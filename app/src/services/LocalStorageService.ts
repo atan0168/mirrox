@@ -10,6 +10,7 @@ const storage = new MMKV();
 // });
 
 const USER_PROFILE_KEY = "user_profile";
+const AVATAR_URL_KEY = "avatar_url";
 const CURRENT_SCHEMA_VERSION = 1;
 
 class LocalStorageService {
@@ -37,6 +38,23 @@ class LocalStorageService {
       return null;
     } catch (error) {
       console.error("Failed to retrieve user profile:", error);
+      return null;
+    }
+  }
+
+  public saveAvatarUrl(url: string): void {
+    try {
+      storage.set(AVATAR_URL_KEY, url);
+    } catch (error) {
+      console.error("Failed to save avatar URL:", error);
+    }
+  }
+
+  public getAvatarUrl(): string | null {
+    try {
+      return storage.getString(AVATAR_URL_KEY) || null;
+    } catch (error) {
+      console.error("Failed to retrieve avatar URL:", error);
       return null;
     }
   }

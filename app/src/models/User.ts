@@ -7,4 +7,8 @@ export interface UserProfile {
   sleepHours: number;
   createdAt: string; // ISO 8601 date string
   schemaVersion?: number; // For future data migrations
+  // Optional fields for future avatar customization
+  gender?: 'male' | 'female' | 'other';
+  ageRange?: 'young' | 'adult' | 'senior';
+  preferredStyle?: 'casual' | 'professional' | 'sporty';
 }

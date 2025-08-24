@@ -7,9 +7,9 @@ interface GeneratingTwinScreenProps {
 
 const GeneratingTwinScreen: React.FC<GeneratingTwinScreenProps> = ({ navigation }) => {
   useEffect(() => {
-    // Simulate some processing time, then navigate to dashboard
+    // Simulate some processing time, then navigate to avatar creation
     const timer = setTimeout(() => {
-      navigation.replace('Dashboard');
+      navigation.replace('AvatarCreation');
     }, 3000);
 
     return () => clearTimeout(timer);

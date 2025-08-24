@@ -44,7 +44,6 @@ export const SleepSlider: React.FC<SleepSliderProps> = ({ value, onValueChange }
         step={0.5}
         minimumTrackTintColor="#3182CE"
         maximumTrackTintColor="#E2E8F0"
-        thumbStyle={styles.thumb}
       />
 
       <View style={styles.rangeLabels}>
@@ -87,11 +86,6 @@ const styles = StyleSheet.create({
   slider: {
     width: '100%',
     height: 40,
-  },
-  thumb: {
-    backgroundColor: '#3182CE',
-    width: 20,
-    height: 20,
   },
   rangeLabels: {
     flexDirection: 'row',

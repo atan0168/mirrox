@@ -8,12 +8,14 @@ import 'react-native-gesture-handler';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import QuestionnaireScreen from './src/screens/QuestionnaireScreen';
 import GeneratingTwinScreen from './src/screens/GeneratingTwinScreen';
+import AvatarCreationScreen from './src/screens/AvatarCreationScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 
 export type RootStackParamList = {
   Welcome: undefined;
   Questionnaire: { location: { latitude: number; longitude: number } | null };
   GeneratingTwin: undefined;
+  AvatarCreation: undefined;
   Dashboard: undefined;
 };
 
@@ -49,6 +51,14 @@ export default function App() {
           name="GeneratingTwin" 
           component={GeneratingTwinScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="AvatarCreation" 
+          component={AvatarCreationScreen}
+          options={{ 
+            title: 'Create Avatar',
+            headerLeft: () => null, // Prevent going back
+          }}
         />
         <Stack.Screen 
           name="Dashboard" 

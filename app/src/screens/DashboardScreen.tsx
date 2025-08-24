@@ -9,12 +9,16 @@ import {
 } from "react-native";
 import { localStorageService } from "../services/LocalStorageService";
 import { apiService } from "../services/ApiService";
-import Avatar from "../components/Avatar";
+import ReadyPlayerMeAvatar from "../components/ReadyPlayerMeAvatar";
+import ThreeAvatar from "../components/ThreeAvatar";
 import { UserProfile } from "../models/User";
 import { AirQualityData } from "../models/AirQuality";
-import { AvatarProps } from "../models/Avatar";
 
-const DashboardScreen: React.FC = () => {
+interface DashboardScreenProps {
+  navigation: any;
+}
+
+const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [airQuality, setAirQuality] = useState<AirQualityData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,16 +74,6 @@ const DashboardScreen: React.FC = () => {
     return `Your twin is breathing clean air today! The air quality in your area is good (${airQuality.aqi}).`;
   };
 
-  const getAvatarProps = (): AvatarProps => {
-    // Logic to derive avatar parts from user profile
-    const eyes = userProfile && userProfile.sleepHours < 6 ? "tired" : "happy";
-    return {
-      head: "oval",
-      eyes: eyes,
-      body: "default",
-    };
-  };
-
   const getSleepMessage = (): string => {
     if (!userProfile) return "";
 
@@ -126,10 +120,8 @@ const DashboardScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Your Digital Twin</Text>
-
         <View style={styles.avatarContainer}>
-          <Avatar />
+          <ThreeAvatar showAnimationButton={true} />
         </View>
 
         <View style={styles.vitalsContainer}>
@@ -194,7 +186,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingTop: 60,
   },
   loadingContainer: {
     flex: 1,
