@@ -1,60 +1,45 @@
-import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import Svg, { Ellipse, Circle, Path, Rect } from 'react-native-svg';
-import { AvatarProps } from '../models/Avatar';
+import React from "react";
+import { View, StyleSheet } from "react-native";
 
-const Avatar: React.FC<AvatarProps> = ({ head, eyes, body }) => {
-  // Simple emoji-based avatar for now - we can enhance this later
-  const getAvatarEmoji = () => {
-    if (eyes === 'tired') return '😴';
-    if (eyes === 'happy') return '😊';
-    return '😐';
-  };
+// Import your SVG components directly!
+// The path is relative to this file.
+import PoseStanding from "../../assets/svgs/poses/robot_dance_3.svg";
+import HeadCornrows from "../../assets/svgs/heads/cornrows.svg";
+import HatBeanie from "../../assets/svgs/heads/hat_beanie.svg";
+import FaceSmile from "../../assets/svgs/faces/smile.svg";
+import Glasses from "../../assets/svgs/accessories/glasses.svg";
 
-  const getBodyEmoji = () => {
-    return '👕'; // Simple body representation
-  };
+// Let's assume a default size for the avatar's artboard (viewBox)
+const AVATAR_SIZE = 500;
+
+const Avatar = () => {
+  // In the future, you'll get the components to render from props.
+  // For now, let's hardcode them to show the layering.
 
   return (
     <View style={styles.container}>
-      <View style={styles.avatarContainer}>
-        <Text style={styles.emoji}>{getAvatarEmoji()}</Text>
-        <Text style={styles.bodyEmoji}>{getBodyEmoji()}</Text>
-      </View>
-      
-      {/* Future SVG implementation */}
       {/* 
-      <View style={styles.svgContainer}>
-        <Svg width={150} height={250} viewBox="0 0 150 250">
-          <Rect x="25" y="120" width="100" height="130" rx="20" fill="#E3F2FD" stroke="#2196F3" strokeWidth="2"/>
-          <Ellipse cx="75" cy="50" rx="40" ry="50" fill="#FDBCB4" stroke="#E1B8A5" strokeWidth="2"/>
-        </Svg>
-      </View>
+        The order of components here determines the stacking order (z-index).
+        The first component is at the bottom, the last is at the top.
       */}
+      <PoseStanding style={styles.part} width="100%" height="100%" />
+      <HatBeanie style={styles.part} width="100%" height="100%" />
+      <FaceSmile style={styles.part} width="100%" height="100%" />
+      <Glasses style={styles.part} width="100%" height="100%" />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    width: 150, 
-    height: 250, 
-    alignItems: 'center', 
-    justifyContent: 'center',
+  container: {
+    width: 250, // The display size on the screen
+    height: 250,
+    position: "relative", // This is the positioning context
   },
-  avatarContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emoji: {
-    fontSize: 80,
-    marginBottom: 10,
-  },
-  bodyEmoji: {
-    fontSize: 40,
-  },
-  svgContainer: {
-    // For future SVG implementation
+  part: {
+    position: "absolute", // This makes all parts stack on top of each other
+    top: 0,
+    left: 0,
   },
 });
 
