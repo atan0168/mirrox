@@ -163,7 +163,7 @@ function ThreeAvatar({
           opacity={0.3}
           color={new THREE.Color(0x888888)}
         />
-        <group position={[0, -1.5, 0]} scale={1.8}>
+        <group position={[0, -2.0, 0]} scale={1.8}>
           <AvatarModel
             url={avatarUrl}
             activeAnimation={activeAnimation}
