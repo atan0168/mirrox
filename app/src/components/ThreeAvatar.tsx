@@ -6,7 +6,7 @@ import {
   Text,
   TouchableOpacity,
 } from "react-native";
-import { Canvas, useFrame } from "@react-three/fiber/native";
+import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
 import { useGLTF, OrbitControls } from "@react-three/drei/native";
 import * as THREE from "three";
 import { localStorageService } from "../services/LocalStorageService";
@@ -35,50 +35,69 @@ const textureLoader = new THREE.TextureLoader();
 textureLoader.crossOrigin = "anonymous";
 
 // Helper function to retarget FBX animations to GLB skeleton
-function retargetAnimationToSkeleton(clip: THREE.AnimationClip, targetSkeleton: THREE.Skeleton): THREE.AnimationClip {
+function retargetAnimationToSkeleton(
+  clip: THREE.AnimationClip,
+  targetSkeleton: THREE.Skeleton,
+): THREE.AnimationClip {
   const clonedClip = clip.clone();
-  
-  clonedClip.tracks.forEach(track => {
+
+  clonedClip.tracks.forEach((track) => {
     // Extract bone name from track name (format: "BoneName.position" or "BoneName.quaternion")
-    const trackParts = track.name.split('.');
+    const trackParts = track.name.split(".");
     if (trackParts.length >= 2) {
       const boneName = trackParts[0];
       const property = trackParts[1];
-      
+
       // Find corresponding bone in target skeleton using fuzzy matching
-      const targetBone = targetSkeleton.bones.find(bone => {
+      const targetBone = targetSkeleton.bones.find((bone) => {
         const lowerBoneName = boneName.toLowerCase();
         const lowerTargetName = bone.name.toLowerCase();
-        
+
         // Try exact match first
         if (lowerBoneName === lowerTargetName) return true;
-        
+
         // Try partial matches
-        if (lowerBoneName.includes(lowerTargetName) || lowerTargetName.includes(lowerBoneName)) return true;
-        
+        if (
+          lowerBoneName.includes(lowerTargetName) ||
+          lowerTargetName.includes(lowerBoneName)
+        )
+          return true;
+
         // Try common bone name mappings
         const boneMapping: { [key: string]: string[] } = {
-          'hips': ['hip', 'pelvis', 'root'],
-          'spine': ['spine', 'back'],
-          'head': ['head', 'skull'],
-          'leftarm': ['left_arm', 'l_arm', 'arm_l'],
-          'rightarm': ['right_arm', 'r_arm', 'arm_r'],
-          'leftleg': ['left_leg', 'l_leg', 'leg_l'],
-          'rightleg': ['right_leg', 'r_leg', 'leg_r'],
+          hips: ["hip", "pelvis", "root"],
+          spine: ["spine", "back"],
+          head: ["head", "skull"],
+          leftarm: ["left_arm", "l_arm", "arm_l"],
+          rightarm: ["right_arm", "r_arm", "arm_r"],
+          leftleg: ["left_leg", "l_leg", "leg_l"],
+          rightleg: ["right_leg", "r_leg", "leg_r"],
         };
-        
+
         for (const [standard, variants] of Object.entries(boneMapping)) {
-          if (variants.some(variant => lowerBoneName.includes(variant) && lowerTargetName.includes(standard))) {
+          if (
+            variants.some(
+              (variant) =>
+                lowerBoneName.includes(variant) &&
+                lowerTargetName.includes(standard),
+            )
+          ) {
             return true;
           }
-          if (variants.some(variant => lowerTargetName.includes(variant) && lowerBoneName.includes(standard))) {
+          if (
+            variants.some(
+              (variant) =>
+                lowerTargetName.includes(variant) &&
+                lowerBoneName.includes(standard),
+            )
+          ) {
             return true;
           }
         }
-        
+
         return false;
       });
-      
+
       if (targetBone) {
         // Update track name to match target bone
         track.name = `${targetBone.name}.${property}`;
@@ -88,7 +107,7 @@ function retargetAnimationToSkeleton(clip: THREE.AnimationClip, targetSkeleton: 
       }
     }
   });
-  
+
   return clonedClip;
 }
 
@@ -114,18 +133,45 @@ textureLoader.load = function (url, onLoad, onProgress, onError) {
 
 function AvatarModel({
   url,
-  isAnimating,
+  activeAnimation,
 }: {
   url: string;
-  isAnimating: boolean;
+  activeAnimation: string | null;
 }) {
   const { scene, animations } = useGLTF(url);
+  const { camera } = useThree();
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
-  const [animationActions, setAnimationActions] = useState<
-    THREE.AnimationAction[]
-  >([]);
+  const [animationActionsMap, setAnimationActionsMap] = useState<
+    Map<string, THREE.AnimationAction>
+  >(new Map());
   const [fbxAnimations, setFbxAnimations] = useState<THREE.AnimationClip[]>([]);
   const sceneRef = useRef<THREE.Group | null>(null);
+
+  // Adjust camera position based on active animation
+  useEffect(() => {
+    const targetPosition = new THREE.Vector3();
+    const targetLookAt = new THREE.Vector3(0, 0, 0);
+    
+    if (activeAnimation === "mixamo.com") {
+      // Position camera for left side view of coughing animation
+      targetPosition.set(-3, 0.2, 4);
+    } else {
+      // Default front view position
+      targetPosition.set(0, 0.5, 5);
+    }
+    
+    // Smooth camera transition
+    const animate = () => {
+      camera.position.lerp(targetPosition, 0.1);
+      camera.lookAt(targetLookAt);
+      
+      if (camera.position.distanceTo(targetPosition) > 0.01) {
+        requestAnimationFrame(animate);
+      }
+    };
+    
+    animate();
+  }, [activeAnimation, camera]);
 
   // This effect runs once after the scene is loaded.
   useEffect(() => {
@@ -163,7 +209,7 @@ function AvatarModel({
           child.receiveShadow = true;
         }
       });
-      
+
       // Store reference to scene for animations
       sceneRef.current = scene;
       console.log("Model materials configured for mobile.");
@@ -178,28 +224,37 @@ function AvatarModel({
     const loadFBXAnimations = async () => {
       try {
         const fbxLoader = new FBXAnimationLoader();
-        
+
         // Use proper asset URLs for React Native - these need to be served via Metro bundler
         const animationPromises = [
-          fbxLoader.loadFBXAnimation("http://10.10.0.126:8080/animations/M_Standing_Expressions_007.fbx"),
-          // fbxLoader.loadFBXAnimation("http://10.10.0.126:8080/animations/laying_severe_cough.fbx")
+          fbxLoader.loadFBXAnimation(
+            "http://10.10.0.126:8080/animations/M_Standing_Expressions_007.fbx",
+          ),
+          fbxLoader.loadFBXAnimation(
+            "http://10.10.0.126:8080/animations/laying_severe_cough.fbx",
+          ),
         ];
 
         const loadedAnimations = await Promise.allSettled(animationPromises);
-        
+
         const successfulAnimations: THREE.AnimationClip[] = [];
         loadedAnimations.forEach((result, index) => {
-          if (result.status === 'fulfilled' && result.value) {
+          if (result.status === "fulfilled" && result.value) {
             console.log(`Successfully loaded FBX animation ${index + 1}`);
             // Flatten the array since loadFBXAnimation returns an array of clips
             successfulAnimations.push(...result.value);
           } else {
-            console.warn(`Failed to load FBX animation ${index + 1}:`, result.status === 'rejected' ? result.reason : 'Unknown error');
+            console.warn(
+              `Failed to load FBX animation ${index + 1}:`,
+              result.status === "rejected" ? result.reason : "Unknown error",
+            );
           }
         });
 
         if (successfulAnimations.length > 0) {
-          console.log(`Loaded ${successfulAnimations.length} FBX animation clips`);
+          console.log(
+            `Loaded ${successfulAnimations.length} FBX animation clips`,
+          );
           setFbxAnimations(successfulAnimations);
         } else {
           console.log("No FBX animations loaded, will use fallback");
@@ -217,7 +272,7 @@ function AvatarModel({
     if (!scene) return;
 
     console.log("Setting up animation mixer...");
-    
+
     // Clean up existing mixer
     if (mixerRef.current) {
       mixerRef.current.stopAllAction();
@@ -228,12 +283,12 @@ function AvatarModel({
     const mixer = new THREE.AnimationMixer(scene);
     mixerRef.current = mixer;
 
-    const actions: THREE.AnimationAction[] = [];
+    const actionsMap = new Map<string, THREE.AnimationAction>();
 
     // Priority 1: Use FBX animations if available (with careful application)
     if (fbxAnimations.length > 0) {
       console.log(`Setting up ${fbxAnimations.length} FBX animations...`);
-      
+
       // Find the skeleton from the GLB avatar
       let avatarSkeleton: THREE.Skeleton | null = null;
       let avatarSkinnedMesh: THREE.SkinnedMesh | null = null;
@@ -241,233 +296,421 @@ function AvatarModel({
         if (child instanceof THREE.SkinnedMesh && child.skeleton) {
           avatarSkeleton = child.skeleton;
           avatarSkinnedMesh = child;
-          console.log("Found avatar skeleton with", child.skeleton.bones.length, "bones");
+          console.log(
+            "Found avatar skeleton with",
+            child.skeleton.bones.length,
+            "bones",
+          );
         }
       });
 
       if (avatarSkeleton && avatarSkinnedMesh) {
         const skeleton = avatarSkeleton as THREE.Skeleton; // Explicit cast to avoid TS issues
-        console.log("Avatar skeleton bones:", skeleton.bones.map((bone: THREE.Bone) => bone.name));
-        
+        console.log(
+          "Avatar skeleton bones:",
+          skeleton.bones.map((bone: THREE.Bone) => bone.name),
+        );
+
         // Store the original bone transforms
         const originalBoneTransforms = new Map();
         skeleton.bones.forEach((bone: THREE.Bone) => {
           originalBoneTransforms.set(bone.uuid, {
             position: bone.position.clone(),
             quaternion: bone.quaternion.clone(),
-            scale: bone.scale.clone()
+            scale: bone.scale.clone(),
           });
         });
-        
+
         fbxAnimations.forEach((clip: THREE.AnimationClip, index: number) => {
           try {
             console.log(`Setting up FBX animation ${index}: ${clip.name}`);
-            console.log("FBX animation tracks:", clip.tracks.map(track => track.name));
-            
+            console.log(
+              "FBX animation tracks:",
+              clip.tracks.map((track) => track.name),
+            );
+
             // Create a filtered version of the animation that only affects existing bones
-            const filteredTracks = clip.tracks.filter(track => {
-              const trackParts = track.name.split('.');
+            const filteredTracks = clip.tracks.filter((track) => {
+              const trackParts = track.name.split(".");
               if (trackParts.length >= 2) {
                 const boneName = trackParts[0];
-                const hasBone = skeleton.bones.some((bone: THREE.Bone) => 
-                  bone.name === boneName || 
-                  bone.name.toLowerCase().includes(boneName.toLowerCase()) ||
-                  boneName.toLowerCase().includes(bone.name.toLowerCase())
-                );
-                if (!hasBone) {
-                  console.log(`Skipping track for non-existent bone: ${boneName}`);
+                
+                // Create a mapping function for Mixamo to ReadyPlayerMe bones
+                const findMatchingBone = (fbxBoneName: string) => {
+                  // Direct match first
+                  let matchedBone = skeleton.bones.find(
+                    (bone: THREE.Bone) => bone.name === fbxBoneName
+                  );
+                  
+                  if (matchedBone) return matchedBone;
+                  
+                  // Try common Mixamo to ReadyPlayerMe mappings
+                  const boneMapping: { [key: string]: string } = {
+                    'mixamorigHips': 'Hips',
+                    'mixamorigSpine': 'Spine',
+                    'mixamorigSpine1': 'Spine1',
+                    'mixamorigSpine2': 'Spine2',
+                    'mixamorigNeck': 'Neck',
+                    'mixamorigHead': 'Head',
+                    'mixamorigLeftShoulder': 'LeftShoulder',
+                    'mixamorigLeftArm': 'LeftUpperArm',
+                    'mixamorigLeftForeArm': 'LeftLowerArm',
+                    'mixamorigLeftHand': 'LeftHand',
+                    'mixamorigRightShoulder': 'RightShoulder',
+                    'mixamorigRightArm': 'RightUpperArm',
+                    'mixamorigRightForeArm': 'RightLowerArm',
+                    'mixamorigRightHand': 'RightHand',
+                    'mixamorigLeftUpLeg': 'LeftUpperLeg',
+                    'mixamorigLeftLeg': 'LeftLowerLeg',
+                    'mixamorigLeftFoot': 'LeftFoot',
+                    'mixamorigRightUpLeg': 'RightUpperLeg',
+                    'mixamorigRightLeg': 'RightLowerLeg',
+                    'mixamorigRightFoot': 'RightFoot',
+                  };
+                  
+                  const mappedName = boneMapping[fbxBoneName];
+                  if (mappedName) {
+                    matchedBone = skeleton.bones.find(
+                      (bone: THREE.Bone) => bone.name === mappedName
+                    );
+                  }
+                  
+                  if (matchedBone) return matchedBone;
+                  
+                  // Fallback: try substring matching
+                  matchedBone = skeleton.bones.find(
+                    (bone: THREE.Bone) =>
+                      bone.name.toLowerCase().includes(fbxBoneName.toLowerCase()) ||
+                      fbxBoneName.toLowerCase().includes(bone.name.toLowerCase())
+                  );
+                  
+                  return matchedBone;
+                };
+                
+                const matchedBone = findMatchingBone(boneName);
+                if (!matchedBone) {
+                  console.log(
+                    `Skipping track for non-existent bone: ${boneName}`,
+                  );
+                  return false;
                 }
-                return hasBone;
+                
+                // Update track name to match the target bone
+                if (matchedBone.name !== boneName) {
+                  const property = trackParts[1];
+                  track.name = `${matchedBone.name}.${property}`;
+                  console.log(`Remapped bone: ${boneName} -> ${matchedBone.name}`);
+                }
+                
+                return true;
               }
               return false;
             });
-            
+
             if (filteredTracks.length > 0) {
-              console.log(`Keeping ${filteredTracks.length}/${clip.tracks.length} tracks`);
-              
+              console.log(
+                `Keeping ${filteredTracks.length}/${clip.tracks.length} tracks`,
+              );
+
               // Filter out position tracks for root bone to prevent avatar displacement
-              const safeTracks = filteredTracks.filter(track => {
-                if (track.name === 'Hips.position') {
-                  console.log("Removing Hips.position track to prevent avatar displacement");
+              // Remove ALL position tracks to keep avatar in place - only use rotation and scale
+              const safeTracks = filteredTracks.filter((track) => {
+                if (track.name.includes(".position")) {
+                  console.log(
+                    `Removing ${track.name} track to prevent avatar displacement`,
+                  );
+                  return false;
+                }
+                // Also filter out any scale tracks that might make avatar invisible
+                if (track.name.includes(".scale")) {
+                  console.log(
+                    `Removing ${track.name} track to prevent avatar scaling issues`,
+                  );
                   return false;
                 }
                 return true;
               });
-              
+
               // Create a new clip with only the safe tracks
               const filteredClip = new THREE.AnimationClip(
-                clip.name + '_filtered',
+                clip.name + "_filtered",
                 clip.duration,
-                safeTracks
+                safeTracks,
               );
-              
+
               const action = mixer.clipAction(filteredClip);
               action.setLoop(THREE.LoopRepeat, Infinity);
               action.clampWhenFinished = true;
-              
-              // Use full weight since bones match perfectly
+
+              // Use full weight for well-retargeted animations
               action.setEffectiveWeight(1.0);
               
-              actions.push(action);
+              // Adjust timing for different animation types
+              if (clip.name.toLowerCase().includes("mixamo") || clip.name.toLowerCase().includes("cough")) {
+                // Mixamo animations might need speed adjustment
+                action.setEffectiveTimeScale(1.0);
+                console.log("Applied Mixamo-specific settings to animation");
+              }
+
+              // Store action by animation name
+              actionsMap.set(clip.name, action);
             } else {
               console.warn(`No valid tracks found for animation: ${clip.name}`);
             }
-            
           } catch (error) {
             console.error(`Error setting up FBX animation ${index}:`, error);
           }
         });
 
-        if (actions.length > 0) {
-          console.log(`Successfully set up ${actions.length} filtered FBX animations`);
-          setAnimationActions(actions);
+        if (actionsMap.size > 0) {
+          console.log(
+            `Successfully set up ${actionsMap.size} filtered FBX animations`,
+          );
+          console.log(
+            "Available animation names:",
+            Array.from(actionsMap.keys()),
+          );
+          setAnimationActionsMap(actionsMap);
           return;
         }
       } else {
-        console.warn("No skeleton found in avatar, cannot apply FBX animations");
+        console.warn(
+          "No skeleton found in avatar, cannot apply FBX animations",
+        );
       }
     }
 
     // Priority 2: Use GLB animations if available
     if (animations && animations.length > 0) {
       console.log(`Setting up ${animations.length} GLB animations...`);
-      
+
       animations.forEach((clip: THREE.AnimationClip, index: number) => {
         try {
           console.log(`Loading GLB animation ${index}: ${clip.name}`);
           const action = mixer.clipAction(clip);
           action.setLoop(THREE.LoopRepeat, Infinity);
-          actions.push(action);
+          actionsMap.set(clip.name, action);
         } catch (error) {
           console.error(`Error setting up GLB animation ${index}:`, error);
         }
       });
 
-      if (actions.length > 0) {
-        console.log(`Successfully set up ${actions.length} GLB animations`);
-        setAnimationActions(actions);
+      if (actionsMap.size > 0) {
+        console.log(`Successfully set up ${actionsMap.size} GLB animations`);
+        setAnimationActionsMap(actionsMap);
         return;
       }
     }
 
     // Priority 3: Create fallback animation
-    console.log("No FBX or GLB animations found, creating simple idle animation...");
+    console.log(
+      "No FBX or GLB animations found, creating simple idle animation...",
+    );
 
     try {
       // Find the best target for animation (preferably skinned mesh or armature)
       let targetObject: THREE.Object3D = scene;
       let foundSkinned = false;
-      
+
       scene.traverse((child) => {
         if (!foundSkinned && child instanceof THREE.SkinnedMesh) {
           targetObject = child;
           foundSkinned = true;
           console.log("Found SkinnedMesh for animation:", child.name);
-        } else if (!foundSkinned && (
-          child.name.toLowerCase().includes('avatar') || 
-          child.name.toLowerCase().includes('armature') ||
-          child.name.toLowerCase().includes('skeleton')
-        )) {
+        } else if (
+          !foundSkinned &&
+          (child.name.toLowerCase().includes("avatar") ||
+            child.name.toLowerCase().includes("armature") ||
+            child.name.toLowerCase().includes("skeleton"))
+        ) {
           targetObject = child;
           console.log("Found potential animation target:", child.name);
         }
       });
 
-      console.log("Creating fallback animation for:", targetObject.name || "scene");
+      console.log(
+        "Creating fallback animation for:",
+        targetObject.name || "scene",
+      );
 
       // Create a very subtle breathing animation
       const times = [0, 1, 2];
       const scaleValues = [1, 1.01, 1]; // Very subtle scale change
 
       const scaleKF = new THREE.VectorKeyframeTrack(
-        targetObject.uuid + '.scale',
+        targetObject.uuid + ".scale",
         times,
-        scaleValues.flatMap(val => [val, val, val])
+        scaleValues.flatMap((val) => [val, val, val]),
       );
-      
+
       const clip = new THREE.AnimationClip("idle_breathing", 2, [scaleKF]);
       const action = mixer.clipAction(clip);
       action.setLoop(THREE.LoopRepeat, Infinity);
 
-      setAnimationActions([action]);
+      actionsMap.set("idle_breathing", action);
+      setAnimationActionsMap(actionsMap);
       console.log("Created fallback idle animation");
     } catch (error) {
       console.error("Error creating fallback animation:", error);
-      setAnimationActions([]);
+      setAnimationActionsMap(new Map());
     }
   }, [scene, animations, fbxAnimations]);
 
   // Control animation playback
   useEffect(() => {
-    console.log(`Animation state changed: ${isAnimating}, available actions: ${animationActions.length}`);
-    
-    if (animationActions.length > 0) {
-      if (isAnimating) {
-        // Play animations with proper setup
-        animationActions.forEach((action, index) => {
-          try {
-            console.log(`Starting animation ${index}: ${action.getClip().name}`);
-            action.reset();
-            action.setEffectiveWeight(1);
-            action.setEffectiveTimeScale(1);
-            action.play();
-            
-            // Log some debug info about the animation
-            console.log(`Animation duration: ${action.getClip().duration}s`);
-            console.log(`Animation tracks: ${action.getClip().tracks.length}`);
-          } catch (error) {
-            console.error(`Error starting animation ${index}:`, error);
-          }
-        });
-        console.log("Animations started");
-        
-        // Debug: Check avatar position after starting animation
-        if (scene) {
-          scene.traverse((child) => {
-            if (child instanceof THREE.SkinnedMesh) {
-              console.log(`Avatar mesh position: x:${child.position.x.toFixed(2)}, y:${child.position.y.toFixed(2)}, z:${child.position.z.toFixed(2)}`);
-              console.log(`Avatar mesh scale: x:${child.scale.x.toFixed(2)}, y:${child.scale.y.toFixed(2)}, z:${child.scale.z.toFixed(2)}`);
-              console.log(`Avatar mesh visible: ${child.visible}`);
-            }
-          });
-        }
-        
-      } else {
-        // Stop all animations gracefully without fading (to prevent avatar disappearing)
-        animationActions.forEach((action, index) => {
-          try {
-            console.log(`Stopping animation ${index}: ${action.getClip().name}`);
+    console.log(
+      `Animation state changed: activeAnimation=${activeAnimation}, available actions: ${animationActionsMap.size}`,
+    );
+
+    if (animationActionsMap.size > 0) {
+      // Stop all currently running animations and reset avatar to safe state
+      animationActionsMap.forEach(
+        (action: THREE.AnimationAction, name: string) => {
+          if (action.isRunning()) {
+            console.log(`Stopping animation: ${name}`);
             action.stop();
-          } catch (error) {
-            console.error(`Error stopping animation ${index}:`, error);
+          }
+        },
+      );
+
+      // When stopping animations, ensure avatar is in a safe state
+      if (!activeAnimation && scene) {
+        scene.traverse((child) => {
+          if (child instanceof THREE.SkinnedMesh) {
+            // Reset to safe defaults
+            child.visible = true;
+            child.scale.set(1, 1, 1);
+            child.position.x = 0;
+            child.position.z = 0;
+            console.log("Reset avatar to safe state after stopping animations");
           }
         });
-        console.log("Animations stopped");
+      }
+
+      // Start the requested animation if specified
+      if (activeAnimation && animationActionsMap.has(activeAnimation)) {
+        const action = animationActionsMap.get(activeAnimation)!;
+        try {
+          console.log(`Starting animation: ${activeAnimation}`);
+          
+          // Store original transforms before starting animation
+          const originalTransforms = new Map();
+          if (scene) {
+            scene.traverse((child) => {
+              if (child instanceof THREE.SkinnedMesh) {
+                originalTransforms.set(child.uuid, {
+                  position: child.position.clone(),
+                  scale: child.scale.clone(),
+                  visible: child.visible
+                });
+              }
+            });
+          }
+          
+          action.reset();
+          action.setEffectiveWeight(1);
+          action.setEffectiveTimeScale(1);
+          action.play();
+
+          // Immediately after starting, ensure avatar stays visible and in position
+          if (scene) {
+            scene.traverse((child) => {
+              if (child instanceof THREE.SkinnedMesh) {
+                const original = originalTransforms.get(child.uuid);
+                if (original) {
+                  // Keep original position and scale to prevent disappearing
+                  child.position.copy(original.position);
+                  child.scale.copy(original.scale);
+                  child.visible = true;
+                }
+                
+                console.log(
+                  `Avatar mesh position: x:${child.position.x.toFixed(2)}, y:${child.position.y.toFixed(2)}, z:${child.position.z.toFixed(2)}`,
+                );
+                console.log(
+                  `Avatar mesh scale: x:${child.scale.x.toFixed(2)}, y:${child.scale.y.toFixed(2)}, z:${child.scale.z.toFixed(2)}`,
+                );
+                console.log(`Avatar mesh visible: ${child.visible}`);
+              }
+            });
+          }
+
+          // Log some debug info about the animation
+          console.log(`Animation duration: ${action.getClip().duration}s`);
+          console.log(`Animation tracks: ${action.getClip().tracks.length}`);
+
+        } catch (error) {
+          console.error(`Error starting animation ${activeAnimation}:`, error);
+        }
+      } else if (activeAnimation) {
+        console.warn(`Animation not found: ${activeAnimation}`);
+      } else {
+        console.log("No animation requested, all animations stopped");
       }
     } else {
       console.log("No animation actions available");
     }
-  }, [isAnimating, animationActions, scene]);
+  }, [activeAnimation, animationActionsMap, scene]);
 
   // Update animation mixer each frame
   useFrame((state, delta) => {
     if (mixerRef.current) {
       try {
         mixerRef.current.update(delta);
-        
+
+        // Continuously check and fix avatar visibility during animations
+        if (scene && activeAnimation) {
+          scene.traverse((child) => {
+            if (child instanceof THREE.SkinnedMesh) {
+              // Fix common issues that cause avatar to disappear
+              if (!child.visible) {
+                console.warn("Avatar became invisible during animation, fixing...");
+                child.visible = true;
+              }
+              
+              // Fix scale issues
+              if (child.scale.x < 0.01 || child.scale.y < 0.01 || child.scale.z < 0.01) {
+                console.warn("Avatar became too small during animation, fixing...");
+                child.scale.set(1, 1, 1);
+              }
+              
+              // Fix position issues and adjust for specific animations
+              if (Math.abs(child.position.x) > 10 || Math.abs(child.position.z) > 10) {
+                console.warn("Avatar moved too far during animation, fixing...");
+                child.position.x = 0;
+                child.position.z = 0;
+              }
+              
+              // Adjust Y position for coughing animation to be lower
+              if (activeAnimation === "mixamo.com") {
+                // Keep the coughing animation lower
+                if (child.position.y > -0.2) {
+                  child.position.y = -0.2;
+                }
+              }
+            }
+          });
+        }
+
         // Debug: Log mixer state occasionally (every 60 frames ≈ 1 second)
-        if (isAnimating && Math.floor(state.clock.elapsedTime * 60) % 60 === 0) {
-          const activeActions = animationActions.filter(action => action.isRunning());
-          console.log(`Mixer update - Active actions: ${activeActions.length}, Time: ${state.clock.elapsedTime.toFixed(1)}s`);
-          
+        if (
+          activeAnimation &&
+          Math.floor(state.clock.elapsedTime * 60) % 60 === 0
+        ) {
+          const runningActions = Array.from(
+            animationActionsMap.values(),
+          ).filter((action) => action.isRunning());
+          console.log(
+            `Mixer update - Active actions: ${runningActions.length}, Time: ${state.clock.elapsedTime.toFixed(1)}s`,
+          );
+
           // Check if avatar is still visible
           if (scene) {
             scene.traverse((child) => {
               if (child instanceof THREE.SkinnedMesh) {
-                if (!child.visible || child.scale.x < 0.01 || child.scale.y < 0.01 || child.scale.z < 0.01) {
-                  console.warn("Avatar became invisible or too small during animation!");
-                  console.log(`Visible: ${child.visible}, Scale: ${child.scale.x}, ${child.scale.y}, ${child.scale.z}`);
-                }
+                console.log(
+                  `Avatar status - Visible: ${child.visible}, Scale: ${child.scale.x.toFixed(2)}, Position: ${child.position.x.toFixed(2)}, ${child.position.y.toFixed(2)}, ${child.position.z.toFixed(2)}`,
+                );
               }
             });
           }
@@ -495,8 +738,14 @@ const ThreeAvatar: React.FC<ThreeAvatarProps> = ({
 }) => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
+  const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
   const canvasRef = useRef<any>(null);
+
+  // Available animations - we'll detect these dynamically from the loaded FBX files
+  const availableAnimations = [
+    { name: "M_Standing_Expressions_007", label: "Expressions" },
+    { name: "mixamo.com", label: "Cough" }, // This is the actual name from the Mixamo animation
+  ];
 
   useEffect(() => {
     // Simplified loading logic
@@ -521,10 +770,16 @@ const ThreeAvatar: React.FC<ThreeAvatarProps> = ({
     loadAvatar();
   }, []);
 
-  const handleAnimationToggle = () => {
-    const newState = !isAnimating;
-    console.log(`User toggling animation: ${isAnimating} -> ${newState}`);
-    setIsAnimating(newState);
+  const handleAnimationToggle = (animationName: string) => {
+    if (activeAnimation === animationName) {
+      // Stop the current animation
+      console.log(`Stopping animation: ${animationName}`);
+      setActiveAnimation(null);
+    } else {
+      // Start the new animation
+      console.log(`Starting animation: ${animationName}`);
+      setActiveAnimation(animationName);
+    }
   };
 
   if (!avatarUrl) {
@@ -554,8 +809,11 @@ const ThreeAvatar: React.FC<ThreeAvatarProps> = ({
           powerPreference: "high-performance",
           preserveDrawingBuffer: true,
         }}
-        // Place the camera further away to ensure we see the model.
-        camera={{ position: [0, 1, 5], fov: 50 }}
+        // Place the camera to show full avatar (including head)
+        camera={{ 
+          position: [0, 0.5, 5], 
+          fov: 60 
+        }}
         // This onCreated is crucial for material rendering.
         onCreated={({ gl, scene }) => {
           console.log("Canvas created. Configuring renderer...");
@@ -579,8 +837,11 @@ const ThreeAvatar: React.FC<ThreeAvatarProps> = ({
         <pointLight position={[-5, 5, 5]} intensity={1} />
 
         <Suspense fallback={null}>
-          <group position={[0, -1, 0]} scale={2}>
-            <AvatarModel url={avatarUrl} isAnimating={isAnimating} />
+          <group 
+            position={[0, -1.5, 0]} 
+            scale={1.8}
+          >
+            <AvatarModel url={avatarUrl} activeAnimation={activeAnimation} />
           </group>
         </Suspense>
 
@@ -597,14 +858,34 @@ const ThreeAvatar: React.FC<ThreeAvatarProps> = ({
       </View>
 
       {showAnimationButton && (
-        <TouchableOpacity
-          style={styles.animationButton}
-          onPress={handleAnimationToggle}
-        >
-          <Text style={styles.animationButtonText}>
-            {isAnimating ? "Stop Animation" : "Start Animation"}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.animationButtonsContainer}>
+          {availableAnimations.map((animation, index) => (
+            <TouchableOpacity
+              key={animation.name}
+              style={[
+                styles.animationButton,
+                activeAnimation === animation.name &&
+                  styles.activeAnimationButton,
+                {
+                  marginBottom: index < availableAnimations.length - 1 ? 8 : 0,
+                },
+              ]}
+              onPress={() => handleAnimationToggle(animation.name)}
+            >
+              <Text
+                style={[
+                  styles.animationButtonText,
+                  activeAnimation === animation.name &&
+                    styles.activeAnimationButtonText,
+                ]}
+              >
+                {activeAnimation === animation.name
+                  ? `Stop ${animation.label}`
+                  : `Play ${animation.label}`}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -644,17 +925,27 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 12,
   },
-  animationButton: {
+  animationButtonsContainer: {
     position: "absolute",
     bottom: 10,
     left: 10,
     right: 10,
+  },
+  animationButton: {
     backgroundColor: "#3182CE",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",
   },
+  activeAnimationButton: {
+    backgroundColor: "#E53E3E",
+  },
   animationButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  activeAnimationButtonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "600",
