@@ -10,6 +10,7 @@ import { AnimationControls } from "./controls/AnimationControls";
 import { EffectControls } from "./controls/EffectControls";
 import { SkinToneControls } from "./controls/SkinToneControls";
 import { LoadingState, ErrorState } from "./ui/StateComponents";
+import AvatarLoadingIndicator from "./ui/AvatarLoadingIndicator";
 import { localStorageService } from "../services/LocalStorageService";
 import {
   suppressEXGLWarnings,
@@ -55,6 +56,12 @@ function ThreeAvatar({
   const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
   const [hazeEnabled, setHazeEnabled] = useState<boolean>(false);
   const [smogIntensity, setSmogIntensity] = useState<number>(1.0);
+  const [isAvatarLoading, setIsAvatarLoading] = useState<boolean>(false);
+  const [loadingProgress, setLoadingProgress] = useState<{
+    loaded: number;
+    total: number;
+    item: string;
+  }>({ loaded: 0, total: 0, item: "" });
   const canvasRef = useRef<any>(null);
 
   // Use external facial expression prop, fallback to "neutral"
@@ -108,6 +115,18 @@ function ThreeAvatar({
   const handleIntensityChange = (intensity: number) => {
     setSmogIntensity(intensity);
     console.log(`Smog intensity changed to: ${intensity}`);
+  };
+
+  const handleAvatarLoadingChange = (loading: boolean) => {
+    setIsAvatarLoading(loading);
+  };
+
+  const handleLoadingProgress = (progress: {
+    loaded: number;
+    total: number;
+    item: string;
+  }) => {
+    setLoadingProgress(progress);
   };
 
   if (!avatarUrl) {
@@ -175,6 +194,8 @@ function ThreeAvatar({
             activeAnimation={activeAnimation}
             facialExpression={facialExpression}
             skinToneAdjustment={skinToneAdjustment}
+            onLoadingChange={handleAvatarLoadingChange}
+            onLoadingProgress={handleLoadingProgress}
           />
         </group>
 
@@ -203,6 +224,12 @@ function ThreeAvatar({
         activeAnimation={activeAnimation}
         onAnimationToggle={handleAnimationToggle}
         visible={showAnimationButton}
+      />
+
+      {/* Loading Indicator Overlay */}
+      <AvatarLoadingIndicator
+        isLoading={isAvatarLoading}
+        progress={loadingProgress}
       />
     </View>
   );

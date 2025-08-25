@@ -3,12 +3,15 @@ import { useFrame, useThree } from "@react-three/fiber/native";
 import { useGLTF } from "@react-three/drei/native";
 import * as THREE from "three";
 import { FBXAnimationLoader } from "../../utils/FBXAnimationLoader";
+import AnimationCacheService from "../../services/AnimationCacheService";
 
 interface AvatarModelProps {
   url: string;
   activeAnimation: string | null;
   facialExpression?: string;
   skinToneAdjustment?: number; // -1 to 1, where negative darkens and positive lightens
+  onLoadingChange?: (loading: boolean) => void;
+  onLoadingProgress?: (progress: { loaded: number; total: number; item: string }) => void;
 }
 
 export function AvatarModel({
@@ -16,6 +19,8 @@ export function AvatarModel({
   activeAnimation,
   facialExpression = "neutral",
   skinToneAdjustment = 0,
+  onLoadingChange,
+  onLoadingProgress,
 }: AvatarModelProps) {
   const { scene, animations } = useGLTF(url);
   const { camera } = useThree();
@@ -28,6 +33,34 @@ export function AvatarModel({
   const [currentIdleIndex, setCurrentIdleIndex] = useState<number>(0);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [headMesh, setHeadMesh] = useState<THREE.SkinnedMesh | null>(null);
+  const [isLoadingAnimations, setIsLoadingAnimations] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState({ loaded: 0, total: 0, item: '' });
+  const cacheServiceRef = useRef<typeof AnimationCacheService>(AnimationCacheService);
+
+  // Initialize cache service
+  useEffect(() => {
+    const initializeCache = async () => {
+      try {
+        await cacheServiceRef.current.initialize();
+        console.log('✅ Animation cache service initialized');
+      } catch (error) {
+        console.error('❌ Error initializing cache service:', error);
+      }
+    };
+
+    initializeCache();
+  }, []);
+
+  // Update loading state
+  useEffect(() => {
+    const isLoading = isLoadingAnimations;
+    onLoadingChange?.(isLoading);
+  }, [isLoadingAnimations, onLoadingChange]);
+
+  // Update loading progress
+  useEffect(() => {
+    onLoadingProgress?.(loadingProgress);
+  }, [loadingProgress, onLoadingProgress]);
 
   // Define available idle animations in order of preference
   const IDLE_ANIMATIONS = [
@@ -817,55 +850,119 @@ export function AvatarModel({
     }
   }, [scene, skinToneAdjustment]);
 
-  // Load FBX animations
+  // Load FBX animations with caching
   useEffect(() => {
     if (!scene) return;
 
-    console.log("Loading FBX animations...");
+    console.log("Loading FBX animations with caching...");
     const loadFBXAnimations = async () => {
+      setIsLoadingAnimations(true);
+      
       try {
         const fbxLoader = new FBXAnimationLoader();
 
-        const animationPromises = [
-          fbxLoader.loadFBXAnimation(
-            "http://10.10.0.126:8080/animations/M_Standing_Expressions_007.fbx",
-          ),
-          fbxLoader.loadFBXAnimation(
-            "http://10.10.0.126:8080/animations/laying_severe_cough.fbx",
-          ),
-          fbxLoader.loadFBXAnimation(
-            "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_006.fbx",
-          ),
-          fbxLoader.loadFBXAnimation(
-            "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_003.fbx",
-          ),
+        const animationURLs = [
+          {
+            url: "http://10.10.0.126:8080/animations/M_Standing_Expressions_007.fbx",
+            name: "M_Standing_Expressions_007"
+          },
+          {
+            url: "http://10.10.0.126:8080/animations/laying_severe_cough.fbx", 
+            name: "laying_severe_cough"
+          },
+          {
+            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_006.fbx",
+            name: "M_Standing_Idle_Variations_006"
+          },
+          {
+            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_003.fbx",
+            name: "M_Standing_Idle_Variations_003"
+          },
         ];
 
-        const loadedAnimations = await Promise.allSettled(animationPromises);
+        setLoadingProgress({ loaded: 0, total: animationURLs.length, item: 'Preparing animations...' });
+
+        const animationPromises = animationURLs.map(async ({ url, name }, index) => {
+          try {
+            setLoadingProgress({ 
+              loaded: index, 
+              total: animationURLs.length, 
+              item: `Loading ${name}...` 
+            });
+
+            // Get cached or download file
+            const localPath = await cacheServiceRef.current.getOrCacheFile(
+              url,
+              (progress) => {
+                setLoadingProgress({ 
+                  loaded: index + progress, 
+                  total: animationURLs.length, 
+                  item: `Downloading ${name} (${Math.round(progress * 100)}%)...` 
+                });
+              }
+            );
+
+            setLoadingProgress({ 
+              loaded: index + 0.5, 
+              total: animationURLs.length, 
+              item: `Processing ${name}...` 
+            });
+
+            // Load animation from local file
+            const animations = await fbxLoader.loadFBXAnimation(localPath);
+            
+            setLoadingProgress({ 
+              loaded: index + 1, 
+              total: animationURLs.length, 
+              item: `Loaded ${name}` 
+            });
+
+            return animations;
+          } catch (error) {
+            console.warn(`Failed to load animation ${name}:`, error);
+            setLoadingProgress({ 
+              loaded: index + 1, 
+              total: animationURLs.length, 
+              item: `Failed to load ${name}` 
+            });
+            return null;
+          }
+        });
+
+        const loadedAnimations = await Promise.all(animationPromises);
 
         const successfulAnimations: THREE.AnimationClip[] = [];
         loadedAnimations.forEach((result, index) => {
-          if (result.status === "fulfilled" && result.value) {
-            console.log(`Successfully loaded FBX animation ${index + 1}`);
-            successfulAnimations.push(...result.value);
-          } else {
-            console.warn(
-              `Failed to load FBX animation ${index + 1}:`,
-              result.status === "rejected" ? result.reason : "Unknown error",
-            );
+          if (result) {
+            console.log(`✅ Successfully loaded cached animation ${index + 1}`);
+            successfulAnimations.push(...result);
           }
         });
 
         if (successfulAnimations.length > 0) {
           console.log(
-            `Loaded ${successfulAnimations.length} FBX animation clips`,
+            `🎬 Loaded ${successfulAnimations.length} FBX animation clips from cache/download`,
           );
           setFbxAnimations(successfulAnimations);
         } else {
-          console.log("No FBX animations loaded, will use fallback");
+          console.log("❌ No FBX animations loaded, will use fallback");
         }
+
+        setLoadingProgress({ 
+          loaded: animationURLs.length, 
+          total: animationURLs.length, 
+          item: 'Animations ready!' 
+        });
+
       } catch (error) {
-        console.error("Error loading FBX animations:", error);
+        console.error("❌ Error loading FBX animations:", error);
+        setLoadingProgress({ 
+          loaded: 0, 
+          total: 0, 
+          item: 'Animation loading failed' 
+        });
+      } finally {
+        setIsLoadingAnimations(false);
       }
     };
 
