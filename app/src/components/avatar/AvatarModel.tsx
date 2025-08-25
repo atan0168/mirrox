@@ -7,9 +7,10 @@ import { FBXAnimationLoader } from "../../utils/FBXAnimationLoader";
 interface AvatarModelProps {
   url: string;
   activeAnimation: string | null;
+  facialExpression?: string;
 }
 
-export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
+export function AvatarModel({ url, activeAnimation, facialExpression = "neutral" }: AvatarModelProps) {
   const { scene, animations } = useGLTF(url);
   const { camera } = useThree();
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -20,6 +21,7 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
   const sceneRef = useRef<THREE.Group | null>(null);
   const [currentIdleIndex, setCurrentIdleIndex] = useState<number>(0);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [headMesh, setHeadMesh] = useState<THREE.SkinnedMesh | null>(null);
 
   // Define available idle animations in order of preference
   const IDLE_ANIMATIONS = [
@@ -27,6 +29,49 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
     "M_Standing_Idle_Variations_003",
     "idle_breathing", // fallback
   ];
+
+  // Define basic facial expression morph target mappings
+  // Starting with common ReadyPlayerMe morph targets
+  const FACIAL_EXPRESSIONS = {
+    neutral: {},
+    happy: { 
+      mouthSmile_L: 0.7, 
+      mouthSmile_R: 0.7,
+      // Try alternative naming conventions
+      mouthSmileLeft: 0.7,
+      mouthSmileRight: 0.7,
+      // Try ARKit naming
+      jawOpen: 0.1,
+      mouthSmile: 0.7
+    },
+    sad: { 
+      mouthFrown_L: 0.6, 
+      mouthFrown_R: 0.6,
+      mouthFrownLeft: 0.6,
+      mouthFrownRight: 0.6,
+      mouthFrown: 0.6,
+      browDown_L: 0.4,
+      browDown_R: 0.4,
+      browDownLeft: 0.4,
+      browDownRight: 0.4
+    },
+    surprised: {
+      eyeWide_L: 0.8,
+      eyeWide_R: 0.8,
+      eyeWideLeft: 0.8,
+      eyeWideRight: 0.8,
+      jawOpen: 0.6,
+      mouthFunnel: 0.3,
+      browUp_L: 0.5,
+      browUp_R: 0.5,
+      browUpLeft: 0.5,
+      browUpRight: 0.5
+    },
+    // Test with any available morph target
+    test: {
+      // We'll try to find ANY available morph target and use it
+    }
+  };
 
   // Helper function to get available idle animations
   const getAvailableIdleAnimations = () => {
@@ -49,6 +94,196 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
         `Cycling to next idle animation. New index: ${(currentIdleIndex + 1) % availableIdles.length}`,
       );
     }
+  };
+
+  // Function to apply facial expression with smooth transitions
+  const applyFacialExpression = (expression: string, transitionDuration: number = 0.5) => {
+    if (!headMesh || !headMesh.morphTargetInfluences) {
+      console.log("❌ No morph targets available for facial expressions");
+      console.log("Head mesh:", headMesh ? "found" : "not found");
+      console.log("Morph target influences:", headMesh?.morphTargetInfluences ? "found" : "not found");
+      return;
+    }
+
+    const morphTargetDictionary = headMesh.morphTargetDictionary;
+    if (!morphTargetDictionary) {
+      console.log("❌ No morph target dictionary found");
+      return;
+    }
+
+    console.log(`🎭 Applying facial expression: ${expression}`);
+    console.log(`📊 Available morph targets (${Object.keys(morphTargetDictionary).length}):`, Object.keys(morphTargetDictionary));
+
+    // Store current morph target values for smooth transition
+    const currentValues = [...headMesh.morphTargetInfluences];
+    
+    // Get target expression data
+    const expressionData = FACIAL_EXPRESSIONS[expression as keyof typeof FACIAL_EXPRESSIONS];
+    if (!expressionData) {
+      console.warn(`❌ Unknown facial expression: ${expression}`);
+      console.log("Available expressions:", Object.keys(FACIAL_EXPRESSIONS));
+      return;
+    }
+
+    console.log(`🎯 Expression data for "${expression}":`, expressionData);
+
+    // Check which morph targets from the expression are actually available
+    const availableMorphs: string[] = [];
+    const missingMorphs: string[] = [];
+    
+    Object.keys(expressionData).forEach(morphTarget => {
+      if (morphTargetDictionary[morphTarget] !== undefined) {
+        availableMorphs.push(morphTarget);
+      } else {
+        missingMorphs.push(morphTarget);
+      }
+    });
+
+    console.log(`✅ Available morph targets for expression:`, availableMorphs);
+    if (missingMorphs.length > 0) {
+      console.log(`❌ Missing morph targets:`, missingMorphs);
+    }
+
+    if (availableMorphs.length === 0) {
+      console.warn(`❌ No compatible morph targets found for expression "${expression}"`);
+      return;
+    }
+
+    // Create transition animation
+    const startTime = Date.now();
+    const duration = transitionDuration * 1000; // Convert to milliseconds
+
+    const animateTransition = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Use easeInOutCubic for smooth transition
+      const easeProgress = progress < 0.5 
+        ? 4 * progress * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      // Reset all morph targets and interpolate to new values
+      for (let i = 0; i < headMesh.morphTargetInfluences!.length; i++) {
+        const currentValue = currentValues[i] || 0;
+        headMesh.morphTargetInfluences![i] = currentValue * (1 - easeProgress);
+      }
+
+      // Apply the selected expression with interpolation
+      let appliedCount = 0;
+      Object.entries(expressionData).forEach(([morphTarget, targetValue]) => {
+        const index = morphTargetDictionary[morphTarget];
+        if (index !== undefined && headMesh.morphTargetInfluences) {
+          const currentValue = currentValues[index] || 0;
+          const interpolatedValue = currentValue + (targetValue - currentValue) * easeProgress;
+          headMesh.morphTargetInfluences[index] = interpolatedValue;
+          appliedCount++;
+          
+          if (progress === 1) {
+            console.log(`🔧 Applied ${morphTarget}: ${interpolatedValue.toFixed(3)} (target: ${targetValue})`);
+          }
+        }
+      });
+
+      // Continue animation if not complete
+      if (progress < 1) {
+        requestAnimationFrame(animateTransition);
+      } else {
+        console.log(`✅ Applied facial expression: ${expression} (${appliedCount}/${Object.keys(expressionData).length} morph targets)`);
+        
+        // Log current state of all morph targets for debugging
+        console.log("🔍 Current morph target state:");
+        Object.entries(morphTargetDictionary).forEach(([name, index]) => {
+          const value = headMesh.morphTargetInfluences![index];
+          if (value !== 0) {
+            console.log(`  ${name}: ${value.toFixed(3)}`);
+          }
+        });
+      }
+    };
+
+    // Start the transition animation
+    animateTransition();
+  };
+
+  // Function to find head mesh with morph targets
+  const findHeadMesh = (scene: THREE.Group) => {
+    let foundHeadMesh: THREE.SkinnedMesh | null = null;
+    
+    scene.traverse((child) => {
+      if (child instanceof THREE.SkinnedMesh) {
+        // Look for head-related meshes that have morph targets
+        if (
+          child.morphTargetInfluences &&
+          child.morphTargetInfluences.length > 0 &&
+          (child.name.toLowerCase().includes("head") ||
+           child.name.toLowerCase().includes("face") ||
+           child.name.toLowerCase().includes("wolf3d_head") ||
+           child.material?.name?.toLowerCase().includes("head"))
+        ) {
+          foundHeadMesh = child;
+          console.log(`🎭 Found head mesh: ${child.name} with ${child.morphTargetInfluences.length} morph targets`);
+          
+          // Log available morph targets for debugging
+          if (child.morphTargetDictionary) {
+            const availableMorphs = Object.keys(child.morphTargetDictionary);
+            console.log("📋 Available morph targets:", availableMorphs);
+            
+            // Update the test expression with the first available morph target
+            if (availableMorphs.length > 0) {
+              const testMorph = availableMorphs[0];
+              FACIAL_EXPRESSIONS.test = { [testMorph]: 0.8 };
+              console.log(`🧪 Test expression will use: ${testMorph} = 0.8`);
+            }
+            
+            // Check which expression morph targets are available
+            const allExpressionMorphs = new Set<string>();
+            
+            Object.values(FACIAL_EXPRESSIONS).forEach(expression => {
+              Object.keys(expression).forEach(morph => allExpressionMorphs.add(morph));
+            });
+            
+            const missingMorphs = Array.from(allExpressionMorphs).filter(
+              morph => !availableMorphs.includes(morph)
+            );
+            
+            const presentMorphs = Array.from(allExpressionMorphs).filter(
+              morph => availableMorphs.includes(morph)
+            );
+            
+            if (presentMorphs.length > 0) {
+              console.log("✅ Present expression morph targets:", presentMorphs);
+            }
+            
+            if (missingMorphs.length > 0) {
+              console.log("❌ Missing morph targets for expressions:", missingMorphs);
+            }
+            
+            console.log("📊 Expression system compatibility:", 
+              Math.round((allExpressionMorphs.size - missingMorphs.length) / allExpressionMorphs.size * 100) + "%"
+            );
+
+            // Look for common patterns in morph target names
+            const patterns = {
+              mouth: availableMorphs.filter(m => m.toLowerCase().includes('mouth')),
+              eye: availableMorphs.filter(m => m.toLowerCase().includes('eye')),
+              brow: availableMorphs.filter(m => m.toLowerCase().includes('brow')),
+              jaw: availableMorphs.filter(m => m.toLowerCase().includes('jaw')),
+              smile: availableMorphs.filter(m => m.toLowerCase().includes('smile')),
+              frown: availableMorphs.filter(m => m.toLowerCase().includes('frown')),
+            };
+
+            console.log("🔍 Morph target patterns found:");
+            Object.entries(patterns).forEach(([pattern, morphs]) => {
+              if (morphs.length > 0) {
+                console.log(`  ${pattern}:`, morphs);
+              }
+            });
+          }
+        }
+      }
+    });
+
+    return foundHeadMesh;
   };
 
   // Adjust camera position based on active animation
@@ -76,6 +311,21 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
 
     animate();
   }, [activeAnimation, camera]);
+
+  // Find head mesh and apply facial expressions
+  useEffect(() => {
+    if (scene) {
+      const foundHeadMesh = findHeadMesh(scene);
+      setHeadMesh(foundHeadMesh);
+    }
+  }, [scene]);
+
+  // Apply facial expression when it changes
+  useEffect(() => {
+    if (headMesh && facialExpression) {
+      applyFacialExpression(facialExpression);
+    }
+  }, [headMesh, facialExpression]);
 
   // Configure materials for mobile compatibility
   useEffect(() => {
@@ -644,27 +894,27 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
         }
 
         // Debug logging occasionally
-        if (
-          animationActionsMap.size > 0 &&
-          Math.floor(state.clock.elapsedTime * 60) % 60 === 0
-        ) {
-          const runningActions = Array.from(
-            animationActionsMap.values(),
-          ).filter((action) => action.isRunning());
-          console.log(
-            `Mixer update - Active actions: ${runningActions.length}, Time: ${state.clock.elapsedTime.toFixed(1)}s`,
-          );
+        // if (
+        //   animationActionsMap.size > 0 &&
+        //   Math.floor(state.clock.elapsedTime * 60) % 60 === 0
+        // ) {
+        //   const runningActions = Array.from(
+        //     animationActionsMap.values(),
+        //   ).filter((action) => action.isRunning());
+        //   console.log(
+        //     `Mixer update - Active actions: ${runningActions.length}, Time: ${state.clock.elapsedTime.toFixed(1)}s`,
+        //   );
 
-          if (scene) {
-            scene.traverse((child) => {
-              if (child instanceof THREE.SkinnedMesh) {
-                console.log(
-                  `Avatar status - Visible: ${child.visible}, Scale: ${child.scale.x.toFixed(2)}, Position: ${child.position.x.toFixed(2)}, ${child.position.y.toFixed(2)}, ${child.position.z.toFixed(2)}`,
-                );
-              }
-            });
-          }
-        }
+        // if (scene) {
+        //   scene.traverse((child) => {
+        //     if (child instanceof THREE.SkinnedMesh) {
+        //       console.log(
+        //         `Avatar status - Visible: ${child.visible}, Scale: ${child.scale.x.toFixed(2)}, Position: ${child.position.x.toFixed(2)}, ${child.position.y.toFixed(2)}, ${child.position.z.toFixed(2)}`,
+        //       );
+        //     }
+        //   });
+        // }
+        // }
       } catch (error) {
         console.error("Animation mixer update error:", error);
       }

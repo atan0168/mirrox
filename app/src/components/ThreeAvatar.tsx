@@ -26,6 +26,8 @@ interface ThreeAvatarProps {
   showAnimationButton?: boolean;
   width?: number;
   height?: number;
+  facialExpression?: string;
+  onFacialExpressionChange?: (expression: string) => void;
 }
 
 const AVAILABLE_ANIMATIONS = [
@@ -39,6 +41,8 @@ function ThreeAvatar({
   showAnimationButton = false,
   width = 300,
   height = 500,
+  facialExpression: externalFacialExpression = "neutral",
+  onFacialExpressionChange,
 }: ThreeAvatarProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +50,9 @@ function ThreeAvatar({
   const [hazeEnabled, setHazeEnabled] = useState<boolean>(false);
   const [smogIntensity, setSmogIntensity] = useState<number>(1.0);
   const canvasRef = useRef<any>(null);
+
+  // Use external facial expression prop, fallback to "neutral"
+  const facialExpression = externalFacialExpression;
 
   useEffect(() => {
     const loadAvatar = async () => {
@@ -157,7 +164,11 @@ function ThreeAvatar({
           color={new THREE.Color(0x888888)}
         />
         <group position={[0, -1.5, 0]} scale={1.8}>
-          <AvatarModel url={avatarUrl} activeAnimation={activeAnimation} />
+          <AvatarModel
+            url={avatarUrl}
+            activeAnimation={activeAnimation}
+            facialExpression={facialExpression}
+          />
         </group>
 
         <OrbitControls
@@ -168,7 +179,7 @@ function ThreeAvatar({
         />
       </Canvas>
 
-      {/* UI Overlays */}
+      {/* UI Overlays - positioned on top of canvas */}
       <DebugOverlay />
       <EffectControls
         hazeEnabled={hazeEnabled}
@@ -176,12 +187,12 @@ function ThreeAvatar({
         intensity={smogIntensity}
         onIntensityChange={handleIntensityChange}
       />
-      <AnimationControls
-        availableAnimations={AVAILABLE_ANIMATIONS}
-        activeAnimation={activeAnimation}
-        onAnimationToggle={handleAnimationToggle}
-        visible={showAnimationButton}
-      />
+      {/* <AnimationControls */}
+      {/*   availableAnimations={AVAILABLE_ANIMATIONS} */}
+      {/*   activeAnimation={activeAnimation} */}
+      {/*   onAnimationToggle={handleAnimationToggle} */}
+      {/*   visible={showAnimationButton} */}
+      {/* /> */}
     </View>
   );
 }
@@ -195,4 +206,3 @@ const styles = StyleSheet.create({
 });
 
 export default ThreeAvatar;
-

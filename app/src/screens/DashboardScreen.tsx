@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { localStorageService } from "../services/LocalStorageService";
 import ThreeAvatar from "../components/ThreeAvatar";
+import { FacialExpressionControls } from "../components/controls/FacialExpressionControls";
 import { UserProfile } from "../models/User";
 import { AirQualityData } from "../models/AirQuality";
 
@@ -20,6 +21,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [airQuality, setAirQuality] = useState<AirQualityData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [facialExpression, setFacialExpression] = useState<string>("neutral");
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -97,6 +99,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     return commuteMessages[userProfile.commuteMode];
   };
 
+  const handleFacialExpressionChange = (expression: string) => {
+    console.log(`=== Facial expression change requested: ${expression} ===`);
+    setFacialExpression(expression);
+    console.log(`Facial expression state updated to: ${expression}`);
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -118,7 +126,19 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.avatarContainer}>
-          <ThreeAvatar showAnimationButton={true} />
+          <ThreeAvatar 
+            showAnimationButton={true} 
+            facialExpression={facialExpression}
+            onFacialExpressionChange={handleFacialExpressionChange}
+          />
+        </View>
+
+        {/* Facial Expression Controls - moved outside of ThreeAvatar */}
+        <View style={styles.controlsContainer}>
+          <FacialExpressionControls
+            currentExpression={facialExpression}
+            onExpressionChange={handleFacialExpressionChange}
+          />
         </View>
 
         <View style={styles.vitalsContainer}>
@@ -218,6 +238,17 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  controlsContainer: {
+    marginBottom: 30,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

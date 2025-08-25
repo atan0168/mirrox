@@ -167,8 +167,10 @@ class ReadyPlayerMeApiService {
 
       // After successful save, cache the avatar locally
       const avatarUrl = this.getSavedAvatarUrl(avatarId);
-      console.log(`Avatar saved successfully. Caching GLB file from: ${avatarUrl}`);
-      
+      console.log(
+        `Avatar saved successfully. Caching GLB file from: ${avatarUrl}`,
+      );
+
       try {
         await localStorageService.downloadAndCacheAvatar(avatarUrl);
         console.log(`Avatar ${avatarId} cached successfully`);
@@ -186,7 +188,7 @@ class ReadyPlayerMeApiService {
    * Get the final saved avatar URL
    */
   getSavedAvatarUrl(avatarId: string): string {
-    return `https://models.readyplayer.me/${avatarId}.glb`;
+    return `https://models.readyplayer.me/${avatarId}.glb?morphTagets=Default`;
   }
 
   /**
@@ -285,4 +287,3 @@ class ReadyPlayerMeApiService {
 }
 
 export const readyPlayerMeApiService = new ReadyPlayerMeApiService();
-

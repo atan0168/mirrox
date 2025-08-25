@@ -39,8 +39,8 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
       const existingAvatarUrl = await localStorageService.getAvatarUrl();
       if (!mounted) return;
       if (existingAvatarUrl) {
-        console.log('Avatar already exists, navigating to dashboard');
-        navigation.navigate('Dashboard');
+        console.log("Avatar already exists, navigating to dashboard");
+        navigation.navigate("Dashboard");
         return;
       }
 
@@ -119,13 +119,14 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
     setShowCreationOptions(false);
 
     try {
-  const avatarUrl = await readyPlayerMeApiService.createAvatarForUser(userProfile);
+      const avatarUrl =
+        await readyPlayerMeApiService.createAvatarForUser(userProfile);
 
-  // Save the avatar URL
-  await localStorageService.saveAvatarUrl(avatarUrl);
+      // Save the avatar URL
+      await localStorageService.saveAvatarUrl(avatarUrl);
 
-  // Navigate to dashboard
-  navigation.navigate("Dashboard");
+      // Navigate to dashboard
+      navigation.navigate("Dashboard");
     } catch (error) {
       console.error("Error creating avatar via API:", error);
       Alert.alert(
@@ -454,4 +455,3 @@ const styles = StyleSheet.create({
 });
 
 export default AvatarCreationScreen;
-
