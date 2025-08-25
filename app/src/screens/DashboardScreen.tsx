@@ -9,6 +9,7 @@ import {
 import { localStorageService } from "../services/LocalStorageService";
 import ThreeAvatar from "../components/ThreeAvatar";
 import { FacialExpressionControls } from "../components/controls/FacialExpressionControls";
+import { SkinToneButton } from "../components/controls/SkinToneButton";
 import { UserProfile } from "../models/User";
 import { AirQualityData } from "../models/AirQuality";
 
@@ -22,6 +23,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [facialExpression, setFacialExpression] = useState<string>("neutral");
+  const [skinToneAdjustment, setSkinToneAdjustment] = useState<number>(0);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -105,6 +107,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     console.log(`Facial expression state updated to: ${expression}`);
   };
 
+  const handleSkinToneChange = (value: number) => {
+    console.log(`=== Skin tone change requested: ${value} ===`);
+    setSkinToneAdjustment(value);
+    console.log(`Skin tone adjustment updated to: ${value}`);
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -130,10 +138,20 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             showAnimationButton={true}
             facialExpression={facialExpression}
             onFacialExpressionChange={handleFacialExpressionChange}
+            skinToneAdjustment={skinToneAdjustment}
           />
         </View>
 
-        {/* Facial Expression Controls - moved outside of ThreeAvatar */}
+        {/* Skin Tone Controls - above facial expressions */}
+        <View style={styles.controlsContainer}>
+          <Text style={styles.controlsTitle}>Avatar Customization</Text>
+          <SkinToneButton
+            skinToneAdjustment={skinToneAdjustment}
+            onSkinToneChange={handleSkinToneChange}
+          />
+        </View>
+
+        {/* Facial Expression Controls */}
         <View style={styles.controlsContainer}>
           <FacialExpressionControls
             currentExpression={facialExpression}
@@ -254,6 +272,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  controlsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2D3748",
+    marginBottom: 12,
   },
   vitalsContainer: {
     marginBottom: 30,

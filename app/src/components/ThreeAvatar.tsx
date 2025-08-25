@@ -8,6 +8,7 @@ import { AvatarModel } from "./avatar/AvatarModel";
 import { SmogController } from "./effects/SmogController";
 import { AnimationControls } from "./controls/AnimationControls";
 import { EffectControls } from "./controls/EffectControls";
+import { SkinToneControls } from "./controls/SkinToneControls";
 import { LoadingState, ErrorState } from "./ui/StateComponents";
 import { localStorageService } from "../services/LocalStorageService";
 import {
@@ -23,10 +24,13 @@ configureTextureLoader();
 
 interface ThreeAvatarProps {
   showAnimationButton?: boolean;
+  showSkinToneControls?: boolean;
   width?: number;
   height?: number;
   facialExpression?: string;
   onFacialExpressionChange?: (expression: string) => void;
+  skinToneAdjustment?: number; // -1 to 1, where negative darkens and positive lightens
+  onSkinToneChange?: (value: number) => void;
 }
 
 const AVAILABLE_ANIMATIONS = [
@@ -38,10 +42,13 @@ const AVAILABLE_ANIMATIONS = [
 
 function ThreeAvatar({
   showAnimationButton = false,
+  showSkinToneControls = false,
   width = 300,
   height = 500,
   facialExpression: externalFacialExpression = "neutral",
   onFacialExpressionChange,
+  skinToneAdjustment = 0,
+  onSkinToneChange,
 }: ThreeAvatarProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -167,6 +174,7 @@ function ThreeAvatar({
             url={avatarUrl}
             activeAnimation={activeAnimation}
             facialExpression={facialExpression}
+            skinToneAdjustment={skinToneAdjustment}
           />
         </group>
 
@@ -184,6 +192,11 @@ function ThreeAvatar({
         onHazeToggle={handleHazeToggle}
         intensity={smogIntensity}
         onIntensityChange={handleIntensityChange}
+      />
+      <SkinToneControls
+        skinToneAdjustment={skinToneAdjustment}
+        onSkinToneChange={onSkinToneChange || (() => {})}
+        visible={showSkinToneControls}
       />
       <AnimationControls
         availableAnimations={AVAILABLE_ANIMATIONS}

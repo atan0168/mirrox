@@ -8,12 +8,14 @@ interface AvatarModelProps {
   url: string;
   activeAnimation: string | null;
   facialExpression?: string;
+  skinToneAdjustment?: number; // -1 to 1, where negative darkens and positive lightens
 }
 
 export function AvatarModel({
   url,
   activeAnimation,
   facialExpression = "neutral",
+  skinToneAdjustment = 0,
 }: AvatarModelProps) {
   const { scene, animations } = useGLTF(url);
   const { camera } = useThree();
@@ -749,7 +751,7 @@ export function AvatarModel({
     }
   }, [headMesh, facialExpression]);
 
-  // Configure materials for mobile compatibility
+  // Configure materials for mobile compatibility and apply skin tone adjustments
   useEffect(() => {
     if (scene) {
       console.log(
@@ -770,6 +772,37 @@ export function AvatarModel({
           ) {
             child.material.envMapIntensity = 0.5;
             child.material.needsUpdate = true;
+            
+            // Apply skin tone adjustment to skin materials
+            if (skinToneAdjustment !== 0 && 
+                (child.name.toLowerCase().includes('body') || 
+                 child.name.toLowerCase().includes('head') || 
+                 child.name.toLowerCase().includes('face') ||
+                 child.name.toLowerCase().includes('arm') ||
+                 child.name.toLowerCase().includes('leg') ||
+                 child.material.name?.toLowerCase().includes('skin') ||
+                 child.material.name?.toLowerCase().includes('body'))) {
+              
+              // Create a copy of the material to avoid affecting other meshes
+              const adjustedMaterial = child.material.clone();
+              
+              // Get the current color
+              const currentColor = adjustedMaterial.color.clone();
+              
+              if (skinToneAdjustment > 0) {
+                // Lighten: lerp towards white
+                currentColor.lerp(new THREE.Color(1, 1, 1), skinToneAdjustment);
+              } else {
+                // Darken: lerp towards darker brown/black
+                currentColor.lerp(new THREE.Color(0.2, 0.15, 0.1), Math.abs(skinToneAdjustment));
+              }
+              
+              adjustedMaterial.color = currentColor;
+              adjustedMaterial.needsUpdate = true;
+              child.material = adjustedMaterial;
+              
+              console.log(`Applied skin tone adjustment ${skinToneAdjustment} to mesh: ${child.name}`);
+            }
           } else {
             child.material = compatibleMaterial;
           }
@@ -782,7 +815,7 @@ export function AvatarModel({
       sceneRef.current = scene;
       console.log("Model materials configured for mobile.");
     }
-  }, [scene]);
+  }, [scene, skinToneAdjustment]);
 
   // Load FBX animations
   useEffect(() => {

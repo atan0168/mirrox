@@ -28,6 +28,21 @@ interface RPMAvatar {
   imageUrl: string;
 }
 
+interface RPMAsset {
+  id: string;
+  type: string;
+  gender: "male" | "female";
+  name: string;
+  iconUrl: string;
+}
+
+interface SkinToneOption {
+  id: string;
+  name: string;
+  iconUrl: string;
+  value: number; // 0-1 scale for skin tone darkness
+}
+
 class ReadyPlayerMeApiService {
   private baseUrl = "https://api.readyplayer.me";
 
@@ -95,7 +110,72 @@ class ReadyPlayerMeApiService {
   }
 
   /**
-   * Step 2.2: Create a draft avatar from a template
+   * Get available skin tone assets from Ready Player Me
+   */
+  async getSkinToneAssets(token: string, gender: "male" | "female"): Promise<SkinToneOption[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/v2/assets`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch assets: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Filter for skin tone assets
+      const skinToneAssets = data.data.filter((asset: any) => 
+        asset.type === 'skin' && asset.gender === gender
+      );
+
+      return skinToneAssets.map((asset: any, index: number) => ({
+        id: asset.id,
+        name: asset.name,
+        iconUrl: asset.iconUrl,
+        value: index / (skinToneAssets.length - 1) // Normalize to 0-1 scale
+      }));
+    } catch (error) {
+      console.error("Error fetching skin tone assets:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update avatar with skin tone
+   */
+  async updateAvatarSkinTone(token: string, avatarId: string, skinToneAssetId: string): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/v2/avatars/${avatarId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          data: {
+            assets: {
+              skin: skinToneAssetId
+            }
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update avatar skin tone: ${response.statusText}`);
+      }
+
+      console.log("Avatar skin tone updated successfully");
+    } catch (error) {
+      console.error("Error updating avatar skin tone:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Step 3: Create a draft avatar from a template
    */
   async createAvatarFromTemplate(
     token: string,
