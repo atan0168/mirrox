@@ -20,31 +20,41 @@ interface AvatarCreationScreenProps {
   navigation: any;
 }
 
-const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation }) => {
+const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
+  navigation,
+}) => {
   const [isLoading, setIsLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isFrameReady, setIsFrameReady] = useState(false);
   const [showCreationOptions, setShowCreationOptions] = useState(true);
-  const [creationMethod, setCreationMethod] = useState<'api' | 'iframe' | null>(null);
+  const [creationMethod, setCreationMethod] = useState<"api" | "iframe" | null>(
+    null,
+  );
   const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
-    // Check if avatar already exists and skip creation if it does
-    const existingAvatarUrl = localStorageService.getAvatarUrl();
-    if (existingAvatarUrl) {
-      console.log("Avatar already exists, navigating to dashboard");
-      navigation.navigate("Dashboard");
-      return;
-    }
+    let mounted = true;
+    (async () => {
+      // Check if avatar already exists and skip creation if it does
+      const existingAvatarUrl = await localStorageService.getAvatarUrl();
+      if (!mounted) return;
+      if (existingAvatarUrl) {
+        console.log('Avatar already exists, navigating to dashboard');
+        navigation.navigate('Dashboard');
+        return;
+      }
 
-    // Get user profile to potentially customize avatar based on user data
-    const profile = localStorageService.getUserProfile();
-    if (profile) {
-      setUserProfile(profile);
-    }
+      // Get user profile to potentially customize avatar based on user data
+      const profile = await localStorageService.getUserProfile();
+      if (!mounted) return;
+      if (profile) setUserProfile(profile);
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [navigation]);
 
-  const handleWebViewMessage = (event: any) => {
+  const handleWebViewMessage = async (event: any) => {
     try {
       const json = JSON.parse(event.nativeEvent.data);
       console.log("Received message from ReadyPlayerMe:", json);
@@ -53,10 +63,10 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
       if (json.eventName === "v1.avatar.exported") {
         const url = json.data.url;
         console.log("Avatar exported:", url);
-        
+
         // Save the avatar URL
-        localStorageService.saveAvatarUrl(url);
-        
+        await localStorageService.saveAvatarUrl(url);
+
         // Navigate to dashboard
         navigation.navigate("Dashboard");
       }
@@ -66,7 +76,7 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
         console.log("Frame ready");
         setIsFrameReady(true);
         setIsLoading(false);
-        
+
         // Subscribe to all events
         webViewRef.current?.postMessage(
           JSON.stringify({
@@ -93,12 +103,10 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
       if (json.eventName === "v1.avatar.loading") {
         console.log("Avatar loading...");
       }
-
     } catch (e) {
       console.log("Error parsing message from ReadyPlayerMe iframe", e);
     }
   };
-
 
   const handleQuickCreate = async () => {
     if (!userProfile) {
@@ -107,30 +115,30 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
     }
 
     setIsLoading(true);
-    setCreationMethod('api');
+    setCreationMethod("api");
     setShowCreationOptions(false);
 
     try {
-      const avatarUrl = await readyPlayerMeApiService.createAvatarForUser(userProfile);
-      
-      // Save the avatar URL
-      localStorageService.saveAvatarUrl(avatarUrl);
-      
-      // Navigate to dashboard
-      navigation.navigate("Dashboard");
+  const avatarUrl = await readyPlayerMeApiService.createAvatarForUser(userProfile);
+
+  // Save the avatar URL
+  await localStorageService.saveAvatarUrl(avatarUrl);
+
+  // Navigate to dashboard
+  navigation.navigate("Dashboard");
     } catch (error) {
-      console.error('Error creating avatar via API:', error);
+      console.error("Error creating avatar via API:", error);
       Alert.alert(
-        "Error", 
+        "Error",
         "Failed to create avatar automatically. Please try the custom creation option.",
         [
           {
             text: "Try Custom Creation",
             onPress: () => {
-              setCreationMethod('iframe');
+              setCreationMethod("iframe");
               setShowCreationOptions(false);
               setIsLoading(false);
-            }
+            },
           },
           {
             text: "Retry",
@@ -138,37 +146,37 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
               setIsLoading(false);
               setShowCreationOptions(true);
               setCreationMethod(null);
-            }
-          }
-        ]
+            },
+          },
+        ],
       );
     }
   };
 
   const handleCustomCreate = () => {
-    setCreationMethod('iframe');
+    setCreationMethod("iframe");
     setShowCreationOptions(false);
     setIsLoading(true);
   };
 
   const constructAvatarUrl = () => {
     let url = `https://${RPM_SUBDOMAIN}.readyplayer.me/avatar?frameApi`;
-    
+
     // Add configuration parameters based on user profile or preferences
     const params = new URLSearchParams();
-    
+
     // You can add custom parameters here based on your needs
     if (userProfile?.gender) {
-      params.append('gender', userProfile.gender);
+      params.append("gender", userProfile.gender);
     }
-    params.append('bodyType', 'fullbody');
-    params.append('language', 'en');
-    
+    params.append("bodyType", "fullbody");
+    params.append("language", "en");
+
     const queryString = params.toString();
     if (queryString) {
       url += `&${queryString}`;
     }
-    
+
     return url;
   };
 
@@ -183,22 +191,30 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
         </View>
 
         <View style={styles.optionsContainer}>
-          <TouchableOpacity style={styles.optionCard} onPress={handleQuickCreate}>
+          <TouchableOpacity
+            style={styles.optionCard}
+            onPress={handleQuickCreate}
+          >
             <Text style={styles.optionIcon}>⚡</Text>
             <Text style={styles.optionTitle}>Quick Create</Text>
             <Text style={styles.optionDescription}>
-              Let us create an avatar for you based on your profile answers. Fast and personalized!
+              Let us create an avatar for you based on your profile answers.
+              Fast and personalized!
             </Text>
             <View style={styles.optionButton}>
               <Text style={styles.optionButtonText}>Create Automatically</Text>
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.optionCard} onPress={handleCustomCreate}>
+          <TouchableOpacity
+            style={styles.optionCard}
+            onPress={handleCustomCreate}
+          >
             <Text style={styles.optionIcon}>🎨</Text>
             <Text style={styles.optionTitle}>Custom Create</Text>
             <Text style={styles.optionDescription}>
-              Design your avatar from scratch with full customization options. Takes more time but fully personalized.
+              Design your avatar from scratch with full customization options.
+              Takes more time but fully personalized.
             </Text>
             <View style={styles.optionButton}>
               <Text style={styles.optionButtonText}>Customize Yourself</Text>
@@ -208,7 +224,8 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            💡 Both options create a unique avatar that represents you in the app
+            💡 Both options create a unique avatar that represents you in the
+            app
           </Text>
         </View>
       </SafeAreaView>
@@ -219,17 +236,18 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>
-          {creationMethod === 'api' ? 'Creating Your Avatar' : 'Customize Your Avatar'}
+          {creationMethod === "api"
+            ? "Creating Your Avatar"
+            : "Customize Your Avatar"}
         </Text>
         <Text style={styles.subtitle}>
-          {creationMethod === 'api' 
-            ? 'Please wait while we generate your personalized avatar...'
-            : 'Design your digital twin that will represent you in the app'
-          }
+          {creationMethod === "api"
+            ? "Please wait while we generate your personalized avatar..."
+            : "Design your digital twin that will represent you in the app"}
         </Text>
       </View>
 
-      {creationMethod === 'api' ? (
+      {creationMethod === "api" ? (
         <View style={styles.apiCreationContainer}>
           <ActivityIndicator size="large" color="#3182CE" />
           <Text style={styles.loadingText}>Generating your avatar...</Text>
@@ -245,7 +263,7 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
               <Text style={styles.loadingText}>Loading avatar creator...</Text>
             </View>
           )}
-          
+
           <WebView
             ref={webViewRef}
             source={{ uri: constructAvatarUrl() }}
@@ -276,7 +294,7 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
                       webViewRef.current?.reload();
                     },
                   },
-                ]
+                ],
               );
             }}
             onHttpError={(syntheticEvent) => {
@@ -299,10 +317,9 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({ navigation 
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          {creationMethod === 'api' 
-            ? '🤖 AI is creating your perfect avatar...'
-            : '💡 Tip: Take your time to customize your avatar. It will represent you throughout the app!'
-          }
+          {creationMethod === "api"
+            ? "🤖 AI is creating your perfect avatar..."
+            : "💡 Tip: Take your time to customize your avatar. It will represent you throughout the app!"}
         </Text>
       </View>
     </SafeAreaView>
@@ -437,3 +454,4 @@ const styles = StyleSheet.create({
 });
 
 export default AvatarCreationScreen;
+

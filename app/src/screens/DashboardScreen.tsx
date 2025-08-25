@@ -5,11 +5,8 @@ import {
   ActivityIndicator,
   StyleSheet,
   ScrollView,
-  Alert,
 } from "react-native";
 import { localStorageService } from "../services/LocalStorageService";
-import { apiService } from "../services/ApiService";
-import ReadyPlayerMeAvatar from "../components/ReadyPlayerMeAvatar";
 import ThreeAvatar from "../components/ThreeAvatar";
 import { UserProfile } from "../models/User";
 import { AirQualityData } from "../models/AirQuality";
@@ -27,9 +24,9 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   useEffect(() => {
     const initializeDashboard = async () => {
       try {
-        const profile = localStorageService.getUserProfile();
+        const profile = await localStorageService.getUserProfile();
         if (!profile) {
-          throw new Error("User profile not found.");
+          throw new Error('User profile not found.');
         }
         setUserProfile(profile);
 

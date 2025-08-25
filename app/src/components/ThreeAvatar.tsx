@@ -1,21 +1,21 @@
-import React, { useRef, useEffect, useState, Suspense } from "react";
+import React, { Suspense, useState, useEffect, useRef } from "react";
 import {
   View,
   StyleSheet,
-  TouchableOpacity,
-  Text,
   ActivityIndicator,
-  Dimensions,
+  Text,
+  TouchableOpacity,
 } from "react-native";
-import { Canvas } from "@react-three/fiber/native";
-import { useGLTF, useAnimations, useFBX } from "@react-three/drei/native";
+import { Canvas, useFrame } from "@react-three/fiber/native";
+import { useGLTF, OrbitControls } from "@react-three/drei/native";
 import * as THREE from "three";
 import { localStorageService } from "../services/LocalStorageService";
+import { FBXAnimationLoader } from "../utils/FBXAnimationLoader";
 
-// Suppress EXGL warnings for unsupported WebGL features
+// --- FIX 1: Correctly suppress EXGL warnings by targeting console.log ---
 if (__DEV__) {
-  const originalInfo = console.info;
-  console.info = (...args) => {
+  const originalLog = console.log;
+  console.log = (...args) => {
     if (
       args[0] &&
       typeof args[0] === "string" &&
@@ -23,7 +23,7 @@ if (__DEV__) {
     ) {
       return; // Suppress EXGL pixelStorei warnings
     }
-    originalInfo.apply(console, args);
+    originalLog.apply(console, args);
   };
 }
 
@@ -33,6 +33,64 @@ THREE.ColorManagement.enabled = false;
 // Preload and configure texture loader for React Native
 const textureLoader = new THREE.TextureLoader();
 textureLoader.crossOrigin = "anonymous";
+
+// Helper function to retarget FBX animations to GLB skeleton
+function retargetAnimationToSkeleton(clip: THREE.AnimationClip, targetSkeleton: THREE.Skeleton): THREE.AnimationClip {
+  const clonedClip = clip.clone();
+  
+  clonedClip.tracks.forEach(track => {
+    // Extract bone name from track name (format: "BoneName.position" or "BoneName.quaternion")
+    const trackParts = track.name.split('.');
+    if (trackParts.length >= 2) {
+      const boneName = trackParts[0];
+      const property = trackParts[1];
+      
+      // Find corresponding bone in target skeleton using fuzzy matching
+      const targetBone = targetSkeleton.bones.find(bone => {
+        const lowerBoneName = boneName.toLowerCase();
+        const lowerTargetName = bone.name.toLowerCase();
+        
+        // Try exact match first
+        if (lowerBoneName === lowerTargetName) return true;
+        
+        // Try partial matches
+        if (lowerBoneName.includes(lowerTargetName) || lowerTargetName.includes(lowerBoneName)) return true;
+        
+        // Try common bone name mappings
+        const boneMapping: { [key: string]: string[] } = {
+          'hips': ['hip', 'pelvis', 'root'],
+          'spine': ['spine', 'back'],
+          'head': ['head', 'skull'],
+          'leftarm': ['left_arm', 'l_arm', 'arm_l'],
+          'rightarm': ['right_arm', 'r_arm', 'arm_r'],
+          'leftleg': ['left_leg', 'l_leg', 'leg_l'],
+          'rightleg': ['right_leg', 'r_leg', 'leg_r'],
+        };
+        
+        for (const [standard, variants] of Object.entries(boneMapping)) {
+          if (variants.some(variant => lowerBoneName.includes(variant) && lowerTargetName.includes(standard))) {
+            return true;
+          }
+          if (variants.some(variant => lowerTargetName.includes(variant) && lowerBoneName.includes(standard))) {
+            return true;
+          }
+        }
+        
+        return false;
+      });
+      
+      if (targetBone) {
+        // Update track name to match target bone
+        track.name = `${targetBone.name}.${property}`;
+        console.log(`Retargeted ${boneName} -> ${targetBone.name}`);
+      } else {
+        console.warn(`Could not find target bone for: ${boneName}`);
+      }
+    }
+  });
+  
+  return clonedClip;
+}
 
 // Override Three.js texture loading to prevent EXGL issues
 const originalLoad = textureLoader.load.bind(textureLoader);
@@ -54,327 +112,499 @@ textureLoader.load = function (url, onLoad, onProgress, onError) {
   );
 };
 
-interface ThreeAvatarProps {
-  showAnimationButton?: boolean;
-}
-
 function AvatarModel({
-  animation,
-  avatarUrl,
-  onLoad,
-  onError,
+  url,
+  isAnimating,
 }: {
-  animation: string;
-  avatarUrl: string;
-  onLoad: () => void;
-  onError: (error: string) => void;
+  url: string;
+  isAnimating: boolean;
 }) {
-  const group = useRef<THREE.Group>(null);
+  const { scene, animations } = useGLTF(url);
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const [animationActions, setAnimationActions] = useState<
+    THREE.AnimationAction[]
+  >([]);
+  const [fbxAnimations, setFbxAnimations] = useState<THREE.AnimationClip[]>([]);
+  const sceneRef = useRef<THREE.Group | null>(null);
 
-  try {
-    const { scene, animations } = useGLTF(avatarUrl);
-    const { actions } = useAnimations(animations, group);
-
-    useEffect(() => {
-      if (scene) {
-        console.log("Avatar model loaded successfully:", avatarUrl);
-        onLoad();
-
-        // Center and scale the model
-        if (scene) {
-          try {
-            const box = new THREE.Box3().setFromObject(scene);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-
-            // Center the model
-            scene.position.sub(center);
-
-            // Scale to fit in view
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 2 / maxDim;
-            scene.scale.setScalar(scale);
-          } catch (scaleError) {
-            console.warn("Could not scale model, using default:", scaleError);
-            // Use default positioning
-            scene.position.set(0, 0, 0);
-            scene.scale.setScalar(1);
-          }
-        }
-      }
-    }, [scene, avatarUrl, onLoad]);
-
-    useEffect(() => {
-      if (actions && animation) {
-        actions[animation]?.play();
-        return () => {
-          actions[animation]?.fadeOut(0.5);
-        };
-      }
-    }, [actions, animation]);
-
-    return (
-      <primitive
-        ref={group}
-        object={scene}
-        dispose={null}
-        position={[0, 0, 0]}
-      />
-    );
-  } catch (error) {
-    console.error("Error loading avatar model:", error);
-    onError(`Failed to load model: ${error}`);
-
-    // Return a fallback avatar when the model fails to load
-    return (
-      <mesh position={[0, 0, 0]}>
-        <cylinderGeometry args={[0.5, 0.5, 2, 8]} />
-        <meshStandardMaterial color="#9B59B6" />
-      </mesh>
-    );
-  }
-}
-
-// Three.js-based loading fallback for Suspense inside Canvas
-function ThreeLoadingFallback() {
-  return (
-    <mesh position={[0, 0, 0]}>
-      <boxGeometry args={[0.5, 0.5, 0.5]} />
-      <meshStandardMaterial color="#3182CE" />
-    </mesh>
-  );
-}
-
-// React Native loading fallback for initial loading state
-function LoadingFallback() {
-  return (
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#3182CE" />
-      <Text style={styles.loadingText}>Loading 3D Avatar...</Text>
-    </View>
-  );
-}
-
-class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  { hasError: boolean; errorMessage: string }
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, errorMessage: "" };
-  }
-
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true, errorMessage: error.message || "Unknown error" };
-  }
-
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error("ErrorBoundary caught an error", error, errorInfo);
-    this.setState({ errorMessage: error.message || "Unknown error" });
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Failed to load avatar.</Text>
-          <Text style={styles.errorDetails}>{this.state.errorMessage}</Text>
-        </View>
+  // This effect runs once after the scene is loaded.
+  useEffect(() => {
+    if (scene) {
+      console.log(
+        "Scene loaded. Configuring materials for mobile compatibility.",
       );
+
+      // Create a more realistic material that still works well on mobile
+      const compatibleMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.5,
+        metalness: 0.1,
+      });
+
+      // Go through every single part of the loaded 3D model.
+      scene.traverse((child) => {
+        // If the part is a mesh (i.e., something with geometry and a material)...
+        if (child instanceof THREE.Mesh) {
+          // Keep original material if it's compatible, otherwise use fallback
+          if (
+            child.material &&
+            child.material instanceof THREE.MeshStandardMaterial
+          ) {
+            // Configure existing material for mobile
+            child.material.envMapIntensity = 0.5;
+            child.material.needsUpdate = true;
+          } else {
+            // Replace incompatible materials
+            child.material = compatibleMaterial;
+          }
+
+          // Enable shadow casting and receiving
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      
+      // Store reference to scene for animations
+      sceneRef.current = scene;
+      console.log("Model materials configured for mobile.");
+    }
+  }, [scene]);
+
+  // Load FBX animations
+  useEffect(() => {
+    if (!scene) return;
+
+    console.log("Loading FBX animations...");
+    const loadFBXAnimations = async () => {
+      try {
+        const fbxLoader = new FBXAnimationLoader();
+        
+        // Use proper asset URLs for React Native - these need to be served via Metro bundler
+        const animationPromises = [
+          fbxLoader.loadFBXAnimation("http://10.10.0.126:8080/animations/M_Standing_Expressions_007.fbx"),
+          // fbxLoader.loadFBXAnimation("http://10.10.0.126:8080/animations/laying_severe_cough.fbx")
+        ];
+
+        const loadedAnimations = await Promise.allSettled(animationPromises);
+        
+        const successfulAnimations: THREE.AnimationClip[] = [];
+        loadedAnimations.forEach((result, index) => {
+          if (result.status === 'fulfilled' && result.value) {
+            console.log(`Successfully loaded FBX animation ${index + 1}`);
+            // Flatten the array since loadFBXAnimation returns an array of clips
+            successfulAnimations.push(...result.value);
+          } else {
+            console.warn(`Failed to load FBX animation ${index + 1}:`, result.status === 'rejected' ? result.reason : 'Unknown error');
+          }
+        });
+
+        if (successfulAnimations.length > 0) {
+          console.log(`Loaded ${successfulAnimations.length} FBX animation clips`);
+          setFbxAnimations(successfulAnimations);
+        } else {
+          console.log("No FBX animations loaded, will use fallback");
+        }
+      } catch (error) {
+        console.error("Error loading FBX animations:", error);
+      }
+    };
+
+    loadFBXAnimations();
+  }, [scene]);
+
+  // Set up animations - prioritize FBX, then GLB, then fallback
+  useEffect(() => {
+    if (!scene) return;
+
+    console.log("Setting up animation mixer...");
+    
+    // Clean up existing mixer
+    if (mixerRef.current) {
+      mixerRef.current.stopAllAction();
+      mixerRef.current = null;
     }
 
-    return this.props.children;
-  }
+    // Create new animation mixer
+    const mixer = new THREE.AnimationMixer(scene);
+    mixerRef.current = mixer;
+
+    const actions: THREE.AnimationAction[] = [];
+
+    // Priority 1: Use FBX animations if available (with careful application)
+    if (fbxAnimations.length > 0) {
+      console.log(`Setting up ${fbxAnimations.length} FBX animations...`);
+      
+      // Find the skeleton from the GLB avatar
+      let avatarSkeleton: THREE.Skeleton | null = null;
+      let avatarSkinnedMesh: THREE.SkinnedMesh | null = null;
+      scene.traverse((child) => {
+        if (child instanceof THREE.SkinnedMesh && child.skeleton) {
+          avatarSkeleton = child.skeleton;
+          avatarSkinnedMesh = child;
+          console.log("Found avatar skeleton with", child.skeleton.bones.length, "bones");
+        }
+      });
+
+      if (avatarSkeleton && avatarSkinnedMesh) {
+        const skeleton = avatarSkeleton as THREE.Skeleton; // Explicit cast to avoid TS issues
+        console.log("Avatar skeleton bones:", skeleton.bones.map((bone: THREE.Bone) => bone.name));
+        
+        // Store the original bone transforms
+        const originalBoneTransforms = new Map();
+        skeleton.bones.forEach((bone: THREE.Bone) => {
+          originalBoneTransforms.set(bone.uuid, {
+            position: bone.position.clone(),
+            quaternion: bone.quaternion.clone(),
+            scale: bone.scale.clone()
+          });
+        });
+        
+        fbxAnimations.forEach((clip: THREE.AnimationClip, index: number) => {
+          try {
+            console.log(`Setting up FBX animation ${index}: ${clip.name}`);
+            console.log("FBX animation tracks:", clip.tracks.map(track => track.name));
+            
+            // Create a filtered version of the animation that only affects existing bones
+            const filteredTracks = clip.tracks.filter(track => {
+              const trackParts = track.name.split('.');
+              if (trackParts.length >= 2) {
+                const boneName = trackParts[0];
+                const hasBone = skeleton.bones.some((bone: THREE.Bone) => 
+                  bone.name === boneName || 
+                  bone.name.toLowerCase().includes(boneName.toLowerCase()) ||
+                  boneName.toLowerCase().includes(bone.name.toLowerCase())
+                );
+                if (!hasBone) {
+                  console.log(`Skipping track for non-existent bone: ${boneName}`);
+                }
+                return hasBone;
+              }
+              return false;
+            });
+            
+            if (filteredTracks.length > 0) {
+              console.log(`Keeping ${filteredTracks.length}/${clip.tracks.length} tracks`);
+              
+              // Filter out position tracks for root bone to prevent avatar displacement
+              const safeTracks = filteredTracks.filter(track => {
+                if (track.name === 'Hips.position') {
+                  console.log("Removing Hips.position track to prevent avatar displacement");
+                  return false;
+                }
+                return true;
+              });
+              
+              // Create a new clip with only the safe tracks
+              const filteredClip = new THREE.AnimationClip(
+                clip.name + '_filtered',
+                clip.duration,
+                safeTracks
+              );
+              
+              const action = mixer.clipAction(filteredClip);
+              action.setLoop(THREE.LoopRepeat, Infinity);
+              action.clampWhenFinished = true;
+              
+              // Use full weight since bones match perfectly
+              action.setEffectiveWeight(1.0);
+              
+              actions.push(action);
+            } else {
+              console.warn(`No valid tracks found for animation: ${clip.name}`);
+            }
+            
+          } catch (error) {
+            console.error(`Error setting up FBX animation ${index}:`, error);
+          }
+        });
+
+        if (actions.length > 0) {
+          console.log(`Successfully set up ${actions.length} filtered FBX animations`);
+          setAnimationActions(actions);
+          return;
+        }
+      } else {
+        console.warn("No skeleton found in avatar, cannot apply FBX animations");
+      }
+    }
+
+    // Priority 2: Use GLB animations if available
+    if (animations && animations.length > 0) {
+      console.log(`Setting up ${animations.length} GLB animations...`);
+      
+      animations.forEach((clip: THREE.AnimationClip, index: number) => {
+        try {
+          console.log(`Loading GLB animation ${index}: ${clip.name}`);
+          const action = mixer.clipAction(clip);
+          action.setLoop(THREE.LoopRepeat, Infinity);
+          actions.push(action);
+        } catch (error) {
+          console.error(`Error setting up GLB animation ${index}:`, error);
+        }
+      });
+
+      if (actions.length > 0) {
+        console.log(`Successfully set up ${actions.length} GLB animations`);
+        setAnimationActions(actions);
+        return;
+      }
+    }
+
+    // Priority 3: Create fallback animation
+    console.log("No FBX or GLB animations found, creating simple idle animation...");
+
+    try {
+      // Find the best target for animation (preferably skinned mesh or armature)
+      let targetObject: THREE.Object3D = scene;
+      let foundSkinned = false;
+      
+      scene.traverse((child) => {
+        if (!foundSkinned && child instanceof THREE.SkinnedMesh) {
+          targetObject = child;
+          foundSkinned = true;
+          console.log("Found SkinnedMesh for animation:", child.name);
+        } else if (!foundSkinned && (
+          child.name.toLowerCase().includes('avatar') || 
+          child.name.toLowerCase().includes('armature') ||
+          child.name.toLowerCase().includes('skeleton')
+        )) {
+          targetObject = child;
+          console.log("Found potential animation target:", child.name);
+        }
+      });
+
+      console.log("Creating fallback animation for:", targetObject.name || "scene");
+
+      // Create a very subtle breathing animation
+      const times = [0, 1, 2];
+      const scaleValues = [1, 1.01, 1]; // Very subtle scale change
+
+      const scaleKF = new THREE.VectorKeyframeTrack(
+        targetObject.uuid + '.scale',
+        times,
+        scaleValues.flatMap(val => [val, val, val])
+      );
+      
+      const clip = new THREE.AnimationClip("idle_breathing", 2, [scaleKF]);
+      const action = mixer.clipAction(clip);
+      action.setLoop(THREE.LoopRepeat, Infinity);
+
+      setAnimationActions([action]);
+      console.log("Created fallback idle animation");
+    } catch (error) {
+      console.error("Error creating fallback animation:", error);
+      setAnimationActions([]);
+    }
+  }, [scene, animations, fbxAnimations]);
+
+  // Control animation playback
+  useEffect(() => {
+    console.log(`Animation state changed: ${isAnimating}, available actions: ${animationActions.length}`);
+    
+    if (animationActions.length > 0) {
+      if (isAnimating) {
+        // Play animations with proper setup
+        animationActions.forEach((action, index) => {
+          try {
+            console.log(`Starting animation ${index}: ${action.getClip().name}`);
+            action.reset();
+            action.setEffectiveWeight(1);
+            action.setEffectiveTimeScale(1);
+            action.play();
+            
+            // Log some debug info about the animation
+            console.log(`Animation duration: ${action.getClip().duration}s`);
+            console.log(`Animation tracks: ${action.getClip().tracks.length}`);
+          } catch (error) {
+            console.error(`Error starting animation ${index}:`, error);
+          }
+        });
+        console.log("Animations started");
+        
+        // Debug: Check avatar position after starting animation
+        if (scene) {
+          scene.traverse((child) => {
+            if (child instanceof THREE.SkinnedMesh) {
+              console.log(`Avatar mesh position: x:${child.position.x.toFixed(2)}, y:${child.position.y.toFixed(2)}, z:${child.position.z.toFixed(2)}`);
+              console.log(`Avatar mesh scale: x:${child.scale.x.toFixed(2)}, y:${child.scale.y.toFixed(2)}, z:${child.scale.z.toFixed(2)}`);
+              console.log(`Avatar mesh visible: ${child.visible}`);
+            }
+          });
+        }
+        
+      } else {
+        // Stop all animations gracefully without fading (to prevent avatar disappearing)
+        animationActions.forEach((action, index) => {
+          try {
+            console.log(`Stopping animation ${index}: ${action.getClip().name}`);
+            action.stop();
+          } catch (error) {
+            console.error(`Error stopping animation ${index}:`, error);
+          }
+        });
+        console.log("Animations stopped");
+      }
+    } else {
+      console.log("No animation actions available");
+    }
+  }, [isAnimating, animationActions, scene]);
+
+  // Update animation mixer each frame
+  useFrame((state, delta) => {
+    if (mixerRef.current) {
+      try {
+        mixerRef.current.update(delta);
+        
+        // Debug: Log mixer state occasionally (every 60 frames ≈ 1 second)
+        if (isAnimating && Math.floor(state.clock.elapsedTime * 60) % 60 === 0) {
+          const activeActions = animationActions.filter(action => action.isRunning());
+          console.log(`Mixer update - Active actions: ${activeActions.length}, Time: ${state.clock.elapsedTime.toFixed(1)}s`);
+          
+          // Check if avatar is still visible
+          if (scene) {
+            scene.traverse((child) => {
+              if (child instanceof THREE.SkinnedMesh) {
+                if (!child.visible || child.scale.x < 0.01 || child.scale.y < 0.01 || child.scale.z < 0.01) {
+                  console.warn("Avatar became invisible or too small during animation!");
+                  console.log(`Visible: ${child.visible}, Scale: ${child.scale.x}, ${child.scale.y}, ${child.scale.z}`);
+                }
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Animation mixer update error:", error);
+      }
+    }
+  });
+
+  // Return the modified scene.
+  return <primitive object={scene} />;
+}
+
+interface ThreeAvatarProps {
+  showAnimationButton?: boolean;
+  width?: number;
+  height?: number;
 }
 
 const ThreeAvatar: React.FC<ThreeAvatarProps> = ({
   showAnimationButton = false,
+  width = 300,
+  height = 500,
 }) => {
-  const [currentAnimation, setCurrentAnimation] = useState<string>("idle");
-  const [isAnimating, setIsAnimating] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [modelLoaded, setModelLoaded] = useState(false);
-  const [modelError, setModelError] = useState<string | null>(null);
-  const [canvasReady, setCanvasReady] = useState(false);
-  const [canvasError, setCanvasError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const canvasRef = useRef<any>(null);
 
   useEffect(() => {
+    // Simplified loading logic
     const loadAvatar = async () => {
       try {
-        console.log("ThreeAvatar: Starting to load avatar...");
-        const savedAvatarUrl = localStorageService.getAvatarUrl();
-        if (savedAvatarUrl) {
-          console.log("ThreeAvatar: Using saved avatar URL:", savedAvatarUrl);
-          setAvatarUrl(savedAvatarUrl);
+        console.log("Attempting to load avatar URL...");
+        let url = await localStorageService.getAvatarUrl();
+        if (!url) {
+          console.log("No saved URL, using fallback.");
+          url = "https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb";
         } else {
-          // Use the working ReadyPlayerMe URL
-          const defaultUrl =
-            "https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb";
-          console.log("ThreeAvatar: Using default avatar URL:", defaultUrl);
-          setAvatarUrl(defaultUrl);
+          console.log(`Found saved URL: ${url}`);
         }
-        setIsLoading(false);
-      } catch (error) {
-        console.error("ThreeAvatar: Error loading avatar URL:", error);
-        setModelError("Failed to load avatar URL");
-        setIsLoading(false);
+
+        setAvatarUrl(url);
+      } catch (err) {
+        console.error("Error loading avatar:", err);
+        setError("Failed to load avatar");
       }
     };
 
     loadAvatar();
   }, []);
 
-  const handleModelLoad = () => {
-    console.log("ThreeAvatar: Model loaded successfully");
-    setModelLoaded(true);
-    setModelError(null);
+  const handleAnimationToggle = () => {
+    const newState = !isAnimating;
+    console.log(`User toggling animation: ${isAnimating} -> ${newState}`);
+    setIsAnimating(newState);
   };
 
-  const handleModelError = (error: string) => {
-    console.error("ThreeAvatar: Model loading error:", error);
-    setModelError(error);
-    setModelLoaded(false);
-  };
-
-  const handleCanvasError = (error: any) => {
-    console.error("ThreeAvatar: Canvas error:", error);
-    setCanvasError(`Canvas error: ${error?.message || error}`);
-  };
-
-  const triggerExpression = () => {
-    if (isAnimating) return;
-
-    setIsAnimating(true);
-    setCurrentAnimation("expression");
-
-    setTimeout(() => {
-      setCurrentAnimation("idle");
-      setIsAnimating(false);
-    }, 3000);
-  };
-
-  if (isLoading) {
-    return <LoadingFallback />;
-  }
-
-  if (modelError) {
+  if (!avatarUrl) {
     return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Avatar Loading Error</Text>
-          <Text style={styles.errorDetails}>{modelError}</Text>
-          <Text style={styles.errorDetails}>URL: {avatarUrl}</Text>
-        </View>
+      <View style={[styles.container, { width, height }]}>
+        <ActivityIndicator size="large" color="#3182CE" />
+        <Text style={styles.loadingText}>Loading avatar...</Text>
       </View>
     );
   }
 
-  if (!avatarUrl) {
+  if (error) {
     return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>No Avatar URL Available</Text>
-        </View>
+      <View style={[styles.container, { width, height }]}>
+        <Text style={styles.errorText}>{error}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <ErrorBoundary>
-        <Canvas
-          style={styles.canvas}
-          camera={{ position: [0, 0, 3], fov: 50 }}
-          gl={{
-            antialias: false,
-            powerPreference: "high-performance",
-            alpha: false,
-            stencil: false,
-            depth: true,
-            preserveDrawingBuffer: false,
-          }}
-          onCreated={({ gl, scene, camera }) => {
-            console.log("ThreeAvatar: Canvas created successfully");
-            try {
-              gl.setClearColor(0xf0f0f0, 1);
-              gl.outputColorSpace = THREE.SRGBColorSpace;
-              gl.toneMapping = THREE.NoToneMapping;
-              setCanvasReady(true);
-              setCanvasError(null);
+    <View style={[styles.container, { width, height }]}>
+      <Canvas
+        ref={canvasRef}
+        gl={{
+          // These settings are vital for mobile.
+          antialias: false,
+          powerPreference: "high-performance",
+          preserveDrawingBuffer: true,
+        }}
+        // Place the camera further away to ensure we see the model.
+        camera={{ position: [0, 1, 5], fov: 50 }}
+        // This onCreated is crucial for material rendering.
+        onCreated={({ gl, scene }) => {
+          console.log("Canvas created. Configuring renderer...");
+          gl.setClearColor("#f0f0f0");
+          gl.outputColorSpace = THREE.SRGBColorSpace;
+          gl.toneMapping = THREE.NoToneMapping;
+          gl.shadowMap.enabled = true;
+          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          console.log("Renderer configured.");
+        }}
+      >
+        {/* Improved lighting setup */}
+        <ambientLight intensity={1.5} />
+        <directionalLight
+          position={[5, 5, 5]}
+          intensity={2}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+        />
+        <pointLight position={[-5, 5, 5]} intensity={1} />
 
-              // Add some debugging info
-              console.log("ThreeAvatar: GL context:", gl);
-              console.log("ThreeAvatar: Scene:", scene);
-              console.log("ThreeAvatar: Camera:", camera);
-            } catch (error) {
-              console.error("ThreeAvatar: Error in onCreated:", error);
-              setCanvasError(`onCreated error: ${error}`);
-            }
-          }}
-        >
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[5, 5, 5]} intensity={0.5} />
-          <pointLight position={[-5, 5, 5]} intensity={0.3} />
+        <Suspense fallback={null}>
+          <group position={[0, -1, 0]} scale={2}>
+            <AvatarModel url={avatarUrl} isAnimating={isAnimating} />
+          </group>
+        </Suspense>
 
-          {/* Test cube to verify Canvas is working */}
-          <mesh position={[0, 0, 0]}>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color="#FF6B6B" />
-          </mesh>
+        <OrbitControls
+          enablePan={false}
+          enableZoom={false}
+          enableRotate={false}
+          enabled={false}
+        />
+      </Canvas>
 
-          {/* Simple rotating cube for testing */}
-          <mesh position={[2, 0, 0]}>
-            <boxGeometry args={[0.5, 0.5, 0.5]} />
-            <meshStandardMaterial color="#4A90E2" />
-          </mesh>
-
-          {/* Try loading the avatar model */}
-          <Suspense fallback={<ThreeLoadingFallback />}>
-            {avatarUrl && (
-              <AvatarModel
-                animation={currentAnimation}
-                avatarUrl={avatarUrl}
-                onLoad={handleModelLoad}
-                onError={handleModelError}
-              />
-            )}
-          </Suspense>
-        </Canvas>
-      </ErrorBoundary>
+      <View style={styles.debugContainer}>
+        <Text style={styles.debugText}>Your Digital Twin</Text>
+      </View>
 
       {showAnimationButton && (
         <TouchableOpacity
-          style={[
-            styles.animationButton,
-            isAnimating && styles.animationButtonDisabled,
-          ]}
-          onPress={triggerExpression}
-          disabled={isAnimating}
+          style={styles.animationButton}
+          onPress={handleAnimationToggle}
         >
           <Text style={styles.animationButtonText}>
-            {isAnimating ? "🎭 Animating..." : "🎭 Play Expression"}
+            {isAnimating ? "Stop Animation" : "Start Animation"}
           </Text>
         </TouchableOpacity>
-      )}
-
-      {/* Debug info in development */}
-      {__DEV__ && (
-        <View style={styles.debugContainer}>
-          <Text style={styles.debugText}>
-            Canvas Ready: {canvasReady ? "Yes" : "No"}
-          </Text>
-          <Text style={styles.debugText}>
-            Model Loaded: {modelLoaded ? "Yes" : "No"}
-          </Text>
-          <Text style={styles.debugText}>URL: {avatarUrl}</Text>
-          <Text style={styles.debugText}>
-            Test: You should see a red cube and blue cube
-          </Text>
-          {canvasError && (
-            <Text style={styles.debugText}>Canvas Error: {canvasError}</Text>
-          )}
-        </View>
       )}
     </View>
   );
@@ -382,44 +612,37 @@ const ThreeAvatar: React.FC<ThreeAvatarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    width: 200,
-    height: 300,
+    width: 300,
+    height: 500,
     backgroundColor: "#f0f0f0",
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: "hidden",
   },
-  canvas: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f0f0f0",
-  },
   loadingText: {
-    marginTop: 10,
-    fontSize: 14,
+    marginTop: 16,
+    fontSize: 16,
     color: "#4A5568",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f0f0f0",
-    padding: 20,
+    textAlign: "center",
   },
   errorText: {
     fontSize: 16,
     color: "#E53E3E",
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  errorDetails: {
-    fontSize: 12,
-    color: "#E53E3E",
     textAlign: "center",
-    marginBottom: 4,
+    padding: 20,
+  },
+  debugContainer: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 5,
+    borderRadius: 5,
+  },
+  debugText: {
+    color: "white",
+    textAlign: "center",
+    fontSize: 12,
   },
   animationButton: {
     position: "absolute",
@@ -427,37 +650,14 @@ const styles = StyleSheet.create({
     left: 10,
     right: 10,
     backgroundColor: "#3182CE",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    padding: 12,
     borderRadius: 8,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  animationButtonDisabled: {
-    backgroundColor: "#A0AEC0",
   },
   animationButtonText: {
-    color: "#FFFFFF",
+    color: "white",
     fontSize: 14,
     fontWeight: "600",
-  },
-  debugContainer: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    right: 10,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    padding: 8,
-    borderRadius: 4,
-  },
-  debugText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    marginBottom: 2,
   },
 });
 

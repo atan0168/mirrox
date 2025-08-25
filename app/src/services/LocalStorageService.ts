@@ -1,85 +1,104 @@
-import { MMKV } from "react-native-mmkv";
+import * as SQLite from 'expo-sqlite';
 import { UserProfile } from "../models/User";
 
-// Initialize the storage instance
-const storage = new MMKV();
-// const storage = new MMKV({
-//   id: 'user-profile-storage',
-// Optional: Add encryption key for enhanced security
-// encryptionKey: 'your-super-secret-key'
-// });
-
-const USER_PROFILE_KEY = "user_profile";
-const AVATAR_URL_KEY = "avatar_url";
+const DB_NAME = 'localstorage.db';
+const TABLE_NAME = 'kv';
+const USER_PROFILE_KEY = 'user_profile';
+const AVATAR_URL_KEY = 'avatar_url';
 const CURRENT_SCHEMA_VERSION = 1;
 
-class LocalStorageService {
-  public saveUserProfile(profile: UserProfile): void {
+export class LocalStorageService {
+  private db: SQLite.SQLiteDatabase;
+  private ready: Promise<void>;
+
+  constructor() {
+    this.db = SQLite.openDatabaseSync(DB_NAME);
+    this.ready = this.init();
+  }
+
+  private async init() {
+    // Create simple key-value table
+    await this.db.execAsync(`CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (key TEXT PRIMARY KEY NOT NULL, value TEXT);`);
+  }
+
+  private async setItem(key: string, value: string): Promise<void> {
+    await this.ready;
+    await this.db.runAsync(
+      `INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?);`,
+      [key, value],
+    );
+  }
+
+  private async getItem(key: string): Promise<string | null> {
+    await this.ready;
+    const result = await this.db.getFirstAsync<{value: string}>(`SELECT value FROM ${TABLE_NAME} WHERE key = ? LIMIT 1;`, [key]);
+    return result?.value || null;
+  }
+
+  private async clearAll(): Promise<void> {
+    await this.ready;
+    await this.db.runAsync(`DELETE FROM ${TABLE_NAME};`);
+  }
+
+  public async saveUserProfile(profile: UserProfile): Promise<void> {
     try {
-      storage.set(USER_PROFILE_KEY, JSON.stringify(profile));
+      const withVersion = { ...(profile as any), schemaVersion: profile.schemaVersion || CURRENT_SCHEMA_VERSION };
+      await this.setItem(USER_PROFILE_KEY, JSON.stringify(withVersion));
     } catch (error) {
-      console.error("Failed to save user profile:", error);
-      // Handle error appropriately (e.g., show a user-facing message)
+      console.error('Failed to save user profile:', error);
     }
   }
 
-  public getUserProfile(): UserProfile | null {
+  public async getUserProfile(): Promise<UserProfile | null> {
     try {
-      const profileJson = storage.getString(USER_PROFILE_KEY);
+      const profileJson = await this.getItem(USER_PROFILE_KEY);
       if (profileJson) {
         let profile = JSON.parse(profileJson);
-        // Run migration if necessary
         if ((profile.schemaVersion || 1) < CURRENT_SCHEMA_VERSION) {
           profile = this.migrateProfile(profile);
-          this.saveUserProfile(profile); // Save the updated profile back to storage
+          await this.saveUserProfile(profile);
         }
         return profile as UserProfile;
       }
       return null;
     } catch (error) {
-      console.error("Failed to retrieve user profile:", error);
+      console.error('Failed to retrieve user profile:', error);
       return null;
     }
   }
 
-  public saveAvatarUrl(url: string): void {
+  public async saveAvatarUrl(url: string): Promise<void> {
     try {
-      storage.set(AVATAR_URL_KEY, url);
+      await this.setItem(AVATAR_URL_KEY, url);
     } catch (error) {
-      console.error("Failed to save avatar URL:", error);
+      console.error('Failed to save avatar URL:', error);
     }
   }
 
-  public getAvatarUrl(): string | null {
+  public async getAvatarUrl(): Promise<string | null> {
     try {
-      return storage.getString(AVATAR_URL_KEY) || null;
+      return await this.getItem(AVATAR_URL_KEY);
     } catch (error) {
-      console.error("Failed to retrieve avatar URL:", error);
+      console.error('Failed to retrieve avatar URL:', error);
       return null;
     }
   }
 
-  public clearData(): void {
+  public async clearData(): Promise<void> {
     try {
-      storage.clearAll();
+      await this.clearAll();
     } catch (error) {
-      console.error("Failed to clear storage:", error);
+      console.error('Failed to clear storage:', error);
     }
   }
 
   private migrateProfile(profile: any): UserProfile {
     const version = profile.schemaVersion || 1;
-
-    // Add migration logic here as schema evolves
-    // Example:
-    // if (version < 2) {
-    //   profile.dietaryPreference = 'unspecified';
-    // }
-
+    // Add migration steps here as schema evolves
     profile.schemaVersion = CURRENT_SCHEMA_VERSION;
     return profile as UserProfile;
   }
 }
 
-// Export a singleton instance
+// Export singleton
 export const localStorageService = new LocalStorageService();

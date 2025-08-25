@@ -34,7 +34,9 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({ route, naviga
       schemaVersion: 1,
     };
 
-    localStorageService.saveUserProfile(profile);
+    (async () => {
+      await localStorageService.saveUserProfile(profile);
+    })();
 
     // Navigate to a temporary loading screen while we fetch API data
     navigation.navigate('GeneratingTwin');
