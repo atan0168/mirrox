@@ -1,4 +1,5 @@
 import { UserProfile } from "../models/User";
+import { localStorageService } from "./LocalStorageService";
 
 // You'll need to get this from your Ready Player Me developer account
 // To get your Application ID:
@@ -149,7 +150,7 @@ class ReadyPlayerMeApiService {
   }
 
   /**
-   * Step 2.4: Save the draft avatar permanently
+   * Step 2.4: Save the draft avatar permanently and cache it locally
    */
   async saveAvatar(token: string, avatarId: string): Promise<void> {
     try {
@@ -162,6 +163,18 @@ class ReadyPlayerMeApiService {
 
       if (!response.ok) {
         throw new Error(`Failed to save avatar: ${response.statusText}`);
+      }
+
+      // After successful save, cache the avatar locally
+      const avatarUrl = this.getSavedAvatarUrl(avatarId);
+      console.log(`Avatar saved successfully. Caching GLB file from: ${avatarUrl}`);
+      
+      try {
+        await localStorageService.downloadAndCacheAvatar(avatarUrl);
+        console.log(`Avatar ${avatarId} cached successfully`);
+      } catch (cacheError) {
+        console.warn(`Failed to cache avatar ${avatarId}:`, cacheError);
+        // Don't throw here - avatar creation was successful, caching is optional
       }
     } catch (error) {
       console.error("Error saving avatar:", error);

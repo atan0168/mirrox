@@ -11,10 +11,10 @@ import { EffectControls } from "./controls/EffectControls";
 import { DebugOverlay } from "./ui/DebugOverlay";
 import { LoadingState, ErrorState } from "./ui/StateComponents";
 import { localStorageService } from "../services/LocalStorageService";
-import { 
-  suppressEXGLWarnings, 
+import {
+  suppressEXGLWarnings,
   configureMobileCompatibility,
-  configureTextureLoader 
+  configureTextureLoader,
 } from "../utils/ThreeUtils";
 
 // Initialize Three.js configuration
@@ -29,6 +29,8 @@ interface ThreeAvatarProps {
 }
 
 const AVAILABLE_ANIMATIONS = [
+  { name: "M_Standing_Idle_Variations_006", label: "Idle 1" },
+  { name: "M_Standing_Idle_Variations_003", label: "Idle 2" },
   { name: "M_Standing_Expressions_007", label: "Expressions" },
   { name: "mixamo.com", label: "Cough" },
 ];
@@ -48,15 +50,23 @@ function ThreeAvatar({
   useEffect(() => {
     const loadAvatar = async () => {
       try {
-        console.log("Attempting to load avatar URL...");
-        let url = await localStorageService.getAvatarUrl();
+        console.log("Attempting to load avatar with caching...");
+
+        // Try to get cached avatar first, then fallback to remote
+        let url = await localStorageService.getAvatarWithCaching();
+
         if (!url) {
           console.log("No saved URL, using fallback.");
-          url = "https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb";
-        } else {
-          console.log(`Found saved URL: ${url}`);
+          const fallbackUrl =
+            "https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb";
+          // Try to cache the fallback URL too
+          url = await localStorageService.getAvatarWithCaching(fallbackUrl);
+          if (!url) {
+            url = fallbackUrl; // Final fallback to remote URL
+          }
         }
 
+        console.log(`Loading avatar from: ${url}`);
         setAvatarUrl(url);
       } catch (err) {
         console.error("Error loading avatar:", err);
@@ -79,7 +89,7 @@ function ThreeAvatar({
 
   const handleHazeToggle = () => {
     setHazeEnabled(!hazeEnabled);
-    console.log(`Smog effect ${!hazeEnabled ? 'enabled' : 'disabled'}`);
+    console.log(`Smog effect ${!hazeEnabled ? "enabled" : "disabled"}`);
   };
 
   const handleIntensityChange = (intensity: number) => {
@@ -104,9 +114,9 @@ function ThreeAvatar({
           powerPreference: "high-performance",
           preserveDrawingBuffer: true,
         }}
-        camera={{ 
-          position: [0, 0.5, 5], 
-          fov: 60 
+        camera={{
+          position: [0, 0.5, 5],
+          fov: 60,
         }}
         onCreated={({ gl }) => {
           console.log("Canvas created. Configuring renderer...");
@@ -130,8 +140,8 @@ function ThreeAvatar({
         <pointLight position={[-5, 5, 5]} intensity={1} />
 
         {/* 3D Content */}
-        <SmogController 
-          enabled={hazeEnabled} 
+        <SmogController
+          enabled={hazeEnabled}
           intensity={smogIntensity}
           windStrength={1.0}
           density={60}
@@ -160,8 +170,8 @@ function ThreeAvatar({
 
       {/* UI Overlays */}
       <DebugOverlay />
-      <EffectControls 
-        hazeEnabled={hazeEnabled} 
+      <EffectControls
+        hazeEnabled={hazeEnabled}
         onHazeToggle={handleHazeToggle}
         intensity={smogIntensity}
         onIntensityChange={handleIntensityChange}
@@ -185,3 +195,4 @@ const styles = StyleSheet.create({
 });
 
 export default ThreeAvatar;
+

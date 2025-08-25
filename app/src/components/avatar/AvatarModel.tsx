@@ -18,12 +18,44 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
   >(new Map());
   const [fbxAnimations, setFbxAnimations] = useState<THREE.AnimationClip[]>([]);
   const sceneRef = useRef<THREE.Group | null>(null);
+  const [currentIdleIndex, setCurrentIdleIndex] = useState<number>(0);
+  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Define available idle animations in order of preference
+  const IDLE_ANIMATIONS = [
+    "M_Standing_Idle_Variations_006",
+    "M_Standing_Idle_Variations_003",
+    "idle_breathing", // fallback
+  ];
+
+  // Helper function to get available idle animations
+  const getAvailableIdleAnimations = () => {
+    return IDLE_ANIMATIONS.filter((name) => animationActionsMap.has(name));
+  };
+
+  // Helper function to get current idle animation
+  const getCurrentIdleAnimation = () => {
+    const availableIdles = getAvailableIdleAnimations();
+    if (availableIdles.length === 0) return null;
+    return availableIdles[currentIdleIndex % availableIdles.length];
+  };
+
+  // Function to cycle to next idle animation
+  const cycleToNextIdleAnimation = () => {
+    const availableIdles = getAvailableIdleAnimations();
+    if (availableIdles.length > 1) {
+      setCurrentIdleIndex((prev) => (prev + 1) % availableIdles.length);
+      console.log(
+        `Cycling to next idle animation. New index: ${(currentIdleIndex + 1) % availableIdles.length}`,
+      );
+    }
+  };
 
   // Adjust camera position based on active animation
   useEffect(() => {
     const targetPosition = new THREE.Vector3();
     const targetLookAt = new THREE.Vector3(0, 0, 0);
-    
+
     if (activeAnimation === "mixamo.com") {
       // Position camera for left side view of coughing animation
       targetPosition.set(-3, 1.2, 4);
@@ -31,24 +63,26 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
       // Default front view position
       targetPosition.set(0, 0.5, 5);
     }
-    
+
     // Smooth camera transition
     const animate = () => {
       camera.position.lerp(targetPosition, 0.1);
       camera.lookAt(targetLookAt);
-      
+
       if (camera.position.distanceTo(targetPosition) > 0.01) {
         requestAnimationFrame(animate);
       }
     };
-    
+
     animate();
   }, [activeAnimation, camera]);
 
   // Configure materials for mobile compatibility
   useEffect(() => {
     if (scene) {
-      console.log("Scene loaded. Configuring materials for mobile compatibility.");
+      console.log(
+        "Scene loaded. Configuring materials for mobile compatibility.",
+      );
 
       const compatibleMaterial = new THREE.MeshStandardMaterial({
         color: 0xffffff,
@@ -94,6 +128,12 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
           fbxLoader.loadFBXAnimation(
             "http://10.10.0.126:8080/animations/laying_severe_cough.fbx",
           ),
+          fbxLoader.loadFBXAnimation(
+            "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_006.fbx",
+          ),
+          fbxLoader.loadFBXAnimation(
+            "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_003.fbx",
+          ),
         ];
 
         const loadedAnimations = await Promise.allSettled(animationPromises);
@@ -112,7 +152,9 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
         });
 
         if (successfulAnimations.length > 0) {
-          console.log(`Loaded ${successfulAnimations.length} FBX animation clips`);
+          console.log(
+            `Loaded ${successfulAnimations.length} FBX animation clips`,
+          );
           setFbxAnimations(successfulAnimations);
         } else {
           console.log("No FBX animations loaded, will use fallback");
@@ -152,7 +194,11 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
         if (child instanceof THREE.SkinnedMesh && child.skeleton) {
           avatarSkeleton = child.skeleton;
           avatarSkinnedMesh = child;
-          console.log("Found avatar skeleton with", child.skeleton.bones.length, "bones");
+          console.log(
+            "Found avatar skeleton with",
+            child.skeleton.bones.length,
+            "bones",
+          );
         }
       });
 
@@ -171,85 +217,99 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
               const trackParts = track.name.split(".");
               if (trackParts.length >= 2) {
                 const boneName = trackParts[0];
-                
+
                 const findMatchingBone = (fbxBoneName: string) => {
                   let matchedBone = skeleton.bones.find(
-                    (bone: THREE.Bone) => bone.name === fbxBoneName
+                    (bone: THREE.Bone) => bone.name === fbxBoneName,
                   );
-                  
+
                   if (matchedBone) return matchedBone;
-                  
+
                   // Common Mixamo to ReadyPlayerMe mappings
                   const boneMapping: { [key: string]: string } = {
-                    'mixamorigHips': 'Hips',
-                    'mixamorigSpine': 'Spine',
-                    'mixamorigSpine1': 'Spine1',
-                    'mixamorigSpine2': 'Spine2',
-                    'mixamorigNeck': 'Neck',
-                    'mixamorigHead': 'Head',
-                    'mixamorigLeftShoulder': 'LeftShoulder',
-                    'mixamorigLeftArm': 'LeftUpperArm',
-                    'mixamorigLeftForeArm': 'LeftLowerArm',
-                    'mixamorigLeftHand': 'LeftHand',
-                    'mixamorigRightShoulder': 'RightShoulder',
-                    'mixamorigRightArm': 'RightUpperArm',
-                    'mixamorigRightForeArm': 'RightLowerArm',
-                    'mixamorigRightHand': 'RightHand',
-                    'mixamorigLeftUpLeg': 'LeftUpperLeg',
-                    'mixamorigLeftLeg': 'LeftLowerLeg',
-                    'mixamorigLeftFoot': 'LeftFoot',
-                    'mixamorigRightUpLeg': 'RightUpperLeg',
-                    'mixamorigRightLeg': 'RightLowerLeg',
-                    'mixamorigRightFoot': 'RightFoot',
+                    mixamorigHips: "Hips",
+                    mixamorigSpine: "Spine",
+                    mixamorigSpine1: "Spine1",
+                    mixamorigSpine2: "Spine2",
+                    mixamorigNeck: "Neck",
+                    mixamorigHead: "Head",
+                    mixamorigLeftShoulder: "LeftShoulder",
+                    mixamorigLeftArm: "LeftUpperArm",
+                    mixamorigLeftForeArm: "LeftLowerArm",
+                    mixamorigLeftHand: "LeftHand",
+                    mixamorigRightShoulder: "RightShoulder",
+                    mixamorigRightArm: "RightUpperArm",
+                    mixamorigRightForeArm: "RightLowerArm",
+                    mixamorigRightHand: "RightHand",
+                    mixamorigLeftUpLeg: "LeftUpperLeg",
+                    mixamorigLeftLeg: "LeftLowerLeg",
+                    mixamorigLeftFoot: "LeftFoot",
+                    mixamorigRightUpLeg: "RightUpperLeg",
+                    mixamorigRightLeg: "RightLowerLeg",
+                    mixamorigRightFoot: "RightFoot",
                   };
-                  
+
                   const mappedName = boneMapping[fbxBoneName];
                   if (mappedName) {
                     matchedBone = skeleton.bones.find(
-                      (bone: THREE.Bone) => bone.name === mappedName
+                      (bone: THREE.Bone) => bone.name === mappedName,
                     );
                   }
-                  
+
                   if (matchedBone) return matchedBone;
-                  
+
                   // Fallback: substring matching
                   matchedBone = skeleton.bones.find(
                     (bone: THREE.Bone) =>
-                      bone.name.toLowerCase().includes(fbxBoneName.toLowerCase()) ||
-                      fbxBoneName.toLowerCase().includes(bone.name.toLowerCase())
+                      bone.name
+                        .toLowerCase()
+                        .includes(fbxBoneName.toLowerCase()) ||
+                      fbxBoneName
+                        .toLowerCase()
+                        .includes(bone.name.toLowerCase()),
                   );
-                  
+
                   return matchedBone;
                 };
-                
+
                 const matchedBone = findMatchingBone(boneName);
                 if (!matchedBone) {
-                  console.log(`Skipping track for non-existent bone: ${boneName}`);
+                  console.log(
+                    `Skipping track for non-existent bone: ${boneName}`,
+                  );
                   return false;
                 }
-                
+
                 if (matchedBone.name !== boneName) {
                   const property = trackParts[1];
                   track.name = `${matchedBone.name}.${property}`;
-                  console.log(`Remapped bone: ${boneName} -> ${matchedBone.name}`);
+                  console.log(
+                    `Remapped bone: ${boneName} -> ${matchedBone.name}`,
+                  );
                 }
-                
+
                 return true;
               }
               return false;
             });
 
             if (filteredTracks.length > 0) {
-              console.log(`Keeping ${filteredTracks.length}/${clip.tracks.length} tracks`);
+              console.log(
+                `Keeping ${filteredTracks.length}/${clip.tracks.length} tracks`,
+              );
 
               // Remove position and scale tracks to prevent avatar displacement
               const safeTracks = filteredTracks.filter((track) => {
                 if (track.name.includes(".position")) {
-                  console.log(`Removing ${track.name} track to prevent avatar displacement`);
+                  console.log(
+                    `Removing ${track.name} track to prevent avatar displacement`,
+                  );
                   return false;
                 }
                 if (track.name.includes(".scale")) {
-                  console.log(`Removing ${track.name} track to prevent avatar scaling issues`);
+                  console.log(
+                    `Removing ${track.name} track to prevent avatar scaling issues`,
+                  );
                   return false;
                 }
                 return true;
@@ -265,8 +325,11 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
               action.setLoop(THREE.LoopRepeat, Infinity);
               action.clampWhenFinished = true;
               action.setEffectiveWeight(1.0);
-              
-              if (clip.name.toLowerCase().includes("mixamo") || clip.name.toLowerCase().includes("cough")) {
+
+              if (
+                clip.name.toLowerCase().includes("mixamo") ||
+                clip.name.toLowerCase().includes("cough")
+              ) {
                 action.setEffectiveTimeScale(1.0);
                 console.log("Applied Mixamo-specific settings to animation");
               }
@@ -281,12 +344,16 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
         });
 
         if (actionsMap.size > 0) {
-          console.log(`Successfully set up ${actionsMap.size} filtered FBX animations`);
+          console.log(
+            `Successfully set up ${actionsMap.size} filtered FBX animations`,
+          );
           setAnimationActionsMap(actionsMap);
           return;
         }
       } else {
-        console.warn("No skeleton found in avatar, cannot apply FBX animations");
+        console.warn(
+          "No skeleton found in avatar, cannot apply FBX animations",
+        );
       }
     }
 
@@ -313,7 +380,9 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
     }
 
     // Priority 3: Create fallback animation
-    console.log("No FBX or GLB animations found, creating simple idle animation...");
+    console.log(
+      "No FBX or GLB animations found, creating simple idle animation...",
+    );
 
     try {
       let targetObject: THREE.Object3D = scene;
@@ -335,7 +404,10 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
         }
       });
 
-      console.log("Creating fallback animation for:", targetObject.name || "scene");
+      console.log(
+        "Creating fallback animation for:",
+        targetObject.name || "scene",
+      );
 
       const times = [0, 1, 2];
       const scaleValues = [1, 1.01, 1];
@@ -365,17 +437,47 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
       `Animation state changed: activeAnimation=${activeAnimation}, available actions: ${animationActionsMap.size}`,
     );
 
+    // Clear existing idle timer
+    if (idleTimerRef.current) {
+      clearInterval(idleTimerRef.current);
+      idleTimerRef.current = null;
+    }
+
     if (animationActionsMap.size > 0) {
       // Stop all currently running animations
-      animationActionsMap.forEach((action: THREE.AnimationAction, name: string) => {
-        if (action.isRunning()) {
-          console.log(`Stopping animation: ${name}`);
-          action.stop();
+      animationActionsMap.forEach(
+        (action: THREE.AnimationAction, name: string) => {
+          if (action.isRunning()) {
+            console.log(`Stopping animation: ${name}`);
+            action.stop();
+          }
+        },
+      );
+
+      // Determine which animation to play
+      let animationToPlay = activeAnimation;
+
+      // If no specific animation is requested, use idle cycling system
+      if (!animationToPlay) {
+        animationToPlay = getCurrentIdleAnimation();
+        if (animationToPlay) {
+          console.log(`Using idle animation: ${animationToPlay}`);
+
+          // Set up cycling timer for idle animations (change every 10-15 seconds)
+          const availableIdles = getAvailableIdleAnimations();
+          if (availableIdles.length > 1) {
+            idleTimerRef.current = setInterval(() => {
+              cycleToNextIdleAnimation();
+            }, 12000); // 12 seconds between idle animation changes
+            console.log(
+              `Started idle animation cycling timer for ${availableIdles.length} animations`,
+            );
+          }
         }
-      });
+      }
 
       // Reset avatar to safe state when stopping animations
-      if (!activeAnimation && scene) {
+      if (!animationToPlay && scene) {
         scene.traverse((child) => {
           if (child instanceof THREE.SkinnedMesh) {
             child.visible = true;
@@ -387,12 +489,12 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
         });
       }
 
-      // Start the requested animation
-      if (activeAnimation && animationActionsMap.has(activeAnimation)) {
-        const action = animationActionsMap.get(activeAnimation)!;
+      // Start the requested or default animation
+      if (animationToPlay && animationActionsMap.has(animationToPlay)) {
+        const action = animationActionsMap.get(animationToPlay)!;
         try {
-          console.log(`Starting animation: ${activeAnimation}`);
-          
+          console.log(`Starting animation: ${animationToPlay}`);
+
           const originalTransforms = new Map();
           if (scene) {
             scene.traverse((child) => {
@@ -400,12 +502,12 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
                 originalTransforms.set(child.uuid, {
                   position: child.position.clone(),
                   scale: child.scale.clone(),
-                  visible: child.visible
+                  visible: child.visible,
                 });
               }
             });
           }
-          
+
           action.reset();
           action.setEffectiveWeight(1);
           action.setEffectiveTimeScale(1);
@@ -421,7 +523,7 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
                   child.scale.copy(original.scale);
                   child.visible = true;
                 }
-                
+
                 console.log(
                   `Avatar mesh position: x:${child.position.x.toFixed(2)}, y:${child.position.y.toFixed(2)}, z:${child.position.z.toFixed(2)}`,
                 );
@@ -435,12 +537,11 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
 
           console.log(`Animation duration: ${action.getClip().duration}s`);
           console.log(`Animation tracks: ${action.getClip().tracks.length}`);
-
         } catch (error) {
-          console.error(`Error starting animation ${activeAnimation}:`, error);
+          console.error(`Error starting animation ${animationToPlay}:`, error);
         }
-      } else if (activeAnimation) {
-        console.warn(`Animation not found: ${activeAnimation}`);
+      } else if (animationToPlay) {
+        console.warn(`Animation not found: ${animationToPlay}`);
       } else {
         console.log("No animation requested, all animations stopped");
       }
@@ -449,6 +550,46 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
     }
   }, [activeAnimation, animationActionsMap, scene]);
 
+  // Handle idle animation cycling
+  useEffect(() => {
+    // Only cycle if we're in idle mode (no active animation specified)
+    if (!activeAnimation && animationActionsMap.size > 0) {
+      const newIdleAnimation = getCurrentIdleAnimation();
+      if (newIdleAnimation && animationActionsMap.has(newIdleAnimation)) {
+        // Stop current animations
+        animationActionsMap.forEach((action) => {
+          if (action.isRunning()) {
+            action.stop();
+          }
+        });
+
+        // Start new idle animation
+        const action = animationActionsMap.get(newIdleAnimation)!;
+        try {
+          console.log(`Switching to idle animation: ${newIdleAnimation}`);
+          action.reset();
+          action.setEffectiveWeight(1);
+          action.setEffectiveTimeScale(1);
+          action.play();
+        } catch (error) {
+          console.error(
+            `Error switching to idle animation ${newIdleAnimation}:`,
+            error,
+          );
+        }
+      }
+    }
+  }, [currentIdleIndex, activeAnimation, animationActionsMap]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (idleTimerRef.current) {
+        clearInterval(idleTimerRef.current);
+      }
+    };
+  }, []);
+
   // Update animation mixer each frame
   useFrame((state, delta) => {
     if (mixerRef.current) {
@@ -456,25 +597,43 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
         mixerRef.current.update(delta);
 
         // Continuously check and fix avatar visibility during animations
-        if (scene && activeAnimation) {
+        if (scene) {
+          // Check if any animation is currently running
+          const hasRunningAnimation = Array.from(
+            animationActionsMap.values(),
+          ).some((action) => action.isRunning());
+
           scene.traverse((child) => {
             if (child instanceof THREE.SkinnedMesh) {
               if (!child.visible) {
-                console.warn("Avatar became invisible during animation, fixing...");
+                console.warn(
+                  "Avatar became invisible during animation, fixing...",
+                );
                 child.visible = true;
               }
-              
-              if (child.scale.x < 0.01 || child.scale.y < 0.01 || child.scale.z < 0.01) {
-                console.warn("Avatar became too small during animation, fixing...");
+
+              if (
+                child.scale.x < 0.01 ||
+                child.scale.y < 0.01 ||
+                child.scale.z < 0.01
+              ) {
+                console.warn(
+                  "Avatar became too small during animation, fixing...",
+                );
                 child.scale.set(1, 1, 1);
               }
-              
-              if (Math.abs(child.position.x) > 10 || Math.abs(child.position.z) > 10) {
-                console.warn("Avatar moved too far during animation, fixing...");
+
+              if (
+                Math.abs(child.position.x) > 10 ||
+                Math.abs(child.position.z) > 10
+              ) {
+                console.warn(
+                  "Avatar moved too far during animation, fixing...",
+                );
                 child.position.x = 0;
                 child.position.z = 0;
               }
-              
+
               if (activeAnimation === "mixamo.com") {
                 if (child.position.y > -0.2) {
                   child.position.y = -0.2;
@@ -486,12 +645,12 @@ export function AvatarModel({ url, activeAnimation }: AvatarModelProps) {
 
         // Debug logging occasionally
         if (
-          activeAnimation &&
+          animationActionsMap.size > 0 &&
           Math.floor(state.clock.elapsedTime * 60) % 60 === 0
         ) {
-          const runningActions = Array.from(animationActionsMap.values()).filter(
-            (action) => action.isRunning()
-          );
+          const runningActions = Array.from(
+            animationActionsMap.values(),
+          ).filter((action) => action.isRunning());
           console.log(
             `Mixer update - Active actions: ${runningActions.length}, Time: ${state.clock.elapsedTime.toFixed(1)}s`,
           );
