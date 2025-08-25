@@ -188,7 +188,7 @@ class ReadyPlayerMeApiService {
    * Get the final saved avatar URL
    */
   getSavedAvatarUrl(avatarId: string): string {
-    return `https://models.readyplayer.me/${avatarId}.glb?morphTagets=Default`;
+    return `https://models.readyplayer.me/${avatarId}.glb?morphTargets=ARKit,mouthOpen,mouthSmile,eyesClosed,eyesLookUp,eyesLookDown`;
   }
 
   /**

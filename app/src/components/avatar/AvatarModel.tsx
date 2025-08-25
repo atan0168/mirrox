@@ -10,7 +10,11 @@ interface AvatarModelProps {
   facialExpression?: string;
 }
 
-export function AvatarModel({ url, activeAnimation, facialExpression = "neutral" }: AvatarModelProps) {
+export function AvatarModel({
+  url,
+  activeAnimation,
+  facialExpression = "neutral",
+}: AvatarModelProps) {
   const { scene, animations } = useGLTF(url);
   const { camera } = useThree();
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -30,47 +34,119 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
     "idle_breathing", // fallback
   ];
 
-  // Define basic facial expression morph target mappings
-  // Starting with common ReadyPlayerMe morph targets
-  const FACIAL_EXPRESSIONS = {
-    neutral: {},
-    happy: { 
-      mouthSmile_L: 0.7, 
-      mouthSmile_R: 0.7,
-      // Try alternative naming conventions
-      mouthSmileLeft: 0.7,
-      mouthSmileRight: 0.7,
-      // Try ARKit naming
-      jawOpen: 0.1,
-      mouthSmile: 0.7
+  // Define facial expression morph target mappings using ARKit blend shapes
+  const FACIAL_EXPRESSIONS: { [key: string]: { [key: string]: number } } = {
+    neutral: {
+      // Reset all expressions to neutral
+      mouthSmileLeft: 0,
+      mouthSmileRight: 0,
+      mouthFrownLeft: 0,
+      mouthFrownRight: 0,
+      jawOpen: 0,
+      eyeBlinkLeft: 0,
+      eyeBlinkRight: 0,
     },
-    sad: { 
-      mouthFrown_L: 0.6, 
-      mouthFrown_R: 0.6,
-      mouthFrownLeft: 0.6,
-      mouthFrownRight: 0.6,
-      mouthFrown: 0.6,
-      browDown_L: 0.4,
-      browDown_R: 0.4,
+    happy: {
+      mouthSmileLeft: 0.8,
+      mouthSmileRight: 0.8,
+      mouthDimpleLeft: 0.3,
+      mouthDimpleRight: 0.3,
+      cheekSquintLeft: 0.2,
+      cheekSquintRight: 0.2,
+      browInnerUp: 0.2,
+    },
+    tired: {
+      eyeSquintLeft: 0.6,
+      eyeSquintRight: 0.6,
+      eyeBlinkLeft: 0.3,
+      eyeBlinkRight: 0.3,
+      mouthFrownLeft: 0.2,
+      mouthFrownRight: 0.2,
       browDownLeft: 0.4,
-      browDownRight: 0.4
+      browDownRight: 0.4,
+    },
+    exhausted: {
+      eyeBlinkLeft: 0.7,
+      eyeBlinkRight: 0.7,
+      mouthOpen: 0.2,
+      mouthFrownLeft: 0.4,
+      mouthFrownRight: 0.4,
+      browDownLeft: 0.6,
+      browDownRight: 0.6,
+      jawOpen: 0.1,
+    },
+    concerned: {
+      browDownLeft: 0.5,
+      browDownRight: 0.5,
+      browInnerUp: 0.3,
+      mouthFrownLeft: 0.3,
+      mouthFrownRight: 0.3,
+      eyeSquintLeft: 0.2,
+      eyeSquintRight: 0.2,
+    },
+    calm: {
+      eyeBlinkLeft: 0.1,
+      eyeBlinkRight: 0.1,
+      mouthSmileLeft: 0.1,
+      mouthSmileRight: 0.1,
+      browInnerUp: 0.1,
     },
     surprised: {
-      eyeWide_L: 0.8,
-      eyeWide_R: 0.8,
       eyeWideLeft: 0.8,
       eyeWideRight: 0.8,
-      jawOpen: 0.6,
+      browOuterUpLeft: 0.7,
+      browOuterUpRight: 0.7,
+      browInnerUp: 0.8,
+      jawOpen: 0.4,
       mouthFunnel: 0.3,
-      browUp_L: 0.5,
-      browUp_R: 0.5,
-      browUpLeft: 0.5,
-      browUpRight: 0.5
     },
-    // Test with any available morph target
-    test: {
-      // We'll try to find ANY available morph target and use it
-    }
+    angry: {
+      browDownLeft: 0.8,
+      browDownRight: 0.8,
+      eyeSquintLeft: 0.7,
+      eyeSquintRight: 0.7,
+      mouthFrownLeft: 0.6,
+      mouthFrownRight: 0.6,
+      noseSneerLeft: 0.4,
+      noseSneerRight: 0.4,
+      mouthPressLeft: 0.3,
+      mouthPressRight: 0.3,
+    },
+    sick: {
+      mouthFrownLeft: 0.5,
+      mouthFrownRight: 0.5,
+      browDownLeft: 0.3,
+      browDownRight: 0.3,
+      eyeSquintLeft: 0.4,
+      eyeSquintRight: 0.4,
+      mouthOpen: 0.2,
+      cheekPuff: 0.2,
+    },
+    // Health-related expressions for digital twin
+    coughing: {
+      jawOpen: 0.8,
+      mouthOpen: 0.7,
+      mouthFrownLeft: 0.3,
+      mouthFrownRight: 0.3,
+      eyeSquintLeft: 0.5,
+      eyeSquintRight: 0.5,
+      browDownLeft: 0.2,
+      browDownRight: 0.2,
+    },
+    breathing_difficulty: {
+      jawOpen: 0.3,
+      mouthOpen: 0.4,
+      mouthFrownLeft: 0.4,
+      mouthFrownRight: 0.4,
+      eyeSquintLeft: 0.3,
+      eyeSquintRight: 0.3,
+      browDownLeft: 0.4,
+      browDownRight: 0.4,
+      noseSneerLeft: 0.2,
+      noseSneerRight: 0.2,
+    },
+    // Test expression - will be dynamically populated with available morph targets
+    test: {},
   };
 
   // Helper function to get available idle animations
@@ -97,11 +173,17 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
   };
 
   // Function to apply facial expression with smooth transitions
-  const applyFacialExpression = (expression: string, transitionDuration: number = 0.5) => {
+  const applyFacialExpression = (
+    expression: string,
+    transitionDuration: number = 0.5,
+  ) => {
     if (!headMesh || !headMesh.morphTargetInfluences) {
       console.log("❌ No morph targets available for facial expressions");
       console.log("Head mesh:", headMesh ? "found" : "not found");
-      console.log("Morph target influences:", headMesh?.morphTargetInfluences ? "found" : "not found");
+      console.log(
+        "Morph target influences:",
+        headMesh?.morphTargetInfluences ? "found" : "not found",
+      );
       return;
     }
 
@@ -112,13 +194,16 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
     }
 
     console.log(`🎭 Applying facial expression: ${expression}`);
-    console.log(`📊 Available morph targets (${Object.keys(morphTargetDictionary).length}):`, Object.keys(morphTargetDictionary));
+    console.log(
+      `📊 Available morph targets (${Object.keys(morphTargetDictionary).length}):`,
+      Object.keys(morphTargetDictionary),
+    );
 
     // Store current morph target values for smooth transition
     const currentValues = [...headMesh.morphTargetInfluences];
-    
+
     // Get target expression data
-    const expressionData = FACIAL_EXPRESSIONS[expression as keyof typeof FACIAL_EXPRESSIONS];
+    const expressionData = FACIAL_EXPRESSIONS[expression];
     if (!expressionData) {
       console.warn(`❌ Unknown facial expression: ${expression}`);
       console.log("Available expressions:", Object.keys(FACIAL_EXPRESSIONS));
@@ -130,8 +215,8 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
     // Check which morph targets from the expression are actually available
     const availableMorphs: string[] = [];
     const missingMorphs: string[] = [];
-    
-    Object.keys(expressionData).forEach(morphTarget => {
+
+    Object.keys(expressionData).forEach((morphTarget) => {
       if (morphTargetDictionary[morphTarget] !== undefined) {
         availableMorphs.push(morphTarget);
       } else {
@@ -145,7 +230,9 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
     }
 
     if (availableMorphs.length === 0) {
-      console.warn(`❌ No compatible morph targets found for expression "${expression}"`);
+      console.warn(
+        `❌ No compatible morph targets found for expression "${expression}"`,
+      );
       return;
     }
 
@@ -156,11 +243,12 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
     const animateTransition = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
+
       // Use easeInOutCubic for smooth transition
-      const easeProgress = progress < 0.5 
-        ? 4 * progress * progress * progress 
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      const easeProgress =
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
       // Reset all morph targets and interpolate to new values
       for (let i = 0; i < headMesh.morphTargetInfluences!.length; i++) {
@@ -174,12 +262,15 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
         const index = morphTargetDictionary[morphTarget];
         if (index !== undefined && headMesh.morphTargetInfluences) {
           const currentValue = currentValues[index] || 0;
-          const interpolatedValue = currentValue + (targetValue - currentValue) * easeProgress;
+          const interpolatedValue =
+            currentValue + (targetValue - currentValue) * easeProgress;
           headMesh.morphTargetInfluences[index] = interpolatedValue;
           appliedCount++;
-          
+
           if (progress === 1) {
-            console.log(`🔧 Applied ${morphTarget}: ${interpolatedValue.toFixed(3)} (target: ${targetValue})`);
+            console.log(
+              `🔧 Applied ${morphTarget}: ${interpolatedValue.toFixed(3)} (target: ${targetValue})`,
+            );
           }
         }
       });
@@ -188,8 +279,10 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
       if (progress < 1) {
         requestAnimationFrame(animateTransition);
       } else {
-        console.log(`✅ Applied facial expression: ${expression} (${appliedCount}/${Object.keys(expressionData).length} morph targets)`);
-        
+        console.log(
+          `✅ Applied facial expression: ${expression} (${appliedCount}/${Object.keys(expressionData).length} morph targets)`,
+        );
+
         // Log current state of all morph targets for debugging
         console.log("🔍 Current morph target state:");
         Object.entries(morphTargetDictionary).forEach(([name, index]) => {
@@ -209,6 +302,46 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
   const findHeadMesh = (scene: THREE.Group) => {
     let foundHeadMesh: THREE.SkinnedMesh | null = null;
     
+    console.log("🔍 Searching for head mesh with morph targets...");
+    
+    // First, let's log ALL meshes in the scene for debugging
+    const allMeshes: Array<{ name: string; type: string; morphTargets: number; material?: string }> = [];
+    
+    scene.traverse((child) => {
+      if (child instanceof THREE.SkinnedMesh) {
+        const morphTargetCount = child.morphTargetInfluences?.length || 0;
+        const materialName = child.material?.name || (Array.isArray(child.material) ? 
+          child.material.map(m => m.name).join(', ') : 'unknown');
+        
+        allMeshes.push({
+          name: child.name,
+          type: 'SkinnedMesh',
+          morphTargets: morphTargetCount,
+          material: materialName
+        });
+        
+        console.log(`📦 SkinnedMesh: "${child.name}" | Material: "${materialName}" | Morph Targets: ${morphTargetCount}`);
+        
+        if (morphTargetCount > 0) {
+          console.log(`  🎯 Morph target dictionary:`, Object.keys(child.morphTargetDictionary || {}));
+        }
+      } else if (child instanceof THREE.Mesh) {
+        const morphTargetCount = child.morphTargetInfluences?.length || 0;
+        if (morphTargetCount > 0) {
+          allMeshes.push({
+            name: child.name,
+            type: 'Mesh',
+            morphTargets: morphTargetCount,
+            material: child.material?.name || 'unknown'
+          });
+          console.log(`📦 Mesh: "${child.name}" | Material: "${child.material?.name}" | Morph Targets: ${morphTargetCount}`);
+        }
+      }
+    });
+    
+    console.log(`📊 Total meshes found: ${allMeshes.length}`);
+    console.log(`📊 Meshes with morph targets: ${allMeshes.filter(m => m.morphTargets > 0).length}`);
+
     scene.traverse((child) => {
       if (child instanceof THREE.SkinnedMesh) {
         // Look for head-related meshes that have morph targets
@@ -216,60 +349,304 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
           child.morphTargetInfluences &&
           child.morphTargetInfluences.length > 0 &&
           (child.name.toLowerCase().includes("head") ||
-           child.name.toLowerCase().includes("face") ||
-           child.name.toLowerCase().includes("wolf3d_head") ||
-           child.material?.name?.toLowerCase().includes("head"))
+            child.name.toLowerCase().includes("face") ||
+            child.name.toLowerCase().includes("wolf3d_head") ||
+            child.material?.name?.toLowerCase().includes("head"))
         ) {
           foundHeadMesh = child;
-          console.log(`🎭 Found head mesh: ${child.name} with ${child.morphTargetInfluences.length} morph targets`);
-          
+          console.log(
+            `🎭 Found head mesh: ${child.name} with ${child.morphTargetInfluences.length} morph targets`,
+          );
+
           // Log available morph targets for debugging
           if (child.morphTargetDictionary) {
             const availableMorphs = Object.keys(child.morphTargetDictionary);
             console.log("📋 Available morph targets:", availableMorphs);
-            
+            console.log(
+              `📊 Total morph targets found: ${availableMorphs.length}`,
+            );
+
+            // Check for ARKit compatibility
+            const arkitMorphs = [
+              "eyeBlinkLeft",
+              "eyeLookDownLeft",
+              "eyeLookInLeft",
+              "eyeLookOutLeft",
+              "eyeLookUpLeft",
+              "eyeSquintLeft",
+              "eyeWideLeft",
+              "eyeBlinkRight",
+              "eyeLookDownRight",
+              "eyeLookInRight",
+              "eyeLookOutRight",
+              "eyeLookUpRight",
+              "eyeSquintRight",
+              "eyeWideRight",
+              "jawForward",
+              "jawLeft",
+              "jawRight",
+              "jawOpen",
+              "mouthClose",
+              "mouthFunnel",
+              "mouthPucker",
+              "mouthLeft",
+              "mouthRight",
+              "mouthSmileLeft",
+              "mouthSmileRight",
+              "mouthFrownLeft",
+              "mouthFrownRight",
+              "mouthDimpleLeft",
+              "mouthDimpleRight",
+              "mouthStretchLeft",
+              "mouthStretchRight",
+              "mouthRollLower",
+              "mouthRollUpper",
+              "mouthShrugLower",
+              "mouthShrugUpper",
+              "mouthPressLeft",
+              "mouthPressRight",
+              "mouthLowerDownLeft",
+              "mouthLowerDownRight",
+              "mouthUpperUpLeft",
+              "mouthUpperUpRight",
+              "browDownLeft",
+              "browDownRight",
+              "browInnerUp",
+              "browOuterUpLeft",
+              "browOuterUpRight",
+              "cheekPuff",
+              "cheekSquintLeft",
+              "cheekSquintRight",
+              "noseSneerLeft",
+              "noseSneerRight",
+              "tongueOut",
+            ];
+
+            const presentARKitMorphs = arkitMorphs.filter((morph) =>
+              availableMorphs.includes(morph),
+            );
+            const missingARKitMorphs = arkitMorphs.filter(
+              (morph) => !availableMorphs.includes(morph),
+            );
+            const extraMorphs = availableMorphs.filter(
+              (morph) => !arkitMorphs.includes(morph),
+            );
+
+            console.log(
+              `🎯 ARKit morph targets present (${presentARKitMorphs.length}/52):`,
+              presentARKitMorphs,
+            );
+            console.log(
+              `❌ ARKit morph targets missing (${missingARKitMorphs.length}/52):`,
+              missingARKitMorphs,
+            );
+            if (extraMorphs.length > 0) {
+              console.log(
+                `➕ Additional (non-ARKit) morph targets (${extraMorphs.length}):`,
+                extraMorphs,
+              );
+            }
+
+            // Check for additional common morph targets
+            const commonExtraMorphs = [
+              "mouthOpen",
+              "mouthSmile",
+              "eyesClosed",
+              "eyesLookUp",
+              "eyesLookDown",
+            ];
+            const presentExtraMorphs = commonExtraMorphs.filter((morph) =>
+              availableMorphs.includes(morph),
+            );
+            if (presentExtraMorphs.length > 0) {
+              console.log(
+                `🔧 Common additional morph targets present:`,
+                presentExtraMorphs,
+              );
+            }
+
+            // Dynamically update facial expressions based on available morph targets
+            console.log(
+              "🔄 Updating facial expressions based on available morph targets...",
+            );
+
+            // Update happy expression based on available morphs
+            const happyExpression: { [key: string]: number } = {};
+            if (availableMorphs.includes("mouthSmileLeft"))
+              happyExpression.mouthSmileLeft = 0.8;
+            if (availableMorphs.includes("mouthSmileRight"))
+              happyExpression.mouthSmileRight = 0.8;
+            if (availableMorphs.includes("mouthSmile"))
+              happyExpression.mouthSmile = 0.7;
+            if (availableMorphs.includes("jawOpen"))
+              happyExpression.jawOpen = 0.1;
+            if (availableMorphs.includes("cheekSquintLeft"))
+              happyExpression.cheekSquintLeft = 0.3;
+            if (availableMorphs.includes("cheekSquintRight"))
+              happyExpression.cheekSquintRight = 0.3;
+            if (Object.keys(happyExpression).length > 0) {
+              FACIAL_EXPRESSIONS.happy = happyExpression;
+              console.log("✅ Updated happy expression:", happyExpression);
+            }
+
+            // Update sad expression
+            const sadExpression: { [key: string]: number } = {};
+            if (availableMorphs.includes("mouthFrownLeft"))
+              sadExpression.mouthFrownLeft = 0.7;
+            if (availableMorphs.includes("mouthFrownRight"))
+              sadExpression.mouthFrownRight = 0.7;
+            if (availableMorphs.includes("browDownLeft"))
+              sadExpression.browDownLeft = 0.5;
+            if (availableMorphs.includes("browDownRight"))
+              sadExpression.browDownRight = 0.5;
+            if (availableMorphs.includes("mouthLowerDownLeft"))
+              sadExpression.mouthLowerDownLeft = 0.3;
+            if (availableMorphs.includes("mouthLowerDownRight"))
+              sadExpression.mouthLowerDownRight = 0.3;
+            // Fallback for basic sad expression
+            if (
+              Object.keys(sadExpression).length === 0 &&
+              availableMorphs.includes("mouthSmile")
+            ) {
+              sadExpression.mouthSmile = -0.3;
+            }
+            if (Object.keys(sadExpression).length > 0) {
+              FACIAL_EXPRESSIONS.sad = sadExpression;
+              console.log("✅ Updated sad expression:", sadExpression);
+            }
+
+            // Update surprised expression
+            const surprisedExpression: { [key: string]: number } = {};
+            if (availableMorphs.includes("eyeWideLeft"))
+              surprisedExpression.eyeWideLeft = 0.9;
+            if (availableMorphs.includes("eyeWideRight"))
+              surprisedExpression.eyeWideRight = 0.9;
+            if (availableMorphs.includes("jawOpen"))
+              surprisedExpression.jawOpen = 0.7;
+            if (availableMorphs.includes("mouthFunnel"))
+              surprisedExpression.mouthFunnel = 0.4;
+            if (availableMorphs.includes("browInnerUp"))
+              surprisedExpression.browInnerUp = 0.6;
+            if (availableMorphs.includes("browOuterUpLeft"))
+              surprisedExpression.browOuterUpLeft = 0.5;
+            if (availableMorphs.includes("browOuterUpRight"))
+              surprisedExpression.browOuterUpRight = 0.5;
+            // Fallback
+            if (Object.keys(surprisedExpression).length === 0) {
+              if (availableMorphs.includes("mouthOpen"))
+                surprisedExpression.mouthOpen = 0.6;
+              if (availableMorphs.includes("mouthSmile"))
+                surprisedExpression.mouthSmile = 0.2;
+            }
+            if (Object.keys(surprisedExpression).length > 0) {
+              FACIAL_EXPRESSIONS.surprised = surprisedExpression;
+              console.log(
+                "✅ Updated surprised expression:",
+                surprisedExpression,
+              );
+            }
+
+            // Update coughing expression
+            const coughingExpression: { [key: string]: number } = {};
+            if (availableMorphs.includes("jawOpen"))
+              coughingExpression.jawOpen = 0.5;
+            if (availableMorphs.includes("mouthOpen"))
+              coughingExpression.mouthOpen = 0.6;
+            if (availableMorphs.includes("eyeSquintLeft"))
+              coughingExpression.eyeSquintLeft = 0.4;
+            if (availableMorphs.includes("eyeSquintRight"))
+              coughingExpression.eyeSquintRight = 0.4;
+            if (availableMorphs.includes("browDownLeft"))
+              coughingExpression.browDownLeft = 0.3;
+            if (availableMorphs.includes("browDownRight"))
+              coughingExpression.browDownRight = 0.3;
+            // Fallback
+            if (Object.keys(coughingExpression).length === 0) {
+              if (availableMorphs.includes("mouthOpen"))
+                coughingExpression.mouthOpen = 0.7;
+              if (availableMorphs.includes("mouthSmile"))
+                coughingExpression.mouthSmile = -0.1;
+            }
+            if (Object.keys(coughingExpression).length > 0) {
+              FACIAL_EXPRESSIONS.coughing = coughingExpression;
+              console.log(
+                "✅ Updated coughing expression:",
+                coughingExpression,
+              );
+            }
+
+            console.log(
+              "🎭 Final facial expressions configuration:",
+              FACIAL_EXPRESSIONS,
+            );
+
             // Update the test expression with the first available morph target
             if (availableMorphs.length > 0) {
               const testMorph = availableMorphs[0];
               FACIAL_EXPRESSIONS.test = { [testMorph]: 0.8 };
               console.log(`🧪 Test expression will use: ${testMorph} = 0.8`);
             }
-            
+
             // Check which expression morph targets are available
             const allExpressionMorphs = new Set<string>();
-            
-            Object.values(FACIAL_EXPRESSIONS).forEach(expression => {
-              Object.keys(expression).forEach(morph => allExpressionMorphs.add(morph));
+
+            Object.values(FACIAL_EXPRESSIONS).forEach((expression) => {
+              Object.keys(expression).forEach((morph) =>
+                allExpressionMorphs.add(morph),
+              );
             });
-            
+
             const missingMorphs = Array.from(allExpressionMorphs).filter(
-              morph => !availableMorphs.includes(morph)
+              (morph) => !availableMorphs.includes(morph),
             );
-            
+
             const presentMorphs = Array.from(allExpressionMorphs).filter(
-              morph => availableMorphs.includes(morph)
+              (morph) => availableMorphs.includes(morph),
             );
-            
+
             if (presentMorphs.length > 0) {
-              console.log("✅ Present expression morph targets:", presentMorphs);
+              console.log(
+                "✅ Present expression morph targets:",
+                presentMorphs,
+              );
             }
-            
+
             if (missingMorphs.length > 0) {
-              console.log("❌ Missing morph targets for expressions:", missingMorphs);
+              console.log(
+                "❌ Missing morph targets for expressions:",
+                missingMorphs,
+              );
             }
-            
-            console.log("📊 Expression system compatibility:", 
-              Math.round((allExpressionMorphs.size - missingMorphs.length) / allExpressionMorphs.size * 100) + "%"
+
+            console.log(
+              "📊 Expression system compatibility:",
+              Math.round(
+                ((allExpressionMorphs.size - missingMorphs.length) /
+                  allExpressionMorphs.size) *
+                  100,
+              ) + "%",
             );
 
             // Look for common patterns in morph target names
             const patterns = {
-              mouth: availableMorphs.filter(m => m.toLowerCase().includes('mouth')),
-              eye: availableMorphs.filter(m => m.toLowerCase().includes('eye')),
-              brow: availableMorphs.filter(m => m.toLowerCase().includes('brow')),
-              jaw: availableMorphs.filter(m => m.toLowerCase().includes('jaw')),
-              smile: availableMorphs.filter(m => m.toLowerCase().includes('smile')),
-              frown: availableMorphs.filter(m => m.toLowerCase().includes('frown')),
+              mouth: availableMorphs.filter((m) =>
+                m.toLowerCase().includes("mouth"),
+              ),
+              eye: availableMorphs.filter((m) =>
+                m.toLowerCase().includes("eye"),
+              ),
+              brow: availableMorphs.filter((m) =>
+                m.toLowerCase().includes("brow"),
+              ),
+              jaw: availableMorphs.filter((m) =>
+                m.toLowerCase().includes("jaw"),
+              ),
+              smile: availableMorphs.filter((m) =>
+                m.toLowerCase().includes("smile"),
+              ),
+              frown: availableMorphs.filter((m) =>
+                m.toLowerCase().includes("frown"),
+              ),
             };
 
             console.log("🔍 Morph target patterns found:");
@@ -282,6 +659,51 @@ export function AvatarModel({ url, activeAnimation, facialExpression = "neutral"
         }
       }
     });
+
+    // If no head mesh found, try a more aggressive search
+    if (!foundHeadMesh) {
+      console.log("⚠️ No head-specific mesh found, searching ALL meshes with morph targets...");
+      
+      let bestMesh: THREE.SkinnedMesh | null = null;
+      let maxMorphTargets = 0;
+      
+      scene.traverse((child) => {
+        if (child instanceof THREE.SkinnedMesh && child.morphTargetInfluences && child.morphTargetInfluences.length > 0) {
+          console.log(`🔍 Alternative mesh: "${child.name}" with ${child.morphTargetInfluences.length} morph targets`);
+          
+          if (child.morphTargetInfluences.length > maxMorphTargets) {
+            bestMesh = child;
+            maxMorphTargets = child.morphTargetInfluences.length;
+          }
+        }
+      });
+      
+      if (bestMesh) {
+        console.log(`🎯 Using mesh with most morph targets: "${(bestMesh as THREE.SkinnedMesh).name}" (${maxMorphTargets} targets)`);
+        foundHeadMesh = bestMesh as THREE.SkinnedMesh;
+        
+        // Log the morph targets for this mesh
+        const mesh = bestMesh as THREE.SkinnedMesh;
+        if (mesh.morphTargetDictionary) {
+          console.log("📋 Morph targets in selected mesh:", Object.keys(mesh.morphTargetDictionary));
+        }
+      }
+    }
+    
+    // Add avatar URL diagnostics
+    console.log("🔗 Avatar URL analysis:");
+    console.log(`  URL: ${url}`);
+    console.log(`  File extension: ${url.split('.').pop()}`);
+    console.log(`  Is Ready Player Me URL: ${url.includes('readyplayerme') || url.includes('rpm')}`);
+    
+    if (!foundHeadMesh) {
+      console.error("❌ No mesh with morph targets found in the entire scene!");
+      console.log("💡 This could mean:");
+      console.log("  - The avatar wasn't exported with facial blend shapes");
+      console.log("  - The file format doesn't support morph targets");
+      console.log("  - The avatar is an older version without ARKit support");
+      console.log("  - The morph targets are on a different mesh than expected");
+    }
 
     return foundHeadMesh;
   };

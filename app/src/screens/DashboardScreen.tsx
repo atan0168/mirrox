@@ -28,7 +28,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
       try {
         const profile = await localStorageService.getUserProfile();
         if (!profile) {
-          throw new Error('User profile not found.');
+          throw new Error("User profile not found.");
         }
         setUserProfile(profile);
 
@@ -126,8 +126,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.avatarContainer}>
-          <ThreeAvatar 
-            showAnimationButton={true} 
+          <ThreeAvatar
+            showAnimationButton={true}
             facialExpression={facialExpression}
             onFacialExpressionChange={handleFacialExpressionChange}
           />
