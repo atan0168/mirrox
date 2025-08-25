@@ -11,7 +11,11 @@ interface AvatarModelProps {
   facialExpression?: string;
   skinToneAdjustment?: number; // -1 to 1, where negative darkens and positive lightens
   onLoadingChange?: (loading: boolean) => void;
-  onLoadingProgress?: (progress: { loaded: number; total: number; item: string }) => void;
+  onLoadingProgress?: (progress: {
+    loaded: number;
+    total: number;
+    item: string;
+  }) => void;
 }
 
 export function AvatarModel({
@@ -34,17 +38,23 @@ export function AvatarModel({
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [headMesh, setHeadMesh] = useState<THREE.SkinnedMesh | null>(null);
   const [isLoadingAnimations, setIsLoadingAnimations] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState({ loaded: 0, total: 0, item: '' });
-  const cacheServiceRef = useRef<typeof AnimationCacheService>(AnimationCacheService);
+  const [loadingProgress, setLoadingProgress] = useState({
+    loaded: 0,
+    total: 0,
+    item: "",
+  });
+  const cacheServiceRef = useRef<typeof AnimationCacheService>(
+    AnimationCacheService,
+  );
 
   // Initialize cache service
   useEffect(() => {
     const initializeCache = async () => {
       try {
         await cacheServiceRef.current.initialize();
-        console.log('✅ Animation cache service initialized');
+        console.log("✅ Animation cache service initialized");
       } catch (error) {
-        console.error('❌ Error initializing cache service:', error);
+        console.error("❌ Error initializing cache service:", error);
       }
     };
 
@@ -336,46 +346,63 @@ export function AvatarModel({
   // Function to find head mesh with morph targets
   const findHeadMesh = (scene: THREE.Group) => {
     let foundHeadMesh: THREE.SkinnedMesh | null = null;
-    
+
     console.log("🔍 Searching for head mesh with morph targets...");
-    
+
     // First, let's log ALL meshes in the scene for debugging
-    const allMeshes: Array<{ name: string; type: string; morphTargets: number; material?: string }> = [];
-    
+    const allMeshes: Array<{
+      name: string;
+      type: string;
+      morphTargets: number;
+      material?: string;
+    }> = [];
+
     scene.traverse((child) => {
       if (child instanceof THREE.SkinnedMesh) {
         const morphTargetCount = child.morphTargetInfluences?.length || 0;
-        const materialName = child.material?.name || (Array.isArray(child.material) ? 
-          child.material.map(m => m.name).join(', ') : 'unknown');
-        
+        const materialName =
+          child.material?.name ||
+          (Array.isArray(child.material)
+            ? child.material.map((m) => m.name).join(", ")
+            : "unknown");
+
         allMeshes.push({
           name: child.name,
-          type: 'SkinnedMesh',
+          type: "SkinnedMesh",
           morphTargets: morphTargetCount,
-          material: materialName
+          material: materialName,
         });
-        
-        console.log(`📦 SkinnedMesh: "${child.name}" | Material: "${materialName}" | Morph Targets: ${morphTargetCount}`);
-        
+
+        console.log(
+          `📦 SkinnedMesh: "${child.name}" | Material: "${materialName}" | Morph Targets: ${morphTargetCount}`,
+        );
+
         if (morphTargetCount > 0) {
-          console.log(`  🎯 Morph target dictionary:`, Object.keys(child.morphTargetDictionary || {}));
+          console.log(
+            `  🎯 Morph target dictionary:`,
+            Object.keys(child.morphTargetDictionary || {}),
+          );
         }
       } else if (child instanceof THREE.Mesh) {
         const morphTargetCount = child.morphTargetInfluences?.length || 0;
         if (morphTargetCount > 0) {
           allMeshes.push({
             name: child.name,
-            type: 'Mesh',
+            type: "Mesh",
             morphTargets: morphTargetCount,
-            material: child.material?.name || 'unknown'
+            material: child.material?.name || "unknown",
           });
-          console.log(`📦 Mesh: "${child.name}" | Material: "${child.material?.name}" | Morph Targets: ${morphTargetCount}`);
+          console.log(
+            `📦 Mesh: "${child.name}" | Material: "${child.material?.name}" | Morph Targets: ${morphTargetCount}`,
+          );
         }
       }
     });
-    
+
     console.log(`📊 Total meshes found: ${allMeshes.length}`);
-    console.log(`📊 Meshes with morph targets: ${allMeshes.filter(m => m.morphTargets > 0).length}`);
+    console.log(
+      `📊 Meshes with morph targets: ${allMeshes.filter((m) => m.morphTargets > 0).length}`,
+    );
 
     scene.traverse((child) => {
       if (child instanceof THREE.SkinnedMesh) {
@@ -697,47 +724,64 @@ export function AvatarModel({
 
     // If no head mesh found, try a more aggressive search
     if (!foundHeadMesh) {
-      console.log("⚠️ No head-specific mesh found, searching ALL meshes with morph targets...");
-      
+      console.log(
+        "⚠️ No head-specific mesh found, searching ALL meshes with morph targets...",
+      );
+
       let bestMesh: THREE.SkinnedMesh | null = null;
       let maxMorphTargets = 0;
-      
+
       scene.traverse((child) => {
-        if (child instanceof THREE.SkinnedMesh && child.morphTargetInfluences && child.morphTargetInfluences.length > 0) {
-          console.log(`🔍 Alternative mesh: "${child.name}" with ${child.morphTargetInfluences.length} morph targets`);
-          
+        if (
+          child instanceof THREE.SkinnedMesh &&
+          child.morphTargetInfluences &&
+          child.morphTargetInfluences.length > 0
+        ) {
+          console.log(
+            `🔍 Alternative mesh: "${child.name}" with ${child.morphTargetInfluences.length} morph targets`,
+          );
+
           if (child.morphTargetInfluences.length > maxMorphTargets) {
             bestMesh = child;
             maxMorphTargets = child.morphTargetInfluences.length;
           }
         }
       });
-      
+
       if (bestMesh) {
-        console.log(`🎯 Using mesh with most morph targets: "${(bestMesh as THREE.SkinnedMesh).name}" (${maxMorphTargets} targets)`);
+        console.log(
+          `🎯 Using mesh with most morph targets: "${(bestMesh as THREE.SkinnedMesh).name}" (${maxMorphTargets} targets)`,
+        );
         foundHeadMesh = bestMesh as THREE.SkinnedMesh;
-        
+
         // Log the morph targets for this mesh
         const mesh = bestMesh as THREE.SkinnedMesh;
         if (mesh.morphTargetDictionary) {
-          console.log("📋 Morph targets in selected mesh:", Object.keys(mesh.morphTargetDictionary));
+          console.log(
+            "📋 Morph targets in selected mesh:",
+            Object.keys(mesh.morphTargetDictionary),
+          );
         }
       }
     }
-    
+
     // Add avatar URL diagnostics
     console.log("🔗 Avatar URL analysis:");
     console.log(`  URL: ${url}`);
-    console.log(`  File extension: ${url.split('.').pop()}`);
-    console.log(`  Is Ready Player Me URL: ${url.includes('readyplayerme') || url.includes('rpm')}`);
-    
+    console.log(`  File extension: ${url.split(".").pop()}`);
+    console.log(
+      `  Is Ready Player Me URL: ${url.includes("readyplayerme") || url.includes("rpm")}`,
+    );
+
     if (!foundHeadMesh) {
       console.error("❌ No mesh with morph targets found in the entire scene!");
       console.log("💡 This could mean:");
       console.log("  - The avatar wasn't exported with facial blend shapes");
       console.log("  - The file format doesn't support morph targets");
       console.log("  - The avatar is an older version without ARKit support");
-      console.log("  - The morph targets are on a different mesh than expected");
+      console.log(
+        "  - The morph targets are on a different mesh than expected",
+      );
     }
 
     return foundHeadMesh;
@@ -805,36 +849,42 @@ export function AvatarModel({
           ) {
             child.material.envMapIntensity = 0.5;
             child.material.needsUpdate = true;
-            
+
             // Apply skin tone adjustment to skin materials
-            if (skinToneAdjustment !== 0 && 
-                (child.name.toLowerCase().includes('body') || 
-                 child.name.toLowerCase().includes('head') || 
-                 child.name.toLowerCase().includes('face') ||
-                 child.name.toLowerCase().includes('arm') ||
-                 child.name.toLowerCase().includes('leg') ||
-                 child.material.name?.toLowerCase().includes('skin') ||
-                 child.material.name?.toLowerCase().includes('body'))) {
-              
+            if (
+              skinToneAdjustment !== 0 &&
+              (child.name.toLowerCase().includes("body") ||
+                child.name.toLowerCase().includes("head") ||
+                child.name.toLowerCase().includes("face") ||
+                child.name.toLowerCase().includes("arm") ||
+                child.name.toLowerCase().includes("leg") ||
+                child.material.name?.toLowerCase().includes("skin") ||
+                child.material.name?.toLowerCase().includes("body"))
+            ) {
               // Create a copy of the material to avoid affecting other meshes
               const adjustedMaterial = child.material.clone();
-              
+
               // Get the current color
               const currentColor = adjustedMaterial.color.clone();
-              
+
               if (skinToneAdjustment > 0) {
                 // Lighten: lerp towards white
                 currentColor.lerp(new THREE.Color(1, 1, 1), skinToneAdjustment);
               } else {
                 // Darken: lerp towards darker brown/black
-                currentColor.lerp(new THREE.Color(0.2, 0.15, 0.1), Math.abs(skinToneAdjustment));
+                currentColor.lerp(
+                  new THREE.Color(0.2, 0.15, 0.1),
+                  Math.abs(skinToneAdjustment),
+                );
               }
-              
+
               adjustedMaterial.color = currentColor;
               adjustedMaterial.needsUpdate = true;
               child.material = adjustedMaterial;
-              
-              console.log(`Applied skin tone adjustment ${skinToneAdjustment} to mesh: ${child.name}`);
+
+              console.log(
+                `Applied skin tone adjustment ${skinToneAdjustment} to mesh: ${child.name}`,
+              );
             }
           } else {
             child.material = compatibleMaterial;
@@ -857,77 +907,91 @@ export function AvatarModel({
     console.log("Loading FBX animations with caching...");
     const loadFBXAnimations = async () => {
       setIsLoadingAnimations(true);
-      
+
       try {
         const fbxLoader = new FBXAnimationLoader();
 
         const animationURLs = [
           {
             url: "http://10.10.0.126:8080/animations/M_Standing_Expressions_007.fbx",
-            name: "M_Standing_Expressions_007"
+            name: "M_Standing_Expressions_007",
           },
           {
-            url: "http://10.10.0.126:8080/animations/laying_severe_cough.fbx", 
-            name: "laying_severe_cough"
+            url: "http://10.10.0.126:8080/animations/laying_severe_cough.fbx",
+            name: "laying_severe_cough",
           },
+          {
+            url: "http://10.10.0.126:8080/animations/wiping_sweat.fbx",
+            name: "wiping_sweat",
+          },
+          // {
+          //   url: "http://10.10.0.126:8080/animations/shock.fbx",
+          //   name: "shock",
+          // },
           {
             url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_006.fbx",
-            name: "M_Standing_Idle_Variations_006"
+            name: "M_Standing_Idle_Variations_006",
           },
           {
             url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_003.fbx",
-            name: "M_Standing_Idle_Variations_003"
+            name: "M_Standing_Idle_Variations_003",
           },
         ];
 
-        setLoadingProgress({ loaded: 0, total: animationURLs.length, item: 'Preparing animations...' });
-
-        const animationPromises = animationURLs.map(async ({ url, name }, index) => {
-          try {
-            setLoadingProgress({ 
-              loaded: index, 
-              total: animationURLs.length, 
-              item: `Loading ${name}...` 
-            });
-
-            // Get cached or download file
-            const localPath = await cacheServiceRef.current.getOrCacheFile(
-              url,
-              (progress) => {
-                setLoadingProgress({ 
-                  loaded: index + progress, 
-                  total: animationURLs.length, 
-                  item: `Downloading ${name} (${Math.round(progress * 100)}%)...` 
-                });
-              }
-            );
-
-            setLoadingProgress({ 
-              loaded: index + 0.5, 
-              total: animationURLs.length, 
-              item: `Processing ${name}...` 
-            });
-
-            // Load animation from local file
-            const animations = await fbxLoader.loadFBXAnimation(localPath);
-            
-            setLoadingProgress({ 
-              loaded: index + 1, 
-              total: animationURLs.length, 
-              item: `Loaded ${name}` 
-            });
-
-            return animations;
-          } catch (error) {
-            console.warn(`Failed to load animation ${name}:`, error);
-            setLoadingProgress({ 
-              loaded: index + 1, 
-              total: animationURLs.length, 
-              item: `Failed to load ${name}` 
-            });
-            return null;
-          }
+        setLoadingProgress({
+          loaded: 0,
+          total: animationURLs.length,
+          item: "Preparing animations...",
         });
+
+        const animationPromises = animationURLs.map(
+          async ({ url, name }, index) => {
+            try {
+              setLoadingProgress({
+                loaded: index,
+                total: animationURLs.length,
+                item: `Loading ${name}...`,
+              });
+
+              // Get cached or download file
+              const localPath = await cacheServiceRef.current.getOrCacheFile(
+                url,
+                (progress) => {
+                  setLoadingProgress({
+                    loaded: index + progress,
+                    total: animationURLs.length,
+                    item: `Downloading ${name} (${Math.round(progress * 100)}%)...`,
+                  });
+                },
+              );
+
+              setLoadingProgress({
+                loaded: index + 0.5,
+                total: animationURLs.length,
+                item: `Processing ${name}...`,
+              });
+
+              // Load animation from local file
+              const animations = await fbxLoader.loadFBXAnimation(localPath);
+
+              setLoadingProgress({
+                loaded: index + 1,
+                total: animationURLs.length,
+                item: `Loaded ${name}`,
+              });
+
+              return animations;
+            } catch (error) {
+              console.warn(`Failed to load animation ${name}:`, error);
+              setLoadingProgress({
+                loaded: index + 1,
+                total: animationURLs.length,
+                item: `Failed to load ${name}`,
+              });
+              return null;
+            }
+          },
+        );
 
         const loadedAnimations = await Promise.all(animationPromises);
 
@@ -948,18 +1012,17 @@ export function AvatarModel({
           console.log("❌ No FBX animations loaded, will use fallback");
         }
 
-        setLoadingProgress({ 
-          loaded: animationURLs.length, 
-          total: animationURLs.length, 
-          item: 'Animations ready!' 
+        setLoadingProgress({
+          loaded: animationURLs.length,
+          total: animationURLs.length,
+          item: "Animations ready!",
         });
-
       } catch (error) {
         console.error("❌ Error loading FBX animations:", error);
-        setLoadingProgress({ 
-          loaded: 0, 
-          total: 0, 
-          item: 'Animation loading failed' 
+        setLoadingProgress({
+          loaded: 0,
+          total: 0,
+          item: "Animation loading failed",
         });
       } finally {
         setIsLoadingAnimations(false);
@@ -1149,6 +1212,7 @@ export function AvatarModel({
           console.log(
             `Successfully set up ${actionsMap.size} filtered FBX animations`,
           );
+          console.log("Available animations:", Array.from(actionsMap.keys()));
           setAnimationActionsMap(actionsMap);
           return;
         }
@@ -1326,13 +1390,13 @@ export function AvatarModel({
                   child.visible = true;
                 }
 
-                console.log(
-                  `Avatar mesh position: x:${child.position.x.toFixed(2)}, y:${child.position.y.toFixed(2)}, z:${child.position.z.toFixed(2)}`,
-                );
-                console.log(
-                  `Avatar mesh scale: x:${child.scale.x.toFixed(2)}, y:${child.scale.y.toFixed(2)}, z:${child.scale.z.toFixed(2)}`,
-                );
-                console.log(`Avatar mesh visible: ${child.visible}`);
+                // console.log(
+                //   `Avatar mesh position: x:${child.position.x.toFixed(2)}, y:${child.position.y.toFixed(2)}, z:${child.position.z.toFixed(2)}`,
+                // );
+                // console.log(
+                //   `Avatar mesh scale: x:${child.scale.x.toFixed(2)}, y:${child.scale.y.toFixed(2)}, z:${child.scale.z.toFixed(2)}`,
+                // );
+                // console.log(`Avatar mesh visible: ${child.visible}`);
               }
             });
           }
