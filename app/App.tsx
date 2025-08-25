@@ -5,6 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import 'react-native-gesture-handler';
 
 // Import screens
+import SplashScreen from './src/screens/SplashScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 import QuestionnaireScreen from './src/screens/QuestionnaireScreen';
 import GeneratingTwinScreen from './src/screens/GeneratingTwinScreen';
@@ -12,6 +13,7 @@ import AvatarCreationScreen from './src/screens/AvatarCreationScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 
 export type RootStackParamList = {
+  Splash: undefined;
   Welcome: undefined;
   Questionnaire: { location: { latitude: number; longitude: number } | null };
   GeneratingTwin: undefined;
@@ -26,7 +28,7 @@ export default function App() {
     <NavigationContainer>
       <StatusBar style="auto" />
       <Stack.Navigator
-        initialRouteName="Welcome"
+        initialRouteName="Splash"
         screenOptions={{
           headerStyle: {
             backgroundColor: '#3182CE',
@@ -37,6 +39,11 @@ export default function App() {
           },
         }}
       >
+        <Stack.Screen 
+          name="Splash" 
+          component={SplashScreen}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen 
           name="Welcome" 
           component={WelcomeScreen}

@@ -46,7 +46,7 @@ export function AvatarLoadingIndicator({
                   ]}
                 />
               </View>
-              <Text style={styles.progressText}>{progressPercentage}%</Text>
+              <Text style={styles.progressText}>{progressPercentage.toFixed(2)}%</Text>
             </View>
 
             <Text style={styles.countText}>

@@ -29,7 +29,6 @@ interface ThreeAvatarProps {
   width?: number;
   height?: number;
   facialExpression?: string;
-  onFacialExpressionChange?: (expression: string) => void;
   skinToneAdjustment?: number; // -1 to 1, where negative darkens and positive lightens
   onSkinToneChange?: (value: number) => void;
 }
@@ -47,7 +46,6 @@ function ThreeAvatar({
   width = 300,
   height = 500,
   facialExpression: externalFacialExpression = "neutral",
-  onFacialExpressionChange,
   skinToneAdjustment = 0,
   onSkinToneChange,
 }: ThreeAvatarProps) {

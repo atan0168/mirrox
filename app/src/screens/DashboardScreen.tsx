@@ -137,7 +137,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
           <ThreeAvatar
             showAnimationButton={true}
             facialExpression={facialExpression}
-            onFacialExpressionChange={handleFacialExpressionChange}
             skinToneAdjustment={skinToneAdjustment}
           />
         </View>

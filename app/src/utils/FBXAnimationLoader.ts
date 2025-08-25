@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three-stdlib';
+import AnimationPreloaderService from '../services/AnimationPreloaderService';
 
 /**
  * Utility class for loading FBX animations and applying them to GLB avatars
@@ -14,6 +15,7 @@ export class FBXAnimationLoader {
 
   /**
    * Load FBX animation clips only (without applying to avatar)
+   * Uses the preloader service for efficient caching
    * @param fbxUrl - URL to the FBX file
    * @returns Promise<THREE.AnimationClip[]>
    */
@@ -21,10 +23,13 @@ export class FBXAnimationLoader {
     try {
       console.log('Loading FBX animation clips from:', fbxUrl);
       
-      // Load the FBX file
+      // Use preloader service to get cached file
+      const localPath = await AnimationPreloaderService.getAnimation(fbxUrl);
+      
+      // Load the FBX file from local path
       const fbxScene = await new Promise<THREE.Group>((resolve, reject) => {
         this.loader.load(
-          fbxUrl,
+          localPath,
           (object) => resolve(object),
           (progress) => console.log('Loading progress:', progress),
           (error) => reject(error)
@@ -47,6 +52,7 @@ export class FBXAnimationLoader {
 
   /**
    * Load FBX animation and apply to avatar scene
+   * Uses the preloader service for efficient caching
    * @param fbxUrl - URL to the FBX file (must be accessible via HTTP/HTTPS)
    * @param avatarScene - The loaded GLB avatar scene
    * @returns Promise<THREE.AnimationMixer | null>
@@ -58,10 +64,13 @@ export class FBXAnimationLoader {
     try {
       console.log('Loading FBX animation from:', fbxUrl);
       
-      // Load the FBX file
+      // Use preloader service to get cached file
+      const localPath = await AnimationPreloaderService.getAnimation(fbxUrl);
+      
+      // Load the FBX file from local path
       const fbxScene = await new Promise<THREE.Group>((resolve, reject) => {
         this.loader.load(
-          fbxUrl,
+          localPath,
           (object) => resolve(object),
           (progress) => console.log('Loading progress:', progress),
           (error) => reject(error)
