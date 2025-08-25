@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber/native";
 import { useGLTF } from "@react-three/drei/native";
 import * as THREE from "three";
-import { FBXAnimationLoader } from "../../utils/FBXAnimationLoader";
+import { GLBAnimationLoader } from "../../utils/GLBAnimationLoader";
 import AnimationCacheService from "../../services/AnimationCacheService";
 
 interface AvatarModelProps {
@@ -32,7 +32,7 @@ export function AvatarModel({
   const [animationActionsMap, setAnimationActionsMap] = useState<
     Map<string, THREE.AnimationAction>
   >(new Map());
-  const [fbxAnimations, setFbxAnimations] = useState<THREE.AnimationClip[]>([]);
+  const [glbAnimations, setGlbAnimations] = useState<THREE.AnimationClip[]>([]);
   const sceneRef = useRef<THREE.Group | null>(null);
   const [currentIdleIndex, setCurrentIdleIndex] = useState<number>(0);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -900,41 +900,42 @@ export function AvatarModel({
     }
   }, [scene, skinToneAdjustment]);
 
-  // Load FBX animations with caching
+  // Load GLB animations with caching
   useEffect(() => {
     if (!scene) return;
 
-    console.log("Loading FBX animations with caching...");
-    const loadFBXAnimations = async () => {
+    console.log("Loading GLB animations with caching...");
+    const loadGLBAnimations = async () => {
       setIsLoadingAnimations(true);
 
       try {
-        const fbxLoader = new FBXAnimationLoader();
+        const glbLoader = new GLBAnimationLoader();
 
         const animationURLs = [
           {
-            url: "http://10.10.0.126:8080/animations/M_Standing_Expressions_007.fbx",
-            name: "M_Standing_Expressions_007",
-          },
-          {
-            url: "http://10.10.0.126:8080/animations/laying_severe_cough.fbx",
+            url: "http://10.10.0.126:8080/animations/laying_severe_cough.glb",
             name: "laying_severe_cough",
           },
           {
-            url: "http://10.10.0.126:8080/animations/wiping_sweat.fbx",
-            name: "wiping_sweat",
-          },
-          // {
-          //   url: "http://10.10.0.126:8080/animations/shock.fbx",
-          //   name: "shock",
-          // },
-          {
-            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_006.fbx",
+            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/glb/idle/M_Standing_Idle_Variations_006.glb",
             name: "M_Standing_Idle_Variations_006",
           },
           {
-            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_003.fbx",
+            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/glb/idle/M_Standing_Idle_Variations_003.glb",
             name: "M_Standing_Idle_Variations_003",
+          },
+          // Local GLB animations (convert FBX to GLB first)
+          {
+            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/glb/expression/M_Standing_Expressions_007.glb",
+            name: "M_Standing_Expressions_007",
+          },
+          {
+            url: "http://10.10.0.126:8080/animations/wiping_sweat.glb",
+            name: "wiping_sweat",
+          },
+          {
+            url: "http://10.10.0.126:8080/animations/shock.glb",
+            name: "shock",
           },
         ];
 
@@ -972,7 +973,7 @@ export function AvatarModel({
               });
 
               // Load animation from local file
-              const animations = await fbxLoader.loadFBXAnimation(localPath);
+              const animations = await glbLoader.loadGLBAnimation(localPath);
 
               setLoadingProgress({
                 loaded: index + 1,
@@ -1005,11 +1006,11 @@ export function AvatarModel({
 
         if (successfulAnimations.length > 0) {
           console.log(
-            `🎬 Loaded ${successfulAnimations.length} FBX animation clips from cache/download`,
+            `🎬 Loaded ${successfulAnimations.length} GLB animation clips from cache/download`,
           );
-          setFbxAnimations(successfulAnimations);
+          setGlbAnimations(successfulAnimations);
         } else {
-          console.log("❌ No FBX animations loaded, will use fallback");
+          console.log("❌ No GLB animations loaded, will use fallback");
         }
 
         setLoadingProgress({
@@ -1029,7 +1030,7 @@ export function AvatarModel({
       }
     };
 
-    loadFBXAnimations();
+    loadGLBAnimations();
   }, [scene]);
 
   // Set up animations
@@ -1049,9 +1050,9 @@ export function AvatarModel({
 
     const actionsMap = new Map<string, THREE.AnimationAction>();
 
-    // Priority 1: Use FBX animations if available
-    if (fbxAnimations.length > 0) {
-      console.log(`Setting up ${fbxAnimations.length} FBX animations...`);
+    // Priority 1: Use GLB animations if available
+    if (glbAnimations.length > 0) {
+      console.log(`Setting up ${glbAnimations.length} GLB animations...`);
 
       let avatarSkeleton: THREE.Skeleton | null = null;
       let avatarSkinnedMesh: THREE.SkinnedMesh | null = null;
@@ -1074,23 +1075,23 @@ export function AvatarModel({
           skeleton.bones.map((bone: THREE.Bone) => bone.name),
         );
 
-        fbxAnimations.forEach((clip: THREE.AnimationClip, index: number) => {
+        glbAnimations.forEach((clip: THREE.AnimationClip, index: number) => {
           try {
-            console.log(`Setting up FBX animation ${index}: ${clip.name}`);
+            console.log(`Setting up GLB animation ${index}: ${clip.name}`);
 
             const filteredTracks = clip.tracks.filter((track) => {
               const trackParts = track.name.split(".");
               if (trackParts.length >= 2) {
                 const boneName = trackParts[0];
 
-                const findMatchingBone = (fbxBoneName: string) => {
+                const findMatchingBone = (animationBoneName: string) => {
                   let matchedBone = skeleton.bones.find(
-                    (bone: THREE.Bone) => bone.name === fbxBoneName,
+                    (bone: THREE.Bone) => bone.name === animationBoneName,
                   );
 
                   if (matchedBone) return matchedBone;
 
-                  // Common Mixamo to ReadyPlayerMe mappings
+                  // Common animation bone name to ReadyPlayerMe mappings
                   const boneMapping: { [key: string]: string } = {
                     mixamorigHips: "Hips",
                     mixamorigSpine: "Spine",
@@ -1114,7 +1115,7 @@ export function AvatarModel({
                     mixamorigRightFoot: "RightFoot",
                   };
 
-                  const mappedName = boneMapping[fbxBoneName];
+                  const mappedName = boneMapping[animationBoneName];
                   if (mappedName) {
                     matchedBone = skeleton.bones.find(
                       (bone: THREE.Bone) => bone.name === mappedName,
@@ -1128,8 +1129,8 @@ export function AvatarModel({
                     (bone: THREE.Bone) =>
                       bone.name
                         .toLowerCase()
-                        .includes(fbxBoneName.toLowerCase()) ||
-                      fbxBoneName
+                        .includes(animationBoneName.toLowerCase()) ||
+                      animationBoneName
                         .toLowerCase()
                         .includes(bone.name.toLowerCase()),
                   );
@@ -1295,7 +1296,7 @@ export function AvatarModel({
       console.error("Error creating fallback animation:", error);
       setAnimationActionsMap(new Map());
     }
-  }, [scene, animations, fbxAnimations]);
+  }, [scene, animations, glbAnimations]);
 
   // Control animation playback
   useEffect(() => {
