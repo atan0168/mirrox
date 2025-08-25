@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Animated, Easing } from "react-native";
+import { View, Text, StyleSheet, Animated, Easing, SafeAreaView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { Heart } from "lucide-react-native";
 import { RootStackParamList } from "../../App";
 import { LocalStorageService } from "../services/LocalStorageService";
 import AnimationCacheService from "../services/AnimationCacheService";
+import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
 
 type SplashScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -78,109 +80,110 @@ export default function SplashScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Animated.View
-        style={[
-          styles.content,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
-      >
-        <View style={styles.logoContainer}>
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>🫁</Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Animated.View
+          style={[
+            styles.centerContent,
+            {
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            },
+          ]}
+        >
+          <View style={styles.logoContainer}>
+            <View style={styles.logo}>
+              <Heart size={48} color={colors.white} fill={colors.white} />
+            </View>
+            <Text style={styles.title}>Digital Twin</Text>
+            <Text style={styles.subtitle}>Health & Wellness Monitoring</Text>
           </View>
-          <Text style={styles.title}>Digital Twin</Text>
-          <Text style={styles.subtitle}>Health Monitoring</Text>
-        </View>
 
-        <View style={styles.loadingContainer}>
-          <View style={styles.progressBar}>
-            <Animated.View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${loadingProgress * 100}%`,
-                },
-              ]}
-            />
+          <View style={styles.loadingContainer}>
+            <View style={styles.progressBar}>
+              <Animated.View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${loadingProgress * 100}%`,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.loadingText}>{loadingText}</Text>
           </View>
-          <Text style={styles.loadingText}>{loadingText}</Text>
-        </View>
-      </Animated.View>
-    </View>
+        </Animated.View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a202c",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: colors.black,
   },
   content: {
-    alignItems: "center",
-    width: "80%",
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  centerContent: {
+    alignItems: 'center',
+    width: '100%',
   },
   logoContainer: {
-    alignItems: "center",
-    marginBottom: 60,
+    alignItems: 'center',
+    marginBottom: spacing.xxxl + spacing.lg,
   },
   logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#3182CE",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-    shadowColor: "#3182CE",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  logoText: {
-    fontSize: 40,
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[800],
+    borderWidth: 2,
+    borderColor: colors.neutral[700],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    ...shadows.medium,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: "#ffffff",
-    textAlign: "center",
-    marginBottom: 8,
+    fontSize: fontSize.xxxl + 4,
+    fontWeight: '700',
+    color: colors.white,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    color: "#a0aec0",
-    textAlign: "center",
+    fontSize: fontSize.base,
+    color: colors.neutral[400],
+    textAlign: 'center',
+    fontWeight: '500',
   },
   loadingContainer: {
-    width: "100%",
-    alignItems: "center",
+    width: '100%',
+    alignItems: 'center',
   },
   progressBar: {
-    width: "100%",
-    height: 4,
-    backgroundColor: "#2d3748",
-    borderRadius: 2,
-    overflow: "hidden",
-    marginBottom: 16,
+    width: '100%',
+    height: 3,
+    backgroundColor: colors.neutral[800],
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
   },
   progressFill: {
-    height: "100%",
-    backgroundColor: "#3182CE",
-    borderRadius: 2,
+    height: '100%',
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.full,
   },
   loadingText: {
-    fontSize: 14,
-    color: "#a0aec0",
-    textAlign: "center",
+    fontSize: fontSize.sm,
+    color: colors.neutral[500],
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Text, SafeAreaView } from 'react-native';
 import ThreeAvatar from '../components/ThreeAvatar';
+import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
 
 export default function AvatarCustomizationScreen() {
   const [skinToneAdjustment, setSkinToneAdjustment] = useState(0);
@@ -49,53 +50,48 @@ export default function AvatarCustomizationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.neutral[50],
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: spacing.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: fontSize.xxl,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 20,
-    color: '#333',
+    marginBottom: spacing.lg,
+    color: colors.black,
   },
   avatarContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   infoContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    ...shadows.soft,
   },
   infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#333',
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    marginBottom: spacing.md,
+    color: colors.black,
   },
   infoText: {
-    fontSize: 14,
-    marginBottom: 6,
-    color: '#666',
+    fontSize: fontSize.sm,
+    marginBottom: spacing.xs,
+    color: colors.neutral[600],
     lineHeight: 20,
   },
   currentValue: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     fontWeight: '600',
-    marginTop: 10,
-    color: '#4A90E2',
+    marginTop: spacing.sm,
+    color: colors.neutral[700],
     textAlign: 'center',
   },
 });

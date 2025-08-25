@@ -9,9 +9,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { WebView } from "react-native-webview";
+import { Zap, Palette } from "lucide-react-native";
 import { localStorageService } from "../services/LocalStorageService";
 import { UserProfile } from "../models/User";
 import { readyPlayerMeApiService } from "../services/ReadyPlayerMeApiService";
+import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
 
 // Replace 'demo' with your actual subdomain from Ready Player Me
 const RPM_SUBDOMAIN = "mirrox";
@@ -196,7 +198,9 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
             style={styles.optionCard}
             onPress={handleQuickCreate}
           >
-            <Text style={styles.optionIcon}>⚡</Text>
+            <View style={styles.optionIcon}>
+              <Zap size={32} color={colors.neutral[600]} />
+            </View>
             <Text style={styles.optionTitle}>Quick Create</Text>
             <Text style={styles.optionDescription}>
               Let us create an avatar for you based on your profile answers.
@@ -211,7 +215,9 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
             style={styles.optionCard}
             onPress={handleCustomCreate}
           >
-            <Text style={styles.optionIcon}>🎨</Text>
+            <View style={styles.optionIcon}>
+              <Palette size={32} color={colors.neutral[600]} />
+            </View>
             <Text style={styles.optionTitle}>Custom Create</Text>
             <Text style={styles.optionDescription}>
               Design your avatar from scratch with full customization options.
@@ -330,28 +336,28 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.neutral[50],
   },
   header: {
-    padding: 20,
-    paddingTop: 10,
-    backgroundColor: "#ffffff",
+    padding: spacing.lg,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
+    borderBottomColor: colors.neutral[200],
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
-    color: "#2D3748",
+    fontSize: fontSize.xxl,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+    color: colors.black,
   },
   subtitle: {
-    fontSize: 16,
-    textAlign: "center",
-    color: "#4A5568",
+    fontSize: fontSize.base,
+    textAlign: 'center',
+    color: colors.neutral[600],
     lineHeight: 22,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   webviewContainer: {
     flex: 1,
@@ -359,7 +365,7 @@ const styles = StyleSheet.create({
   },
   webview: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.white,
   },
   loadingOverlay: {
     position: "absolute",
@@ -373,83 +379,86 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#4A5568",
+    marginTop: spacing.md,
+    fontSize: fontSize.base,
+    color: colors.neutral[600],
     textAlign: "center",
   },
   optionsContainer: {
     flex: 1,
-    padding: 20,
-    justifyContent: "center",
+    padding: spacing.lg,
+    justifyContent: 'center',
   },
   optionCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 2,
-    borderColor: "transparent",
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    ...shadows.soft,
   },
   optionIcon: {
-    fontSize: 32,
-    textAlign: "center",
-    marginBottom: 12,
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+    alignSelf: 'center',
   },
   optionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
-    color: "#2D3748",
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+    color: colors.black,
   },
   optionDescription: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     textAlign: "center",
-    color: "#4A5568",
+    color: colors.neutral[600],
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   optionButton: {
-    backgroundColor: "#3182CE",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: colors.black,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
     alignItems: "center",
   },
   optionButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
+    color: colors.white,
+    fontSize: fontSize.base,
     fontWeight: "600",
   },
   apiCreationContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 40,
+    padding: spacing.xl,
   },
   loadingSubtext: {
-    fontSize: 14,
-    color: "#718096",
+    fontSize: fontSize.sm,
+    color: colors.neutral[500],
     textAlign: "center",
-    marginTop: 8,
+    marginTop: spacing.xs,
     lineHeight: 20,
   },
   footer: {
-    padding: 16,
-    backgroundColor: "#ffffff",
+    padding: spacing.md,
+    backgroundColor: colors.white,
     borderTopWidth: 1,
-    borderTopColor: "#e2e8f0",
+    borderTopColor: colors.neutral[200],
   },
   footerText: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     textAlign: "center",
-    color: "#718096",
+    color: colors.neutral[500],
     lineHeight: 20,
   },
 });

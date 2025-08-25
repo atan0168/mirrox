@@ -5,13 +5,17 @@ import {
   ActivityIndicator,
   StyleSheet,
   ScrollView,
+  SafeAreaView,
 } from "react-native";
+import { Moon, Car, Heart } from "lucide-react-native";
 import { localStorageService } from "../services/LocalStorageService";
 import ThreeAvatar from "../components/ThreeAvatar";
 import { FacialExpressionControls } from "../components/controls/FacialExpressionControls";
 import { SkinToneButton } from "../components/controls/SkinToneButton";
+import { Card } from "../components/ui";
 import { UserProfile } from "../models/User";
 import { AirQualityData } from "../models/AirQuality";
+import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
 
 interface DashboardScreenProps {
   navigation: any;
@@ -115,24 +119,29 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3182CE" />
-        <Text style={styles.loadingText}>Loading your digital twin...</Text>
-      </View>
+      <SafeAreaView style={styles.loadingContainer}>
+        <View style={styles.loadingContent}>
+          <ActivityIndicator size="large" color={colors.neutral[600]} />
+          <Text style={styles.loadingText}>Loading your digital twin...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-      </View>
+      <SafeAreaView style={styles.errorContainer}>
+        <View style={styles.errorContent}>
+          <Text style={styles.errorText}>Error: {error}</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
         <View style={styles.avatarContainer}>
           <ThreeAvatar
             showAnimationButton={true}
@@ -210,37 +219,50 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
         )}
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.neutral[50],
+  },
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
   },
   content: {
-    padding: 20,
+    padding: spacing.lg,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: colors.neutral[50],
+  },
+  loadingContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#4A5568",
+    marginTop: spacing.md,
+    fontSize: fontSize.base,
+    color: colors.neutral[600],
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
+    backgroundColor: colors.neutral[50],
+  },
+  errorContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
   },
   errorText: {
-    fontSize: 16,
-    color: "#E53E3E",
-    textAlign: "center",
+    fontSize: fontSize.base,
+    color: colors.neutral[700],
+    textAlign: 'center',
   },
   title: {
     fontSize: 28,
