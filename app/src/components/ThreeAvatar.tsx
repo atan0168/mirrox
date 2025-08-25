@@ -42,6 +42,7 @@ function ThreeAvatar({
   const [error, setError] = useState<string | null>(null);
   const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
   const [hazeEnabled, setHazeEnabled] = useState<boolean>(false);
+  const [smogIntensity, setSmogIntensity] = useState<number>(1.0);
   const canvasRef = useRef<any>(null);
 
   useEffect(() => {
@@ -79,6 +80,11 @@ function ThreeAvatar({
   const handleHazeToggle = () => {
     setHazeEnabled(!hazeEnabled);
     console.log(`Smog effect ${!hazeEnabled ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleIntensityChange = (intensity: number) => {
+    setSmogIntensity(intensity);
+    console.log(`Smog intensity changed to: ${intensity}`);
   };
 
   if (!avatarUrl) {
@@ -124,7 +130,22 @@ function ThreeAvatar({
         <pointLight position={[-5, 5, 5]} intensity={1} />
 
         {/* 3D Content */}
-        <SmogController enabled={hazeEnabled} />
+        <SmogController 
+          enabled={hazeEnabled} 
+          intensity={smogIntensity}
+          windStrength={1.0}
+          density={60}
+          enableTurbulence={true}
+          turbulenceStrength={[0.005, 0.005, 0.005]}
+          enableWind={true}
+          windDirection={[1, 0.2, 0]}
+          maxVelocity={[2, 2, 1]}
+          minBounds={[-10, -3, -10]}
+          maxBounds={[10, 8, 10]}
+          size={[200, 200, 200]}
+          opacity={0.3}
+          color={new THREE.Color(0x888888)}
+        />
         <group position={[0, -1.5, 0]} scale={1.8}>
           <AvatarModel url={avatarUrl} activeAnimation={activeAnimation} />
         </group>
@@ -141,7 +162,9 @@ function ThreeAvatar({
       <DebugOverlay />
       <EffectControls 
         hazeEnabled={hazeEnabled} 
-        onHazeToggle={handleHazeToggle} 
+        onHazeToggle={handleHazeToggle}
+        intensity={smogIntensity}
+        onIntensityChange={handleIntensityChange}
       />
       <AnimationControls
         availableAnimations={AVAILABLE_ANIMATIONS}
