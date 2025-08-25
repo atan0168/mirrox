@@ -26,16 +26,21 @@ const Stack = createStackNavigator<RootStackParamList>();
 export default function App() {
   return (
     <NavigationContainer>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
       <Stack.Navigator
         initialRouteName="Splash"
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#3182CE',
+            backgroundColor: '#FFFFFF',
+            borderBottomWidth: 1,
+            borderBottomColor: '#E5E5E5',
+            elevation: 0,
+            shadowOpacity: 0,
           },
-          headerTintColor: '#fff',
+          headerTintColor: '#000000',
           headerTitleStyle: {
-            fontWeight: 'bold',
+            fontWeight: '600',
+            color: '#000000',
           },
         }}
       >

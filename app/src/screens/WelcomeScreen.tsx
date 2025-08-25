@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, Button, Alert, StyleSheet } from 'react-native';
+import { View, Text, Alert, StyleSheet, SafeAreaView } from 'react-native';
 import * as Location from 'expo-location';
+import { MapPin } from 'lucide-react-native';
+import { Button, Card } from '../components/ui';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 interface WelcomeScreenProps {
   navigation: any; // You can type this more strictly with NavigationProp
@@ -52,42 +55,83 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome to Your Digital Twin</Text>
-      <Text style={styles.subtitle}>
-        Create a magical representation of yourself that promotes wellness and self-awareness
-      </Text>
-      
-      <Button 
-        title={isLoading ? "Getting Location..." : "Get Started"} 
-        onPress={handleGetStarted}
-        disabled={isLoading}
-      />
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <Card style={styles.welcomeCard}>
+            <View style={styles.iconContainer}>
+              <View style={styles.iconWrapper}>
+                <MapPin size={32} color={colors.neutral[600]} />
+              </View>
+            </View>
+            
+            <Text style={styles.title}>Welcome to Your Digital Twin</Text>
+            <Text style={styles.subtitle}>
+              Create a magical representation of yourself that promotes wellness and self-awareness
+            </Text>
+          </Card>
+          
+          <View style={styles.buttonContainer}>
+            <Button 
+              fullWidth
+              size="lg"
+              disabled={isLoading}
+              onPress={handleGetStarted}
+            >
+              {isLoading ? "Getting Location..." : "Get Started"}
+            </Button>
+          </View>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.neutral[50],
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  content: {
+    gap: spacing.xl,
+  },
+  welcomeCard: {
+    padding: spacing.xxxl,
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+  },
+  iconContainer: {
+    marginBottom: spacing.lg,
+  },
+  iconWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: fontSize.xxxl,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 16,
-    color: '#2D3748',
+    marginBottom: spacing.md,
+    color: colors.black,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     textAlign: 'center',
-    marginBottom: 40,
-    color: '#4A5568',
+    color: colors.neutral[600],
     lineHeight: 24,
+  },
+  buttonContainer: {
+    paddingHorizontal: spacing.md,
   },
 });
 

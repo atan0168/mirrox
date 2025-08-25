@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, Button, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { MapPin } from 'lucide-react-native';
 import { CommutePicker } from '../components/CommutePicker';
 import { SleepSlider } from '../components/SleepSlider';
+import { Button, Card, Badge } from '../components/ui';
 import { localStorageService } from '../services/LocalStorageService';
 import { UserProfile } from '../models/User';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 interface QuestionnaireScreenProps {
   route: {
@@ -43,71 +46,112 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({ route, naviga
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Tell us about yourself</Text>
-        <Text style={styles.subtitle}>
-          This helps us create your personalized digital twin
-        </Text>
-
-        {!location && (
-          <View style={styles.locationNotice}>
-            <Text style={styles.locationNoticeText}>
-              📍 Using Kuala Lumpur as your default location
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Tell us about yourself</Text>
+            <Text style={styles.subtitle}>
+              This helps us create your personalized digital twin
             </Text>
           </View>
-        )}
 
-        <CommutePicker selectedValue={commuteMode} onValueChange={setCommuteMode} />
-        <SleepSlider value={sleepHours} onValueChange={setSleepHours} />
+          {!location && (
+            <Card variant="outline" style={styles.locationNotice}>
+              <View style={styles.locationNoticeContent}>
+                <View style={styles.locationIcon}>
+                  <MapPin size={16} color={colors.neutral[600]} />
+                </View>
+                <Text style={styles.locationNoticeText}>
+                  Using Kuala Lumpur as your default location
+                </Text>
+              </View>
+            </Card>
+          )}
 
-        <View style={styles.buttonContainer}>
-          <Button title="Create My Twin" onPress={handleCompleteOnboarding} />
+          <Card style={styles.formCard}>
+            <CommutePicker selectedValue={commuteMode} onValueChange={setCommuteMode} />
+            <View style={styles.separator} />
+            <SleepSlider value={sleepHours} onValueChange={setSleepHours} />
+          </Card>
+
+          <View style={styles.buttonContainer}>
+            <Button 
+              fullWidth 
+              size="lg"
+              onPress={handleCompleteOnboarding}
+            >
+              Create My Twin
+            </Button>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.neutral[50],
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   content: {
-    padding: 20,
-    paddingTop: 40,
+    padding: spacing.lg,
+    gap: spacing.lg,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: fontSize.xxxl,
+    fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 8,
-    color: '#2D3748',
+    marginBottom: spacing.xs,
+    color: colors.black,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     textAlign: 'center',
-    marginBottom: 30,
-    color: '#4A5568',
+    color: colors.neutral[600],
     lineHeight: 24,
   },
   locationNotice: {
-    backgroundColor: '#FFF3CD',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#FFEAA7',
+    padding: spacing.md,
+  },
+  locationNoticeContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  locationIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   locationNoticeText: {
-    textAlign: 'center',
-    color: '#856404',
-    fontSize: 14,
+    color: colors.neutral[700],
+    fontSize: fontSize.sm,
+    fontWeight: '500',
+  },
+  formCard: {
+    padding: spacing.lg,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: colors.neutral[200],
+    marginVertical: spacing.lg,
   },
   buttonContainer: {
-    marginTop: 40,
-    marginBottom: 20,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
   },
 });
 
