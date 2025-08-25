@@ -210,33 +210,6 @@ export class AnimationCacheService {
   }
 
   /**
-   * Preload multiple files in parallel
-   */
-  public async preloadFiles(urls: string[], onProgress?: (completed: number, total: number) => void): Promise<void> {
-    console.log(`🔄 Starting preload of ${urls.length} files`);
-    let completed = 0;
-    
-    const promises = urls.map(async (url) => {
-      try {
-        await this.getOrCacheFile(url);
-        completed++;
-        if (onProgress) {
-          onProgress(completed, urls.length);
-        }
-      } catch (error) {
-        console.warn(`⚠️ Failed to preload: ${url}`, error);
-        completed++;
-        if (onProgress) {
-          onProgress(completed, urls.length);
-        }
-      }
-    });
-
-    await Promise.all(promises);
-    console.log(`✅ Preload complete: ${completed}/${urls.length} files processed`);
-  }
-
-  /**
    * Clean up old cache files when size limit is exceeded
    */
   private async cleanupCache(): Promise<void> {

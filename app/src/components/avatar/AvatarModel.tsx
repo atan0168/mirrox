@@ -4,7 +4,6 @@ import { useGLTF } from "@react-three/drei/native";
 import * as THREE from "three";
 import { FBXAnimationLoader } from "../../utils/FBXAnimationLoader";
 import AnimationCacheService from "../../services/AnimationCacheService";
-import AnimationPreloaderService from "../../services/AnimationPreloaderService";
 
 interface AvatarModelProps {
   url: string;
@@ -855,42 +854,58 @@ export function AvatarModel({
   useEffect(() => {
     if (!scene) return;
 
-    console.log("Loading FBX animations with preloader service...");
+    console.log("Loading FBX animations with caching...");
     const loadFBXAnimations = async () => {
       setIsLoadingAnimations(true);
       
       try {
         const fbxLoader = new FBXAnimationLoader();
 
-        // Get animation configs from preloader service
-        const animationConfigs = AnimationPreloaderService.getAnimationConfigs();
-        
-        setLoadingProgress({ loaded: 0, total: animationConfigs.length, item: 'Preparing animations...' });
+        const animationURLs = [
+          {
+            url: "http://10.10.0.126:8080/animations/M_Standing_Expressions_007.fbx",
+            name: "M_Standing_Expressions_007"
+          },
+          {
+            url: "http://10.10.0.126:8080/animations/laying_severe_cough.fbx", 
+            name: "laying_severe_cough"
+          },
+          {
+            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_006.fbx",
+            name: "M_Standing_Idle_Variations_006"
+          },
+          {
+            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/fbx/idle/M_Standing_Idle_Variations_003.fbx",
+            name: "M_Standing_Idle_Variations_003"
+          },
+        ];
 
-        const animationPromises = animationConfigs.map(async (config, index) => {
+        setLoadingProgress({ loaded: 0, total: animationURLs.length, item: 'Preparing animations...' });
+
+        const animationPromises = animationURLs.map(async ({ url, name }, index) => {
           try {
             setLoadingProgress({ 
               loaded: index, 
-              total: animationConfigs.length, 
-              item: `Loading ${config.name}...` 
+              total: animationURLs.length, 
+              item: `Loading ${name}...` 
             });
 
-            // Use preloader service to get animation (cached or download)
-            const localPath = await AnimationPreloaderService.getAnimation(
-              config.url,
+            // Get cached or download file
+            const localPath = await cacheServiceRef.current.getOrCacheFile(
+              url,
               (progress) => {
                 setLoadingProgress({ 
                   loaded: index + progress, 
-                  total: animationConfigs.length, 
-                  item: `Downloading ${config.name} (${Math.round(progress * 100)}%)...` 
+                  total: animationURLs.length, 
+                  item: `Downloading ${name} (${Math.round(progress * 100)}%)...` 
                 });
               }
             );
 
             setLoadingProgress({ 
               loaded: index + 0.5, 
-              total: animationConfigs.length, 
-              item: `Processing ${config.name}...` 
+              total: animationURLs.length, 
+              item: `Processing ${name}...` 
             });
 
             // Load animation from local file
@@ -898,17 +913,17 @@ export function AvatarModel({
             
             setLoadingProgress({ 
               loaded: index + 1, 
-              total: animationConfigs.length, 
-              item: `Loaded ${config.name}` 
+              total: animationURLs.length, 
+              item: `Loaded ${name}` 
             });
 
             return animations;
           } catch (error) {
-            console.warn(`Failed to load animation ${config.name}:`, error);
+            console.warn(`Failed to load animation ${name}:`, error);
             setLoadingProgress({ 
               loaded: index + 1, 
-              total: animationConfigs.length, 
-              item: `Failed to load ${config.name}` 
+              total: animationURLs.length, 
+              item: `Failed to load ${name}` 
             });
             return null;
           }
@@ -926,7 +941,7 @@ export function AvatarModel({
 
         if (successfulAnimations.length > 0) {
           console.log(
-            `🎬 Loaded ${successfulAnimations.length} FBX animation clips from preloader service`,
+            `🎬 Loaded ${successfulAnimations.length} FBX animation clips from cache/download`,
           );
           setFbxAnimations(successfulAnimations);
         } else {
@@ -934,8 +949,8 @@ export function AvatarModel({
         }
 
         setLoadingProgress({ 
-          loaded: animationConfigs.length, 
-          total: animationConfigs.length, 
+          loaded: animationURLs.length, 
+          total: animationURLs.length, 
           item: 'Animations ready!' 
         });
 
