@@ -8,15 +8,16 @@ interface EffectControlsProps {
   onIntensityChange?: (intensity: number) => void;
 }
 
-export function EffectControls({ 
-  hazeEnabled, 
-  onHazeToggle, 
+export function EffectControls({
+  hazeEnabled,
+  onHazeToggle,
   intensity = 1.0,
-  onIntensityChange 
+  onIntensityChange,
 }: EffectControlsProps) {
   const handleIntensityToggle = () => {
     if (onIntensityChange) {
-      const newIntensity = intensity >= 1.0 ? 0.5 : intensity >= 0.5 ? 1.5 : 1.0;
+      const newIntensity =
+        intensity >= 1.0 ? 0.5 : intensity >= 0.5 ? 1.5 : 1.0;
       onIntensityChange(newIntensity);
     }
   };
@@ -37,10 +38,7 @@ export function EffectControls({
   return (
     <View style={styles.controlsContainer}>
       <TouchableOpacity
-        style={[
-          styles.hazeButton,
-          hazeEnabled && styles.activeHazeButton,
-        ]}
+        style={[styles.hazeButton, hazeEnabled && styles.activeHazeButton]}
         onPress={onHazeToggle}
       >
         <Text
@@ -52,15 +50,13 @@ export function EffectControls({
           {getSmogEmoji()} {hazeEnabled ? "Smog ON" : "Add Smog"}
         </Text>
       </TouchableOpacity>
-      
+
       {hazeEnabled && onIntensityChange && (
         <TouchableOpacity
           style={styles.intensityButton}
           onPress={handleIntensityToggle}
         >
-          <Text style={styles.intensityButtonText}>
-            {getIntensityLabel()}
-          </Text>
+          <Text style={styles.intensityButtonText}>{getIntensityLabel()}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -70,7 +66,7 @@ export function EffectControls({
 const styles = StyleSheet.create({
   controlsContainer: {
     position: "absolute",
-    top: 50,
+    top: 10,
     right: 10,
     flexDirection: "column",
     gap: 8,

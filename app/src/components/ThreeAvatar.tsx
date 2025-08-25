@@ -8,7 +8,6 @@ import { AvatarModel } from "./avatar/AvatarModel";
 import { SmogController } from "./effects/SmogController";
 import { AnimationControls } from "./controls/AnimationControls";
 import { EffectControls } from "./controls/EffectControls";
-import { DebugOverlay } from "./ui/DebugOverlay";
 import { LoadingState, ErrorState } from "./ui/StateComponents";
 import { localStorageService } from "../services/LocalStorageService";
 import {
@@ -33,8 +32,8 @@ interface ThreeAvatarProps {
 const AVAILABLE_ANIMATIONS = [
   { name: "M_Standing_Idle_Variations_006", label: "Idle 1" },
   { name: "M_Standing_Idle_Variations_003", label: "Idle 2" },
-  { name: "M_Standing_Expressions_007", label: "Expressions" },
-  { name: "mixamo.com", label: "Cough" },
+  { name: "M_Standing_Expressions_007", label: "Cough" },
+  { name: "mixamo.com", label: "Bad Cough" },
 ];
 
 function ThreeAvatar({
@@ -163,7 +162,7 @@ function ThreeAvatar({
           opacity={0.3}
           color={new THREE.Color(0x888888)}
         />
-        <group position={[0, -2.0, 0]} scale={1.8}>
+        <group position={[0, -1.6, 1.0]} scale={1.8}>
           <AvatarModel
             url={avatarUrl}
             activeAnimation={activeAnimation}
@@ -180,19 +179,18 @@ function ThreeAvatar({
       </Canvas>
 
       {/* UI Overlays - positioned on top of canvas */}
-      <DebugOverlay />
       <EffectControls
         hazeEnabled={hazeEnabled}
         onHazeToggle={handleHazeToggle}
         intensity={smogIntensity}
         onIntensityChange={handleIntensityChange}
       />
-      {/* <AnimationControls */}
-      {/*   availableAnimations={AVAILABLE_ANIMATIONS} */}
-      {/*   activeAnimation={activeAnimation} */}
-      {/*   onAnimationToggle={handleAnimationToggle} */}
-      {/*   visible={showAnimationButton} */}
-      {/* /> */}
+      <AnimationControls
+        availableAnimations={AVAILABLE_ANIMATIONS}
+        activeAnimation={activeAnimation}
+        onAnimationToggle={handleAnimationToggle}
+        visible={showAnimationButton}
+      />
     </View>
   );
 }
