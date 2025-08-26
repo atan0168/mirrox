@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useRef } from "react";
+import { Bot, Palette, Zap } from "lucide-react-native";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
   Alert,
-  TouchableOpacity,
   SafeAreaView,
-  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { Zap, Palette } from "lucide-react-native";
-import { localStorageService } from "../services/LocalStorageService";
+import Loader from "../components/ui/Loader";
 import { UserProfile } from "../models/User";
+import { localStorageService } from "../services/LocalStorageService";
 import { readyPlayerMeApiService } from "../services/ReadyPlayerMeApiService";
-import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
+import { borderRadius, colors, fontSize, shadows, spacing } from "../theme";
 
 // Replace 'demo' with your actual subdomain from Ready Player Me
 const RPM_SUBDOMAIN = "mirrox";
@@ -88,7 +88,7 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
           }),
         );
 
-        // Optional: You can send custom configuration based on user profile
+        // TODO: You can send custom configuration based on user profile
         if (userProfile) {
           // Example: Set gender or other preferences based on user data
           // This would require additional user profile fields
@@ -187,7 +187,6 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Create Your Avatar</Text>
           <Text style={styles.subtitle}>
             Choose how you'd like to create your digital twin
           </Text>
@@ -228,13 +227,6 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
             </View>
           </TouchableOpacity>
         </View>
-
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            💡 Both options create a unique avatar that represents you in the
-            app
-          </Text>
-        </View>
       </SafeAreaView>
     );
   }
@@ -256,7 +248,7 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
 
       {creationMethod === "api" ? (
         <View style={styles.apiCreationContainer}>
-          <ActivityIndicator size="large" color="#3182CE" />
+          <Loader />
           <Text style={styles.loadingText}>Generating your avatar...</Text>
           <Text style={styles.loadingSubtext}>
             We're creating an avatar based on your profile preferences
@@ -266,7 +258,7 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
         <View style={styles.webviewContainer}>
           {isLoading && (
             <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#3182CE" />
+              <Loader />
               <Text style={styles.loadingText}>Loading avatar creator...</Text>
             </View>
           )}
@@ -323,11 +315,16 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
       )}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          {creationMethod === "api"
-            ? "🤖 AI is creating your perfect avatar..."
-            : "💡 Tip: Take your time to customize your avatar. It will represent you throughout the app!"}
-        </Text>
+        <View style={styles.footerRow}>
+          {creationMethod === "api" && (
+            <Bot size={16} color={colors.neutral[600]} />
+          )}
+          <Text style={styles.footerText}>
+            {creationMethod === "api"
+              ? "Creating your perfect avatar..."
+              : "Tip: Take your time to customize your avatar. It will represent you throughout the app!"}
+          </Text>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -339,24 +336,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[50],
   },
   header: {
-    padding: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.neutral[200],
   },
   title: {
     fontSize: fontSize.xxl,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: spacing.xs,
     color: colors.black,
   },
   subtitle: {
     fontSize: fontSize.base,
-    textAlign: 'center',
+    textAlign: "center",
     color: colors.neutral[600],
     lineHeight: 22,
+    marginTop: spacing.md,
     marginBottom: spacing.md,
   },
   webviewContainer: {
@@ -387,7 +385,7 @@ const styles = StyleSheet.create({
   optionsContainer: {
     flex: 1,
     padding: spacing.lg,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   optionCard: {
     backgroundColor: colors.white,
@@ -405,15 +403,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[100],
     borderWidth: 1,
     borderColor: colors.neutral[200],
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.md,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   optionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
     marginBottom: spacing.xs,
     color: colors.black,
   },
@@ -454,6 +452,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.neutral[200],
+    justifyContent: "center",
+  },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
   },
   footerText: {
     fontSize: fontSize.sm,

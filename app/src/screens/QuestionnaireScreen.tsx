@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { MapPin } from 'lucide-react-native';
-import { CommutePicker } from '../components/CommutePicker';
-import { SleepSlider } from '../components/SleepSlider';
-import { Button, Card, Badge } from '../components/ui';
-import { localStorageService } from '../services/LocalStorageService';
-import { UserProfile } from '../models/User';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import React, { useState } from "react";
+import { View, Text, StyleSheet, ScrollView, SafeAreaView } from "react-native";
+import { MapPin } from "lucide-react-native";
+import { CommutePicker } from "../components/CommutePicker";
+import { SleepSlider } from "../components/SleepSlider";
+import { Button, Card, Badge } from "../components/ui";
+import { localStorageService } from "../services/LocalStorageService";
+import { UserProfile } from "../models/User";
+import { colors, spacing, fontSize, borderRadius } from "../theme";
 
 interface QuestionnaireScreenProps {
   route: {
@@ -17,15 +17,20 @@ interface QuestionnaireScreenProps {
   navigation: any;
 }
 
-const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({ route, navigation }) => {
+const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
+  route,
+  navigation,
+}) => {
   const { location } = route.params;
-  const [commuteMode, setCommuteMode] = useState<'car' | 'transit' | 'wfh' | 'bike' | 'walk'>('wfh');
+  const [commuteMode, setCommuteMode] = useState<
+    "car" | "transit" | "wfh" | "bike" | "walk"
+  >("wfh");
   const [sleepHours, setSleepHours] = useState<number>(7);
 
   const handleCompleteOnboarding = () => {
     // If no location was provided, use a default location (you could show a city picker here)
     const profileLocation = location || {
-      latitude: 3.1390, // Kuala Lumpur default
+      latitude: 3.139, // Kuala Lumpur default
       longitude: 101.6869,
     };
 
@@ -42,7 +47,7 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({ route, naviga
     })();
 
     // Navigate to a temporary loading screen while we fetch API data
-    navigation.navigate('GeneratingTwin');
+    navigation.navigate("GeneratingTwin");
   };
 
   return (
@@ -70,14 +75,18 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({ route, naviga
           )}
 
           <Card style={styles.formCard}>
-            <CommutePicker selectedValue={commuteMode} onValueChange={setCommuteMode} />
+            <CommutePicker
+              selectedValue={commuteMode}
+              onValueChange={setCommuteMode}
+            />
             <View style={styles.separator} />
             <SleepSlider value={sleepHours} onValueChange={setSleepHours} />
           </Card>
 
           <View style={styles.buttonContainer}>
-            <Button 
-              fullWidth 
+            <Button
+              fullWidth
+              variant="secondary"
               size="lg"
               onPress={handleCompleteOnboarding}
             >
@@ -103,19 +112,19 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: spacing.md,
   },
   title: {
     fontSize: fontSize.xxxl,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: spacing.xs,
     color: colors.black,
   },
   subtitle: {
     fontSize: fontSize.base,
-    textAlign: 'center',
+    textAlign: "center",
     color: colors.neutral[600],
     lineHeight: 24,
   },
@@ -123,9 +132,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   locationNoticeContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.sm,
   },
   locationIcon: {
@@ -133,13 +142,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: borderRadius.full,
     backgroundColor: colors.neutral[100],
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   locationNoticeText: {
     color: colors.neutral[700],
     fontSize: fontSize.sm,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   formCard: {
     padding: spacing.lg,

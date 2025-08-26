@@ -1,20 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated } from 'react-native';
-import { Loader2, CheckCircle, Clock } from 'lucide-react-native';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, SafeAreaView, Animated } from "react-native";
+import { CheckCircle, Clock } from "lucide-react-native";
+import { colors, spacing, fontSize, borderRadius } from "../theme";
+import Loader from "../components/ui/Loader";
 
 interface GeneratingTwinScreenProps {
   navigation: any;
 }
 
-const GeneratingTwinScreen: React.FC<GeneratingTwinScreenProps> = ({ navigation }) => {
+const GeneratingTwinScreen: React.FC<GeneratingTwinScreenProps> = ({
+  navigation,
+}) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [fadeAnim] = useState(new Animated.Value(0));
 
   const steps = [
-    { text: 'Processing your location', delay: 1000 },
-    { text: 'Fetching environmental data', delay: 1500 },
-    { text: 'Generating your avatar', delay: 2000 },
+    { text: "Processing your location", delay: 1000 },
+    { text: "Fetching environmental data", delay: 1500 },
+    { text: "Generating your avatar", delay: 2000 },
   ];
 
   useEffect(() => {
@@ -34,7 +37,7 @@ const GeneratingTwinScreen: React.FC<GeneratingTwinScreenProps> = ({ navigation 
 
     // Navigate after all steps
     const timer = setTimeout(() => {
-      navigation.replace('AvatarCreation');
+      navigation.replace("AvatarCreation");
     }, 4000);
 
     return () => clearTimeout(timer);
@@ -47,7 +50,7 @@ const GeneratingTwinScreen: React.FC<GeneratingTwinScreenProps> = ({ navigation 
           {/* Loading Icon */}
           <View style={styles.iconContainer}>
             <View style={styles.spinnerWrapper}>
-              <Loader2 size={48} color={colors.neutral[600]} />
+              <Loader />
             </View>
           </View>
 
@@ -63,14 +66,18 @@ const GeneratingTwinScreen: React.FC<GeneratingTwinScreenProps> = ({ navigation 
               <View key={index} style={styles.stepRow}>
                 <View style={styles.stepIcon}>
                   {currentStep > index ? (
-                    <CheckCircle size={20} color={colors.neutral[700]} fill={colors.neutral[200]} />
+                    <CheckCircle
+                      size={20}
+                      color={colors.neutral[700]}
+                      fill={colors.neutral[200]}
+                    />
                   ) : currentStep === index ? (
                     <Clock size={20} color={colors.neutral[500]} />
                   ) : (
                     <View style={styles.pendingIcon} />
                   )}
                 </View>
-                <Text 
+                <Text
                   style={[
                     styles.stepText,
                     currentStep > index && styles.completedStepText,
@@ -95,13 +102,13 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: spacing.xl,
   },
   content: {
-    alignItems: 'center',
-    width: '100%',
+    alignItems: "center",
+    width: "100%",
   },
   iconContainer: {
     marginBottom: spacing.xxxl,
@@ -113,39 +120,39 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: colors.neutral[200],
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     fontSize: fontSize.xxxl,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: spacing.md,
     color: colors.black,
   },
   subtitle: {
     fontSize: fontSize.base,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: spacing.xxxl,
     color: colors.neutral[600],
     lineHeight: 24,
     paddingHorizontal: spacing.md,
   },
   stepContainer: {
-    alignItems: 'flex-start',
-    width: '100%',
+    alignItems: "flex-start",
+    width: "100%",
     maxWidth: 280,
   },
   stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: spacing.md,
   },
   stepIcon: {
     width: 32,
     height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: spacing.md,
   },
   pendingIcon: {
@@ -160,15 +167,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.neutral[500],
     flex: 1,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   completedStepText: {
     color: colors.neutral[700],
-    fontWeight: '600',
+    fontWeight: "600",
   },
   activeStepText: {
     color: colors.black,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

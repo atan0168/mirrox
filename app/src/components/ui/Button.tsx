@@ -1,4 +1,4 @@
-import * as React from 'react';
+import * as React from "react";
 import {
   Pressable,
   View,
@@ -7,14 +7,14 @@ import {
   PressableProps,
   ViewStyle,
   TextStyle,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, borderRadius, fontSize, shadows } from '../../theme';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { colors, spacing, borderRadius, fontSize, shadows } from "../../theme";
 
-export interface ButtonProps extends Omit<PressableProps, 'style'> {
+export interface ButtonProps extends Omit<PressableProps, "style"> {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: "primary" | "secondary" | "ghost";
+  size?: "sm" | "md" | "lg";
   fullWidth?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
@@ -22,8 +22,8 @@ export interface ButtonProps extends Omit<PressableProps, 'style'> {
 
 export const Button: React.FC<ButtonProps> = ({
   children,
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   fullWidth = false,
   style,
   textStyle,
@@ -49,21 +49,16 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {/* Subtle inner gradient for depth */}
       <LinearGradient
-        colors={['rgba(255, 255, 255, 0.1)', 'rgba(0, 0, 0, 0.02)']}
+        colors={["rgba(255, 255, 255, 0.1)", "rgba(0, 0, 0, 0.02)"]}
         style={[StyleSheet.absoluteFill, styles.gradientOverlay]}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
       />
-      
+
       {/* Content */}
-      {typeof children === 'string' ? (
+      {typeof children === "string" ? (
         <Text
-          style={[
-            styles.text,
-            sizeStyles.text,
-            variantStyles.text,
-            textStyle,
-          ]}
+          style={[styles.text, sizeStyles.text, variantStyles.text, textStyle]}
         >
           {children}
         </Text>
@@ -74,9 +69,9 @@ export const Button: React.FC<ButtonProps> = ({
   );
 };
 
-const getSizeStyles = (size: ButtonProps['size']) => {
+const getSizeStyles = (size: ButtonProps["size"]) => {
   switch (size) {
-    case 'sm':
+    case "sm":
       return {
         container: {
           paddingHorizontal: spacing.lg,
@@ -87,7 +82,7 @@ const getSizeStyles = (size: ButtonProps['size']) => {
           fontSize: fontSize.sm,
         },
       };
-    case 'lg':
+    case "lg":
       return {
         container: {
           paddingHorizontal: spacing.xl,
@@ -112,23 +107,23 @@ const getSizeStyles = (size: ButtonProps['size']) => {
   }
 };
 
-const getVariantStyles = (variant: ButtonProps['variant']) => {
+const getVariantStyles = (variant: ButtonProps["variant"]) => {
   switch (variant) {
-    case 'secondary':
+    case "secondary":
       return {
         container: {
-          backgroundColor: colors.neutral[100],
-          borderColor: colors.neutral[300],
+          backgroundColor: colors.neutral[800],
+          borderColor: colors.neutral[950],
         },
         text: {
-          color: colors.neutral[700],
+          color: colors.neutral[200],
         },
       };
-    case 'ghost':
+    case "ghost":
       return {
         container: {
-          backgroundColor: 'transparent',
-          borderColor: 'transparent',
+          backgroundColor: "transparent",
+          borderColor: "transparent",
         },
         text: {
           color: colors.neutral[600],
@@ -151,22 +146,22 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    position: 'relative',
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    position: "relative",
     ...shadows.soft,
   },
   gradientOverlay: {
     borderRadius: borderRadius.lg,
   },
   text: {
-    fontWeight: '600',
-    textAlign: 'center',
+    fontWeight: "600",
+    textAlign: "center",
     zIndex: 1,
   },
   fullWidth: {
-    alignSelf: 'stretch',
+    alignSelf: "stretch",
   },
   pressed: {
     opacity: 0.7,

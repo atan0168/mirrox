@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, Animated, Easing, SafeAreaView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Easing,
+  SafeAreaView,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
 import { Heart } from "lucide-react-native";
@@ -15,13 +22,22 @@ type SplashScreenNavigationProp = StackNavigationProp<
 
 export default function SplashScreen() {
   const navigation = useNavigation<SplashScreenNavigationProp>();
+
+  // Entrance animations
   const [fadeAnim] = useState(new Animated.Value(0));
   const [scaleAnim] = useState(new Animated.Value(0.8));
-  const [loadingProgress, setLoadingProgress] = useState(0);
+
+  // Progress & text
+  const [progressAnim] = useState(new Animated.Value(0)); // 0 -> 1 over 1.5s
   const [loadingText, setLoadingText] = useState("Initializing...");
 
+  // Coordination flags
+  const [initDone, setInitDone] = useState(false);
+  const [progressDone, setProgressDone] = useState(false);
+  const [hasUser, setHasUser] = useState<boolean>(false);
+
+  // Start entrance & progress animations once
   useEffect(() => {
-    // Start entrance animation
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -37,47 +53,62 @@ export default function SplashScreen() {
       }),
     ]).start();
 
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: 1500,
+      easing: Easing.linear,
+      useNativeDriver: false, // width animation requires layout
+    }).start(() => setProgressDone(true));
+  }, []);
+
+  // Derive loading text from progress value
+  useEffect(() => {
+    const id = progressAnim.addListener(({ value }) => {
+      if (value < 0.4) {
+        setLoadingText("Initializing services...");
+      } else if (value < 0.8) {
+        setLoadingText("Checking user data...");
+      } else {
+        setLoadingText("Ready!");
+      }
+    });
+    return () => {
+      progressAnim.removeListener(id);
+    };
+  }, [progressAnim]);
+
+  // Do real initialization work in parallel
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        const localStorage = new LocalStorageService();
+        await AnimationCacheService.initialize();
+
+        const userProfile = await localStorage.getUserProfile();
+        const avatarUrl = await localStorage.getAvatarUrl();
+
+        setHasUser(Boolean(userProfile && avatarUrl));
+        setInitDone(true);
+      } catch (error) {
+        console.error("❌ Error during app initialization:", error);
+        setLoadingText("Error occurred");
+        setHasUser(false);
+        setInitDone(true);
+      }
+    };
+
     initializeApp();
   }, []);
 
-  const initializeApp = async () => {
-    try {
-      // Step 1: Initialize services
-      setLoadingText("Initializing services...");
-      setLoadingProgress(0.1);
-
-      const localStorage = new LocalStorageService();
-      await AnimationCacheService.initialize();
-
-      // Step 2: Check for existing user data
-      setLoadingText("Checking user data...");
-      setLoadingProgress(0.7);
-
-      const userProfile = await localStorage.getUserProfile();
-      const avatarUrl = await localStorage.getAvatarUrl();
-
-      // Step 3: Navigation decision
-      setLoadingText("Ready!");
-      setLoadingProgress(1.0);
-
-      // Small delay to show completion
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Navigate based on user data
-      if (userProfile && avatarUrl) {
-        console.log("✅ Found existing user data, navigating to Dashboard");
-        navigation.replace("Dashboard");
-      } else {
-        console.log("📝 No existing user data, navigating to Welcome");
-        navigation.replace("Welcome");
-      }
-    } catch (error) {
-      console.error("❌ Error during app initialization:", error);
-      setLoadingText("Error occurred");
-      // Navigate to welcome as fallback
-      setTimeout(() => navigation.replace("Welcome"), 1000);
+  // Navigate when BOTH progress + init are done
+  useEffect(() => {
+    if (progressDone && initDone) {
+      const t = setTimeout(() => {
+        navigation.replace(hasUser ? "Dashboard" : "Welcome");
+      }, 250); // slight pause to let users see 100%
+      return () => clearTimeout(t);
     }
-  };
+  }, [progressDone, initDone, hasUser, navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,10 +116,7 @@ export default function SplashScreen() {
         <Animated.View
           style={[
             styles.centerContent,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
+            { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
           ]}
         >
           <View style={styles.logoContainer}>
@@ -105,7 +133,10 @@ export default function SplashScreen() {
                 style={[
                   styles.progressFill,
                   {
-                    width: `${loadingProgress * 100}%`,
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0%", "100%"],
+                    }),
                   },
                 ]}
               />
@@ -125,17 +156,17 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: spacing.xl,
   },
   centerContent: {
-    alignItems: 'center',
-    width: '100%',
+    alignItems: "center",
+    width: "100%",
   },
   logoContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.xxxl + spacing.lg,
+    alignItems: "center",
+    marginBottom: spacing.xxl,
   },
   logo: {
     width: 120,
@@ -144,46 +175,46 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[800],
     borderWidth: 2,
     borderColor: colors.neutral[700],
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.lg,
     ...shadows.medium,
   },
   title: {
     fontSize: fontSize.xxxl + 4,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.white,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
+    textAlign: "center",
+    marginBottom: spacing.md,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: fontSize.base,
     color: colors.neutral[400],
-    textAlign: 'center',
-    fontWeight: '500',
+    textAlign: "center",
+    fontWeight: "500",
   },
   loadingContainer: {
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
   },
   progressBar: {
-    width: '100%',
+    width: "100%",
     height: 3,
     backgroundColor: colors.neutral[800],
     borderRadius: borderRadius.full,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: spacing.md,
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: colors.white,
     borderRadius: borderRadius.full,
   },
   loadingText: {
     fontSize: fontSize.sm,
     color: colors.neutral[500],
-    textAlign: 'center',
-    fontWeight: '500',
+    textAlign: "center",
+    fontWeight: "500",
   },
 });

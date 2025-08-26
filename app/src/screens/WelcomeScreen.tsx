@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, Alert, StyleSheet, SafeAreaView } from 'react-native';
-import * as Location from 'expo-location';
-import { MapPin } from 'lucide-react-native';
-import { Button, Card } from '../components/ui';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { LinearGradient } from "expo-linear-gradient";
+import * as Location from "expo-location";
+import React, { useState } from "react";
+import {
+  Alert,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { Button, Card } from "../components/ui";
+import { borderRadius, colors, fontSize, spacing } from "../theme";
 
 interface WelcomeScreenProps {
   navigation: any; // You can type this more strictly with NavigationProp
@@ -14,18 +21,22 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
 
   const handleGetStarted = async () => {
     setIsLoading(true);
-    
+
     try {
       // Request permission to access location
       const { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
+
+      if (status !== "granted") {
         Alert.alert(
-          'Permission Denied',
-          'Location access is needed to personalize your digital twin\'s environment. You can manually select your city in the next step.',
+          "Permission Denied",
+          "Location access is needed to personalize your digital twin's environment. You can manually select your city in the next step.",
           [
-            { text: 'OK', onPress: () => navigation.navigate('Questionnaire', { location: null }) }
-          ]
+            {
+              text: "OK",
+              onPress: () =>
+                navigation.navigate("Questionnaire", { location: null }),
+            },
+          ],
         );
         return;
       }
@@ -36,18 +47,21 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
       });
 
       const { latitude, longitude } = location.coords;
-      navigation.navigate('Questionnaire', { 
-        location: { latitude, longitude } 
+      navigation.navigate("Questionnaire", {
+        location: { latitude, longitude },
       });
-
     } catch (error) {
-      console.error('Location error:', error);
+      console.error("Location error:", error);
       Alert.alert(
-        'Location Error',
-        'Could not fetch location. You can manually select your city in the next step.',
+        "Location Error",
+        "Could not fetch location. You can manually select your city in the next step.",
         [
-          { text: 'OK', onPress: () => navigation.navigate('Questionnaire', { location: null }) }
-        ]
+          {
+            text: "OK",
+            onPress: () =>
+              navigation.navigate("Questionnaire", { location: null }),
+          },
+        ],
       );
     } finally {
       setIsLoading(false);
@@ -58,29 +72,38 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.content}>
-          <Card style={styles.welcomeCard}>
+          <Card style={styles.welcomeCard} shadow="lg">
             <View style={styles.iconContainer}>
-              <View style={styles.iconWrapper}>
-                <MapPin size={32} color={colors.neutral[600]} />
-              </View>
+              <LinearGradient
+                colors={["#6EE7B7", "#3B82F6"]} // your gradient colors
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.iconWrapper}
+              >
+                <Image
+                  source={require("../../assets/avatar2d.png")}
+                  style={styles.iconImage}
+                  resizeMode="contain"
+                />
+              </LinearGradient>
             </View>
-            
+
             <Text style={styles.title}>Welcome to Your Digital Twin</Text>
             <Text style={styles.subtitle}>
-              Create a magical representation of yourself that promotes wellness and self-awareness
+              Create a magical representation of yourself that promotes wellness
+              and self-awareness
             </Text>
           </Card>
-          
-          <View style={styles.buttonContainer}>
-            <Button 
-              fullWidth
-              size="lg"
-              disabled={isLoading}
-              onPress={handleGetStarted}
-            >
-              {isLoading ? "Getting Location..." : "Get Started"}
-            </Button>
-          </View>
+
+          <Button
+            fullWidth
+            variant="secondary"
+            size="lg"
+            disabled={isLoading}
+            onPress={handleGetStarted}
+          >
+            {isLoading ? "Getting Location..." : "Get Started"}
+          </Button>
         </View>
       </View>
     </SafeAreaView>
@@ -94,7 +117,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: spacing.lg,
   },
   content: {
@@ -102,36 +125,38 @@ const styles = StyleSheet.create({
   },
   welcomeCard: {
     padding: spacing.xxxl,
-    alignItems: 'center',
+    alignItems: "center",
   },
   iconContainer: {
     marginBottom: spacing.lg,
   },
   iconWrapper: {
-    width: 80,
-    height: 80,
+    width: 250,
+    height: 250,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.neutral[100],
+    // backgroundColor: colors.neutral[100],
     borderWidth: 1,
     borderColor: colors.neutral[200],
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconImage: {
+    transform: [{ translateX: 5 }],
+    width: "100%",
+    height: "100%",
   },
   title: {
     fontSize: fontSize.xxxl,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: spacing.md,
     color: colors.black,
   },
   subtitle: {
     fontSize: fontSize.base,
-    textAlign: 'center',
+    textAlign: "center",
     color: colors.neutral[600],
     lineHeight: 24,
-  },
-  buttonContainer: {
-    paddingHorizontal: spacing.md,
   },
 });
 

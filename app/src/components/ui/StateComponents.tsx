@@ -1,5 +1,5 @@
-import React from "react";
-import { View, ActivityIndicator, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
+import Loader from "./Loader";
 
 interface LoadingStateProps {
   message?: string;
@@ -7,14 +7,14 @@ interface LoadingStateProps {
   height: number;
 }
 
-export function LoadingState({ 
-  message = "Loading avatar...", 
-  width, 
-  height 
+export function LoadingState({
+  message = "Loading avatar...",
+  width,
+  height,
 }: LoadingStateProps) {
   return (
     <View style={[styles.container, { width, height }]}>
-      <ActivityIndicator size="large" color="#3182CE" />
+      <Loader />
       <Text style={styles.loadingText}>{message}</Text>
     </View>
   );

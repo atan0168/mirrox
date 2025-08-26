@@ -1,5 +1,7 @@
 import React from "react";
 import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import Loader from "./Loader";
+import { colors } from "../../theme";
 
 interface AvatarLoadingIndicatorProps {
   isLoading: boolean;
@@ -27,11 +29,7 @@ export function AvatarLoadingIndicator({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.content}>
-        <ActivityIndicator
-          size="large"
-          color="#007AFF"
-          style={styles.spinner}
-        />
+        <Loader />
 
         <Text style={styles.title}>Loading Avatar</Text>
 
@@ -46,9 +44,6 @@ export function AvatarLoadingIndicator({
                   ]}
                 />
               </View>
-              <Text style={styles.progressText}>
-                {progressPercentage.toFixed(2)}%
-              </Text>
             </View>
 
             <Text style={styles.countText}>
@@ -96,7 +91,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 20,
+    marginVertical: 20,
   },
   progressContainer: {
     flexDirection: "row",
@@ -109,19 +104,18 @@ const styles = StyleSheet.create({
     height: 8,
     backgroundColor: "#E0E0E0",
     borderRadius: 4,
-    marginRight: 10,
     overflow: "hidden",
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#007AFF",
+    backgroundColor: colors.neutral[700],
     borderRadius: 4,
   },
   progressText: {
     fontSize: 14,
     fontWeight: "500",
     color: "#666",
-    minWidth: 40,
+    minWidth: 30,
     textAlign: "right",
   },
   statusText: {

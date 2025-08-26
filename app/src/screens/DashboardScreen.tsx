@@ -7,7 +7,6 @@ import {
   ScrollView,
   SafeAreaView,
 } from "react-native";
-import { Moon, Car, Heart } from "lucide-react-native";
 import { localStorageService } from "../services/LocalStorageService";
 import ThreeAvatar from "../components/ThreeAvatar";
 import { FacialExpressionControls } from "../components/controls/FacialExpressionControls";
@@ -142,83 +141,83 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
         <View style={styles.content}>
-        <View style={styles.avatarContainer}>
-          <ThreeAvatar
-            showAnimationButton={true}
-            facialExpression={facialExpression}
-            skinToneAdjustment={skinToneAdjustment}
-          />
-        </View>
-
-        {/* Skin Tone Controls - above facial expressions */}
-        <View style={styles.controlsContainer}>
-          <Text style={styles.controlsTitle}>Avatar Customization</Text>
-          <SkinToneButton
-            skinToneAdjustment={skinToneAdjustment}
-            onSkinToneChange={handleSkinToneChange}
-          />
-        </View>
-
-        {/* Facial Expression Controls */}
-        <View style={styles.controlsContainer}>
-          <FacialExpressionControls
-            currentExpression={facialExpression}
-            onExpressionChange={handleFacialExpressionChange}
-          />
-        </View>
-
-        <View style={styles.vitalsContainer}>
-          <Text style={styles.sectionTitle}>Health Vitals</Text>
-
-          <View style={styles.vitalCard}>
-            <Text style={styles.vitalTitle}>🫁 Air Quality Impact</Text>
-            <Text style={styles.vitalDescription}>
-              {generateHealthVitalsMessage()}
-            </Text>
+          <View style={styles.avatarContainer}>
+            <ThreeAvatar
+              showAnimationButton={true}
+              facialExpression={facialExpression}
+              skinToneAdjustment={skinToneAdjustment}
+            />
           </View>
 
-          <View style={styles.vitalCard}>
-            <Text style={styles.vitalTitle}>😴 Sleep Status</Text>
-            <Text style={styles.vitalDescription}>{getSleepMessage()}</Text>
+          {/* Skin Tone Controls - above facial expressions */}
+          <View style={styles.controlsContainer}>
+            <Text style={styles.controlsTitle}>Avatar Customization</Text>
+            <SkinToneButton
+              skinToneAdjustment={skinToneAdjustment}
+              onSkinToneChange={handleSkinToneChange}
+            />
           </View>
 
-          <View style={styles.vitalCard}>
-            <Text style={styles.vitalTitle}>🚶 Commute Impact</Text>
-            <Text style={styles.vitalDescription}>{getCommuteMessage()}</Text>
+          {/* Facial Expression Controls */}
+          <View style={styles.controlsContainer}>
+            <FacialExpressionControls
+              currentExpression={facialExpression}
+              onExpressionChange={handleFacialExpressionChange}
+            />
           </View>
-        </View>
 
-        {airQuality && (
-          <View style={styles.statsContainer}>
-            <Text style={styles.sectionTitle}>Environmental Data</Text>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Air Quality Index:</Text>
-              <Text
-                style={[
-                  styles.statValue,
-                  {
-                    color:
-                      airQuality.aqi > 100
-                        ? "#E53E3E"
-                        : airQuality.aqi > 50
-                          ? "#D69E2E"
-                          : "#38A169",
-                  },
-                ]}
-              >
-                {airQuality.aqi}
+          <View style={styles.vitalsContainer}>
+            <Text style={styles.sectionTitle}>Health Vitals</Text>
+
+            <Card variant="outline">
+              <Text style={styles.vitalTitle}>🫁 Air Quality Impact</Text>
+              <Text style={styles.vitalDescription}>
+                {generateHealthVitalsMessage()}
               </Text>
+            </Card>
+
+            <View style={styles.vitalCard}>
+              <Text style={styles.vitalTitle}>😴 Sleep Status</Text>
+              <Text style={styles.vitalDescription}>{getSleepMessage()}</Text>
             </View>
-            <View style={styles.statRow}>
-              <Text style={styles.statLabel}>Primary Pollutant:</Text>
-              <Text style={styles.statValue}>
-                {airQuality.primaryPollutant}
-              </Text>
+
+            <View style={styles.vitalCard}>
+              <Text style={styles.vitalTitle}>🚶 Commute Impact</Text>
+              <Text style={styles.vitalDescription}>{getCommuteMessage()}</Text>
             </View>
           </View>
-        )}
-      </View>
-    </ScrollView>
+
+          {airQuality && (
+            <View style={styles.statsContainer}>
+              <Text style={styles.sectionTitle}>Environmental Data</Text>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Air Quality Index:</Text>
+                <Text
+                  style={[
+                    styles.statValue,
+                    {
+                      color:
+                        airQuality.aqi > 100
+                          ? "#E53E3E"
+                          : airQuality.aqi > 50
+                            ? "#D69E2E"
+                            : "#38A169",
+                    },
+                  ]}
+                >
+                  {airQuality.aqi}
+                </Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Primary Pollutant:</Text>
+                <Text style={styles.statValue}>
+                  {airQuality.primaryPollutant}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -240,14 +239,14 @@ const styles = StyleSheet.create({
   },
   loadingContent: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: spacing.md,
     fontSize: fontSize.base,
     color: colors.neutral[600],
-    fontWeight: '500',
+    fontWeight: "500",
   },
   errorContainer: {
     flex: 1,
@@ -255,14 +254,14 @@ const styles = StyleSheet.create({
   },
   errorContent: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: spacing.lg,
   },
   errorText: {
     fontSize: fontSize.base,
     color: colors.neutral[700],
-    textAlign: 'center',
+    textAlign: "center",
   },
   title: {
     fontSize: 28,
@@ -302,6 +301,7 @@ const styles = StyleSheet.create({
   },
   vitalsContainer: {
     marginBottom: 30,
+    gap: spacing.md,
   },
   sectionTitle: {
     fontSize: 20,
