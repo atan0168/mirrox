@@ -937,77 +937,51 @@ export function AvatarModel({
       try {
         const glbLoader = new GLBAnimationLoader();
 
-        const animationURLs = [
+        const animationAssets = [
           {
-            url: "http://10.10.0.126:8080/animations/laying_severe_cough.glb",
+            asset: require("../../../assets/animations/laying_severe_cough.glb"),
             name: "laying_severe_cough",
           },
           {
-            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/glb/idle/M_Standing_Idle_Variations_006.glb",
-            name: "M_Standing_Idle_Variations_006",
-          },
-          {
-            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/glb/idle/M_Standing_Idle_Variations_003.glb",
-            name: "M_Standing_Idle_Variations_003",
-          },
-          // Local GLB animations (convert FBX to GLB first)
-          {
-            url: "https://github.com/readyplayerme/animation-library/raw/refs/heads/master/masculine/glb/expression/M_Standing_Expressions_007.glb",
+            asset: require("../../../assets/animations/M_Standing_Expressions_007.glb"),
             name: "M_Standing_Expressions_007",
           },
           {
-            url: "http://10.10.0.126:8080/animations/wiping_sweat.glb",
+            asset: require("../../../assets/animations/wiping_sweat.glb"),
             name: "wiping_sweat",
           },
           {
-            url: "http://10.10.0.126:8080/animations/shock.glb",
+            asset: require("../../../assets/animations/shock.glb"),
             name: "shock",
           },
-          // {
-          //   url: "http://10.10.0.126:8080/animations/mild_cough.glb",
-          //   name: "mild_cough",
-          // },
+          {
+            asset: require("../../../assets/animations/mild_cough.glb"),
+            name: "mild_cough",
+          },
         ];
 
         setLoadingProgress({
           loaded: 0,
-          total: animationURLs.length,
+          total: animationAssets.length,
           item: "Preparing animations...",
         });
 
-        const animationPromises = animationURLs.map(
-          async ({ url, name }, index) => {
+        const animationPromises = animationAssets.map(
+          async ({ asset, name }, index) => {
             try {
               setLoadingProgress({
                 loaded: index,
-                total: animationURLs.length,
+                total: animationAssets.length,
                 item: `Loading ${name}...`,
               });
 
-              // Get cached or download file
-              const localPath = await cacheServiceRef.current.getOrCacheFile(
-                url,
-                (progress) => {
-                  setLoadingProgress({
-                    loaded: index + progress,
-                    total: animationURLs.length,
-                    item: `Downloading ${name} (${Math.round(progress * 100)}%)...`,
-                  });
-                },
-              );
-
-              setLoadingProgress({
-                loaded: index + 0.5,
-                total: animationURLs.length,
-                item: `Processing ${name}...`,
-              });
-
-              // Load animation from local file
-              const animations = await glbLoader.loadGLBAnimation(localPath);
+              // Load animation from local asset
+              const animations =
+                await glbLoader.loadGLBAnimationFromAsset(asset);
 
               setLoadingProgress({
                 loaded: index + 1,
-                total: animationURLs.length,
+                total: animationAssets.length,
                 item: `Loaded ${name}`,
               });
 
@@ -1016,7 +990,7 @@ export function AvatarModel({
               console.warn(`Failed to load animation ${name}:`, error);
               setLoadingProgress({
                 loaded: index + 1,
-                total: animationURLs.length,
+                total: animationAssets.length,
                 item: `Failed to load ${name}`,
               });
               return null;
@@ -1044,8 +1018,8 @@ export function AvatarModel({
         }
 
         setLoadingProgress({
-          loaded: animationURLs.length,
-          total: animationURLs.length,
+          loaded: animationAssets.length,
+          total: animationAssets.length,
           item: "Animations ready!",
         });
       } catch (error) {

@@ -1,5 +1,6 @@
-import * as THREE from 'three';
-import { GLTFLoader } from 'three-stdlib';
+import * as THREE from "three";
+import { GLTFLoader } from "three-stdlib";
+import { Asset } from "expo-asset";
 
 /**
  * Utility class for loading GLB animations and applying them to GLB avatars
@@ -17,30 +18,76 @@ export class GLBAnimationLoader {
    * @param glbUrl - URL to the GLB file
    * @returns Promise<THREE.AnimationClip[]>
    */
-  async loadGLBAnimation(glbUrl: string): Promise<THREE.AnimationClip[] | null> {
+  async loadGLBAnimation(
+    glbUrl: string,
+  ): Promise<THREE.AnimationClip[] | null> {
     try {
-      console.log('Loading GLB animation clips from:', glbUrl);
-      
+      console.log("Loading GLB animation clips from:", glbUrl);
+
       // Load the GLB file
       const gltf = await new Promise<any>((resolve, reject) => {
         this.loader.load(
           glbUrl,
           (gltf) => resolve(gltf),
-          (progress) => console.log('Loading progress:', progress),
-          (error) => reject(error)
+          (progress) => console.log("Loading progress:", progress),
+          (error) => reject(error),
         );
       });
 
       if (!gltf.animations || gltf.animations.length === 0) {
-        console.warn('No animations found in GLB file');
+        console.warn("No animations found in GLB file");
         return null;
       }
 
-      console.log(`Successfully loaded ${gltf.animations.length} animation clips from GLB`);
+      console.log(
+        `Successfully loaded ${gltf.animations.length} animation clips from GLB`,
+      );
       return gltf.animations;
-
     } catch (error) {
-      console.error('Error loading GLB animation:', error);
+      console.error("Error loading GLB animation:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Load GLB animation clips from a local asset
+   * @param assetModule - The require() result for the local asset
+   * @returns Promise<THREE.AnimationClip[]>
+   */
+  async loadGLBAnimationFromAsset(
+    assetModule: any,
+  ): Promise<THREE.AnimationClip[] | null> {
+    try {
+      console.log("Loading GLB animation clips from local asset...");
+
+      // Get the asset URI from the module
+      const asset = Asset.fromModule(assetModule);
+      await asset.downloadAsync();
+      const assetUri = asset.localUri || asset.uri;
+
+      console.log("Asset URI:", assetUri);
+
+      // Load the GLB file
+      const gltf = await new Promise<any>((resolve, reject) => {
+        this.loader.load(
+          assetUri,
+          (gltf) => resolve(gltf),
+          (progress) => console.log("Loading progress:", progress),
+          (error) => reject(error),
+        );
+      });
+
+      if (!gltf.animations || gltf.animations.length === 0) {
+        console.warn("No animations found in GLB file");
+        return null;
+      }
+
+      console.log(
+        `Successfully loaded ${gltf.animations.length} animation clips from local GLB asset`,
+      );
+      return gltf.animations;
+    } catch (error) {
+      console.error("Error loading GLB animation from asset:", error);
       return null;
     }
   }
@@ -52,14 +99,14 @@ export class GLBAnimationLoader {
    * @returns Promise<THREE.AnimationAction[]>
    */
   async loadAndApplyAnimation(
-    glbUrl: string, 
-    avatarScene: THREE.Group
+    glbUrl: string,
+    avatarScene: THREE.Group,
   ): Promise<THREE.AnimationAction[]> {
     try {
       const animations = await this.loadGLBAnimation(glbUrl);
-      
+
       if (!animations) {
-        throw new Error('Failed to load animations from GLB file');
+        throw new Error("Failed to load animations from GLB file");
       }
 
       // Create animation mixer if not exists
@@ -82,9 +129,8 @@ export class GLBAnimationLoader {
       });
 
       return actions;
-
     } catch (error) {
-      console.error('Error loading and applying GLB animation:', error);
+      console.error("Error loading and applying GLB animation:", error);
       return [];
     }
   }
@@ -94,7 +140,9 @@ export class GLBAnimationLoader {
    * @param animationUrls - Array of URLs to GLB animation files
    * @returns Promise<THREE.AnimationClip[]>
    */
-  async loadMultipleAnimations(animationUrls: string[]): Promise<THREE.AnimationClip[]> {
+  async loadMultipleAnimations(
+    animationUrls: string[],
+  ): Promise<THREE.AnimationClip[]> {
     const allAnimations: THREE.AnimationClip[] = [];
 
     for (const url of animationUrls) {
@@ -118,16 +166,16 @@ export class GLBAnimationLoader {
    * @returns Promise<THREE.AnimationClip | null>
    */
   async getAnimationClipByName(
-    glbUrl: string, 
-    animationName: string
+    glbUrl: string,
+    animationName: string,
   ): Promise<THREE.AnimationClip | null> {
     try {
       const animations = await this.loadGLBAnimation(glbUrl);
       if (!animations) return null;
 
-      return animations.find(clip => clip.name === animationName) || null;
+      return animations.find((clip) => clip.name === animationName) || null;
     } catch (error) {
-      console.error('Error getting animation clip by name:', error);
+      console.error("Error getting animation clip by name:", error);
       return null;
     }
   }
