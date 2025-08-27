@@ -1,13 +1,27 @@
-import * as SQLite from 'expo-sqlite';
+import { MMKV } from 'react-native-mmkv';
 import * as FileSystem from 'expo-file-system';
 import { UserProfile } from "../models/User";
 
-const DB_NAME = 'localstorage.db';
-const TABLE_NAME = 'kv';
-const CACHE_TABLE_NAME = 'avatar_cache';
+/**
+ * LocalStorageService - Encrypted storage service using MMKV
+ * 
+ * Features:
+ * - Fast, efficient key-value storage using MMKV
+ * - AES-256 encryption for all stored data
+ * - Automatic encryption key generation and management
+ * - Avatar caching with file system integration
+ * 
+ * Security:
+ * - Encryption key is randomly generated on first use
+ * - Key is stored in separate unencrypted MMKV instance for key management
+ * - All user data is encrypted at rest
+ */
+
 const USER_PROFILE_KEY = 'user_profile';
 const AVATAR_URL_KEY = 'avatar_url';
-const CURRENT_SCHEMA_VERSION = 2; // Incremented for cache table
+const AVATAR_CACHE_KEY = 'avatar_cache';
+const ENCRYPTION_KEY_STORAGE_KEY = 'mmkv_encryption_key';
+const CURRENT_SCHEMA_VERSION = 1; // Incremented for cache table
 
 interface CachedAvatar {
   avatarId: string;
@@ -18,29 +32,52 @@ interface CachedAvatar {
 }
 
 export class LocalStorageService {
-  private db: SQLite.SQLiteDatabase;
+  private storage: MMKV;
+  private keyStorage: MMKV; // Unencrypted storage for encryption key
   private ready: Promise<void>;
 
   constructor() {
-    this.db = SQLite.openDatabaseSync(DB_NAME);
+    // Create unencrypted storage for managing encryption key
+    this.keyStorage = new MMKV({
+      id: 'key-storage',
+    });
+    
+    // Get or generate encryption key
+    const encryptionKey = this.getOrGenerateEncryptionKey();
+    
+    // Create encrypted storage
+    this.storage = new MMKV({
+      id: 'encrypted-storage',
+      encryptionKey: encryptionKey,
+    });
+    
     this.ready = this.init();
   }
 
-  private async init() {
-    // Create simple key-value table
-    await this.db.execAsync(`CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (key TEXT PRIMARY KEY NOT NULL, value TEXT);`);
+  private getOrGenerateEncryptionKey(): string {
+    let encryptionKey = this.keyStorage.getString(ENCRYPTION_KEY_STORAGE_KEY);
     
-    // Create avatar cache table
-    await this.db.execAsync(`
-      CREATE TABLE IF NOT EXISTS ${CACHE_TABLE_NAME} (
-        avatarId TEXT PRIMARY KEY NOT NULL,
-        localPath TEXT NOT NULL,
-        remoteUrl TEXT NOT NULL,
-        downloadedAt INTEGER NOT NULL,
-        fileSize INTEGER NOT NULL
-      );
-    `);
+    if (!encryptionKey) {
+      // Generate a random 256-bit encryption key
+      encryptionKey = this.generateRandomKey();
+      this.keyStorage.set(ENCRYPTION_KEY_STORAGE_KEY, encryptionKey);
+      console.log('Generated new encryption key for MMKV storage');
+    }
+    
+    return encryptionKey;
+  }
 
+  private generateRandomKey(): string {
+    // Generate a 64-character hex string (256 bits)
+    const chars = '0123456789abcdef';
+    let result = '';
+    for (let i = 0; i < 64; i++) {
+      result += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return result;
+  }
+
+  private async init() {
     // Ensure avatars directory exists
     const avatarsDir = `${FileSystem.documentDirectory}avatars/`;
     const dirInfo = await FileSystem.getInfoAsync(avatarsDir);
@@ -49,29 +86,31 @@ export class LocalStorageService {
     }
   }
 
-  private async setItem(key: string, value: string): Promise<void> {
-    await this.ready;
-    await this.db.runAsync(
-      `INSERT OR REPLACE INTO ${TABLE_NAME} (key, value) VALUES (?, ?);`,
-      [key, value],
-    );
+  private setItem(key: string, value: string): void {
+    this.storage.set(key, value);
   }
 
-  private async getItem(key: string): Promise<string | null> {
-    await this.ready;
-    const result = await this.db.getFirstAsync<{value: string}>(`SELECT value FROM ${TABLE_NAME} WHERE key = ? LIMIT 1;`, [key]);
-    return result?.value || null;
+  private getItem(key: string): string | undefined {
+    return this.storage.getString(key);
   }
 
-  private async clearAll(): Promise<void> {
-    await this.ready;
-    await this.db.runAsync(`DELETE FROM ${TABLE_NAME};`);
+  private clearAll(): void {
+    this.storage.clearAll();
+  }
+
+  private getCachedAvatarsData(): Record<string, CachedAvatar> {
+    const cached = this.storage.getString(AVATAR_CACHE_KEY);
+    return cached ? JSON.parse(cached) : {};
+  }
+
+  private setCachedAvatarsData(data: Record<string, CachedAvatar>): void {
+    this.storage.set(AVATAR_CACHE_KEY, JSON.stringify(data));
   }
 
   public async saveUserProfile(profile: UserProfile): Promise<void> {
     try {
       const withVersion = { ...(profile as any), schemaVersion: profile.schemaVersion || CURRENT_SCHEMA_VERSION };
-      await this.setItem(USER_PROFILE_KEY, JSON.stringify(withVersion));
+      this.setItem(USER_PROFILE_KEY, JSON.stringify(withVersion));
     } catch (error) {
       console.error('Failed to save user profile:', error);
     }
@@ -79,7 +118,7 @@ export class LocalStorageService {
 
   public async getUserProfile(): Promise<UserProfile | null> {
     try {
-      const profileJson = await this.getItem(USER_PROFILE_KEY);
+      const profileJson = this.getItem(USER_PROFILE_KEY);
       if (profileJson) {
         let profile = JSON.parse(profileJson);
         if ((profile.schemaVersion || 1) < CURRENT_SCHEMA_VERSION) {
@@ -97,7 +136,7 @@ export class LocalStorageService {
 
   public async saveAvatarUrl(url: string): Promise<void> {
     try {
-      await this.setItem(AVATAR_URL_KEY, url);
+      this.setItem(AVATAR_URL_KEY, url);
     } catch (error) {
       console.error('Failed to save avatar URL:', error);
     }
@@ -105,7 +144,7 @@ export class LocalStorageService {
 
   public async getAvatarUrl(): Promise<string | null> {
     try {
-      return await this.getItem(AVATAR_URL_KEY);
+      return this.getItem(AVATAR_URL_KEY) || null;
     } catch (error) {
       console.error('Failed to retrieve avatar URL:', error);
       return null;
@@ -114,10 +153,42 @@ export class LocalStorageService {
 
   public async clearData(): Promise<void> {
     try {
-      await this.clearAll();
+      this.clearAll();
     } catch (error) {
       console.error('Failed to clear storage:', error);
     }
+  }
+
+  /**
+   * Complete reset - clears all data including encryption keys
+   * This will make all previously stored data unrecoverable
+   */
+  public async completeReset(): Promise<void> {
+    try {
+      // Clear encrypted storage
+      this.storage.clearAll();
+      
+      // Clear key storage (this makes old encrypted data unrecoverable)
+      this.keyStorage.clearAll();
+      
+      // Reinitialize with new encryption key
+      const newEncryptionKey = this.getOrGenerateEncryptionKey();
+      this.storage = new MMKV({
+        id: 'encrypted-storage',
+        encryptionKey: newEncryptionKey,
+      });
+      
+      console.log('Complete reset performed - new encryption key generated');
+    } catch (error) {
+      console.error('Failed to perform complete reset:', error);
+    }
+  }
+
+  /**
+   * Check if storage is encrypted (for debugging/info purposes)
+   */
+  public isEncrypted(): boolean {
+    return this.keyStorage.getString(ENCRYPTION_KEY_STORAGE_KEY) !== undefined;
   }
 
   private migrateProfile(profile: any): UserProfile {
@@ -144,26 +215,24 @@ export class LocalStorageService {
     try {
       await this.ready;
       
-      // Check database for cache entry
-      const result = await this.db.getFirstAsync<CachedAvatar>(
-        `SELECT * FROM ${CACHE_TABLE_NAME} WHERE avatarId = ? LIMIT 1;`,
-        [avatarId]
-      );
+      // Check cache data for entry
+      const cachedAvatars = this.getCachedAvatarsData();
+      const cached = cachedAvatars[avatarId];
 
-      if (!result) {
+      if (!cached) {
         return null;
       }
 
       // Verify file still exists
-      const fileInfo = await FileSystem.getInfoAsync(result.localPath);
+      const fileInfo = await FileSystem.getInfoAsync(cached.localPath);
       if (!fileInfo.exists) {
-        // File was deleted, clean up database entry
+        // File was deleted, clean up cache entry
         await this.removeCachedAvatar(avatarId);
         return null;
       }
 
-      console.log(`Found cached avatar: ${avatarId} at ${result.localPath}`);
-      return result.localPath;
+      console.log(`Found cached avatar: ${avatarId} at ${cached.localPath}`);
+      return cached.localPath;
     } catch (error) {
       console.error('Error checking cached avatar:', error);
       return null;
@@ -202,13 +271,18 @@ export class LocalStorageService {
 
       // Get file info for size
       const fileInfo = await FileSystem.getInfoAsync(localPath);
-      const fileSize = fileInfo.size || 0;
+      const fileSize = (fileInfo.exists && !fileInfo.isDirectory) ? (fileInfo as any).size || 0 : 0;
 
-      // Save to cache database
-      await this.db.runAsync(
-        `INSERT OR REPLACE INTO ${CACHE_TABLE_NAME} (avatarId, localPath, remoteUrl, downloadedAt, fileSize) VALUES (?, ?, ?, ?, ?);`,
-        [avatarId, localPath, remoteUrl, Date.now(), fileSize]
-      );
+      // Save to cache
+      const cachedAvatars = this.getCachedAvatarsData();
+      cachedAvatars[avatarId] = {
+        avatarId,
+        localPath,
+        remoteUrl,
+        downloadedAt: Date.now(),
+        fileSize
+      };
+      this.setCachedAvatarsData(cachedAvatars);
 
       console.log(`Successfully cached avatar ${avatarId} (${fileSize} bytes)`);
       return localPath;
@@ -258,23 +332,19 @@ export class LocalStorageService {
       await this.ready;
       
       // Get cache entry
-      const result = await this.db.getFirstAsync<CachedAvatar>(
-        `SELECT * FROM ${CACHE_TABLE_NAME} WHERE avatarId = ? LIMIT 1;`,
-        [avatarId]
-      );
+      const cachedAvatars = this.getCachedAvatarsData();
+      const cached = cachedAvatars[avatarId];
 
-      if (result) {
+      if (cached) {
         // Delete file
-        const fileInfo = await FileSystem.getInfoAsync(result.localPath);
+        const fileInfo = await FileSystem.getInfoAsync(cached.localPath);
         if (fileInfo.exists) {
-          await FileSystem.deleteAsync(result.localPath);
+          await FileSystem.deleteAsync(cached.localPath);
         }
 
-        // Remove from database
-        await this.db.runAsync(
-          `DELETE FROM ${CACHE_TABLE_NAME} WHERE avatarId = ?;`,
-          [avatarId]
-        );
+        // Remove from cache
+        delete cachedAvatars[avatarId];
+        this.setCachedAvatarsData(cachedAvatars);
 
         console.log(`Removed cached avatar: ${avatarId}`);
       }
@@ -291,12 +361,11 @@ export class LocalStorageService {
       await this.ready;
       
       // Get all cached avatars
-      const results = await this.db.getAllAsync<CachedAvatar>(
-        `SELECT * FROM ${CACHE_TABLE_NAME};`
-      );
+      const cachedAvatars = this.getCachedAvatarsData();
+      const avatarEntries = Object.values(cachedAvatars);
 
       // Delete all files
-      for (const cached of results) {
+      for (const cached of avatarEntries) {
         try {
           const fileInfo = await FileSystem.getInfoAsync(cached.localPath);
           if (fileInfo.exists) {
@@ -307,10 +376,10 @@ export class LocalStorageService {
         }
       }
 
-      // Clear database
-      await this.db.runAsync(`DELETE FROM ${CACHE_TABLE_NAME};`);
+      // Clear cache data
+      this.setCachedAvatarsData({});
       
-      console.log(`Cleared ${results.length} cached avatars`);
+      console.log(`Cleared ${avatarEntries.length} cached avatars`);
     } catch (error) {
       console.error('Error clearing avatar cache:', error);
     }
@@ -328,13 +397,12 @@ export class LocalStorageService {
     try {
       await this.ready;
       
-      const results = await this.db.getAllAsync<CachedAvatar>(
-        `SELECT * FROM ${CACHE_TABLE_NAME};`
-      );
+      const cachedAvatars = this.getCachedAvatarsData();
+      const avatarEntries = Object.values(cachedAvatars);
 
-      const totalFiles = results.length;
-      const totalSize = results.reduce((sum, item) => sum + item.fileSize, 0);
-      const downloadTimes = results.map(item => item.downloadedAt);
+      const totalFiles = avatarEntries.length;
+      const totalSize = avatarEntries.reduce((sum: number, item: CachedAvatar) => sum + item.fileSize, 0);
+      const downloadTimes = avatarEntries.map((item: CachedAvatar) => item.downloadedAt);
       
       return {
         totalFiles,
@@ -358,12 +426,12 @@ export class LocalStorageService {
       const cutoffTime = Date.now() - (maxAgeInDays * 24 * 60 * 60 * 1000);
       
       // Get old entries
-      const oldEntries = await this.db.getAllAsync<CachedAvatar>(
-        `SELECT * FROM ${CACHE_TABLE_NAME} WHERE downloadedAt < ?;`,
-        [cutoffTime]
+      const cachedAvatars = this.getCachedAvatarsData();
+      const oldEntries = Object.values(cachedAvatars).filter(
+        (entry: CachedAvatar) => entry.downloadedAt < cutoffTime
       );
 
-      // Delete old files and database entries
+      // Delete old files and cache entries
       for (const entry of oldEntries) {
         await this.removeCachedAvatar(entry.avatarId);
       }
