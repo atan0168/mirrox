@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView } from "react-native";
 import { MapPin } from "lucide-react-native";
 import { CommutePicker } from "../components/CommutePicker";
 import { SleepSlider } from "../components/SleepSlider";
+import { GenderPicker } from "../components/GenderPicker";
+import { SkinTonePicker, SkinTone } from "../components/SkinTonePicker";
 import { Button, Card, Badge } from "../components/ui";
 import { localStorageService } from "../services/LocalStorageService";
 import { UserProfile } from "../models/User";
@@ -26,6 +28,8 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
     "car" | "transit" | "wfh" | "bike" | "walk"
   >("wfh");
   const [sleepHours, setSleepHours] = useState<number>(7);
+  const [gender, setGender] = useState<"male" | "female">("male");
+  const [skinTone, setSkinTone] = useState<SkinTone>("medium");
 
   const handleCompleteOnboarding = () => {
     // If no location was provided, use a default location (you could show a city picker here)
@@ -38,6 +42,8 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
       location: profileLocation,
       commuteMode,
       sleepHours,
+      gender,
+      skinTone,
       createdAt: new Date().toISOString(),
       schemaVersion: 1,
     };
@@ -75,6 +81,16 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
           )}
 
           <Card style={styles.formCard}>
+            <GenderPicker
+              selectedValue={gender}
+              onValueChange={setGender}
+            />
+            <View style={styles.separator} />
+            <SkinTonePicker
+              selectedValue={skinTone}
+              onValueChange={setSkinTone}
+            />
+            <View style={styles.separator} />
             <CommutePicker
               selectedValue={commuteMode}
               onValueChange={setCommuteMode}

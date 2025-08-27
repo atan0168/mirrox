@@ -2,12 +2,6 @@ import { RPM_APPLICATION_ID, RPM_SUBDOMAIN } from "../constants";
 import { UserProfile } from "../models/User";
 import { localStorageService } from "./LocalStorageService";
 
-// You'll need to get this from your Ready Player Me developer account
-// To get your Application ID:
-// 1. Go to https://studio.readyplayer.me/
-// 2. Create or select your application
-// 3. Copy the Application ID from the settings
-
 interface RPMUser {
   id: string;
   token: string;
@@ -39,7 +33,7 @@ interface SkinToneOption {
   id: string;
   name: string;
   iconUrl: string;
-  value: number; // 0-1 scale for skin tone darkness
+  value: number; // 1-5 scale for skin tone darkness
 }
 
 class ReadyPlayerMeApiService {
@@ -104,6 +98,35 @@ class ReadyPlayerMeApiService {
       }));
     } catch (error) {
       console.error("Error fetching templates:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Step 2.2: Select a template based on gender
+   */
+  async selectTemplateByGender(
+    token: string,
+    gender: "male" | "female"
+  ): Promise<RPMTemplate> {
+    try {
+      const templates = await this.getTemplates(token);
+      
+      // Filter templates by gender
+      const genderTemplates = templates.filter(template => template.gender === gender);
+      
+      if (genderTemplates.length === 0) {
+        throw new Error(`No templates found for gender: ${gender}`);
+      }
+      
+      // For now, return the first template of the specified gender
+      // You could add additional logic here to select based on other criteria
+      const selectedTemplate = genderTemplates[0];
+      console.log(`Selected template for ${gender}:`, selectedTemplate);
+      
+      return selectedTemplate;
+    } catch (error) {
+      console.error("Error selecting template by gender:", error);
       throw error;
     }
   }
@@ -288,21 +311,31 @@ class ReadyPlayerMeApiService {
       const user = await this.createAnonymousUser();
 
       console.log("Created user", user);
-      // Step 2: Get templates
-      const templates = await this.getTemplates(user.token);
-
-      // Step 3: Select template based on user profile
-      const selectedTemplate = this.selectTemplateForUser(
-        templates,
-        userProfile,
+      
+      // Step 2: Select template based on user's gender
+      const selectedTemplate = await this.selectTemplateByGender(
+        user.token,
+        userProfile.gender,
       );
 
-      // Step 4: Create avatar from template
+      // Step 3: Create avatar from template
       const avatarId = await this.createAvatarFromTemplate(
         user.token,
         selectedTemplate.id,
         "fullbody",
       );
+
+      // Step 4: Optionally customize skin tone
+      // Note: This requires additional API calls to get and apply skin tone assets
+      // For now, we'll just log the user's preference
+      console.log(`User selected skin tone: ${userProfile.skinTone}`);
+      
+      // TODO: Implement skin tone customization
+      // const skinToneAssets = await this.getSkinToneAssets(user.token, userProfile.gender);
+      // const selectedSkinTone = this.mapSkinToneToAsset(userProfile.skinTone, skinToneAssets);
+      // if (selectedSkinTone) {
+      //   await this.updateAvatarSkinTone(user.token, avatarId, selectedSkinTone.id);
+      // }
 
       // Step 5: Save avatar
       await this.saveAvatar(user.token, avatarId);
@@ -316,36 +349,31 @@ class ReadyPlayerMeApiService {
   }
 
   /**
-   * Select appropriate template based on user profile
-   * You can customize this logic based on user answers
+   * Map user's skin tone preference to available assets
    */
-  private selectTemplateForUser(
-    templates: RPMTemplate[],
-    userProfile: UserProfile,
-  ): RPMTemplate {
-    // For now, we'll select randomly, but you can add logic based on:
-    // - userProfile.gender (if you add this field)
-    // - userProfile.preferredStyle
-    // - userProfile.ageRange
-    // - etc.
+  private mapSkinToneToAsset(
+    userSkinTone: "light" | "medium" | "dark",
+    availableAssets: SkinToneOption[]
+  ): SkinToneOption | null {
+    if (availableAssets.length === 0) return null;
 
-    // Filter templates if you have gender preference
-    let filteredTemplates = templates;
-
-    if (userProfile.gender) {
-      filteredTemplates = templates.filter(
-        (t) => t.gender === userProfile.gender,
-      );
+    // Sort assets by skin tone value (0 = lightest, 1 = darkest)
+    const sortedAssets = [...availableAssets].sort((a, b) => a.value - b.value);
+    
+    switch (userSkinTone) {
+      case "light":
+        // Return the lightest skin tone (lowest value)
+        return sortedAssets[0];
+      case "medium":
+        // Return middle skin tone
+        const middleIndex = Math.floor(sortedAssets.length / 2);
+        return sortedAssets[middleIndex];
+      case "dark":
+        // Return the darkest skin tone (highest value)
+        return sortedAssets[sortedAssets.length - 1];
+      default:
+        return sortedAssets[0];
     }
-
-    // If no templates match criteria, use all templates
-    if (filteredTemplates.length === 0) {
-      filteredTemplates = templates;
-    }
-
-    // Select random template for now
-    const randomIndex = Math.floor(Math.random() * filteredTemplates.length);
-    return filteredTemplates[randomIndex];
   }
 
   /**
