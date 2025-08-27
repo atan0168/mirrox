@@ -39,6 +39,7 @@ const AVAILABLE_ANIMATIONS = [
   { name: "M_Standing_Expressions_007", label: "Cough" },
   { name: "wiping_sweat", label: "Wipe Sweat" },
   { name: "shock", label: "Shock" },
+  { name: "swat_bugs", label: "Swat Bugs" },
   // { name: "cough", label: "Mild Cough" },
   { name: "laying_severe_cough", label: "Bad Cough" },
 ];

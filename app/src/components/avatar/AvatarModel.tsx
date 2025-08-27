@@ -956,6 +956,10 @@ export function AvatarModel({
             asset: require("../../../assets/animations/shock.glb"),
             name: "shock",
           },
+          {
+            asset: require("../../../assets/animations/swat_bugs.glb"),
+            name: "swat_bugs",
+          },
           // {
           //   asset: require("../../../assets/animations/mild_cough.glb"),
           //   name: "mild_cough",

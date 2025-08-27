@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "Mirrox",
+    "slug": "mirrox",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.zensein.app"
+      "bundleIdentifier": "com.zensein.mirrox"
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.zensein.app"
+      "package": "com.zensein.mirrox"
     },
     "web": {
       "favicon": "./assets/favicon.png"
