@@ -34,7 +34,7 @@ interface ThreeAvatarProps {
 }
 
 const AVAILABLE_ANIMATIONS = [
-  { name: "M_Standing_Idle_Variations_006", label: "Idle 1" },
+  { name: "M_Standing_Idle_Variations_007", label: "Idle 1" },
   { name: "M_Standing_Idle_Variations_003", label: "Idle 2" },
   { name: "M_Standing_Expressions_007", label: "Cough" },
   { name: "wiping_sweat", label: "Wipe Sweat" },

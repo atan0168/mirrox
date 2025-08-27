@@ -14,9 +14,9 @@ import { UserProfile } from "../models/User";
 import { localStorageService } from "../services/LocalStorageService";
 import { readyPlayerMeApiService } from "../services/ReadyPlayerMeApiService";
 import { borderRadius, colors, fontSize, shadows, spacing } from "../theme";
+import { RPM_SUBDOMAIN } from "../constants";
 
 // Replace 'demo' with your actual subdomain from Ready Player Me
-const RPM_SUBDOMAIN = "mirrox";
 
 interface AvatarCreationScreenProps {
   navigation: any;

@@ -4,6 +4,7 @@ import { useGLTF } from "@react-three/drei/native";
 import * as THREE from "three";
 import { GLBAnimationLoader } from "../../utils/GLBAnimationLoader";
 import AnimationCacheService from "../../services/AnimationCacheService";
+import { IDLE_ANIMATIONS } from "../../constants";
 
 interface AvatarModelProps {
   url: string;
@@ -71,13 +72,6 @@ export function AvatarModel({
   useEffect(() => {
     onLoadingProgress?.(loadingProgress);
   }, [loadingProgress, onLoadingProgress]);
-
-  // Define available idle animations in order of preference
-  const IDLE_ANIMATIONS = [
-    "M_Standing_Idle_Variations_006",
-    "M_Standing_Idle_Variations_003",
-    "idle_breathing", // fallback
-  ];
 
   // Define facial expression morph target mappings using ARKit blend shapes
   const FACIAL_EXPRESSIONS: { [key: string]: { [key: string]: number } } = {
@@ -947,6 +941,14 @@ export function AvatarModel({
             name: "M_Standing_Expressions_007",
           },
           {
+            asset: require("../../../assets/animations/M_Standing_Idle_Variations_003.glb"),
+            name: "M_Standing_Idle_Variations_003",
+          },
+          {
+            asset: require("../../../assets/animations/M_Standing_Idle_Variations_007.glb"),
+            name: "M_Standing_Idle_Variations_007",
+          },
+          {
             asset: require("../../../assets/animations/wiping_sweat.glb"),
             name: "wiping_sweat",
           },
@@ -954,10 +956,10 @@ export function AvatarModel({
             asset: require("../../../assets/animations/shock.glb"),
             name: "shock",
           },
-          {
-            asset: require("../../../assets/animations/mild_cough.glb"),
-            name: "mild_cough",
-          },
+          // {
+          //   asset: require("../../../assets/animations/mild_cough.glb"),
+          //   name: "mild_cough",
+          // },
         ];
 
         setLoadingProgress({

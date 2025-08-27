@@ -1,3 +1,4 @@
+import { RPM_APPLICATION_ID, RPM_SUBDOMAIN } from "../constants";
 import { UserProfile } from "../models/User";
 import { localStorageService } from "./LocalStorageService";
 
@@ -6,8 +7,6 @@ import { localStorageService } from "./LocalStorageService";
 // 1. Go to https://studio.readyplayer.me/
 // 2. Create or select your application
 // 3. Copy the Application ID from the settings
-const RPM_APPLICATION_ID = "68ab0e092240338178fb429e";
-const RPM_SUBDOMAIN = "mirrox"; // Your subdomain
 
 interface RPMUser {
   id: string;
@@ -112,7 +111,10 @@ class ReadyPlayerMeApiService {
   /**
    * Get available skin tone assets from Ready Player Me
    */
-  async getSkinToneAssets(token: string, gender: "male" | "female"): Promise<SkinToneOption[]> {
+  async getSkinToneAssets(
+    token: string,
+    gender: "male" | "female",
+  ): Promise<SkinToneOption[]> {
     try {
       const response = await fetch(`${this.baseUrl}/v2/assets`, {
         headers: {
@@ -125,17 +127,17 @@ class ReadyPlayerMeApiService {
       }
 
       const data = await response.json();
-      
+
       // Filter for skin tone assets
-      const skinToneAssets = data.data.filter((asset: any) => 
-        asset.type === 'skin' && asset.gender === gender
+      const skinToneAssets = data.data.filter(
+        (asset: any) => asset.type === "skin" && asset.gender === gender,
       );
 
       return skinToneAssets.map((asset: any, index: number) => ({
         id: asset.id,
         name: asset.name,
         iconUrl: asset.iconUrl,
-        value: index / (skinToneAssets.length - 1) // Normalize to 0-1 scale
+        value: index / (skinToneAssets.length - 1), // Normalize to 0-1 scale
       }));
     } catch (error) {
       console.error("Error fetching skin tone assets:", error);
@@ -146,25 +148,31 @@ class ReadyPlayerMeApiService {
   /**
    * Update avatar with skin tone
    */
-  async updateAvatarSkinTone(token: string, avatarId: string, skinToneAssetId: string): Promise<void> {
+  async updateAvatarSkinTone(
+    token: string,
+    avatarId: string,
+    skinToneAssetId: string,
+  ): Promise<void> {
     try {
       const response = await fetch(`${this.baseUrl}/v2/avatars/${avatarId}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           data: {
             assets: {
-              skin: skinToneAssetId
-            }
-          }
+              skin: skinToneAssetId,
+            },
+          },
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update avatar skin tone: ${response.statusText}`);
+        throw new Error(
+          `Failed to update avatar skin tone: ${response.statusText}`,
+        );
       }
 
       console.log("Avatar skin tone updated successfully");
