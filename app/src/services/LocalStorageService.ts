@@ -82,12 +82,12 @@ export class LocalStorageService {
     
     try {
       // Store in secure storage with hardware backing when available
+      // Note: No access control by default - authentication is optional
       await Keychain.setInternetCredentials(
         ENCRYPTION_KEY_SERVICE,
         ENCRYPTION_KEY_ACCOUNT,
         encryptionKey,
         {
-          accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
           accessGroup: undefined, // Use default access group
           securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
         }
@@ -146,31 +146,34 @@ export class LocalStorageService {
     }
   }
 
-  private setItem(key: string, value: string): void {
+  private async setItem(key: string, value: string): Promise<void> {
+    await this.ready;
     this.storage.set(key, value);
   }
 
-  private getItem(key: string): string | undefined {
+  private async getItem(key: string): Promise<string | undefined> {
+    await this.ready;
     return this.storage.getString(key);
   }
 
-  private clearAll(): void {
+  private async clearAll(): Promise<void> {
+    await this.ready;
     this.storage.clearAll();
   }
 
-  private getCachedAvatarsData(): Record<string, CachedAvatar> {
-    const cached = this.storage.getString(AVATAR_CACHE_KEY);
+  private async getCachedAvatarsData(): Promise<Record<string, CachedAvatar>> {
+    const cached = await this.getItem(AVATAR_CACHE_KEY);
     return cached ? JSON.parse(cached) : {};
   }
 
-  private setCachedAvatarsData(data: Record<string, CachedAvatar>): void {
-    this.storage.set(AVATAR_CACHE_KEY, JSON.stringify(data));
+  private async setCachedAvatarsData(data: Record<string, CachedAvatar>): Promise<void> {
+    await this.setItem(AVATAR_CACHE_KEY, JSON.stringify(data));
   }
 
   public async saveUserProfile(profile: UserProfile): Promise<void> {
     try {
       const withVersion = { ...(profile as any), schemaVersion: profile.schemaVersion || CURRENT_SCHEMA_VERSION };
-      this.setItem(USER_PROFILE_KEY, JSON.stringify(withVersion));
+      await this.setItem(USER_PROFILE_KEY, JSON.stringify(withVersion));
     } catch (error) {
       console.error('Failed to save user profile:', error);
     }
@@ -178,7 +181,7 @@ export class LocalStorageService {
 
   public async getUserProfile(): Promise<UserProfile | null> {
     try {
-      const profileJson = this.getItem(USER_PROFILE_KEY);
+      const profileJson = await this.getItem(USER_PROFILE_KEY);
       if (profileJson) {
         let profile = JSON.parse(profileJson);
         if ((profile.schemaVersion || 1) < CURRENT_SCHEMA_VERSION) {
@@ -196,7 +199,7 @@ export class LocalStorageService {
 
   public async saveAvatarUrl(url: string): Promise<void> {
     try {
-      this.setItem(AVATAR_URL_KEY, url);
+      await this.setItem(AVATAR_URL_KEY, url);
     } catch (error) {
       console.error('Failed to save avatar URL:', error);
     }
@@ -204,7 +207,8 @@ export class LocalStorageService {
 
   public async getAvatarUrl(): Promise<string | null> {
     try {
-      return this.getItem(AVATAR_URL_KEY) || null;
+      const result = await this.getItem(AVATAR_URL_KEY);
+      return result || null;
     } catch (error) {
       console.error('Failed to retrieve avatar URL:', error);
       return null;
@@ -213,9 +217,129 @@ export class LocalStorageService {
 
   public async clearData(): Promise<void> {
     try {
-      this.clearAll();
+      await this.clearAll();
     } catch (error) {
       console.error('Failed to clear storage:', error);
+    }
+  }
+
+  // Authentication methods
+  public async isAuthenticationRequired(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.security?.requireAuthentication ?? false; // Default to false (optional)
+    } catch (error) {
+      console.error('Failed to check authentication requirement:', error);
+      return false;
+    }
+  }
+
+  public async authenticateUser(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      
+      // If authentication is not required, return true
+      if (!profile?.security?.requireAuthentication) {
+        return true;
+      }
+
+      // For authentication, we need to prompt the user
+      // We'll use a separate keychain entry with access control for this
+      const authKeyService = 'MirroxAppAuth';
+      const authKeyAccount = 'auth_verification';
+      
+      try {
+        // Try to access the authentication key (this will prompt for biometric/PIN)
+        const authCredentials = await Keychain.getInternetCredentials(authKeyService);
+        
+        if (authCredentials && authCredentials.password) {
+          // Update last authenticated timestamp
+          if (profile.security) {
+            profile.security.lastAuthenticatedAt = new Date().toISOString();
+            await this.saveUserProfile(profile);
+          }
+          return true;
+        }
+        
+        // If no auth key exists, create one (this will also prompt for authentication)
+        await Keychain.setInternetCredentials(
+          authKeyService,
+          authKeyAccount,
+          'authenticated',
+          {
+            accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
+            securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
+          }
+        );
+        
+        // Update last authenticated timestamp
+        if (profile.security) {
+          profile.security.lastAuthenticatedAt = new Date().toISOString();
+          await this.saveUserProfile(profile);
+        }
+        
+        return true;
+      } catch (authError) {
+        console.log('Authentication failed or cancelled:', authError);
+        return false;
+      }
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      return false;
+    }
+  }
+
+  public async updateSecuritySettings(settings: {
+    requireAuthentication: boolean;
+    authMethod?: 'pin' | 'biometric' | 'both';
+  }): Promise<void> {
+    try {
+      const profile = await this.getUserProfile();
+      if (profile) {
+        profile.security = {
+          requireAuthentication: settings.requireAuthentication,
+          authMethod: settings.authMethod || 'biometric',
+          lastAuthenticatedAt: settings.requireAuthentication ? undefined : profile.security?.lastAuthenticatedAt,
+        };
+        await this.saveUserProfile(profile);
+        
+        // If enabling authentication, set up the auth keychain entry
+        if (settings.requireAuthentication) {
+          const authKeyService = 'MirroxAppAuth';
+          const authKeyAccount = 'auth_verification';
+          
+          try {
+            await Keychain.setInternetCredentials(
+              authKeyService,
+              authKeyAccount,
+              'authenticated',
+              {
+                accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
+                securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
+              }
+            );
+          } catch (error) {
+            // Fallback to software security
+            await Keychain.setInternetCredentials(
+              authKeyService,
+              authKeyAccount,
+              'authenticated',
+              {
+                securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE,
+              }
+            );
+          }
+        } else {
+          // If disabling authentication, remove the auth keychain entry
+          try {
+            await Keychain.setInternetCredentials('MirroxAppAuth', 'auth_verification', '');
+          } catch (error) {
+            console.warn('Failed to remove auth keychain entry:', error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update security settings:', error);
     }
   }
 
@@ -284,7 +408,7 @@ export class LocalStorageService {
       await this.ready;
       
       // Check cache data for entry
-      const cachedAvatars = this.getCachedAvatarsData();
+      const cachedAvatars = await this.getCachedAvatarsData();
       const cached = cachedAvatars[avatarId];
 
       if (!cached) {
@@ -342,7 +466,7 @@ export class LocalStorageService {
       const fileSize = (fileInfo.exists && !fileInfo.isDirectory) ? (fileInfo as any).size || 0 : 0;
 
       // Save to cache
-      const cachedAvatars = this.getCachedAvatarsData();
+      const cachedAvatars = await this.getCachedAvatarsData();
       cachedAvatars[avatarId] = {
         avatarId,
         localPath,
@@ -350,7 +474,7 @@ export class LocalStorageService {
         downloadedAt: Date.now(),
         fileSize
       };
-      this.setCachedAvatarsData(cachedAvatars);
+      await this.setCachedAvatarsData(cachedAvatars);
 
       console.log(`Successfully cached avatar ${avatarId} (${fileSize} bytes)`);
       return localPath;
@@ -400,7 +524,7 @@ export class LocalStorageService {
       await this.ready;
       
       // Get cache entry
-      const cachedAvatars = this.getCachedAvatarsData();
+      const cachedAvatars = await this.getCachedAvatarsData();
       const cached = cachedAvatars[avatarId];
 
       if (cached) {
@@ -412,7 +536,7 @@ export class LocalStorageService {
 
         // Remove from cache
         delete cachedAvatars[avatarId];
-        this.setCachedAvatarsData(cachedAvatars);
+        await this.setCachedAvatarsData(cachedAvatars);
 
         console.log(`Removed cached avatar: ${avatarId}`);
       }
@@ -429,7 +553,7 @@ export class LocalStorageService {
       await this.ready;
       
       // Get all cached avatars
-      const cachedAvatars = this.getCachedAvatarsData();
+      const cachedAvatars = await this.getCachedAvatarsData();
       const avatarEntries = Object.values(cachedAvatars);
 
       // Delete all files
@@ -445,7 +569,7 @@ export class LocalStorageService {
       }
 
       // Clear cache data
-      this.setCachedAvatarsData({});
+      await this.setCachedAvatarsData({});
       
       console.log(`Cleared ${avatarEntries.length} cached avatars`);
     } catch (error) {
@@ -465,7 +589,7 @@ export class LocalStorageService {
     try {
       await this.ready;
       
-      const cachedAvatars = this.getCachedAvatarsData();
+      const cachedAvatars = await this.getCachedAvatarsData();
       const avatarEntries = Object.values(cachedAvatars);
 
       const totalFiles = avatarEntries.length;
@@ -494,7 +618,7 @@ export class LocalStorageService {
       const cutoffTime = Date.now() - (maxAgeInDays * 24 * 60 * 60 * 1000);
       
       // Get old entries
-      const cachedAvatars = this.getCachedAvatarsData();
+      const cachedAvatars = await this.getCachedAvatarsData();
       const oldEntries = Object.values(cachedAvatars).filter(
         (entry: CachedAvatar) => entry.downloadedAt < cutoffTime
       );

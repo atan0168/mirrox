@@ -6,10 +6,11 @@ import {
   Animated,
   Easing,
   SafeAreaView,
+  TouchableOpacity,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { Heart } from "lucide-react-native";
+import { Heart, RefreshCw } from "lucide-react-native";
 import { RootStackParamList } from "../../App";
 import { LocalStorageService } from "../services/LocalStorageService";
 import AnimationCacheService from "../services/AnimationCacheService";
@@ -35,6 +36,9 @@ export default function SplashScreen() {
   const [initDone, setInitDone] = useState(false);
   const [progressDone, setProgressDone] = useState(false);
   const [hasUser, setHasUser] = useState<boolean>(false);
+  const [authenticationCompleted, setAuthenticationCompleted] = useState(false);
+  const [authenticationRequired, setAuthenticationRequired] = useState(false);
+  const [authenticationFailed, setAuthenticationFailed] = useState(false);
 
   // Start entrance & progress animations once
   useEffect(() => {
@@ -64,6 +68,11 @@ export default function SplashScreen() {
   // Derive loading text from progress value
   useEffect(() => {
     const id = progressAnim.addListener(({ value }) => {
+      if (authenticationRequired && !authenticationCompleted) {
+        // Don't change text while waiting for authentication
+        return;
+      }
+      
       if (value < 0.4) {
         setLoadingText("Initializing services...");
       } else if (value < 0.8) {
@@ -75,7 +84,7 @@ export default function SplashScreen() {
     return () => {
       progressAnim.removeListener(id);
     };
-  }, [progressAnim]);
+  }, [progressAnim, authenticationRequired, authenticationCompleted]);
 
   // Do real initialization work in parallel
   useEffect(() => {
@@ -84,6 +93,26 @@ export default function SplashScreen() {
         const localStorage = new LocalStorageService();
         await AnimationCacheService.initialize();
 
+        // Check if authentication is required first
+        const authRequired = await localStorage.isAuthenticationRequired();
+        setAuthenticationRequired(authRequired);
+
+        // If authentication is required, wait for it
+        if (authRequired) {
+          setLoadingText("Authentication required...");
+          const authSuccess = await localStorage.authenticateUser();
+          if (!authSuccess) {
+            setLoadingText("Authentication failed or cancelled");
+            setAuthenticationFailed(true);
+            setAuthenticationCompleted(false);
+            setInitDone(true);
+            return;
+          }
+        }
+
+        setAuthenticationCompleted(true);
+
+        // Now proceed with loading user data
         const userProfile = await localStorage.getUserProfile();
         const avatarUrl = await localStorage.getAvatarUrl();
 
@@ -93,6 +122,7 @@ export default function SplashScreen() {
         console.error("❌ Error during app initialization:", error);
         setLoadingText("Error occurred");
         setHasUser(false);
+        setAuthenticationCompleted(!authenticationRequired); // Set to true if auth not required
         setInitDone(true);
       }
     };
@@ -100,15 +130,43 @@ export default function SplashScreen() {
     initializeApp();
   }, []);
 
-  // Navigate when BOTH progress + init are done
+  // Handle retry authentication
+  const retryAuthentication = async () => {
+    try {
+      setAuthenticationFailed(false);
+      setLoadingText("Retrying authentication...");
+      
+      const localStorage = new LocalStorageService();
+      const authSuccess = await localStorage.authenticateUser();
+      
+      if (authSuccess) {
+        setAuthenticationCompleted(true);
+        setLoadingText("Authentication successful");
+        
+        // Proceed with loading user data
+        const userProfile = await localStorage.getUserProfile();
+        const avatarUrl = await localStorage.getAvatarUrl();
+        setHasUser(Boolean(userProfile && avatarUrl));
+      } else {
+        setAuthenticationFailed(true);
+        setLoadingText("Authentication failed or cancelled");
+      }
+    } catch (error) {
+      console.error("❌ Error during authentication retry:", error);
+      setAuthenticationFailed(true);
+      setLoadingText("Authentication error");
+    }
+  };
+
+  // Navigate when BOTH progress + init are done AND authentication is completed
   useEffect(() => {
-    if (progressDone && initDone) {
+    if (progressDone && initDone && (authenticationCompleted || !authenticationRequired)) {
       const t = setTimeout(() => {
         navigation.replace(hasUser ? "Dashboard" : "Welcome");
       }, 250); // slight pause to let users see 100%
       return () => clearTimeout(t);
     }
-  }, [progressDone, initDone, hasUser, navigation]);
+  }, [progressDone, initDone, hasUser, authenticationCompleted, authenticationRequired, navigation]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -142,6 +200,17 @@ export default function SplashScreen() {
               />
             </View>
             <Text style={styles.loadingText}>{loadingText}</Text>
+            
+            {/* Show retry button if authentication failed */}
+            {authenticationFailed && (
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={retryAuthentication}
+              >
+                <RefreshCw size={16} color={colors.white} />
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </Animated.View>
       </View>
@@ -216,5 +285,23 @@ const styles = StyleSheet.create({
     color: colors.neutral[500],
     textAlign: "center",
     fontWeight: "500",
+  },
+  retryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.neutral[700],
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.neutral[600],
+  },
+  retryButtonText: {
+    fontSize: fontSize.sm,
+    color: colors.white,
+    fontWeight: "600",
+    marginLeft: spacing.xs,
   },
 });

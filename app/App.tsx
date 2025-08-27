@@ -1,8 +1,10 @@
 import "react-native-gesture-handler";
 import React from "react";
+import { TouchableOpacity } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
+import { Settings } from "lucide-react-native";
 
 // Import screens
 import SplashScreen from "./src/screens/SplashScreen";
@@ -11,6 +13,7 @@ import QuestionnaireScreen from "./src/screens/QuestionnaireScreen";
 import GeneratingTwinScreen from "./src/screens/GeneratingTwinScreen";
 import AvatarCreationScreen from "./src/screens/AvatarCreationScreen";
 import DashboardScreen from "./src/screens/DashboardScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -19,6 +22,7 @@ export type RootStackParamList = {
   GeneratingTwin: undefined;
   AvatarCreation: undefined;
   Dashboard: undefined;
+  Settings: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -75,9 +79,24 @@ export default function App() {
         <Stack.Screen
           name="Dashboard"
           component={DashboardScreen}
-          options={{
+          options={({ navigation }) => ({
             title: "Your Digital Twin",
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={() => navigation.navigate("Settings")}
+                style={{ marginRight: 16 }}
+              >
+                <Settings size={24} color="#000000" />
+              </TouchableOpacity>
+            ),
             // headerLeft: () => null, // Prevent going back
+          })}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{
+            title: "Settings",
           }}
         />
       </Stack.Navigator>

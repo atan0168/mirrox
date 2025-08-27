@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { View, StyleSheet } from "react-native";
 import { Canvas } from "@react-three/fiber/native";
 import { OrbitControls } from "@react-three/drei/native";
@@ -34,8 +34,6 @@ interface ThreeAvatarProps {
 }
 
 const AVAILABLE_ANIMATIONS = [
-  { name: "M_Standing_Idle_Variations_007", label: "Idle 1" },
-  { name: "M_Standing_Idle_Variations_003", label: "Idle 2" },
   { name: "M_Standing_Expressions_007", label: "Cough" },
   { name: "wiping_sweat", label: "Wipe Sweat" },
   { name: "shock", label: "Shock" },
@@ -78,20 +76,12 @@ function ThreeAvatar({
         let url = await localStorageService.getAvatarWithCaching();
 
         if (!url) {
-          console.log("No saved URL, using fallback.");
-          const fallbackUrl =
-            "https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb";
-          // Try to cache the fallback URL too
-          url = await localStorageService.getAvatarWithCaching(fallbackUrl);
-          if (!url) {
-            url = fallbackUrl; // Final fallback to remote URL
-          }
+          throw new Error("Failed to load avatar");
         }
 
         console.log(`Loading avatar from: ${url}`);
         setAvatarUrl(url);
-      } catch (err) {
-        console.error("Error loading avatar:", err);
+      } catch {
         setError("Failed to load avatar");
       }
     };
