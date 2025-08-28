@@ -13,7 +13,7 @@ import { colors, spacing, borderRadius, fontSize, shadows } from "../../theme";
 
 export interface ButtonProps extends Omit<PressableProps, "style"> {
   children: React.ReactNode;
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "outline";
   size?: "sm" | "md" | "lg";
   fullWidth?: boolean;
   style?: ViewStyle;
@@ -127,6 +127,16 @@ const getVariantStyles = (variant: ButtonProps["variant"]) => {
         },
         text: {
           color: colors.neutral[600],
+        },
+      };
+    case "outline":
+      return {
+        container: {
+          backgroundColor: "transparent",
+          borderColor: colors.neutral[300],
+        },
+        text: {
+          color: colors.neutral[700],
         },
       };
     default: // primary

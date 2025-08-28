@@ -71,7 +71,7 @@ export default function SplashScreen() {
         // Don't change text while waiting for authentication
         return;
       }
-      
+
       if (value < 0.4) {
         setLoadingText("Initializing services...");
       } else if (value < 0.8) {
@@ -133,14 +133,14 @@ export default function SplashScreen() {
     try {
       setAuthenticationFailed(false);
       setLoadingText("Retrying authentication...");
-      
+
       const localStorage = new LocalStorageService();
       const authSuccess = await localStorage.authenticateUser();
-      
+
       if (authSuccess) {
         setAuthenticationCompleted(true);
         setLoadingText("Authentication successful");
-        
+
         // Proceed with loading user data
         const userProfile = await localStorage.getUserProfile();
         const avatarUrl = await localStorage.getAvatarUrl();
@@ -158,13 +158,24 @@ export default function SplashScreen() {
 
   // Navigate when BOTH progress + init are done AND authentication is completed
   useEffect(() => {
-    if (progressDone && initDone && (authenticationCompleted || !authenticationRequired)) {
+    if (
+      progressDone &&
+      initDone &&
+      (authenticationCompleted || !authenticationRequired)
+    ) {
       const t = setTimeout(() => {
         navigation.replace(hasUser ? "Dashboard" : "Welcome");
       }, 250); // slight pause to let users see 100%
       return () => clearTimeout(t);
     }
-  }, [progressDone, initDone, hasUser, authenticationCompleted, authenticationRequired, navigation]);
+  }, [
+    progressDone,
+    initDone,
+    hasUser,
+    authenticationCompleted,
+    authenticationRequired,
+    navigation,
+  ]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -198,7 +209,7 @@ export default function SplashScreen() {
               />
             </View>
             <Text style={styles.loadingText}>{loadingText}</Text>
-            
+
             {/* Show retry button if authentication failed */}
             {authenticationFailed && (
               <TouchableOpacity
