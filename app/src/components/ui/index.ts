@@ -12,3 +12,5 @@ export type { AvatarProps } from './Avatar';
 
 export { Input } from './Input';
 export type { InputProps } from './Input';
+
+export { default as HealthSummary } from './HealthSummary';

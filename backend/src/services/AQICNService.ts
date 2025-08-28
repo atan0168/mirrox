@@ -36,7 +36,7 @@ class AQICNService {
    */
   private async makeRateLimitedRequest<T>(
     url: string,
-    params: Record<string, any>
+    params: Record<string, unknown>
   ): Promise<T> {
     return aqicnRateLimiterService.executeWithRateLimit(async () => {
       const response = await this.axiosInstance.get<T>(url, { params });
