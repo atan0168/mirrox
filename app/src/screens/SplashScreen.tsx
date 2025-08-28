@@ -13,7 +13,6 @@ import { StackNavigationProp } from "@react-navigation/stack";
 import { Heart, RefreshCw } from "lucide-react-native";
 import { RootStackParamList } from "../../App";
 import { LocalStorageService } from "../services/LocalStorageService";
-import AnimationCacheService from "../services/AnimationCacheService";
 import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
 
 type SplashScreenNavigationProp = StackNavigationProp<
@@ -91,7 +90,6 @@ export default function SplashScreen() {
     const initializeApp = async () => {
       try {
         const localStorage = new LocalStorageService();
-        await AnimationCacheService.initialize();
 
         // Check if authentication is required first
         const authRequired = await localStorage.isAuthenticationRequired();

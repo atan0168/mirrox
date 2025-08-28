@@ -3,7 +3,6 @@ import { useFrame, useThree } from "@react-three/fiber/native";
 import { useGLTF } from "@react-three/drei/native";
 import * as THREE from "three";
 import { GLBAnimationLoader } from "../../utils/GLBAnimationLoader";
-import AnimationCacheService from "../../services/AnimationCacheService";
 import { IDLE_ANIMATIONS } from "../../constants";
 
 interface AvatarModelProps {
@@ -44,23 +43,6 @@ export function AvatarModel({
     total: 0,
     item: "",
   });
-  const cacheServiceRef = useRef<typeof AnimationCacheService>(
-    AnimationCacheService,
-  );
-
-  // Initialize cache service
-  useEffect(() => {
-    const initializeCache = async () => {
-      try {
-        await cacheServiceRef.current.initialize();
-        console.log("✅ Animation cache service initialized");
-      } catch (error) {
-        console.error("❌ Error initializing cache service:", error);
-      }
-    };
-
-    initializeCache();
-  }, []);
 
   // Update loading state
   useEffect(() => {
