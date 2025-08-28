@@ -8,6 +8,9 @@ export const IDLE_ANIMATIONS = [
 
 export const RPM_SUBDOMAIN = "mirrox";
 export const RPM_APPLICATION_ID = "68ab0e092240338178fb429e";
-export const USER_PROFILE_KEY = 'user_profile';
-export const AVATAR_URL_KEY = 'avatar_url';
-export const AVATAR_CACHE_KEY = 'avatar_cache';
+export const USER_PROFILE_KEY = "user_profile";
+export const AVATAR_URL_KEY = "avatar_url";
+export const AVATAR_CACHE_KEY = "avatar_cache";
+export const BACKEND_API_URL = __DEV__
+  ? "http://localhost:3000/api/air-quality"
+  : "https://your-production-backend.com/api/air-quality";

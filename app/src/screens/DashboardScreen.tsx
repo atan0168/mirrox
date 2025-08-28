@@ -15,6 +15,7 @@ import { Card } from "../components/ui";
 import { UserProfile } from "../models/User";
 import { AirQualityData } from "../models/AirQuality";
 import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
+import { useAirQuality } from "../hooks/useAirQuality";
 
 interface DashboardScreenProps {
   navigation: any;
@@ -22,11 +23,10 @@ interface DashboardScreenProps {
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [airQuality, setAirQuality] = useState<AirQualityData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [facialExpression, setFacialExpression] = useState<string>("neutral");
   const [skinToneAdjustment, setSkinToneAdjustment] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -36,24 +36,6 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
           throw new Error("User profile not found.");
         }
         setUserProfile(profile);
-
-        // For now, we'll mock the air quality data since we don't have a backend yet
-        // You can uncomment the next lines when your backend is ready
-        /*
-        const aqData = await apiService.fetchAirQuality(
-          profile.location.latitude,
-          profile.location.longitude
-        );
-        setAirQuality(aqData);
-        */
-
-        // Mock air quality data for demo
-        const mockAirQuality: AirQualityData = {
-          aqi: Math.floor(Math.random() * 150) + 20, // Random AQI between 20-170
-          primaryPollutant: "PM2.5",
-          stationName: "Kuala Lumpur Station",
-        };
-        setAirQuality(mockAirQuality);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "An unexpected error occurred.",
@@ -66,16 +48,26 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     initializeDashboard();
   }, []);
 
+  // Use React Query for air quality data
+  const { data: airQuality, isLoading: isAirQualityLoading, error: airQualityError } = useAirQuality(
+    userProfile?.location.latitude || 0,
+    userProfile?.location.longitude || 0,
+    !!userProfile
+  );
+
   const generateHealthVitalsMessage = (): string => {
     if (!airQuality) return "Analyzing your environment...";
 
-    if (airQuality.aqi > 100) {
-      return `Your twin's lungs are starting with a major debuff due to poor air quality (${airQuality.aqi}) in your area. The main pollutant is ${airQuality.primaryPollutant}.`;
+    const aqi = airQuality.aqi;
+    if (!aqi) return "Air quality data unavailable";
+
+    if (aqi > 100) {
+      return `Your twin's lungs are starting with a major debuff due to poor air quality (${aqi}) in your area. The main pollutant is ${airQuality.primaryPollutant || 'unknown'}.`;
     }
-    if (airQuality.aqi > 50) {
-      return `Your twin's lungs are starting with a slight debuff due to today's air quality (${airQuality.aqi}) in your area.`;
+    if (aqi > 50) {
+      return `Your twin's lungs are starting with a slight debuff due to today's air quality (${aqi}) in your area.`;
     }
-    return `Your twin is breathing clean air today! The air quality in your area is good (${airQuality.aqi}).`;
+    return `Your twin is breathing clean air today! The air quality in your area is good (${aqi}).`;
   };
 
   const getSleepMessage = (): string => {
@@ -197,21 +189,21 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                     styles.statValue,
                     {
                       color:
-                        airQuality.aqi > 100
+                        (airQuality.aqi || 0) > 100
                           ? "#E53E3E"
-                          : airQuality.aqi > 50
+                          : (airQuality.aqi || 0) > 50
                             ? "#D69E2E"
                             : "#38A169",
                     },
                   ]}
                 >
-                  {airQuality.aqi}
+                  {airQuality.aqi || 'N/A'}
                 </Text>
               </View>
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Primary Pollutant:</Text>
                 <Text style={styles.statValue}>
-                  {airQuality.primaryPollutant}
+                  {airQuality.primaryPollutant || 'N/A'}
                 </Text>
               </View>
             </View>
