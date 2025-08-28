@@ -1,6 +1,13 @@
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { Image, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import {
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Button, Card } from "../components/ui";
 import { borderRadius, colors, fontSize, spacing } from "../theme";
 
@@ -49,6 +56,15 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             Get Started
           </Button>
         </View>
+
+        <View style={styles.privacyContainer}>
+          <Text style={styles.privacy}>
+            No accounts. No cloud profiles. Ever.
+          </Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Privacy")}>
+            <Text style={styles.privacyLink}>Privacy Practices</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -68,7 +84,7 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   welcomeCard: {
-    padding: spacing.xxxl,
+    padding: spacing.xxl,
     alignItems: "center",
   },
   iconContainer: {
@@ -101,6 +117,22 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: colors.neutral[600],
     lineHeight: 24,
+  },
+  privacyContainer: {
+    marginTop: spacing.xl,
+    marginBottom: spacing.lg,
+    alignItems: "center",
+  },
+  privacy: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[500],
+    lineHeight: 20,
+  },
+  privacyLink: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[400],
+    lineHeight: 20,
+    textDecorationLine: "underline",
   },
 });
 

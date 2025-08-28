@@ -16,10 +16,12 @@ import GeneratingTwinScreen from "./src/screens/GeneratingTwinScreen";
 import AvatarCreationScreen from "./src/screens/AvatarCreationScreen";
 import DashboardScreen from "./src/screens/DashboardScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
+import PrivacyScreen from "./src/screens/PrivacyScreen";
 
 export type RootStackParamList = {
   Splash: undefined;
   Welcome: undefined;
+  Privacy: undefined;
   Permission: undefined;
   CitySelection: undefined;
   Questionnaire: {
@@ -78,6 +80,11 @@ export default function App() {
           <Stack.Screen
             name="Welcome"
             component={WelcomeScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Privacy"
+            component={PrivacyScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
