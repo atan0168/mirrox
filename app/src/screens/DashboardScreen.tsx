@@ -25,6 +25,11 @@ import {
   formatPollutantValue,
   formatTimestamp,
 } from '../utils/aqiUtils';
+import {
+  calculateCombinedSkinEffects,
+  getRecommendedFacialExpression,
+  calculateSmogEffects,
+} from '../utils/skinEffectsUtils';
 
 const DashboardScreen: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -100,8 +105,48 @@ const DashboardScreen: React.FC = () => {
       !!userProfile
     );
 
+  // Calculate skin effects based on air quality
+  const skinEffects = React.useMemo(() => {
+    if (!airQuality) {
+      return { adjustment: 0, primaryFactor: 'none', description: 'No air quality data available' };
+    }
+    return calculateCombinedSkinEffects({
+      pm25: airQuality.pm25,
+      pm10: airQuality.pm10,
+      aqi: airQuality.aqi,
+    });
+  }, [airQuality]);
+
+  // Calculate smog effects based on air quality
+  const smogEffects = React.useMemo(() => {
+    if (!airQuality) {
+      return { enabled: false, intensity: 0, opacity: 0, density: 0, description: 'No air quality data available' };
+    }
+    return calculateSmogEffects({
+      aqi: airQuality.aqi,
+      pm25: airQuality.pm25,
+      pm10: airQuality.pm10,
+    });
+  }, [airQuality]);
+
+  // Auto-adjust facial expression based on air quality
+  const recommendedExpression = React.useMemo(() => {
+    if (!airQuality) return 'neutral';
+    return getRecommendedFacialExpression(airQuality.pm25, airQuality.aqi);
+  }, [airQuality]);
+
+  // Update facial expression when air quality changes (but allow manual override)
+  const [hasManualExpression, setHasManualExpression] = useState(false);
+  
+  React.useEffect(() => {
+    if (!hasManualExpression && recommendedExpression !== facialExpression) {
+      setFacialExpression(recommendedExpression);
+    }
+  }, [recommendedExpression, hasManualExpression, facialExpression]);
+
   const handleFacialExpressionChange = (expression: string) => {
     setFacialExpression(expression);
+    setHasManualExpression(true); // Mark as manually set to prevent auto-override
   };
 
   const handleSkinToneChange = (value: number) => {
@@ -137,7 +182,12 @@ const DashboardScreen: React.FC = () => {
             <ThreeAvatar
               showAnimationButton={true}
               facialExpression={facialExpression}
-              skinToneAdjustment={skinToneAdjustment}
+              skinToneAdjustment={skinToneAdjustment + skinEffects.adjustment}
+              airQualityData={airQuality ? {
+                aqi: airQuality.aqi,
+                pm25: airQuality.pm25,
+                pm10: airQuality.pm10,
+              } : null}
             />
           </View>
 
@@ -148,6 +198,45 @@ const DashboardScreen: React.FC = () => {
               skinToneAdjustment={skinToneAdjustment}
               onSkinToneChange={handleSkinToneChange}
             />
+            
+            {/* Air Quality Effects Indicator */}
+            {(skinEffects.adjustment !== 0 || smogEffects.enabled) && (
+              <View style={styles.skinEffectsIndicator}>
+                <Text style={styles.skinEffectsTitle}>Air Quality Effects on Avatar</Text>
+                
+                {/* Skin Effects */}
+                {skinEffects.adjustment !== 0 && (
+                  <View style={styles.effectSection}>
+                    <Text style={styles.effectSubtitle}>Skin Effects:</Text>
+                    <Text style={styles.skinEffectsDescription}>
+                      {skinEffects.description}
+                    </Text>
+                    <Text style={styles.skinEffectsLabel}>
+                      Adjustment: {(skinEffects.adjustment * 100).toFixed(0)}% darker
+                    </Text>
+                  </View>
+                )}
+                
+                {/* Smog Effects */}
+                {smogEffects.enabled && (
+                  <View style={styles.effectSection}>
+                    <Text style={styles.effectSubtitle}>Atmospheric Effects:</Text>
+                    <Text style={styles.skinEffectsDescription}>
+                      {smogEffects.description}
+                    </Text>
+                    <Text style={styles.skinEffectsLabel}>
+                      Smog intensity: {(smogEffects.intensity * 100).toFixed(0)}% • Opacity: {(smogEffects.opacity * 100).toFixed(0)}%
+                    </Text>
+                  </View>
+                )}
+                
+                <View style={styles.skinEffectsDetails}>
+                  <Text style={styles.skinEffectsSource}>
+                    Based on {skinEffects.primaryFactor || smogEffects.description.includes('PM2.5') ? 'PM2.5' : 'AQI'}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Facial Expression Controls */}
@@ -517,6 +606,56 @@ const styles = StyleSheet.create({
     color: '#2C5282', // Darker blue
     lineHeight: 18,
     marginBottom: 4,
+  },
+  // Skin effects indicator styles
+  skinEffectsIndicator: {
+    backgroundColor: '#FFF5F5', // Light red/pink background
+    borderColor: '#FEB2B2', // Light red border
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  skinEffectsTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: '#C53030', // Dark red
+    marginBottom: spacing.xs,
+  },
+  skinEffectsDescription: {
+    fontSize: fontSize.sm,
+    color: '#744210', // Dark orange/brown
+    lineHeight: 18,
+    marginBottom: spacing.sm,
+  },
+  skinEffectsDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  skinEffectsLabel: {
+    fontSize: fontSize.xs,
+    color: '#9C4221', // Medium brown
+    fontWeight: '500',
+  },
+  skinEffectsSource: {
+    fontSize: fontSize.xs,
+    color: colors.neutral[500],
+    fontStyle: 'italic',
+  },
+  effectSection: {
+    marginBottom: spacing.sm,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral[200],
+  },
+  effectSubtitle: {
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+    color: '#B91C1C', // Darker red
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });
 

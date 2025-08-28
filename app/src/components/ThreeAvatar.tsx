@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Canvas } from '@react-three/fiber/native';
 import { OrbitControls } from '@react-three/drei/native';
@@ -17,6 +17,7 @@ import {
   configureMobileCompatibility,
   configureTextureLoader,
 } from '../utils/ThreeUtils';
+import { calculateSmogEffects } from '../utils/skinEffectsUtils';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -31,6 +32,12 @@ interface ThreeAvatarProps {
   facialExpression?: string;
   skinToneAdjustment?: number; // -1 to 1, where negative darkens and positive lightens
   onSkinToneChange?: (value: number) => void;
+  // Air quality props for automatic smog effects
+  airQualityData?: {
+    aqi?: number | null;
+    pm25?: number | null;
+    pm10?: number | null;
+  } | null;
 }
 
 const AVAILABLE_ANIMATIONS = [
@@ -50,6 +57,7 @@ function ThreeAvatar({
   facialExpression: externalFacialExpression = 'neutral',
   skinToneAdjustment = 0,
   onSkinToneChange,
+  airQualityData = null,
 }: ThreeAvatarProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +74,32 @@ function ThreeAvatar({
 
   // Use external facial expression prop, fallback to "neutral"
   const facialExpression = externalFacialExpression;
+
+  // Calculate automatic smog effects based on air quality
+  const autoSmogEffects = useMemo(() => {
+    if (!airQualityData) {
+      return {
+        enabled: false,
+        intensity: 0,
+        opacity: 0,
+        density: 0,
+        description: 'No air quality data',
+      };
+    }
+    return calculateSmogEffects(airQualityData);
+  }, [airQualityData]);
+
+  // Use automatic smog effects, but allow manual override via controls
+  const effectiveHazeEnabled = autoSmogEffects.enabled || hazeEnabled;
+  const effectiveSmogIntensity = autoSmogEffects.enabled
+    ? autoSmogEffects.intensity
+    : smogIntensity;
+  const effectiveSmogOpacity = autoSmogEffects.enabled
+    ? autoSmogEffects.opacity
+    : 0.3;
+  const effectiveSmogDensity = autoSmogEffects.enabled
+    ? autoSmogEffects.density
+    : 60;
 
   useEffect(() => {
     const loadAvatar = async () => {
@@ -165,10 +199,10 @@ function ThreeAvatar({
 
         {/* 3D Content */}
         <SmogController
-          enabled={hazeEnabled}
-          intensity={smogIntensity}
+          enabled={effectiveHazeEnabled}
+          intensity={effectiveSmogIntensity}
           windStrength={1.0}
-          density={60}
+          density={effectiveSmogDensity}
           enableTurbulence={true}
           turbulenceStrength={[0.005, 0.005, 0.005]}
           enableWind={true}
@@ -177,7 +211,7 @@ function ThreeAvatar({
           minBounds={[-10, -3, -10]}
           maxBounds={[10, 8, 10]}
           size={[200, 200, 200]}
-          opacity={0.3}
+          opacity={effectiveSmogOpacity}
           color={new THREE.Color(0x888888)}
         />
         <group position={[0, -1.6, 1.0]} scale={1.8}>
