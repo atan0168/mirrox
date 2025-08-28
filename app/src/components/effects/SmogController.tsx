@@ -77,70 +77,93 @@ export function SmogController({
   // Initialize particles when enabled
   useEffect(() => {
     if (enabled) {
+      // Clear material cache to ensure fresh materials with correct opacity
+      if (particleMaterial.clearCache) {
+        particleMaterial.clearCache();
+      }
+
+      // Clean up existing particles first if they exist
+      if (groupRef.current && groupRef.current.children.length > 0) {
+        groupRef.current.children.forEach(child => {
+          const particle = child as THREE.Mesh;
+          if (particle.geometry) particle.geometry.dispose();
+          if (particle.material) {
+            const material = particle.material;
+            if (Array.isArray(material)) {
+              material.forEach(m => m.dispose());
+            } else {
+              material.dispose();
+            }
+          }
+        });
+        groupRef.current.clear();
+      }
+
       // Create group if it doesn't exist
       if (!groupRef.current) {
         groupRef.current = new THREE.Group();
         // Position the group behind the avatar
         groupRef.current.position.set(0, 0, -2);
+      }
+      // Ensure the group is attached to the scene
+      if (groupRef.current.parent !== scene) {
         scene.add(groupRef.current);
       }
 
-      // Only initialize if particles aren't already created
-      if (groupRef.current.children.length === 0) {
-        // Initialize particle geometries and materials
-        for (let p = 0; p < particles.length; p++) {
-          const particle = particles[p];
-          particle.geometry = particleGeometry(p, { size, density });
-          particle.material = particleMaterial(p, [smokeTexture], {
-            opacity: opacity * intensity,
-            density,
-            color,
-          });
+      // Initialize particles (always reinitialize to ensure fresh state)
+      // Initialize particle geometries and materials
+      for (let p = 0; p < particles.length; p++) {
+        const particle = particles[p];
+        particle.geometry = particleGeometry(p, { size, density });
+        particle.material = particleMaterial(p, [smokeTexture], {
+          opacity: opacity * intensity,
+          density,
+          color,
+        });
 
-          // Create layered background smoke positioning
-          const layer = Math.floor(p / (density / 3)); // 3 layers
-          const layerOffset = layer * 2; // Spread layers apart
+        // Create layered background smoke positioning
+        const layer = Math.floor(p / (density / 3)); // 3 layers
+        const layerOffset = layer * 2; // Spread layers apart
 
-          // Position particles in a more natural smoke pattern
-          const angle = (p / density) * Math.PI * 4 + Math.random() * Math.PI;
-          const radius = 3 + Math.random() * 4 + layerOffset;
-          const height =
-            minBounds[1] + Math.random() * (maxBounds[1] - minBounds[1]);
+        // Position particles in a more natural smoke pattern
+        const angle = (p / density) * Math.PI * 4 + Math.random() * Math.PI;
+        const radius = 3 + Math.random() * 4 + layerOffset;
+        const height =
+          minBounds[1] + Math.random() * (maxBounds[1] - minBounds[1]);
 
-          const x = Math.cos(angle) * radius + (Math.random() - 0.5) * 2;
-          const y = height;
-          const z =
-            Math.sin(angle) * radius + (Math.random() - 0.5) * 2 - layerOffset;
+        const x = Math.cos(angle) * radius + (Math.random() - 0.5) * 2;
+        const y = height;
+        const z =
+          Math.sin(angle) * radius + (Math.random() - 0.5) * 2 - layerOffset;
 
-          particle.position.set(x, y, z);
+        particle.position.set(x, y, z);
 
-          // Set coordinated, slow movement - all particles move in similar direction
-          const baseDirection = new THREE.Vector3(0.1, 0.2, 0.05); // Main drift direction
-          const variation = 0.3; // Small random variation
+        // Set coordinated, slow movement - all particles move in similar direction
+        const baseDirection = new THREE.Vector3(0.1, 0.2, 0.05); // Main drift direction
+        const variation = 0.3; // Small random variation
 
-          particle.userData.velocity = new THREE.Vector3(
-            baseDirection.x + (Math.random() - 0.5) * variation,
-            baseDirection.y + (Math.random() - 0.5) * variation * 0.5,
-            baseDirection.z + (Math.random() - 0.5) * variation
+        particle.userData.velocity = new THREE.Vector3(
+          baseDirection.x + (Math.random() - 0.5) * variation,
+          baseDirection.y + (Math.random() - 0.5) * variation * 0.5,
+          baseDirection.z + (Math.random() - 0.5) * variation
+        );
+
+        // Set initial turbulence if enabled
+        if (enableTurbulence) {
+          particle.userData.turbulence = new THREE.Vector3(
+            Math.random() * 2 * Math.PI,
+            Math.random() * 2 * Math.PI,
+            Math.random() * 2 * Math.PI
           );
-
-          // Set initial turbulence if enabled
-          if (enableTurbulence) {
-            particle.userData.turbulence = new THREE.Vector3(
-              Math.random() * 2 * Math.PI,
-              Math.random() * 2 * Math.PI,
-              Math.random() * 2 * Math.PI
-            );
-          }
-
-          // Make particles face the camera initially
-          particle.lookAt(camera.position);
-
-          groupRef.current.add(particle);
         }
 
-        particlesRef.current = particles;
+        // Make particles face the camera initially
+        particle.lookAt(camera.position);
+
+        groupRef.current.add(particle);
       }
+
+      particlesRef.current = particles;
     } else {
       // Clean up when disabled
       if (groupRef.current) {
@@ -149,21 +172,34 @@ export function SmogController({
         groupRef.current = null;
         particlesRef.current = [];
       }
+      
+      // Clear material cache when disabled
+      if (particleMaterial.clearCache) {
+        particleMaterial.clearCache();
+      }
     }
 
     return () => {
-      // Cleanup on unmount
+      // Cleanup on dependency change/unmount
       if (groupRef.current) {
         scene.remove(groupRef.current);
         particles.forEach(particle => {
-          particle.geometry.dispose();
+          if (particle.geometry) particle.geometry.dispose();
           const material = particle.material;
           if (Array.isArray(material)) {
             material.forEach(m => m.dispose());
-          } else {
+          } else if (material) {
             material.dispose();
           }
         });
+        // Ensure we recreate and reattach the group on next effect run
+        groupRef.current = null;
+        particlesRef.current = [];
+      }
+
+      // Clear material cache on unmount or re-init
+      if (particleMaterial.clearCache) {
+        particleMaterial.clearCache();
       }
     };
   }, [
@@ -179,19 +215,9 @@ export function SmogController({
     size,
     density,
     camera,
+    color,
   ]);
 
-  // Update material opacity when intensity changes
-  useEffect(() => {
-    if (particlesRef.current && enabled) {
-      particlesRef.current.forEach(particle => {
-        const material = particle.material as THREE.MeshBasicMaterial;
-        if (material) {
-          material.opacity = opacity * intensity * 0.5; // Base opacity adjustment
-        }
-      });
-    }
-  }, [intensity, opacity, enabled]);
 
   // Animation loop for background smoke effect
   useFrame((state, delta) => {
@@ -270,7 +296,9 @@ export function SmogController({
       const maxDistance = 12;
       const fadeStart = 8;
 
-      let finalOpacity = opacity * intensity * 0.5;
+      const material = particle.material as THREE.MeshBasicMaterial;
+      const randomVariation = material.userData?.opacityVariation || 1.0;
+      let finalOpacity = opacity * intensity * 0.5 * randomVariation;
 
       if (distanceFromCenter > fadeStart) {
         const fadeRatio = Math.max(
@@ -280,7 +308,6 @@ export function SmogController({
         finalOpacity *= fadeRatio;
       }
 
-      const material = particle.material as THREE.MeshBasicMaterial;
       material.opacity = finalOpacity;
     });
 
