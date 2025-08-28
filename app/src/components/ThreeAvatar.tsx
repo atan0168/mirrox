@@ -1,22 +1,22 @@
-import { useState, useEffect, useRef } from "react";
-import { View, StyleSheet } from "react-native";
-import { Canvas } from "@react-three/fiber/native";
-import { OrbitControls } from "@react-three/drei/native";
-import * as THREE from "three";
+import { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Canvas } from '@react-three/fiber/native';
+import { OrbitControls } from '@react-three/drei/native';
+import * as THREE from 'three';
 
-import { AvatarModel } from "./avatar/AvatarModel";
-import { SmogController } from "./effects/SmogController";
-import { AnimationControls } from "./controls/AnimationControls";
-import { EffectControls } from "./controls/EffectControls";
-import { SkinToneControls } from "./controls/SkinToneControls";
-import { LoadingState, ErrorState } from "./ui/StateComponents";
-import AvatarLoadingIndicator from "./ui/AvatarLoadingIndicator";
-import { localStorageService } from "../services/LocalStorageService";
+import { AvatarModel } from './avatar/AvatarModel';
+import { SmogController } from './effects/SmogController';
+import { AnimationControls } from './controls/AnimationControls';
+import { EffectControls } from './controls/EffectControls';
+import { SkinToneControls } from './controls/SkinToneControls';
+import { LoadingState, ErrorState } from './ui/StateComponents';
+import AvatarLoadingIndicator from './ui/AvatarLoadingIndicator';
+import { localStorageService } from '../services/LocalStorageService';
 import {
   suppressEXGLWarnings,
   configureMobileCompatibility,
   configureTextureLoader,
-} from "../utils/ThreeUtils";
+} from '../utils/ThreeUtils';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -34,12 +34,12 @@ interface ThreeAvatarProps {
 }
 
 const AVAILABLE_ANIMATIONS = [
-  { name: "M_Standing_Expressions_007", label: "Cough" },
-  { name: "wiping_sweat", label: "Wipe Sweat" },
-  { name: "shock", label: "Shock" },
-  { name: "swat_bugs", label: "Swat Bugs" },
+  { name: 'M_Standing_Expressions_007', label: 'Cough' },
+  { name: 'wiping_sweat', label: 'Wipe Sweat' },
+  { name: 'shock', label: 'Shock' },
+  { name: 'swat_bugs', label: 'Swat Bugs' },
   // { name: "cough", label: "Mild Cough" },
-  { name: "laying_severe_cough", label: "Bad Cough" },
+  { name: 'laying_severe_cough', label: 'Bad Cough' },
 ];
 
 function ThreeAvatar({
@@ -47,7 +47,7 @@ function ThreeAvatar({
   showSkinToneControls = false,
   width = 300,
   height = 500,
-  facialExpression: externalFacialExpression = "neutral",
+  facialExpression: externalFacialExpression = 'neutral',
   skinToneAdjustment = 0,
   onSkinToneChange,
 }: ThreeAvatarProps) {
@@ -61,7 +61,7 @@ function ThreeAvatar({
     loaded: number;
     total: number;
     item: string;
-  }>({ loaded: 0, total: 0, item: "" });
+  }>({ loaded: 0, total: 0, item: '' });
   const canvasRef = useRef<any>(null);
 
   // Use external facial expression prop, fallback to "neutral"
@@ -70,19 +70,19 @@ function ThreeAvatar({
   useEffect(() => {
     const loadAvatar = async () => {
       try {
-        console.log("Attempting to load avatar with caching...");
+        console.log('Attempting to load avatar with caching...');
 
         // Try to get cached avatar first, then fallback to remote
         let url = await localStorageService.getAvatarWithCaching();
 
         if (!url) {
-          throw new Error("Failed to load avatar");
+          throw new Error('Failed to load avatar');
         }
 
         console.log(`Loading avatar from: ${url}`);
         setAvatarUrl(url);
       } catch {
-        setError("Failed to load avatar");
+        setError('Failed to load avatar');
       }
     };
 
@@ -101,7 +101,7 @@ function ThreeAvatar({
 
   const handleHazeToggle = () => {
     setHazeEnabled(!hazeEnabled);
-    console.log(`Smog effect ${!hazeEnabled ? "enabled" : "disabled"}`);
+    console.log(`Smog effect ${!hazeEnabled ? 'enabled' : 'disabled'}`);
   };
 
   const handleIntensityChange = (intensity: number) => {
@@ -135,7 +135,7 @@ function ThreeAvatar({
         ref={canvasRef}
         gl={{
           antialias: false,
-          powerPreference: "high-performance",
+          powerPreference: 'high-performance',
           preserveDrawingBuffer: true,
         }}
         camera={{
@@ -143,13 +143,13 @@ function ThreeAvatar({
           fov: 60,
         }}
         onCreated={({ gl }) => {
-          console.log("Canvas created. Configuring renderer...");
-          gl.setClearColor("#f0f0f0");
+          console.log('Canvas created. Configuring renderer...');
+          gl.setClearColor('#f0f0f0');
           gl.outputColorSpace = THREE.SRGBColorSpace;
           gl.toneMapping = THREE.NoToneMapping;
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
-          console.log("Renderer configured.");
+          console.log('Renderer configured.');
         }}
       >
         {/* Lighting setup */}
@@ -229,9 +229,9 @@ function ThreeAvatar({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: '#f0f0f0',
     borderRadius: 12,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
 });
 

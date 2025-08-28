@@ -20,16 +20,16 @@ sequenceDiagram
     Note right of User's Mobile App: Contains {lat, lon, commute, sleep}
 
     User's Mobile App->>Our Node.js Backend: 3. GET /api/air-quality?lat=...&lon=...
-    
+
     Note left of Our Node.js Backend: Only coordinates are sent. No PII.
 
     Our Node.js Backend->>External Services (DOE API): 4. Fetch Air Quality Data for coordinates
     External Services (DOE API)-->>Our Node.js Backend: 5. Return Raw Air Quality Data
 
     Our Node.js Backend->>Our Node.js Backend: 6. Process and simplify the data
-    
+
     Our Node.js Backend-->>User's Mobile App: 7. Return Clean JSON {aqi, primaryPollutant}
-    
+
     User's Mobile App->>User's Mobile App: 8. Combine Local UserProfile + Air Quality Data
     User's Mobile App->>User's Mobile App: 9. Generate "Health Vitals" & Render Avatar
 ```
@@ -43,6 +43,7 @@ Here is the breakdown of the development process, from setting up the foundation
 First, we need a robust and fast local storage solution. MMKV is an excellent choice.
 
 **1. Installation:**
+
 ```bash
 npm install react-native-mmkv
 cd ios && pod install
@@ -69,7 +70,7 @@ class LocalStorageService {
     try {
       storage.set(USER_PROFILE_KEY, JSON.stringify(profile));
     } catch (error) {
-      console.error("Failed to save user profile:", error);
+      console.error('Failed to save user profile:', error);
       // Handle error appropriately (e.g., show a user-facing message)
     }
   }
@@ -82,7 +83,7 @@ class LocalStorageService {
       }
       return null;
     } catch (error) {
-      console.error("Failed to retrieve user profile:", error);
+      console.error('Failed to retrieve user profile:', error);
       return null;
     }
   }
@@ -91,7 +92,7 @@ class LocalStorageService {
     try {
       storage.clearAll();
     } catch (error) {
-      console.error("Failed to clear storage:", error);
+      console.error('Failed to clear storage:', error);
     }
   }
 }
@@ -109,8 +110,8 @@ The onboarding flow is composed of four main screens.
 **1. `WelcomeScreen.tsx`:**
 This screen's primary job is to get location permission and access.
 
-*   **Library:** `react-native-geolocation-service`
-*   **Key Logic:** Request location permission. On success, navigate to the `QuestionnaireScreen` with the location data. Handle permission denial gracefully (see Challenges).
+- **Library:** `react-native-geolocation-service`
+- **Key Logic:** Request location permission. On success, navigate to the `QuestionnaireScreen` with the location data. Handle permission denial gracefully (see Challenges).
 
 ```typescript
 // src/screens/WelcomeScreen.tsx
@@ -275,6 +276,7 @@ export default Avatar;
 A simple, secure Express.js endpoint to proxy requests.
 
 **1. Setup:**
+
 ```bash
 npm install express typescript ts-node @types/express @types/node axios cors @types/cors dotenv
 ```
@@ -290,51 +292,59 @@ const router = express.Router();
 
 // Configure CORS for your frontend's domain in production
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' ? 'https://your-app-domain.com' : '*',
+  origin:
+    process.env.NODE_ENV === 'production' ? 'https://your-app-domain.com' : '*',
 };
 
-router.get('/api/air-quality', cors(corsOptions), async (req: Request, res: Response) => {
-  const { lat, lon } = req.query;
+router.get(
+  '/api/air-quality',
+  cors(corsOptions),
+  async (req: Request, res: Response) => {
+    const { lat, lon } = req.query;
 
-  if (!lat || !lon) {
-    return res.status(400).json({ error: 'Latitude and longitude are required' });
+    if (!lat || !lon) {
+      return res
+        .status(400)
+        .json({ error: 'Latitude and longitude are required' });
+    }
+
+    // IMPORTANT: Store this in environment variables (.env file)
+    const DOE_API_URL =
+      process.env.DOE_API_URL || 'https://api.doe.gov.my/air/v1/latest';
+    const DOE_API_KEY = process.env.DOE_API_KEY;
+
+    try {
+      const response = await axios.get(DOE_API_URL, {
+        params: {
+          lat: lat,
+          lon: lon,
+        },
+        headers: {
+          Authorization: `Bearer ${DOE_API_KEY}`, // Example auth header
+          Accept: 'application/json',
+        },
+      });
+
+      // Assume the DOE API returns a complex object; we extract and simplify it.
+      const aqiData = response.data; // This will vary based on the actual API response
+      const transformedData = {
+        aqi: aqiData.overall_aqi || aqiData.stations[0]?.aqi,
+        primaryPollutant: aqiData.primary_pollutant || 'PM2.5',
+        stationName: aqiData.stations[0]?.name || 'Unknown',
+      };
+
+      return res.status(200).json(transformedData);
+    } catch (error) {
+      console.error('Error fetching from DOE API:', error);
+      // Return a generic error to the client
+      return res
+        .status(502)
+        .json({ error: 'Could not retrieve air quality data' });
+    }
   }
-
-  // IMPORTANT: Store this in environment variables (.env file)
-  const DOE_API_URL = process.env.DOE_API_URL || 'https://api.doe.gov.my/air/v1/latest';
-  const DOE_API_KEY = process.env.DOE_API_KEY;
-
-  try {
-    const response = await axios.get(DOE_API_URL, {
-      params: {
-        lat: lat,
-        lon: lon,
-      },
-      headers: {
-        'Authorization': `Bearer ${DOE_API_KEY}`, // Example auth header
-        'Accept': 'application/json',
-      },
-    });
-
-    // Assume the DOE API returns a complex object; we extract and simplify it.
-    const aqiData = response.data; // This will vary based on the actual API response
-    const transformedData = {
-      aqi: aqiData.overall_aqi || aqiData.stations[0]?.aqi,
-      primaryPollutant: aqiData.primary_pollutant || 'PM2.5',
-      stationName: aqiData.stations[0]?.name || 'Unknown',
-    };
-
-    return res.status(200).json(transformedData);
-
-  } catch (error) {
-    console.error('Error fetching from DOE API:', error);
-    // Return a generic error to the client
-    return res.status(502).json({ error: 'Could not retrieve air quality data' });
-  }
-});
+);
 
 export default router;
-
 ```
 
 #### **Step 5: API Service on Mobile (`ApiService.ts`)**
@@ -350,25 +360,30 @@ import { AirQualityData } from '../models/AirQuality';
 const API_BASE_URL = 'https://your-backend-proxy.com'; // Replace with your actual backend URL
 
 class ApiService {
-  public async fetchAirQuality(latitude: number, longitude: number): Promise<AirQualityData> {
+  public async fetchAirQuality(
+    latitude: number,
+    longitude: number
+  ): Promise<AirQualityData> {
     try {
-      const response = await axios.get<AirQualityData>(`${API_BASE_URL}/api/air-quality`, {
-        params: {
-          lat: latitude,
-          lon: longitude,
-        },
-      });
+      const response = await axios.get<AirQualityData>(
+        `${API_BASE_URL}/api/air-quality`,
+        {
+          params: {
+            lat: latitude,
+            lon: longitude,
+          },
+        }
+      );
       return response.data;
     } catch (error) {
-      console.error("Failed to fetch air quality:", error);
+      console.error('Failed to fetch air quality:', error);
       // Re-throw a custom error to be handled by the UI
-      throw new Error("Unable to connect to environmental services.");
+      throw new Error('Unable to connect to environmental services.');
     }
   }
 }
 
 export const apiService = new ApiService();
-
 ```
 
 #### **Step 6: Tying It All Together (`DashboardScreen.tsx`)**
@@ -463,6 +478,7 @@ export default DashboardScreen;
 Defining clear data structures is crucial for a stable application.
 
 **`UserProfile` (`src/models/User.ts`)**
+
 ```typescript
 export interface UserProfile {
   location: {
@@ -477,6 +493,7 @@ export interface UserProfile {
 ```
 
 **`AirQualityData` (`src/models/AirQuality.ts`)**
+
 ```typescript
 export interface AirQualityData {
   aqi: number;
@@ -486,6 +503,7 @@ export interface AirQualityData {
 ```
 
 **`AvatarProps` (`src/models/Avatar.ts`)**
+
 ```typescript
 export interface AvatarProps {
   head: 'oval' | 'round';
@@ -498,24 +516,25 @@ export interface AvatarProps {
 ### **4. Potential Challenges & Solutions**
 
 1.  **Challenge: Handling Location Permission Denial**
-    *   **Problem:** The core experience relies on location. If a user denies permission, the app flow breaks.
-    *   **Solution:** Implement a graceful fallback.
-        *   **Primary Action:** On denial, show a modal explaining *why* location is needed (for environmental data, not tracking) and provide a button to open the app settings.
-        *   **Secondary Fallback:** If the user still refuses, allow them to manually select their city from a predefined list (e.g., "Kuala Lumpur," "Petaling Jaya," "Shah Alam"). We can then use a geocoding service on the backend to get approximate coordinates for that city center to fetch the relevant air quality data. This respects user choice while still providing the core feature.
+    - **Problem:** The core experience relies on location. If a user denies permission, the app flow breaks.
+    - **Solution:** Implement a graceful fallback.
+      - **Primary Action:** On denial, show a modal explaining _why_ location is needed (for environmental data, not tracking) and provide a button to open the app settings.
+      - **Secondary Fallback:** If the user still refuses, allow them to manually select their city from a predefined list (e.g., "Kuala Lumpur," "Petaling Jaya," "Shah Alam"). We can then use a geocoding service on the backend to get approximate coordinates for that city center to fetch the relevant air quality data. This respects user choice while still providing the core feature.
 
 2.  **Challenge: External API Unavailability**
-    *   **Problem:** The Malaysia DOE API might be down, have rate limits, or return an error. This would block the user from seeing their "Health Vitals."
-    *   **Solution:** Build resilience in both the backend and frontend.
-        *   **Backend Caching:** Our Node.js proxy can implement a short-term cache (e.g., using Redis or a simple in-memory cache). If we get multiple requests for the same approximate coordinates within a 15-minute window, we can serve the cached data instead of hitting the DOE API every time.
-        *   **Frontend Graceful Degradation:** If the `ApiService.fetchAirQuality` call fails, the `DashboardScreen.tsx` should catch the error and display a user-friendly message like, "We couldn't connect to environmental services right now. We'll try again later." The rest of the twin (avatar based on sleep/commute) should still render, ensuring the app doesn't feel broken.
+    - **Problem:** The Malaysia DOE API might be down, have rate limits, or return an error. This would block the user from seeing their "Health Vitals."
+    - **Solution:** Build resilience in both the backend and frontend.
+      - **Backend Caching:** Our Node.js proxy can implement a short-term cache (e.g., using Redis or a simple in-memory cache). If we get multiple requests for the same approximate coordinates within a 15-minute window, we can serve the cached data instead of hitting the DOE API every time.
+      - **Frontend Graceful Degradation:** If the `ApiService.fetchAirQuality` call fails, the `DashboardScreen.tsx` should catch the error and display a user-friendly message like, "We couldn't connect to environmental services right now. We'll try again later." The rest of the twin (avatar based on sleep/commute) should still render, ensuring the app doesn't feel broken.
 
 3.  **Challenge: Data Synchronization/Migration**
-    *   **Problem:** All user data is local. If we release a new version of the app that changes the `UserProfile` interface (e.g., adding a new question like `dietaryPreference`), existing users' locally stored data will be outdated, potentially causing crashes.
-    *   **Solution:** Implement a simple versioning and migration strategy within the `LocalStorageService`.
-        *   **Versioning:** Add a `schemaVersion` number to the `UserProfile` interface. The first version is `1`.
-        *   **Migration Logic:** When `getUserProfile` is called, it checks the `schemaVersion`. If the version is missing or lower than the current app version, it runs a migration function.
+    - **Problem:** All user data is local. If we release a new version of the app that changes the `UserProfile` interface (e.g., adding a new question like `dietaryPreference`), existing users' locally stored data will be outdated, potentially causing crashes.
+    - **Solution:** Implement a simple versioning and migration strategy within the `LocalStorageService`.
+      - **Versioning:** Add a `schemaVersion` number to the `UserProfile` interface. The first version is `1`.
+      - **Migration Logic:** When `getUserProfile` is called, it checks the `schemaVersion`. If the version is missing or lower than the current app version, it runs a migration function.
 
     **Example Migrator (`LocalStorageService.ts`):**
+
     ```typescript
     // In LocalStorageService.ts
     const CURRENT_SCHEMA_VERSION = 2;

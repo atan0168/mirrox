@@ -1,7 +1,7 @@
-import React from "react";
-import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
-import Loader from "./Loader";
-import { colors } from "../../theme";
+import React from 'react';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import Loader from './Loader';
+import { colors } from '../../theme';
 
 interface AvatarLoadingIndicatorProps {
   isLoading: boolean;
@@ -58,24 +58,24 @@ export function AvatarLoadingIndicator({
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1000,
   },
   content: {
-    backgroundColor: "white",
+    backgroundColor: 'white',
     padding: 30,
     borderRadius: 15,
-    alignItems: "center",
+    alignItems: 'center',
     minWidth: 250,
-    maxWidth: "80%",
-    shadowColor: "#000",
+    maxWidth: '80%',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -89,46 +89,46 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
+    fontWeight: '600',
+    color: '#333',
     marginVertical: 20,
   },
   progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
     marginBottom: 10,
   },
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: "#E0E0E0",
+    backgroundColor: '#E0E0E0',
     borderRadius: 4,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   progressFill: {
-    height: "100%",
+    height: '100%',
     backgroundColor: colors.neutral[700],
     borderRadius: 4,
   },
   progressText: {
     fontSize: 14,
-    fontWeight: "500",
-    color: "#666",
+    fontWeight: '500',
+    color: '#666',
     minWidth: 30,
-    textAlign: "right",
+    textAlign: 'right',
   },
   statusText: {
     fontSize: 14,
-    color: "#666",
-    textAlign: "center",
+    color: '#666',
+    textAlign: 'center',
     marginBottom: 5,
-    width: "100%",
+    width: '100%',
   },
   countText: {
     fontSize: 12,
-    color: "#999",
-    textAlign: "center",
+    color: '#999',
+    textAlign: 'center',
   },
 });
 

@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet } from "react-native";
-import Loader from "./Loader";
+import { View, Text, StyleSheet } from 'react-native';
+import Loader from './Loader';
 
 interface LoadingStateProps {
   message?: string;
@@ -8,7 +8,7 @@ interface LoadingStateProps {
 }
 
 export function LoadingState({
-  message = "Loading avatar...",
+  message = 'Loading avatar...',
   width,
   height,
 }: LoadingStateProps) {
@@ -36,22 +36,22 @@ export function ErrorState({ error, width, height }: ErrorStateProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: '#f0f0f0',
     borderRadius: 12,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#4A5568",
-    textAlign: "center",
+    color: '#4A5568',
+    textAlign: 'center',
   },
   errorText: {
     fontSize: 16,
-    color: "#E53E3E",
-    textAlign: "center",
+    color: '#E53E3E',
+    textAlign: 'center',
     padding: 20,
   },
 });

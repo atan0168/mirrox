@@ -8,58 +8,101 @@ interface CommutePickerProps {
   onValueChange: (value: 'car' | 'transit' | 'wfh' | 'bike' | 'walk') => void;
 }
 
-const CommuteOption = ({ label, value, icon, isSelected, onPress }: {
+const CommuteOption = ({
+  label,
+  value,
+  icon,
+  isSelected,
+  onPress,
+}: {
   label: string;
   value: string;
   icon: React.ReactNode;
   isSelected: boolean;
   onPress: () => void;
 }) => (
-  <Pressable 
+  <Pressable
     style={({ pressed }) => [
-      styles.option, 
+      styles.option,
       isSelected && styles.selectedOption,
-      pressed && styles.pressedOption
-    ]} 
+      pressed && styles.pressedOption,
+    ]}
     onPress={onPress}
   >
     <View style={styles.optionContent}>
-      <View style={[styles.iconContainer, isSelected && styles.selectedIconContainer]}>
+      <View
+        style={[
+          styles.iconContainer,
+          isSelected && styles.selectedIconContainer,
+        ]}
+      >
         {icon}
       </View>
-      <Text style={[styles.optionText, isSelected && styles.selectedOptionText]}>
+      <Text
+        style={[styles.optionText, isSelected && styles.selectedOptionText]}
+      >
         {label}
       </Text>
     </View>
   </Pressable>
 );
 
-export const CommutePicker: React.FC<CommutePickerProps> = ({ selectedValue, onValueChange }) => {
+export const CommutePicker: React.FC<CommutePickerProps> = ({
+  selectedValue,
+  onValueChange,
+}) => {
   const options = [
-    { 
-      label: 'Drive to Work', 
-      value: 'car' as const, 
-      icon: <Car size={20} color={selectedValue === 'car' ? colors.white : colors.neutral[600]} />
+    {
+      label: 'Drive to Work',
+      value: 'car' as const,
+      icon: (
+        <Car
+          size={20}
+          color={selectedValue === 'car' ? colors.white : colors.neutral[600]}
+        />
+      ),
     },
-    { 
-      label: 'Public Transport', 
-      value: 'transit' as const, 
-      icon: <Train size={20} color={selectedValue === 'transit' ? colors.white : colors.neutral[600]} />
+    {
+      label: 'Public Transport',
+      value: 'transit' as const,
+      icon: (
+        <Train
+          size={20}
+          color={
+            selectedValue === 'transit' ? colors.white : colors.neutral[600]
+          }
+        />
+      ),
     },
-    { 
-      label: 'Work from Home', 
-      value: 'wfh' as const, 
-      icon: <Home size={20} color={selectedValue === 'wfh' ? colors.white : colors.neutral[600]} />
+    {
+      label: 'Work from Home',
+      value: 'wfh' as const,
+      icon: (
+        <Home
+          size={20}
+          color={selectedValue === 'wfh' ? colors.white : colors.neutral[600]}
+        />
+      ),
     },
-    { 
-      label: 'Bike to Work', 
-      value: 'bike' as const, 
-      icon: <Bike size={20} color={selectedValue === 'bike' ? colors.white : colors.neutral[600]} />
+    {
+      label: 'Bike to Work',
+      value: 'bike' as const,
+      icon: (
+        <Bike
+          size={20}
+          color={selectedValue === 'bike' ? colors.white : colors.neutral[600]}
+        />
+      ),
     },
-    { 
-      label: 'Walk to Work', 
-      value: 'walk' as const, 
-      icon: <PersonStanding size={20} color={selectedValue === 'walk' ? colors.white : colors.neutral[600]} />
+    {
+      label: 'Walk to Work',
+      value: 'walk' as const,
+      icon: (
+        <PersonStanding
+          size={20}
+          color={selectedValue === 'walk' ? colors.white : colors.neutral[600]}
+        />
+      ),
     },
   ];
 
@@ -67,7 +110,7 @@ export const CommutePicker: React.FC<CommutePickerProps> = ({ selectedValue, onV
     <View style={styles.container}>
       <Text style={styles.label}>How do you usually commute?</Text>
       <View style={styles.optionsContainer}>
-        {options.map((option) => (
+        {options.map(option => (
           <CommuteOption
             key={option.value}
             label={option.label}

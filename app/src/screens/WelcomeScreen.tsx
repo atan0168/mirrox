@@ -1,5 +1,5 @@
-import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
+import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
 import {
   Image,
   SafeAreaView,
@@ -7,9 +7,9 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { Button, Card } from "../components/ui";
-import { borderRadius, colors, fontSize, spacing } from "../theme";
+} from 'react-native';
+import { Button, Card } from '../components/ui';
+import { borderRadius, colors, fontSize, spacing } from '../theme';
 
 interface WelcomeScreenProps {
   navigation: any; // You can type this more strictly with NavigationProp
@@ -17,7 +17,7 @@ interface WelcomeScreenProps {
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
   const handleGetStarted = () => {
-    navigation.navigate("Permission");
+    navigation.navigate('Permission');
   };
 
   return (
@@ -27,13 +27,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
           <Card style={styles.welcomeCard} shadow="lg">
             <View style={styles.iconContainer}>
               <LinearGradient
-                colors={["#6EE7B7", "#3B82F6"]} // your gradient colors
+                colors={['#6EE7B7', '#3B82F6']} // your gradient colors
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.iconWrapper}
               >
                 <Image
-                  source={require("../../assets/avatar2d.png")}
+                  source={require('../../assets/avatar2d.png')}
                   style={styles.iconImage}
                   resizeMode="contain"
                 />
@@ -61,7 +61,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
           <Text style={styles.privacy}>
             No accounts. No cloud profiles. Ever.
           </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Privacy")}>
+          <TouchableOpacity onPress={() => navigation.navigate('Privacy')}>
             <Text style={styles.privacyLink}>Privacy Practices</Text>
           </TouchableOpacity>
         </View>
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: "center",
+    justifyContent: 'center',
     padding: spacing.lg,
   },
   content: {
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   },
   welcomeCard: {
     padding: spacing.xxl,
-    alignItems: "center",
+    alignItems: 'center',
   },
   iconContainer: {
     marginBottom: spacing.lg,
@@ -97,31 +97,31 @@ const styles = StyleSheet.create({
     // backgroundColor: colors.neutral[100],
     borderWidth: 1,
     borderColor: colors.neutral[200],
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconImage: {
     transform: [{ translateX: 5 }],
-    width: "100%",
-    height: "100%",
+    width: '100%',
+    height: '100%',
   },
   title: {
     fontSize: fontSize.xxxl,
-    fontWeight: "700",
-    textAlign: "center",
+    fontWeight: '700',
+    textAlign: 'center',
     marginBottom: spacing.md,
     color: colors.black,
   },
   subtitle: {
     fontSize: fontSize.base,
-    textAlign: "center",
+    textAlign: 'center',
     color: colors.neutral[600],
     lineHeight: 24,
   },
   privacyContainer: {
     marginTop: spacing.xl,
     marginBottom: spacing.lg,
-    alignItems: "center",
+    alignItems: 'center',
   },
   privacy: {
     fontSize: fontSize.sm,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.neutral[400],
     lineHeight: 20,
-    textDecorationLine: "underline",
+    textDecorationLine: 'underline',
   },
 });
 

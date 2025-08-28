@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { airQualityController } from "../controllers/AirQualityController";
+import { Router } from 'express';
+import { airQualityController } from '../controllers/AirQualityController';
 
 const router = Router();
 
@@ -10,7 +10,7 @@ const router = Router();
  * @query longitude - Longitude coordinate (required)
  * @returns Air quality data with AQI and pollutant information
  */
-router.get("/", airQualityController.getAirQuality.bind(airQualityController));
+router.get('/', airQualityController.getAirQuality.bind(airQualityController));
 
 /**
  * @route GET /api/air-quality/status
@@ -18,8 +18,8 @@ router.get("/", airQualityController.getAirQuality.bind(airQualityController));
  * @returns Service status information
  */
 router.get(
-  "/status",
-  airQualityController.getServiceStatus.bind(airQualityController),
+  '/status',
+  airQualityController.getServiceStatus.bind(airQualityController)
 );
 
 /**
@@ -28,8 +28,8 @@ router.get(
  * @returns Success message
  */
 router.post(
-  "/clear-cache",
-  airQualityController.clearCache.bind(airQualityController),
+  '/clear-cache',
+  airQualityController.clearCache.bind(airQualityController)
 );
 
 /**
@@ -38,8 +38,8 @@ router.post(
  * @returns Health status
  */
 router.get(
-  "/health",
-  airQualityController.healthCheck.bind(airQualityController),
+  '/health',
+  airQualityController.healthCheck.bind(airQualityController)
 );
 
 // MyEQMS Routes for Malaysian Air Quality Data
@@ -53,8 +53,8 @@ router.get(
  * @returns Malaysian air quality stations within the specified radius
  */
 router.get(
-  "/malaysia",
-  airQualityController.getMalaysianAirQuality.bind(airQualityController),
+  '/malaysia',
+  airQualityController.getMalaysianAirQuality.bind(airQualityController)
 );
 
 /**
@@ -63,8 +63,8 @@ router.get(
  * @returns All active Malaysian air quality monitoring stations
  */
 router.get(
-  "/malaysia/stations",
-  airQualityController.getAllMalaysianStations.bind(airQualityController),
+  '/malaysia/stations',
+  airQualityController.getAllMalaysianStations.bind(airQualityController)
 );
 
 /**
@@ -74,8 +74,8 @@ router.get(
  * @returns Malaysian air quality stations in the specified state
  */
 router.get(
-  "/malaysia/state/:state",
-  airQualityController.getMalaysianAirQualityByState.bind(airQualityController),
+  '/malaysia/state/:state',
+  airQualityController.getMalaysianAirQualityByState.bind(airQualityController)
 );
 
 /**
@@ -85,10 +85,8 @@ router.get(
  * @returns Malaysian air quality stations in the specified region
  */
 router.get(
-  "/malaysia/region/:region",
-  airQualityController.getMalaysianAirQualityByRegion.bind(
-    airQualityController,
-  ),
+  '/malaysia/region/:region',
+  airQualityController.getMalaysianAirQualityByRegion.bind(airQualityController)
 );
 
 /**
@@ -98,8 +96,8 @@ router.get(
  * @returns Detailed air quality data for the specified station
  */
 router.get(
-  "/malaysia/station/:stationId",
-  airQualityController.getMalaysianStationData.bind(airQualityController),
+  '/malaysia/station/:stationId',
+  airQualityController.getMalaysianStationData.bind(airQualityController)
 );
 
 /**
@@ -111,8 +109,8 @@ router.get(
  * @returns Historical trend data for the specified station and parameter
  */
 router.get(
-  "/malaysia/station/:stationId/trend",
-  airQualityController.getMalaysianStationTrend.bind(airQualityController),
+  '/malaysia/station/:stationId/trend',
+  airQualityController.getMalaysianStationTrend.bind(airQualityController)
 );
 
 // AQICN Routes for World Air Quality Index Data
@@ -125,8 +123,8 @@ router.get(
  * @returns AQICN air quality data for the nearest monitoring station
  */
 router.get(
-  "/aqicn",
-  airQualityController.getAQICNAirQuality.bind(airQualityController),
+  '/aqicn',
+  airQualityController.getAQICNAirQuality.bind(airQualityController)
 );
 
 /**
@@ -136,8 +134,8 @@ router.get(
  * @returns AQICN air quality data for the specified station
  */
 router.get(
-  "/aqicn/station/:stationId",
-  airQualityController.getAQICNStationData.bind(airQualityController),
+  '/aqicn/station/:stationId',
+  airQualityController.getAQICNStationData.bind(airQualityController)
 );
 
 /**
@@ -149,8 +147,8 @@ router.get(
  * @returns AQICN stations within the specified radius
  */
 router.get(
-  "/aqicn/search",
-  airQualityController.searchAQICNStations.bind(airQualityController),
+  '/aqicn/search',
+  airQualityController.searchAQICNStations.bind(airQualityController)
 );
 
 /**
@@ -159,8 +157,8 @@ router.get(
  * @returns Success message
  */
 router.post(
-  "/aqicn/clear-cache",
-  airQualityController.clearAQICNCache.bind(airQualityController),
+  '/aqicn/clear-cache',
+  airQualityController.clearAQICNCache.bind(airQualityController)
 );
 
 export default router;

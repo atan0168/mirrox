@@ -17,7 +17,6 @@ This document describes the secure local storage implementation using [`react-na
 - Stored in **iOS Keychain** / **Android Keystore** using `react-native-keychain`.
 - Prefer **hardware-backed** storage (`SECURE_HARDWARE`), fall back to `SECURE_SOFTWARE` when necessary.
 - Optional gating with **biometrics or device passcode** using:
-
   - `ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE`.
 
 ### 3) Cryptographic Key Generation
@@ -52,7 +51,7 @@ await Keychain.setInternetCredentials(
     accessControl:
       Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
     securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
-  },
+  }
 );
 ```
 
@@ -60,15 +59,13 @@ await Keychain.setInternetCredentials(
 
 ```ts
 const bytes = await Crypto.getRandomBytesAsync(32);
-const keyHex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(
-  "",
-);
+const keyHex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 ```
 
 **Encrypted MMKV instance**
 
 ```ts
-this.storage = new MMKV({ id: "encrypted-storage", encryptionKey: keyHex });
+this.storage = new MMKV({ id: 'encrypted-storage', encryptionKey: keyHex });
 ```
 
 **Complete reset (secure wipe)**
@@ -138,27 +135,22 @@ This section outlines what the design **protects against**, **assumes**, and **d
    Detect high-risk devices and degrade features or show warnings.
 
 3. **Secure UI & Logs**
-
    - Avoid logging sensitive data.
    - Mark sensitive screens to prevent OS-generated snapshots (Android: `FLAG_SECURE`; iOS: blur on background).
 
 4. **Build Hardening**
-
    - Android: enable R8/ProGuard, shrink/obfuscate, remove debug, enable App Integrity/Play Integrity API.
    - iOS: disable debug symbols in release; enable bitcode/strip symbols (as applicable to your toolchain).
 
 5. **Key Rotation Strategy (advanced)**
-
    - Option A: **Full wipe** via `completeReset()` (current implementation).
    - Option B: **In-place re-encryption** (requires a migration routine that reads/decrypts with old key, re-encrypts with new key).
 
 6. **Incident Response**
-
    - If compromise suspected: trigger `completeReset()` on next launch and re-authenticate the user.
    - Consider server-side invalidation of tokens tied to local state.
 
 7. **Testing & Verification**
-
    - Validate that storage is unreadable off-device (adb/idevice backups).
    - Confirm hardware-backed path on representative devices (Keychain/Keystore reports).
    - Ensure biometric/passcode prompts behave as expected across cold/warm starts.
@@ -181,6 +173,5 @@ This section outlines what the design **protects against**, **assumes**, and **d
   ```
 
 - **Key Lifecycle**
-
   - `clearData()` → standard logout.
   - `completeReset()` → security event / user-requested wipe.

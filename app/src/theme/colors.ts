@@ -2,7 +2,7 @@ export const colors = {
   // Pure monochrome palette
   black: '#000000',
   white: '#FFFFFF',
-  
+
   // Neutral grays
   neutral: {
     50: '#FAFAFA',
@@ -17,14 +17,14 @@ export const colors = {
     900: '#171717',
     950: '#0A0A0A',
   },
-  
+
   // Opacity utilities for overlays
   overlay: {
     light: 'rgba(255, 255, 255, 0.2)',
     medium: 'rgba(255, 255, 255, 0.1)',
     dark: 'rgba(0, 0, 0, 0.05)',
     darker: 'rgba(0, 0, 0, 0.1)',
-  }
+  },
 } as const;
 
 export type ColorKey = keyof typeof colors;

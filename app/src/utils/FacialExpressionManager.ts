@@ -1,6 +1,6 @@
 /**
  * Facial Expression Manager
- * 
+ *
  * This utility provides intelligent facial expression selection based on:
  * - Health metrics (air quality, sleep, symptoms)
  * - Environmental factors
@@ -56,10 +56,13 @@ export class FacialExpressionManager {
   ): ExpressionRecommendation {
     const scores = this.calculateExpressionScores(metrics);
     const topExpression = this.getTopExpression(scores);
-    
+
     return {
       primaryExpression: topExpression.expression,
-      alternativeExpressions: this.getAlternatives(scores, topExpression.expression),
+      alternativeExpressions: this.getAlternatives(
+        scores,
+        topExpression.expression
+      ),
       confidence: topExpression.score,
       reasoning: this.generateReasoning(metrics, topExpression.expression),
     };
@@ -68,7 +71,9 @@ export class FacialExpressionManager {
   /**
    * Calculate weighted scores for each expression based on health metrics
    */
-  private static calculateExpressionScores(metrics: HealthMetrics): { [key: string]: number } {
+  private static calculateExpressionScores(metrics: HealthMetrics): {
+    [key: string]: number;
+  } {
     const scores: { [key: string]: number } = {
       healthy: 0,
       mild_symptoms: 0,
@@ -130,10 +135,16 @@ export class FacialExpressionManager {
         if (symptomLower.includes('breath') || symptomLower.includes('wheez')) {
           scores.breathing_difficulty += 0.5;
         }
-        if (symptomLower.includes('headache') || symptomLower.includes('nausea')) {
+        if (
+          symptomLower.includes('headache') ||
+          symptomLower.includes('nausea')
+        ) {
           scores.sick += 0.4;
         }
-        if (symptomLower.includes('fatigue') || symptomLower.includes('tired')) {
+        if (
+          symptomLower.includes('fatigue') ||
+          symptomLower.includes('tired')
+        ) {
           scores.tired += 0.4;
           scores.exhausted += 0.2;
         }
@@ -185,7 +196,10 @@ export class FacialExpressionManager {
   /**
    * Get the expression with the highest score
    */
-  private static getTopExpression(scores: { [key: string]: number }): { expression: string; score: number } {
+  private static getTopExpression(scores: { [key: string]: number }): {
+    expression: string;
+    score: number;
+  } {
     let topExpression = 'neutral';
     let topScore = scores.neutral || 0;
 
@@ -202,7 +216,10 @@ export class FacialExpressionManager {
   /**
    * Get alternative expressions sorted by score
    */
-  private static getAlternatives(scores: { [key: string]: number }, primaryExpression: string): string[] {
+  private static getAlternatives(
+    scores: { [key: string]: number },
+    primaryExpression: string
+  ): string[] {
     return Object.entries(scores)
       .filter(([expression]) => expression !== primaryExpression)
       .sort(([, a], [, b]) => b - a)
@@ -213,7 +230,10 @@ export class FacialExpressionManager {
   /**
    * Generate human-readable reasoning for the expression choice
    */
-  private static generateReasoning(metrics: HealthMetrics, expression: string): string {
+  private static generateReasoning(
+    metrics: HealthMetrics,
+    expression: string
+  ): string {
     const factors = [];
 
     if (metrics.airQualityIndex !== undefined) {
@@ -286,7 +306,8 @@ export class FacialExpressionManager {
 
 // Convenience functions for quick expression selection
 export const getHealthExpression = (metrics: HealthMetrics): string => {
-  return FacialExpressionManager.analyzeHealthAndRecommendExpression(metrics).primaryExpression;
+  return FacialExpressionManager.analyzeHealthAndRecommendExpression(metrics)
+    .primaryExpression;
 };
 
 export const getAirQualityExpression = (aqi: number): string => {

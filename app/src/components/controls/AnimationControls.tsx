@@ -1,5 +1,5 @@
-import React from "react";
-import { TouchableOpacity, Text, View, StyleSheet } from "react-native";
+import React from 'react';
+import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
 
 interface AnimationControlsProps {
   availableAnimations: Array<{ name: string; label: string }>;
@@ -49,36 +49,36 @@ export function AnimationControls({
 
 const styles = StyleSheet.create({
   animationButtonsContainer: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 10,
     left: 10,
     right: 10,
-    flexDirection: "row", // Arrange children in a row
-    flexWrap: "wrap", // Allow items to wrap to the next line
-    justifyContent: "space-between", // Distribute space between items
-    alignItems: "center", // Center items vertically
-    alignContent: "center", // Center lines of wrapped items
-    textAlign: "center",
+    flexDirection: 'row', // Arrange children in a row
+    flexWrap: 'wrap', // Allow items to wrap to the next line
+    justifyContent: 'space-between', // Distribute space between items
+    alignItems: 'center', // Center items vertically
+    alignContent: 'center', // Center lines of wrapped items
+    textAlign: 'center',
   },
   animationButton: {
-    backgroundColor: "#3182CE",
+    backgroundColor: '#3182CE',
     padding: 12,
     borderRadius: 8,
-    alignItems: "center",
-    width: "48%", // Set width for two columns with a small gap
+    alignItems: 'center',
+    width: '48%', // Set width for two columns with a small gap
     marginBottom: 8, // Add margin to the bottom of each button
   },
   activeAnimationButton: {
-    backgroundColor: "#E53E3E",
+    backgroundColor: '#E53E3E',
   },
   animationButtonText: {
-    color: "white",
+    color: 'white',
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   activeAnimationButtonText: {
-    color: "white",
+    color: 'white',
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,20 +8,20 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
-} from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import { Shield, Lock, Smartphone } from "lucide-react-native";
-import { LocalStorageService } from "../services/LocalStorageService";
-import { colors, spacing, fontSize, borderRadius } from "../theme";
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Shield, Lock, Smartphone } from 'lucide-react-native';
+import { LocalStorageService } from '../services/LocalStorageService';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 
-type SettingsScreenNavigationProp = StackNavigationProp<any, "Settings">;
+type SettingsScreenNavigationProp = StackNavigationProp<any, 'Settings'>;
 
 export default function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const [requireAuth, setRequireAuth] = useState(false);
-  const [authMethod, setAuthMethod] = useState<"pin" | "biometric" | "both">(
-    "biometric",
+  const [authMethod, setAuthMethod] = useState<'pin' | 'biometric' | 'both'>(
+    'biometric'
   );
   const [loading, setLoading] = useState(true);
 
@@ -36,10 +36,10 @@ export default function SettingsScreen() {
 
       if (profile?.security) {
         setRequireAuth(profile.security.requireAuthentication);
-        setAuthMethod(profile.security.authMethod || "biometric");
+        setAuthMethod(profile.security.authMethod || 'biometric');
       }
     } catch (error) {
-      console.error("Failed to load security settings:", error);
+      console.error('Failed to load security settings:', error);
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,7 @@ export default function SettingsScreen() {
 
   const updateSecuritySettings = async (
     newRequireAuth: boolean,
-    newAuthMethod?: "pin" | "biometric" | "both",
+    newAuthMethod?: 'pin' | 'biometric' | 'both'
   ) => {
     try {
       setLoading(true);
@@ -65,17 +65,17 @@ export default function SettingsScreen() {
 
       if (newRequireAuth) {
         Alert.alert(
-          "Security Enabled",
-          "Authentication will be required the next time you open the app.",
-          [{ text: "OK" }],
+          'Security Enabled',
+          'Authentication will be required the next time you open the app.',
+          [{ text: 'OK' }]
         );
       }
     } catch (error) {
-      console.error("Failed to update security settings:", error);
+      console.error('Failed to update security settings:', error);
       Alert.alert(
-        "Error",
-        "Failed to update security settings. Please try again.",
-        [{ text: "OK" }],
+        'Error',
+        'Failed to update security settings. Please try again.',
+        [{ text: 'OK' }]
       );
     } finally {
       setLoading(false);
@@ -85,28 +85,28 @@ export default function SettingsScreen() {
   const handleAuthToggle = async (value: boolean) => {
     if (value) {
       Alert.alert(
-        "Enable Authentication",
-        "This will require biometric authentication or device passcode to access your digital twin data.",
+        'Enable Authentication',
+        'This will require biometric authentication or device passcode to access your digital twin data.',
         [
-          { text: "Cancel", style: "cancel" },
+          { text: 'Cancel', style: 'cancel' },
           {
-            text: "Enable",
+            text: 'Enable',
             onPress: () => updateSecuritySettings(true),
           },
-        ],
+        ]
       );
     } else {
       Alert.alert(
-        "Disable Authentication",
-        "Are you sure you want to disable authentication? Your data will be accessible without verification.",
+        'Disable Authentication',
+        'Are you sure you want to disable authentication? Your data will be accessible without verification.',
         [
-          { text: "Cancel", style: "cancel" },
+          { text: 'Cancel', style: 'cancel' },
           {
-            text: "Disable",
-            style: "destructive",
+            text: 'Disable',
+            style: 'destructive',
             onPress: () => updateSecuritySettings(false),
           },
-        ],
+        ]
       );
     }
   };
@@ -117,7 +117,7 @@ export default function SettingsScreen() {
     description,
     icon,
   }: {
-    method: "pin" | "biometric" | "both";
+    method: 'pin' | 'biometric' | 'both';
     title: string;
     description: string;
     icon: React.ReactNode;
@@ -208,7 +208,7 @@ export default function SettingsScreen() {
                   <Smartphone
                     size={20}
                     color={
-                      authMethod === "biometric"
+                      authMethod === 'biometric'
                         ? colors.white
                         : colors.neutral[600]
                     }
@@ -224,7 +224,7 @@ export default function SettingsScreen() {
                   <Lock
                     size={20}
                     color={
-                      authMethod === "pin" ? colors.white : colors.neutral[600]
+                      authMethod === 'pin' ? colors.white : colors.neutral[600]
                     }
                   />
                 }
@@ -238,7 +238,7 @@ export default function SettingsScreen() {
                   <Shield
                     size={20}
                     color={
-                      authMethod === "both" ? colors.white : colors.neutral[600]
+                      authMethod === 'both' ? colors.white : colors.neutral[600]
                     }
                   />
                 }
@@ -266,8 +266,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
     fontSize: fontSize.base,
@@ -281,20 +281,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: spacing.lg,
   },
   sectionTitle: {
     fontSize: fontSize.xl,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.black,
     marginLeft: spacing.sm,
   },
   settingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     backgroundColor: colors.neutral[50],
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: fontSize.lg,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.black,
     marginBottom: spacing.xs,
   },
@@ -321,13 +321,13 @@ const styles = StyleSheet.create({
   },
   authMethodSectionTitle: {
     fontSize: fontSize.base,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.black,
     marginBottom: spacing.md,
   },
   authMethodOption: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: spacing.lg,
     backgroundColor: colors.neutral[50],
     borderRadius: borderRadius.lg,
@@ -344,8 +344,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: borderRadius.full,
     backgroundColor: colors.neutral[200],
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: spacing.md,
   },
   authMethodContent: {
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   },
   authMethodTitle: {
     fontSize: fontSize.base,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.black,
     marginBottom: spacing.xs,
   },
@@ -383,6 +383,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.neutral[600],
     lineHeight: 20,
-    textAlign: "center",
+    textAlign: 'center',
   },
 });

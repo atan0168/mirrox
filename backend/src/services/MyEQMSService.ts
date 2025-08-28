@@ -1,12 +1,12 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse } from 'axios';
 import {
   MyEQMSResponse,
   MyEQMSStation,
   UnifiedAirQualityData,
   HistoricalReading,
   TrendData,
-} from "../models/AirQuality";
-import { cacheService } from "./CacheService";
+} from '../models/AirQuality';
+import { cacheService } from './CacheService';
 
 interface MyEQMSServiceConfig {
   baseUrl: string;
@@ -27,7 +27,7 @@ export class MyEQMSService {
   private constructor() {
     this.config = {
       baseUrl:
-        "https://eqms.doe.gov.my/api3/publicmapproxy/PUBLIC_DISPLAY/CAQM_MCAQM_Current_Reading/MapServer/0/query",
+        'https://eqms.doe.gov.my/api3/publicmapproxy/PUBLIC_DISPLAY/CAQM_MCAQM_Current_Reading/MapServer/0/query',
       timeout: 15000,
       retryAttempts: 3,
       retryDelay: 1000,
@@ -49,7 +49,7 @@ export class MyEQMSService {
    * Fetch all MyEQMS air quality stations data
    */
   public async fetchAllStations(): Promise<MyEQMSResponse> {
-    const cacheKey = "myeqms_all_stations";
+    const cacheKey = 'myeqms_all_stations';
 
     // Check cache first
     const cached = cacheService.get<MyEQMSResponse>(cacheKey);
@@ -59,11 +59,11 @@ export class MyEQMSService {
 
     try {
       const params = {
-        f: "json",
-        outFields: "*",
-        returnGeometry: "false",
-        spatialRel: "esriSpatialRelIntersects",
-        where: "1=1",
+        f: 'json',
+        outFields: '*',
+        returnGeometry: 'false',
+        spatialRel: 'esriSpatialRelIntersects',
+        where: '1=1',
       };
 
       const response: AxiosResponse<MyEQMSResponse> =
@@ -78,9 +78,9 @@ export class MyEQMSService {
 
       return data;
     } catch (error) {
-      console.error("Error fetching MyEQMS data:", error);
+      console.error('Error fetching MyEQMS data:', error);
       throw new Error(
-        `Failed to fetch MyEQMS data: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to fetch MyEQMS data: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
@@ -89,16 +89,16 @@ export class MyEQMSService {
    * Get stations by state
    */
   public async getStationsByState(
-    stateName: string,
+    stateName: string
   ): Promise<UnifiedAirQualityData[]> {
     const data = await this.fetchAllStations();
     const stations = data.features
-      .map((feature) => feature.attributes)
-      .filter((station) =>
-        station.STATE_NAME.toLowerCase().includes(stateName.toLowerCase()),
+      .map(feature => feature.attributes)
+      .filter(station =>
+        station.STATE_NAME.toLowerCase().includes(stateName.toLowerCase())
       );
 
-    return stations.map((station) => this.convertToUnifiedFormat(station));
+    return stations.map(station => this.convertToUnifiedFormat(station));
   }
 
   /**
@@ -107,18 +107,18 @@ export class MyEQMSService {
   public async getStationsByLocation(
     latitude: number,
     longitude: number,
-    radiusKm: number = 50,
+    radiusKm: number = 50
   ): Promise<UnifiedAirQualityData[]> {
     const data = await this.fetchAllStations();
 
     const nearbyStations = data.features
-      .map((feature) => feature.attributes)
-      .filter((station) => {
+      .map(feature => feature.attributes)
+      .filter(station => {
         const distance = this.calculateDistance(
           latitude,
           longitude,
           station.LATITUDE,
-          station.LONGITUDE,
+          station.LONGITUDE
         );
         return distance <= radiusKm;
       })
@@ -127,32 +127,30 @@ export class MyEQMSService {
           latitude,
           longitude,
           a.LATITUDE,
-          a.LONGITUDE,
+          a.LONGITUDE
         );
         const distB = this.calculateDistance(
           latitude,
           longitude,
           b.LATITUDE,
-          b.LONGITUDE,
+          b.LONGITUDE
         );
         return distA - distB;
       });
 
-    return nearbyStations.map((station) =>
-      this.convertToUnifiedFormat(station),
-    );
+    return nearbyStations.map(station => this.convertToUnifiedFormat(station));
   }
 
   /**
    * Get station by ID
    */
   public async getStationById(
-    stationId: string,
+    stationId: string
   ): Promise<UnifiedAirQualityData | null> {
     const data = await this.fetchAllStations();
     const station = data.features
-      .map((feature) => feature.attributes)
-      .find((station) => station.STATION_ID === stationId);
+      .map(feature => feature.attributes)
+      .find(station => station.STATION_ID === stationId);
 
     return station ? this.convertToUnifiedFormat(station) : null;
   }
@@ -163,30 +161,26 @@ export class MyEQMSService {
   public async getAllActiveStations(): Promise<UnifiedAirQualityData[]> {
     const data = await this.fetchAllStations();
     const activeStations = data.features
-      .map((feature) => feature.attributes)
-      .filter(
-        (station) => station.STATION_STATUS === 1 && station.API !== null,
-      );
+      .map(feature => feature.attributes)
+      .filter(station => station.STATION_STATUS === 1 && station.API !== null);
 
-    return activeStations.map((station) =>
-      this.convertToUnifiedFormat(station),
-    );
+    return activeStations.map(station => this.convertToUnifiedFormat(station));
   }
 
   /**
    * Get stations by region
    */
   public async getStationsByRegion(
-    regionName: string,
+    regionName: string
   ): Promise<UnifiedAirQualityData[]> {
     const data = await this.fetchAllStations();
     const stations = data.features
-      .map((feature) => feature.attributes)
-      .filter((station) =>
-        station.REGION_NAME.toLowerCase().includes(regionName.toLowerCase()),
+      .map(feature => feature.attributes)
+      .filter(station =>
+        station.REGION_NAME.toLowerCase().includes(regionName.toLowerCase())
       );
 
-    return stations.map((station) => this.convertToUnifiedFormat(station));
+    return stations.map(station => this.convertToUnifiedFormat(station));
   }
 
   /**
@@ -194,43 +188,43 @@ export class MyEQMSService {
    */
   public async getTrendData(
     stationId: string,
-    parameter: "api" | "pm25" | "pm10" | "temperature" | "humidity",
-    hoursBack: number = 24,
+    parameter: 'api' | 'pm25' | 'pm10' | 'temperature' | 'humidity',
+    hoursBack: number = 24
   ): Promise<TrendData> {
     const readings = this.historicalData.get(stationId) || [];
     const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
 
     const recentReadings = readings
-      .filter((reading) => new Date(reading.timestamp) >= cutoffTime)
+      .filter(reading => new Date(reading.timestamp) >= cutoffTime)
       .sort(
         (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
 
-    const data = recentReadings.map((reading) => ({
+    const data = recentReadings.map(reading => ({
       timestamp: reading.timestamp,
       value: reading[parameter as keyof HistoricalReading] as number | null,
     }));
 
     const validValues = data
-      .map((d) => d.value)
-      .filter((v) => v !== null) as number[];
+      .map(d => d.value)
+      .filter(v => v !== null) as number[];
 
     let statistics = {
       average: null as number | null,
       min: null as number | null,
       max: null as number | null,
-      trend: "insufficient_data" as
-        | "improving"
-        | "worsening"
-        | "stable"
-        | "insufficient_data",
+      trend: 'insufficient_data' as
+        | 'improving'
+        | 'worsening'
+        | 'stable'
+        | 'insufficient_data',
       dataPoints: validValues.length,
     };
 
     if (validValues.length > 0) {
       statistics.average = Math.round(
-        validValues.reduce((sum, val) => sum + val, 0) / validValues.length,
+        validValues.reduce((sum, val) => sum + val, 0) / validValues.length
       );
       statistics.min = Math.min(...validValues);
       statistics.max = Math.max(...validValues);
@@ -249,11 +243,11 @@ export class MyEQMSService {
         const difference = recentAvg - olderAvg;
 
         if (Math.abs(difference) < 5) {
-          statistics.trend = "stable";
+          statistics.trend = 'stable';
         } else if (difference < 0) {
-          statistics.trend = "improving"; // Lower values are generally better for pollutants
+          statistics.trend = 'improving'; // Lower values are generally better for pollutants
         } else {
-          statistics.trend = "worsening";
+          statistics.trend = 'worsening';
         }
       }
     }
@@ -276,14 +270,14 @@ export class MyEQMSService {
    */
   public convertToUnifiedFormat(station: MyEQMSStation): UnifiedAirQualityData {
     return {
-      source: "myeqms",
+      source: 'myeqms',
       stationId: station.STATION_ID,
       location: {
         latitude: station.LATITUDE,
         longitude: station.LONGITUDE,
         name: station.STATION_LOCATION,
         state: station.STATE_NAME,
-        country: "Malaysia",
+        country: 'Malaysia',
         category: station.STATION_CATEGORY,
       },
       datetime: station.DATETIME
@@ -298,37 +292,37 @@ export class MyEQMSService {
           concentration: station.PM25_CONC,
           subIndex: station.SI_PM25,
           avg24h: station.PM25_24H_AVG,
-          units: "µg/m³",
+          units: 'µg/m³',
         },
         pm10: {
           concentration: station.PM10_CONC,
           subIndex: station.SI_PM10,
           avg24h: station.PM10_24H_AVG,
-          units: "µg/m³",
+          units: 'µg/m³',
         },
         so2: {
           concentration: station.SO2_CONC,
           subIndex: station.SI_SO2,
           avg1h: station.SO2_1H_AVG,
-          units: "µg/m³",
+          units: 'µg/m³',
         },
         no2: {
           concentration: station.NO2_CONC,
           subIndex: station.SI_NO2,
           avg1h: station.NO2_1H_AVG,
-          units: "µg/m³",
+          units: 'µg/m³',
         },
         o3: {
           concentration: station.O3_CONC,
           subIndex: station.SI_O3,
           avg1h: station.O3_1H_AVG,
-          units: "µg/m³",
+          units: 'µg/m³',
         },
         co: {
           concentration: station.CO_CONC,
           subIndex: station.SI_CO,
           avg8h: station.CO_8H_AVG,
-          units: "mg/m³",
+          units: 'mg/m³',
         },
       },
 
@@ -351,12 +345,12 @@ export class MyEQMSService {
           so2: station.PERC_SO2AVG || 0,
         },
         flags: {
-          so2: station.SO2H_FLAG || "",
-          no2: station.NO2H_FLAG || "",
-          o3: station.O3H_FLAG || "",
-          co: station.COH_FLAG || "",
-          pm25: station.PM25H_FLAG || "",
-          pm10: station.PM10H_FLAG || "",
+          so2: station.SO2H_FLAG || '',
+          no2: station.NO2H_FLAG || '',
+          o3: station.O3H_FLAG || '',
+          co: station.COH_FLAG || '',
+          pm25: station.PM25H_FLAG || '',
+          pm10: station.PM10H_FLAG || '',
         },
       },
 
@@ -370,16 +364,16 @@ export class MyEQMSService {
    */
   private async makeRequest(
     params: Record<string, string>,
-    attempt = 1,
+    attempt = 1
   ): Promise<AxiosResponse<MyEQMSResponse>> {
     try {
       const response = await axios.get(this.config.baseUrl, {
         params,
         timeout: this.config.timeout,
         headers: {
-          Accept: "*/*",
-          "Cache-Control": "no-cache",
-          "User-Agent": "DigitalTwin-Backend/1.0.0",
+          Accept: '*/*',
+          'Cache-Control': 'no-cache',
+          'User-Agent': 'DigitalTwin-Backend/1.0.0',
         },
       });
 
@@ -423,7 +417,7 @@ export class MyEQMSService {
       const recentReadings = stationReadings
         .sort(
           (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         )
         .slice(0, this.MAX_HISTORICAL_RECORDS);
 
@@ -439,13 +433,13 @@ export class MyEQMSService {
     setInterval(
       async () => {
         try {
-          console.log("Collecting MyEQMS data for historical trends...");
+          console.log('Collecting MyEQMS data for historical trends...');
           await this.fetchAllStations();
         } catch (error) {
-          console.error("Error in scheduled data collection:", error);
+          console.error('Error in scheduled data collection:', error);
         }
       },
-      60 * 60 * 1000,
+      60 * 60 * 1000
     ); // Every hour
   }
 
@@ -453,34 +447,34 @@ export class MyEQMSService {
    * Get Malaysian air quality classification color
    */
   private getClassificationColor(api: number | null): string {
-    if (!api) return "#9CA3AF"; // Gray for no data
+    if (!api) return '#9CA3AF'; // Gray for no data
 
-    if (api <= 50) return "#10B981"; // Green - Good
-    if (api <= 100) return "#F59E0B"; // Yellow - Moderate
-    if (api <= 200) return "#EF4444"; // Red - Unhealthy
-    if (api <= 300) return "#7C3AED"; // Purple - Very Unhealthy
-    return "#991B1B"; // Dark Red - Hazardous
+    if (api <= 50) return '#10B981'; // Green - Good
+    if (api <= 100) return '#F59E0B'; // Yellow - Moderate
+    if (api <= 200) return '#EF4444'; // Red - Unhealthy
+    if (api <= 300) return '#7C3AED'; // Purple - Very Unhealthy
+    return '#991B1B'; // Dark Red - Hazardous
   }
 
   /**
    * Get health advice based on API level
    */
   private getHealthAdvice(api: number | null): string {
-    if (!api) return "No data available";
+    if (!api) return 'No data available';
 
     if (api <= 50) {
-      return "Air quality is satisfactory. Enjoy outdoor activities!";
+      return 'Air quality is satisfactory. Enjoy outdoor activities!';
     }
     if (api <= 100) {
-      return "Air quality is acceptable. Sensitive individuals should consider limiting outdoor exertion.";
+      return 'Air quality is acceptable. Sensitive individuals should consider limiting outdoor exertion.';
     }
     if (api <= 200) {
-      return "Unhealthy air quality. Everyone should reduce outdoor activities, especially sensitive groups.";
+      return 'Unhealthy air quality. Everyone should reduce outdoor activities, especially sensitive groups.';
     }
     if (api <= 300) {
-      return "Very unhealthy air quality. Avoid outdoor activities. Use air purifiers indoors.";
+      return 'Very unhealthy air quality. Avoid outdoor activities. Use air purifiers indoors.';
     }
-    return "Hazardous air quality. Stay indoors and avoid all outdoor activities.";
+    return 'Hazardous air quality. Stay indoors and avoid all outdoor activities.';
   }
 
   /**
@@ -490,7 +484,7 @@ export class MyEQMSService {
     lat1: number,
     lon1: number,
     lat2: number,
-    lon2: number,
+    lon2: number
   ): number {
     const R = 6371; // Earth's radius in kilometers
     const dLat = this.deg2rad(lat2 - lat1);
@@ -510,7 +504,7 @@ export class MyEQMSService {
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 

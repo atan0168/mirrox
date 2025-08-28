@@ -213,7 +213,7 @@ export interface MyEQMSResponse {
 
 // Unified air quality data structure for API responses
 export interface UnifiedAirQualityData {
-  source: "openaq" | "myeqms";
+  source: 'openaq' | 'myeqms';
   stationId: string;
   location: {
     latitude: number;
@@ -317,7 +317,7 @@ export interface TrendData {
     average: number | null;
     min: number | null;
     max: number | null;
-    trend: "improving" | "worsening" | "stable" | "insufficient_data";
+    trend: 'improving' | 'worsening' | 'stable' | 'insufficient_data';
     dataPoints: number;
   };
 }

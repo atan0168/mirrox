@@ -15,7 +15,7 @@ export default function AvatarCustomizationScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>Avatar Customization</Text>
-        
+
         <View style={styles.avatarContainer}>
           <ThreeAvatar
             width={300}
@@ -26,7 +26,7 @@ export default function AvatarCustomizationScreen() {
             facialExpression="neutral"
           />
         </View>
-        
+
         <View style={styles.infoContainer}>
           <Text style={styles.infoTitle}>Instructions:</Text>
           <Text style={styles.infoText}>

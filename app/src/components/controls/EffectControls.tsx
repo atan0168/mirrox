@@ -1,5 +1,5 @@
-import React from "react";
-import { TouchableOpacity, Text, View, StyleSheet } from "react-native";
+import React from 'react';
+import { TouchableOpacity, Text, View, StyleSheet } from 'react-native';
 
 interface EffectControlsProps {
   hazeEnabled: boolean;
@@ -23,16 +23,16 @@ export function EffectControls({
   };
 
   const getIntensityLabel = () => {
-    if (intensity <= 0.5) return "Light";
-    if (intensity >= 1.5) return "Heavy";
-    return "Medium";
+    if (intensity <= 0.5) return 'Light';
+    if (intensity >= 1.5) return 'Heavy';
+    return 'Medium';
   };
 
   const getSmogEmoji = () => {
-    if (!hazeEnabled) return "💨";
-    if (intensity <= 0.5) return "🌫️";
-    if (intensity >= 1.5) return "☁️";
-    return "💨";
+    if (!hazeEnabled) return '💨';
+    if (intensity <= 0.5) return '🌫️';
+    if (intensity >= 1.5) return '☁️';
+    return '💨';
   };
 
   return (
@@ -47,7 +47,7 @@ export function EffectControls({
             hazeEnabled && styles.activeHazeButtonText,
           ]}
         >
-          {getSmogEmoji()} {hazeEnabled ? "Smog ON" : "Add Smog"}
+          {getSmogEmoji()} {hazeEnabled ? 'Smog ON' : 'Add Smog'}
         </Text>
       </TouchableOpacity>
 
@@ -65,52 +65,52 @@ export function EffectControls({
 
 const styles = StyleSheet.create({
   controlsContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 10,
     right: 10,
-    flexDirection: "column",
+    flexDirection: 'column',
     gap: 8,
   },
   hazeButton: {
-    backgroundColor: "#68D391",
+    backgroundColor: '#68D391',
     padding: 10,
     borderRadius: 8,
-    alignItems: "center",
+    alignItems: 'center',
     minWidth: 110,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
   },
   activeHazeButton: {
-    backgroundColor: "#38A169",
+    backgroundColor: '#38A169',
   },
   hazeButtonText: {
-    color: "white",
+    color: 'white',
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   activeHazeButtonText: {
-    color: "white",
+    color: 'white',
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   intensityButton: {
-    backgroundColor: "#4A90E2",
+    backgroundColor: '#4A90E2',
     padding: 6,
     borderRadius: 6,
-    alignItems: "center",
+    alignItems: 'center',
     minWidth: 110,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
     shadowRadius: 2,
     elevation: 2,
   },
   intensityButtonText: {
-    color: "white",
+    color: 'white',
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });

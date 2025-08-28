@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors, spacing, fontSize, borderRadius, shadows } from '../../theme';
 
 export interface AvatarProps {
@@ -32,26 +26,16 @@ export const Avatar: React.FC<AvatarProps> = ({
   const textSize = size * 0.4;
 
   return (
-    <View
-      style={[
-        styles.container,
-        avatarStyle,
-        style,
-      ]}
-    >
+    <View style={[styles.container, avatarStyle, style]}>
       {source ? (
         // In a real app, you'd use Image component here
         <View style={[styles.imagePlaceholder, avatarStyle]}>
-          <Text style={[styles.placeholderText, { fontSize: textSize }]}>IMG</Text>
+          <Text style={[styles.placeholderText, { fontSize: textSize }]}>
+            IMG
+          </Text>
         </View>
       ) : (
-        <Text
-          style={[
-            styles.fallbackText,
-            { fontSize: textSize },
-            textStyle,
-          ]}
-        >
+        <Text style={[styles.fallbackText, { fontSize: textSize }, textStyle]}>
           {fallback || '?'}
         </Text>
       )}

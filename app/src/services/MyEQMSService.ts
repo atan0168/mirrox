@@ -1,5 +1,5 @@
-import { BACKEND_API_URL } from "../constants";
-import { UnifiedAirQualityData } from "../models/AirQuality";
+import { BACKEND_API_URL } from '../constants';
+import { UnifiedAirQualityData } from '../models/AirQuality';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -31,8 +31,8 @@ export class MyEQMSService {
   private async makeRequest<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${BACKEND_API_URL}${endpoint}`, {
       headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
         // Add authentication headers if needed
         // 'Authorization': `Bearer ${await getAuthToken()}`,
       },
@@ -40,14 +40,14 @@ export class MyEQMSService {
 
     if (!response.ok) {
       throw new Error(
-        `Backend API error: ${response.status} ${response.statusText}`,
+        `Backend API error: ${response.status} ${response.statusText}`
       );
     }
 
     const result: ApiResponse<T> = await response.json();
 
     if (!result.success) {
-      throw new Error(result.error || "Unknown backend error");
+      throw new Error(result.error || 'Unknown backend error');
     }
 
     return result.data as T;
@@ -59,7 +59,7 @@ export class MyEQMSService {
   async getStationsByLocation(
     latitude: number,
     longitude: number,
-    radiusKm: number = 50,
+    radiusKm: number = 50
   ): Promise<UnifiedAirQualityData[]> {
     const params = new URLSearchParams({
       latitude: latitude.toString(),
@@ -74,10 +74,10 @@ export class MyEQMSService {
    * Get stations by Malaysian state
    */
   async getStationsByState(
-    stateName: string,
+    stateName: string
   ): Promise<UnifiedAirQualityData[]> {
     return this.makeRequest<UnifiedAirQualityData[]>(
-      `/malaysia/state/${encodeURIComponent(stateName)}`,
+      `/malaysia/state/${encodeURIComponent(stateName)}`
     );
   }
 
@@ -85,10 +85,10 @@ export class MyEQMSService {
    * Get stations by Malaysian region
    */
   async getStationsByRegion(
-    regionName: string,
+    regionName: string
   ): Promise<UnifiedAirQualityData[]> {
     return this.makeRequest<UnifiedAirQualityData[]>(
-      `/malaysia/region/${encodeURIComponent(regionName)}`,
+      `/malaysia/region/${encodeURIComponent(regionName)}`
     );
   }
 
@@ -96,15 +96,15 @@ export class MyEQMSService {
    * Get specific station data by ID
    */
   async getStationById(
-    stationId: string,
+    stationId: string
   ): Promise<UnifiedAirQualityData | null> {
     try {
       return await this.makeRequest<UnifiedAirQualityData>(
-        `/malaysia/station/${encodeURIComponent(stationId)}`,
+        `/malaysia/station/${encodeURIComponent(stationId)}`
       );
     } catch (error) {
       // If station not found, return null
-      if (error instanceof Error && error.message.includes("404")) {
+      if (error instanceof Error && error.message.includes('404')) {
         return null;
       }
       throw error;
@@ -115,7 +115,7 @@ export class MyEQMSService {
    * Get all active Malaysian stations
    */
   async getAllActiveStations(): Promise<UnifiedAirQualityData[]> {
-    return this.makeRequest<UnifiedAirQualityData[]>("/malaysia/stations");
+    return this.makeRequest<UnifiedAirQualityData[]>('/malaysia/stations');
   }
 
   /**
@@ -123,8 +123,8 @@ export class MyEQMSService {
    */
   async getTrendData(
     stationId: string,
-    parameter: "api" | "pm25" | "pm10" | "temperature" | "humidity" = "api",
-    hoursBack: number = 24,
+    parameter: 'api' | 'pm25' | 'pm10' | 'temperature' | 'humidity' = 'api',
+    hoursBack: number = 24
   ): Promise<TrendData> {
     const params = new URLSearchParams({
       parameter,
@@ -132,7 +132,7 @@ export class MyEQMSService {
     });
 
     return this.makeRequest<TrendData>(
-      `/malaysia/station/${encodeURIComponent(stationId)}/trend?${params}`,
+      `/malaysia/station/${encodeURIComponent(stationId)}/trend?${params}`
     );
   }
 
@@ -140,34 +140,34 @@ export class MyEQMSService {
    * Get Malaysian air quality classification color
    */
   getClassificationColor(api: number | null): string {
-    if (!api) return "#9CA3AF"; // Gray for no data
+    if (!api) return '#9CA3AF'; // Gray for no data
 
-    if (api <= 50) return "#10B981"; // Green - Good
-    if (api <= 100) return "#F59E0B"; // Yellow - Moderate
-    if (api <= 200) return "#EF4444"; // Red - Unhealthy
-    if (api <= 300) return "#7C3AED"; // Purple - Very Unhealthy
-    return "#991B1B"; // Dark Red - Hazardous
+    if (api <= 50) return '#10B981'; // Green - Good
+    if (api <= 100) return '#F59E0B'; // Yellow - Moderate
+    if (api <= 200) return '#EF4444'; // Red - Unhealthy
+    if (api <= 300) return '#7C3AED'; // Purple - Very Unhealthy
+    return '#991B1B'; // Dark Red - Hazardous
   }
 
   /**
    * Get health advice based on API level
    */
   getHealthAdvice(api: number | null): string {
-    if (!api) return "No data available";
+    if (!api) return 'No data available';
 
     if (api <= 50) {
-      return "Air quality is satisfactory. Enjoy outdoor activities!";
+      return 'Air quality is satisfactory. Enjoy outdoor activities!';
     }
     if (api <= 100) {
-      return "Air quality is acceptable. Sensitive individuals should consider limiting outdoor exertion.";
+      return 'Air quality is acceptable. Sensitive individuals should consider limiting outdoor exertion.';
     }
     if (api <= 200) {
-      return "Unhealthy air quality. Everyone should reduce outdoor activities, especially sensitive groups.";
+      return 'Unhealthy air quality. Everyone should reduce outdoor activities, especially sensitive groups.';
     }
     if (api <= 300) {
-      return "Very unhealthy air quality. Avoid outdoor activities. Use air purifiers indoors.";
+      return 'Very unhealthy air quality. Avoid outdoor activities. Use air purifiers indoors.';
     }
-    return "Hazardous air quality. Stay indoors and avoid all outdoor activities.";
+    return 'Hazardous air quality. Stay indoors and avoid all outdoor activities.';
   }
 
   /**
@@ -177,7 +177,7 @@ export class MyEQMSService {
     lat1: number,
     lon1: number,
     lat2: number,
-    lon2: number,
+    lon2: number
   ): number {
     const R = 6371; // Earth's radius in kilometers
     const dLat = this.deg2rad(lat2 - lat1);

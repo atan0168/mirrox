@@ -1,9 +1,9 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse } from 'axios';
 
 // Define the API base URL - this should be configurable
 const API_BASE_URL = __DEV__
-  ? "http://10.10.0.133:3000/api"
-  : "https://your-production-api.com/api";
+  ? 'http://10.10.0.133:3000/api'
+  : 'https://your-production-api.com/api';
 
 export interface AirQualityApiResponse {
   success: boolean;
@@ -32,7 +32,7 @@ export interface AirQualityApiResponse {
     classification?: string;
     colorCode?: string;
     healthAdvice?: string;
-    source?: "openaq" | "aqicn" | "myeqms";
+    source?: 'openaq' | 'aqicn' | 'myeqms';
     timestamp?: string;
     stationUrl?: string;
     attributions?: Array<{
@@ -61,21 +61,21 @@ class BackendApiService {
       baseURL: API_BASE_URL,
       timeout: 15000, // 15 second timeout
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
     });
 
     // Add request interceptor for logging in development
     this.axiosInstance.interceptors.request.use(
-      (config) => {
+      config => {
         if (__DEV__) {
           console.log(`Making API request to: ${config.baseURL}${config.url}`);
         }
         return config;
       },
-      (error) => {
+      error => {
         return Promise.reject(error);
-      },
+      }
     );
 
     // Add response interceptor for error handling
@@ -83,12 +83,12 @@ class BackendApiService {
       (response: AxiosResponse) => {
         return response;
       },
-      (error) => {
+      error => {
         if (__DEV__) {
-          console.error("API request failed:", error.message);
+          console.error('API request failed:', error.message);
         }
         return Promise.reject(error);
-      },
+      }
     );
   }
 
@@ -100,40 +100,40 @@ class BackendApiService {
    */
   async fetchAirQuality(
     latitude: number,
-    longitude: number,
+    longitude: number
   ): Promise<AirQualityApiResponse> {
     try {
       const response = await this.axiosInstance.get<AirQualityApiResponse>(
-        "/air-quality",
+        '/air-quality',
         {
           params: {
             latitude,
             longitude,
           },
-        },
+        }
       );
 
       return response.data;
     } catch (error) {
-      console.error("Failed to fetch air quality data:", error);
+      console.error('Failed to fetch air quality data:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.error) {
           throw new Error(error.response.data.error);
         } else if (
-          error.code === "NETWORK_ERROR" ||
-          error.code === "ECONNREFUSED"
+          error.code === 'NETWORK_ERROR' ||
+          error.code === 'ECONNREFUSED'
         ) {
           throw new Error(
-            "Unable to connect to the backend service. Please check your connection.",
+            'Unable to connect to the backend service. Please check your connection.'
           );
-        } else if (error.code === "ECONNABORTED") {
-          throw new Error("Request timeout. Please try again.");
+        } else if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timeout. Please try again.');
         }
       }
 
       throw new Error(
-        "An unexpected error occurred while fetching air quality data.",
+        'An unexpected error occurred while fetching air quality data.'
       );
     }
   }
@@ -146,22 +146,22 @@ class BackendApiService {
    */
   async fetchAQICNAirQuality(
     latitude: number,
-    longitude: number,
+    longitude: number
   ): Promise<AirQualityApiResponse> {
     try {
       const response = await this.axiosInstance.get<AirQualityApiResponse>(
-        "/air-quality/aqicn",
+        '/air-quality/aqicn',
         {
           params: {
             latitude,
             longitude,
           },
-        },
+        }
       );
 
       return response.data;
     } catch (error) {
-      console.error("Failed to fetch AQICN air quality data:", error);
+      console.error('Failed to fetch AQICN air quality data:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.error) {
@@ -170,7 +170,7 @@ class BackendApiService {
       }
 
       throw new Error(
-        "An unexpected error occurred while fetching AQICN air quality data.",
+        'An unexpected error occurred while fetching AQICN air quality data.'
       );
     }
   }
@@ -181,16 +181,16 @@ class BackendApiService {
    * @returns Promise with AQICN station data
    */
   async fetchAQICNStationData(
-    stationId: string,
+    stationId: string
   ): Promise<AirQualityApiResponse> {
     try {
       const response = await this.axiosInstance.get<AirQualityApiResponse>(
-        `/air-quality/aqicn/station/${stationId}`,
+        `/air-quality/aqicn/station/${stationId}`
       );
 
       return response.data;
     } catch (error) {
-      console.error("Failed to fetch AQICN station data:", error);
+      console.error('Failed to fetch AQICN station data:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.error) {
@@ -199,7 +199,7 @@ class BackendApiService {
       }
 
       throw new Error(
-        "An unexpected error occurred while fetching AQICN station data.",
+        'An unexpected error occurred while fetching AQICN station data.'
       );
     }
   }
@@ -214,20 +214,24 @@ class BackendApiService {
   async searchAQICNStations(
     latitude: number,
     longitude: number,
-    radius?: number,
-  ): Promise<{ success: boolean; data?: StationSearchResult[]; error?: string }> {
+    radius?: number
+  ): Promise<{
+    success: boolean;
+    data?: StationSearchResult[];
+    error?: string;
+  }> {
     try {
       const params: any = { latitude, longitude };
       if (radius) params.radius = radius;
 
       const response = await this.axiosInstance.get(
-        "/air-quality/aqicn/search",
-        { params },
+        '/air-quality/aqicn/search',
+        { params }
       );
 
       return response.data;
     } catch (error) {
-      console.error("Failed to search AQICN stations:", error);
+      console.error('Failed to search AQICN stations:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.error) {
@@ -236,7 +240,7 @@ class BackendApiService {
       }
 
       throw new Error(
-        "An unexpected error occurred while searching AQICN stations.",
+        'An unexpected error occurred while searching AQICN stations.'
       );
     }
   }
@@ -246,9 +250,9 @@ class BackendApiService {
    */
   async clearAQICNCache(): Promise<void> {
     try {
-      await this.axiosInstance.post("/air-quality/aqicn/clear-cache");
+      await this.axiosInstance.post('/air-quality/aqicn/clear-cache');
     } catch (error) {
-      console.error("Failed to clear AQICN cache:", error);
+      console.error('Failed to clear AQICN cache:', error);
       throw error;
     }
   }
@@ -263,13 +267,13 @@ class BackendApiService {
     error?: string;
   }> {
     try {
-      const response = await this.axiosInstance.get("/health");
+      const response = await this.axiosInstance.get('/health');
       return response.data;
     } catch (error) {
-      console.error("Health check failed:", error);
+      console.error('Health check failed:', error);
       return {
         success: false,
-        error: "Backend service is not available",
+        error: 'Backend service is not available',
       };
     }
   }
@@ -280,10 +284,10 @@ class BackendApiService {
    */
   async getServiceStatus(): Promise<any> {
     try {
-      const response = await this.axiosInstance.get("/air-quality/status");
+      const response = await this.axiosInstance.get('/air-quality/status');
       return response.data;
     } catch (error) {
-      console.error("Failed to get service status:", error);
+      console.error('Failed to get service status:', error);
       throw error;
     }
   }
@@ -293,9 +297,9 @@ class BackendApiService {
    */
   async clearCache(): Promise<void> {
     try {
-      await this.axiosInstance.post("/air-quality/clear-cache");
+      await this.axiosInstance.post('/air-quality/clear-cache');
     } catch (error) {
-      console.error("Failed to clear cache:", error);
+      console.error('Failed to clear cache:', error);
       throw error;
     }
   }

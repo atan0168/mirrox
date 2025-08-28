@@ -1,11 +1,11 @@
-import { Request, Response } from "express";
-import { apiService } from "../services/ApiService";
-import { aqicnService } from "../services/AQICNService";
-import { MyEQMSService } from "../services/MyEQMSService";
+import { Request, Response } from 'express';
+import { apiService } from '../services/ApiService';
+import { aqicnService } from '../services/AQICNService';
+import { MyEQMSService } from '../services/MyEQMSService';
 import {
   AirQualityApiResponse,
   ServiceStatusResponse,
-} from "../models/AirQuality";
+} from '../models/AirQuality';
 
 export class AirQualityController {
   private myeqmsService: MyEQMSService;
@@ -25,7 +25,7 @@ export class AirQualityController {
       if (!latitude || !longitude) {
         res.status(400).json({
           success: false,
-          error: "Latitude and longitude are required parameters",
+          error: 'Latitude and longitude are required parameters',
         } as AirQualityApiResponse);
         return;
       }
@@ -36,7 +36,7 @@ export class AirQualityController {
       if (isNaN(lat) || isNaN(lon)) {
         res.status(400).json({
           success: false,
-          error: "Invalid latitude or longitude values",
+          error: 'Invalid latitude or longitude values',
         } as AirQualityApiResponse);
         return;
       }
@@ -46,7 +46,7 @@ export class AirQualityController {
         res.status(400).json({
           success: false,
           error:
-            "Latitude must be between -90 and 90, longitude must be between -180 and 180",
+            'Latitude must be between -90 and 90, longitude must be between -180 and 180',
         } as AirQualityApiResponse);
         return;
       }
@@ -56,7 +56,7 @@ export class AirQualityController {
       let data, cached, cacheAge;
 
       // Allow explicit source selection
-      if (source === "openaq") {
+      if (source === 'openaq') {
         cached = apiService.hasCachedData(lat, lon);
         cacheAge = apiService.getCacheAge(lat, lon);
         data = await apiService.fetchAirQuality(lat, lon);
@@ -67,7 +67,7 @@ export class AirQualityController {
           cacheAge = aqicnService.getCacheAge(lat, lon);
           data = await aqicnService.fetchAirQualityByCoordinates(lat, lon);
         } catch (error) {
-          console.warn("AQICN failed, falling back to OpenAQ:", error);
+          console.warn('AQICN failed, falling back to OpenAQ:', error);
           // Fallback to OpenAQ if AQICN fails
           cached = apiService.hasCachedData(lat, lon);
           cacheAge = apiService.getCacheAge(lat, lon);
@@ -84,10 +84,10 @@ export class AirQualityController {
 
       res.json(response);
     } catch (error) {
-      console.error("Error fetching air quality data:", error);
+      console.error('Error fetching air quality data:', error);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -105,14 +105,12 @@ export class AirQualityController {
       const cacheStats = openaqStatus.cache;
 
       // Get AQICN specific cache stats
-      const aqicnKeys = cacheStats.keys.filter((key) =>
-        key.startsWith("aqicn_"),
-      );
+      const aqicnKeys = cacheStats.keys.filter(key => key.startsWith('aqicn_'));
       const openaqKeys = cacheStats.keys.filter(
-        (key) => !key.startsWith("aqicn_") && !key.startsWith("myeqms_"),
+        key => !key.startsWith('aqicn_') && !key.startsWith('myeqms_')
       );
-      const myeqmsKeys = cacheStats.keys.filter((key) =>
-        key.startsWith("myeqms_"),
+      const myeqmsKeys = cacheStats.keys.filter(key =>
+        key.startsWith('myeqms_')
       );
 
       const response: ServiceStatusResponse = {
@@ -136,16 +134,16 @@ export class AirQualityController {
           uptime: process.uptime(),
           timestamp: new Date().toISOString(),
           services: {
-            aqicn: "enabled",
-            openaq: "enabled",
-            myeqms: "enabled",
+            aqicn: 'enabled',
+            openaq: 'enabled',
+            myeqms: 'enabled',
           },
         },
       };
 
       res.json(response);
     } catch (error) {
-      console.error("Error getting service status:", error);
+      console.error('Error getting service status:', error);
 
       res.status(500).json({
         success: false,
@@ -159,9 +157,9 @@ export class AirQualityController {
           uptime: process.uptime(),
           timestamp: new Date().toISOString(),
           services: {
-            aqicn: "error",
-            openaq: "error",
-            myeqms: "error",
+            aqicn: 'error',
+            openaq: 'error',
+            myeqms: 'error',
           },
         },
       } as ServiceStatusResponse);
@@ -177,14 +175,14 @@ export class AirQualityController {
 
       res.json({
         success: true,
-        message: "Cache cleared successfully",
+        message: 'Cache cleared successfully',
       });
     } catch (error) {
-      console.error("Error clearing cache:", error);
+      console.error('Error clearing cache:', error);
 
       res.status(500).json({
         success: false,
-        error: "Failed to clear cache",
+        error: 'Failed to clear cache',
       });
     }
   }
@@ -195,7 +193,7 @@ export class AirQualityController {
   async healthCheck(req: Request, res: Response): Promise<void> {
     res.json({
       success: true,
-      status: "healthy",
+      status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
     });
@@ -214,7 +212,7 @@ export class AirQualityController {
       if (!latitude || !longitude) {
         res.status(400).json({
           success: false,
-          error: "Latitude and longitude are required parameters",
+          error: 'Latitude and longitude are required parameters',
         } as AirQualityApiResponse);
         return;
       }
@@ -225,7 +223,7 @@ export class AirQualityController {
       if (isNaN(lat) || isNaN(lon)) {
         res.status(400).json({
           success: false,
-          error: "Invalid latitude or longitude values",
+          error: 'Invalid latitude or longitude values',
         } as AirQualityApiResponse);
         return;
       }
@@ -235,7 +233,7 @@ export class AirQualityController {
         res.status(400).json({
           success: false,
           error:
-            "Latitude must be between -90 and 90, longitude must be between -180 and 180",
+            'Latitude must be between -90 and 90, longitude must be between -180 and 180',
         } as AirQualityApiResponse);
         return;
       }
@@ -258,10 +256,10 @@ export class AirQualityController {
 
       res.json(response);
     } catch (error) {
-      console.error("Error fetching AQICN air quality data:", error);
+      console.error('Error fetching AQICN air quality data:', error);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -280,7 +278,7 @@ export class AirQualityController {
       if (!stationId) {
         res.status(400).json({
           success: false,
-          error: "Station ID parameter is required",
+          error: 'Station ID parameter is required',
         } as AirQualityApiResponse);
         return;
       }
@@ -295,10 +293,10 @@ export class AirQualityController {
         cached: false,
       } as AirQualityApiResponse);
     } catch (error) {
-      console.error("Error fetching AQICN station data:", error);
+      console.error('Error fetching AQICN station data:', error);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -318,7 +316,7 @@ export class AirQualityController {
       if (!latitude || !longitude) {
         res.status(400).json({
           success: false,
-          error: "Latitude and longitude are required parameters",
+          error: 'Latitude and longitude are required parameters',
         } as AirQualityApiResponse);
         return;
       }
@@ -330,13 +328,13 @@ export class AirQualityController {
       if (isNaN(lat) || isNaN(lon)) {
         res.status(400).json({
           success: false,
-          error: "Invalid latitude or longitude values",
+          error: 'Invalid latitude or longitude values',
         } as AirQualityApiResponse);
         return;
       }
 
       console.log(
-        `Searching AQICN stations for coordinates: ${lat}, ${lon}, radius: ${radiusKm}km`,
+        `Searching AQICN stations for coordinates: ${lat}, ${lon}, radius: ${radiusKm}km`
       );
 
       const stations = await aqicnService.searchStations(lat, lon, radiusKm);
@@ -347,10 +345,10 @@ export class AirQualityController {
         cached: false,
       } as AirQualityApiResponse);
     } catch (error) {
-      console.error("Error searching AQICN stations:", error);
+      console.error('Error searching AQICN stations:', error);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -368,14 +366,14 @@ export class AirQualityController {
 
       res.json({
         success: true,
-        message: "AQICN cache cleared successfully",
+        message: 'AQICN cache cleared successfully',
       });
     } catch (error) {
-      console.error("Error clearing AQICN cache:", error);
+      console.error('Error clearing AQICN cache:', error);
 
       res.status(500).json({
         success: false,
-        error: "Failed to clear AQICN cache",
+        error: 'Failed to clear AQICN cache',
       });
     }
   }
@@ -393,7 +391,7 @@ export class AirQualityController {
       if (!latitude || !longitude) {
         res.status(400).json({
           success: false,
-          error: "Latitude and longitude are required parameters",
+          error: 'Latitude and longitude are required parameters',
         } as AirQualityApiResponse);
         return;
       }
@@ -405,7 +403,7 @@ export class AirQualityController {
       if (isNaN(lat) || isNaN(lon)) {
         res.status(400).json({
           success: false,
-          error: "Invalid latitude or longitude values",
+          error: 'Invalid latitude or longitude values',
         } as AirQualityApiResponse);
         return;
       }
@@ -415,19 +413,19 @@ export class AirQualityController {
         res.status(400).json({
           success: false,
           error:
-            "Latitude must be between -90 and 90, longitude must be between -180 and 180",
+            'Latitude must be between -90 and 90, longitude must be between -180 and 180',
         } as AirQualityApiResponse);
         return;
       }
 
       console.log(
-        `Fetching Malaysian air quality for coordinates: ${lat}, ${lon}, radius: ${radiusKm}km`,
+        `Fetching Malaysian air quality for coordinates: ${lat}, ${lon}, radius: ${radiusKm}km`
       );
 
       const stations = await this.myeqmsService.getStationsByLocation(
         lat,
         lon,
-        radiusKm,
+        radiusKm
       );
 
       res.json({
@@ -436,10 +434,10 @@ export class AirQualityController {
         cached: false,
       } as AirQualityApiResponse);
     } catch (error) {
-      console.error("Error fetching Malaysian air quality data:", error);
+      console.error('Error fetching Malaysian air quality data:', error);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -453,7 +451,7 @@ export class AirQualityController {
    */
   async getMalaysianAirQualityByState(
     req: Request,
-    res: Response,
+    res: Response
   ): Promise<void> {
     try {
       const { state } = req.params;
@@ -461,7 +459,7 @@ export class AirQualityController {
       if (!state) {
         res.status(400).json({
           success: false,
-          error: "State parameter is required",
+          error: 'State parameter is required',
         } as AirQualityApiResponse);
         return;
       }
@@ -477,12 +475,12 @@ export class AirQualityController {
       } as AirQualityApiResponse);
     } catch (error) {
       console.error(
-        "Error fetching Malaysian air quality data by state:",
-        error,
+        'Error fetching Malaysian air quality data by state:',
+        error
       );
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -501,7 +499,7 @@ export class AirQualityController {
       if (!stationId) {
         res.status(400).json({
           success: false,
-          error: "Station ID parameter is required",
+          error: 'Station ID parameter is required',
         } as AirQualityApiResponse);
         return;
       }
@@ -513,7 +511,7 @@ export class AirQualityController {
       if (!station) {
         res.status(404).json({
           success: false,
-          error: "Station not found",
+          error: 'Station not found',
         } as AirQualityApiResponse);
         return;
       }
@@ -524,10 +522,10 @@ export class AirQualityController {
         cached: false,
       } as AirQualityApiResponse);
     } catch (error) {
-      console.error("Error fetching Malaysian station data:", error);
+      console.error('Error fetching Malaysian station data:', error);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -541,7 +539,7 @@ export class AirQualityController {
    */
   async getAllMalaysianStations(req: Request, res: Response): Promise<void> {
     try {
-      console.log("Fetching all Malaysian air quality stations");
+      console.log('Fetching all Malaysian air quality stations');
 
       const stations = await this.myeqmsService.getAllActiveStations();
 
@@ -551,10 +549,10 @@ export class AirQualityController {
         cached: false,
       } as AirQualityApiResponse);
     } catch (error) {
-      console.error("Error fetching all Malaysian stations:", error);
+      console.error('Error fetching all Malaysian stations:', error);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -568,7 +566,7 @@ export class AirQualityController {
    */
   async getMalaysianAirQualityByRegion(
     req: Request,
-    res: Response,
+    res: Response
   ): Promise<void> {
     try {
       const { region } = req.params;
@@ -576,7 +574,7 @@ export class AirQualityController {
       if (!region) {
         res.status(400).json({
           success: false,
-          error: "Region parameter is required",
+          error: 'Region parameter is required',
         } as AirQualityApiResponse);
         return;
       }
@@ -592,12 +590,12 @@ export class AirQualityController {
       } as AirQualityApiResponse);
     } catch (error) {
       console.error(
-        "Error fetching Malaysian air quality data by region:",
-        error,
+        'Error fetching Malaysian air quality data by region:',
+        error
       );
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,
@@ -617,19 +615,19 @@ export class AirQualityController {
       if (!stationId) {
         res.status(400).json({
           success: false,
-          error: "Station ID parameter is required",
+          error: 'Station ID parameter is required',
         });
         return;
       }
 
-      const param = (parameter as string) || "api";
+      const param = (parameter as string) || 'api';
       const hoursBack = hours ? parseInt(hours as string) : 24;
 
-      if (!["api", "pm25", "pm10", "temperature", "humidity"].includes(param)) {
+      if (!['api', 'pm25', 'pm10', 'temperature', 'humidity'].includes(param)) {
         res.status(400).json({
           success: false,
           error:
-            "Parameter must be one of: api, pm25, pm10, temperature, humidity",
+            'Parameter must be one of: api, pm25, pm10, temperature, humidity',
         });
         return;
       }
@@ -637,19 +635,19 @@ export class AirQualityController {
       if (isNaN(hoursBack) || hoursBack < 1 || hoursBack > 168) {
         res.status(400).json({
           success: false,
-          error: "Hours must be a number between 1 and 168 (1 week)",
+          error: 'Hours must be a number between 1 and 168 (1 week)',
         });
         return;
       }
 
       console.log(
-        `Fetching trend data for station ${stationId}, parameter: ${param}, hours: ${hoursBack}`,
+        `Fetching trend data for station ${stationId}, parameter: ${param}, hours: ${hoursBack}`
       );
 
       const trendData = await this.myeqmsService.getTrendData(
         stationId,
-        param as "api" | "pm25" | "pm10" | "temperature" | "humidity",
-        hoursBack,
+        param as 'api' | 'pm25' | 'pm10' | 'temperature' | 'humidity',
+        hoursBack
       );
 
       res.json({
@@ -658,10 +656,10 @@ export class AirQualityController {
         cached: false,
       });
     } catch (error) {
-      console.error("Error fetching Malaysian station trend data:", error);
+      console.error('Error fetching Malaysian station trend data:', error);
 
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+        error instanceof Error ? error.message : 'Unknown error occurred';
 
       res.status(500).json({
         success: false,

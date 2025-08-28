@@ -9,7 +9,10 @@ interface SleepSliderProps {
   onValueChange: (value: number) => void;
 }
 
-export const SleepSlider: React.FC<SleepSliderProps> = ({ value, onValueChange }) => {
+export const SleepSlider: React.FC<SleepSliderProps> = ({
+  value,
+  onValueChange,
+}) => {
   const getSleepIcon = (hours: number) => {
     if (hours < 7) {
       return <Moon size={32} color={colors.neutral[600]} />;
@@ -37,19 +40,17 @@ export const SleepSlider: React.FC<SleepSliderProps> = ({ value, onValueChange }
   return (
     <View style={styles.container}>
       <Text style={styles.label}>How many hours do you usually sleep?</Text>
-      
+
       <View style={styles.valueContainer}>
-        <View style={styles.iconContainer}>
-          {getSleepIcon(value)}
-        </View>
-        
+        <View style={styles.iconContainer}>{getSleepIcon(value)}</View>
+
         <View style={styles.valueDisplay}>
           <Text style={styles.value}>{value.toFixed(1)} hours</Text>
           <View style={styles.qualityBadge}>
             <Text style={styles.qualityText}>{getSleepQuality(value)}</Text>
           </View>
         </View>
-        
+
         <Text style={styles.description}>{getSleepDescription(value)}</Text>
       </View>
 

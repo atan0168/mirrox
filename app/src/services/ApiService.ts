@@ -1,5 +1,5 @@
-import { AirQualityData } from "../models/AirQuality";
-import { backendApiService, AirQualityApiResponse } from "./BackendApiService";
+import { AirQualityData } from '../models/AirQuality';
+import { backendApiService, AirQualityApiResponse } from './BackendApiService';
 
 /**
  * Main API service that communicates with our backend
@@ -14,18 +14,18 @@ class ApiService {
    */
   public async fetchAirQuality(
     latitude: number,
-    longitude: number,
+    longitude: number
   ): Promise<AirQualityData> {
     try {
       console.log(
-        `Fetching air quality data for ${latitude}, ${longitude} from backend`,
+        `Fetching air quality data for ${latitude}, ${longitude} from backend`
       );
 
       const response: AirQualityApiResponse =
         await backendApiService.fetchAirQuality(latitude, longitude);
 
       if (!response.success || !response.data) {
-        throw new Error(response.error || "Failed to fetch air quality data");
+        throw new Error(response.error || 'Failed to fetch air quality data');
       }
 
       // Transform backend response to match our app's expected format
@@ -34,7 +34,7 @@ class ApiService {
           id: response.data.location.id,
           name: response.data.location.name,
           locality: response.data.location.locality,
-          timezone: "UTC", // Backend doesn't provide timezone, using default
+          timezone: 'UTC', // Backend doesn't provide timezone, using default
           country: {
             id: 0, // Backend doesn't provide country ID, using default
             code: response.data.location.country.code,
@@ -63,15 +63,15 @@ class ApiService {
 
       if (response.cached) {
         console.log(
-          `Returned cached air quality data (age: ${response.cacheAge}ms)`,
+          `Returned cached air quality data (age: ${response.cacheAge}ms)`
         );
       }
 
-      console.log("Air quality data:", airQualityData);
+      console.log('Air quality data:', airQualityData);
 
       return airQualityData;
     } catch (error) {
-      console.error("ApiService: Failed to fetch air quality data:", error);
+      console.error('ApiService: Failed to fetch air quality data:', error);
       throw error;
     }
   }
@@ -84,11 +84,11 @@ class ApiService {
    */
   public async fetchAQICNAirQuality(
     latitude: number,
-    longitude: number,
+    longitude: number
   ): Promise<AirQualityData> {
     try {
       console.log(
-        `Fetching AQICN air quality data for ${latitude}, ${longitude}`,
+        `Fetching AQICN air quality data for ${latitude}, ${longitude}`
       );
 
       const response: AirQualityApiResponse =
@@ -96,7 +96,7 @@ class ApiService {
 
       if (!response.success || !response.data) {
         throw new Error(
-          response.error || "Failed to fetch AQICN air quality data",
+          response.error || 'Failed to fetch AQICN air quality data'
         );
       }
 
@@ -106,7 +106,7 @@ class ApiService {
           id: response.data.location.id,
           name: response.data.location.name,
           locality: response.data.location.locality,
-          timezone: "UTC",
+          timezone: 'UTC',
           country: {
             id: 0,
             code: response.data.location.country.code,
@@ -126,7 +126,7 @@ class ApiService {
         classification: response.data.classification,
         colorCode: response.data.colorCode,
         healthAdvice: response.data.healthAdvice,
-        source: response.data.source || "aqicn",
+        source: response.data.source || 'aqicn',
         timestamp: response.data.timestamp,
         stationUrl: response.data.stationUrl,
         attributions: response.data.attributions,
@@ -136,13 +136,13 @@ class ApiService {
         console.log(`Returned cached AQICN data (age: ${response.cacheAge}ms)`);
       }
 
-      console.log("AQICN air quality data:", airQualityData);
+      console.log('AQICN air quality data:', airQualityData);
 
       return airQualityData;
     } catch (error) {
       console.error(
-        "ApiService: Failed to fetch AQICN air quality data:",
-        error,
+        'ApiService: Failed to fetch AQICN air quality data:',
+        error
       );
       throw error;
     }
@@ -154,7 +154,7 @@ class ApiService {
    * @returns Promise with AQICN station data
    */
   public async fetchAQICNStationData(
-    stationId: string,
+    stationId: string
   ): Promise<AirQualityData> {
     try {
       console.log(`Fetching AQICN station data for ${stationId}`);
@@ -163,7 +163,7 @@ class ApiService {
         await backendApiService.fetchAQICNStationData(stationId);
 
       if (!response.success || !response.data) {
-        throw new Error(response.error || "Failed to fetch AQICN station data");
+        throw new Error(response.error || 'Failed to fetch AQICN station data');
       }
 
       const airQualityData: AirQualityData = {
@@ -171,7 +171,7 @@ class ApiService {
           id: response.data.location.id,
           name: response.data.location.name,
           locality: response.data.location.locality,
-          timezone: "UTC",
+          timezone: 'UTC',
           country: {
             id: 0,
             code: response.data.location.country.code,
@@ -191,17 +191,17 @@ class ApiService {
         classification: response.data.classification,
         colorCode: response.data.colorCode,
         healthAdvice: response.data.healthAdvice,
-        source: response.data.source || "aqicn",
+        source: response.data.source || 'aqicn',
         timestamp: response.data.timestamp,
         stationUrl: response.data.stationUrl,
         attributions: response.data.attributions,
       };
 
-      console.log("AQICN station data:", airQualityData);
+      console.log('AQICN station data:', airQualityData);
 
       return airQualityData;
     } catch (error) {
-      console.error("ApiService: Failed to fetch AQICN station data:", error);
+      console.error('ApiService: Failed to fetch AQICN station data:', error);
       throw error;
     }
   }
@@ -215,7 +215,7 @@ class ApiService {
       const health = await backendApiService.checkHealth();
       return health.success;
     } catch (error) {
-      console.error("Backend health check failed:", error);
+      console.error('Backend health check failed:', error);
       return false;
     }
   }
@@ -227,7 +227,7 @@ class ApiService {
     try {
       return await backendApiService.getServiceStatus();
     } catch (error) {
-      console.error("Failed to get service status:", error);
+      console.error('Failed to get service status:', error);
       return null;
     }
   }
@@ -238,9 +238,9 @@ class ApiService {
   public async clearCache(): Promise<void> {
     try {
       await backendApiService.clearCache();
-      console.log("Backend cache cleared successfully");
+      console.log('Backend cache cleared successfully');
     } catch (error) {
-      console.error("Failed to clear backend cache:", error);
+      console.error('Failed to clear backend cache:', error);
       throw error;
     }
   }
@@ -251,9 +251,9 @@ class ApiService {
   public async clearAQICNCache(): Promise<void> {
     try {
       await backendApiService.clearAQICNCache();
-      console.log("AQICN cache cleared successfully");
+      console.log('AQICN cache cleared successfully');
     } catch (error) {
-      console.error("Failed to clear AQICN cache:", error);
+      console.error('Failed to clear AQICN cache:', error);
       throw error;
     }
   }
@@ -265,7 +265,7 @@ class ApiService {
    */
   public hasCachedData(latitude: number, longitude: number): boolean {
     console.warn(
-      "hasCachedData is deprecated - caching is now handled by the backend",
+      'hasCachedData is deprecated - caching is now handled by the backend'
     );
     return false;
   }
@@ -275,7 +275,7 @@ class ApiService {
    */
   public getCacheAge(latitude: number, longitude: number): number | null {
     console.warn(
-      "getCacheAge is deprecated - caching is now handled by the backend",
+      'getCacheAge is deprecated - caching is now handled by the backend'
     );
     return null;
   }

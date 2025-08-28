@@ -1,21 +1,21 @@
-import * as THREE from "three";
+import * as THREE from 'three';
 
 // Helper function to retarget FBX animations to GLB skeleton
 export function retargetAnimationToSkeleton(
   clip: THREE.AnimationClip,
-  targetSkeleton: THREE.Skeleton,
+  targetSkeleton: THREE.Skeleton
 ): THREE.AnimationClip {
   const clonedClip = clip.clone();
 
-  clonedClip.tracks.forEach((track) => {
+  clonedClip.tracks.forEach(track => {
     // Extract bone name from track name (format: "BoneName.position" or "BoneName.quaternion")
-    const trackParts = track.name.split(".");
+    const trackParts = track.name.split('.');
     if (trackParts.length >= 2) {
       const boneName = trackParts[0];
       const property = trackParts[1];
 
       // Find corresponding bone in target skeleton using fuzzy matching
-      const targetBone = targetSkeleton.bones.find((bone) => {
+      const targetBone = targetSkeleton.bones.find(bone => {
         const lowerBoneName = boneName.toLowerCase();
         const lowerTargetName = bone.name.toLowerCase();
 
@@ -31,30 +31,30 @@ export function retargetAnimationToSkeleton(
 
         // Try common bone name mappings
         const boneMapping: { [key: string]: string[] } = {
-          hips: ["hip", "pelvis", "root"],
-          spine: ["spine", "back"],
-          head: ["head", "skull"],
-          leftarm: ["left_arm", "l_arm", "arm_l"],
-          rightarm: ["right_arm", "r_arm", "arm_r"],
-          leftleg: ["left_leg", "l_leg", "leg_l"],
-          rightleg: ["right_leg", "r_leg", "leg_r"],
+          hips: ['hip', 'pelvis', 'root'],
+          spine: ['spine', 'back'],
+          head: ['head', 'skull'],
+          leftarm: ['left_arm', 'l_arm', 'arm_l'],
+          rightarm: ['right_arm', 'r_arm', 'arm_r'],
+          leftleg: ['left_leg', 'l_leg', 'leg_l'],
+          rightleg: ['right_leg', 'r_leg', 'leg_r'],
         };
 
         for (const [standard, variants] of Object.entries(boneMapping)) {
           if (
             variants.some(
-              (variant) =>
+              variant =>
                 lowerBoneName.includes(variant) &&
-                lowerTargetName.includes(standard),
+                lowerTargetName.includes(standard)
             )
           ) {
             return true;
           }
           if (
             variants.some(
-              (variant) =>
+              variant =>
                 lowerTargetName.includes(variant) &&
-                lowerBoneName.includes(standard),
+                lowerBoneName.includes(standard)
             )
           ) {
             return true;
@@ -85,14 +85,14 @@ export function configureMobileCompatibility() {
 // Configure texture loader for React Native
 export function configureTextureLoader() {
   const textureLoader = new THREE.TextureLoader();
-  textureLoader.crossOrigin = "anonymous";
+  textureLoader.crossOrigin = 'anonymous';
 
   // Override Three.js texture loading to prevent EXGL issues
   const originalLoad = textureLoader.load.bind(textureLoader);
   textureLoader.load = function (url, onLoad, onProgress, onError) {
     return originalLoad(
       url,
-      (texture) => {
+      texture => {
         // Configure texture to avoid EXGL warnings
         texture.generateMipmaps = false;
         texture.minFilter = THREE.LinearFilter;
@@ -103,7 +103,7 @@ export function configureTextureLoader() {
         if (onLoad) onLoad(texture);
       },
       onProgress,
-      onError,
+      onError
     );
   };
 
@@ -117,8 +117,8 @@ export function suppressEXGLWarnings() {
     console.log = (...args) => {
       if (
         args[0] &&
-        typeof args[0] === "string" &&
-        args[0].includes("EXGL: gl.pixelStorei()")
+        typeof args[0] === 'string' &&
+        args[0].includes('EXGL: gl.pixelStorei()')
       ) {
         return; // Suppress EXGL pixelStorei warnings
       }

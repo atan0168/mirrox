@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber/native";
-import { useGLTF } from "@react-three/drei/native";
-import * as THREE from "three";
-import { GLBAnimationLoader } from "../../utils/GLBAnimationLoader";
-import { IDLE_ANIMATIONS } from "../../constants";
+import React, { useState, useEffect, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber/native';
+import { useGLTF } from '@react-three/drei/native';
+import * as THREE from 'three';
+import { GLBAnimationLoader } from '../../utils/GLBAnimationLoader';
+import { IDLE_ANIMATIONS } from '../../constants';
 
 interface AvatarModelProps {
   url: string;
@@ -21,7 +21,7 @@ interface AvatarModelProps {
 export function AvatarModel({
   url,
   activeAnimation,
-  facialExpression = "neutral",
+  facialExpression = 'neutral',
   skinToneAdjustment = 0,
   onLoadingChange,
   onLoadingProgress,
@@ -41,7 +41,7 @@ export function AvatarModel({
   const [loadingProgress, setLoadingProgress] = useState({
     loaded: 0,
     total: 0,
-    item: "",
+    item: '',
   });
 
   // Update loading state
@@ -198,7 +198,7 @@ export function AvatarModel({
 
   // Helper function to get available idle animations
   const getAvailableIdleAnimations = () => {
-    return IDLE_ANIMATIONS.filter((name) => animationActionsMap.has(name));
+    return IDLE_ANIMATIONS.filter(name => animationActionsMap.has(name));
   };
 
   // Helper function to get current idle animation
@@ -212,9 +212,9 @@ export function AvatarModel({
   const cycleToNextIdleAnimation = () => {
     const availableIdles = getAvailableIdleAnimations();
     if (availableIdles.length > 1) {
-      setCurrentIdleIndex((prev) => (prev + 1) % availableIdles.length);
+      setCurrentIdleIndex(prev => (prev + 1) % availableIdles.length);
       console.log(
-        `Cycling to next idle animation. New index: ${(currentIdleIndex + 1) % availableIdles.length}`,
+        `Cycling to next idle animation. New index: ${(currentIdleIndex + 1) % availableIdles.length}`
       );
     }
   };
@@ -222,28 +222,28 @@ export function AvatarModel({
   // Function to apply facial expression with smooth transitions
   const applyFacialExpression = (
     expression: string,
-    transitionDuration: number = 0.5,
+    transitionDuration: number = 0.5
   ) => {
     if (!headMesh || !headMesh.morphTargetInfluences) {
-      console.log("❌ No morph targets available for facial expressions");
-      console.log("Head mesh:", headMesh ? "found" : "not found");
+      console.log('❌ No morph targets available for facial expressions');
+      console.log('Head mesh:', headMesh ? 'found' : 'not found');
       console.log(
-        "Morph target influences:",
-        headMesh?.morphTargetInfluences ? "found" : "not found",
+        'Morph target influences:',
+        headMesh?.morphTargetInfluences ? 'found' : 'not found'
       );
       return;
     }
 
     const morphTargetDictionary = headMesh.morphTargetDictionary;
     if (!morphTargetDictionary) {
-      console.log("❌ No morph target dictionary found");
+      console.log('❌ No morph target dictionary found');
       return;
     }
 
     console.log(`🎭 Applying facial expression: ${expression}`);
     console.log(
       `📊 Available morph targets (${Object.keys(morphTargetDictionary).length}):`,
-      Object.keys(morphTargetDictionary),
+      Object.keys(morphTargetDictionary)
     );
 
     // Store current morph target values for smooth transition
@@ -253,7 +253,7 @@ export function AvatarModel({
     const expressionData = FACIAL_EXPRESSIONS[expression];
     if (!expressionData) {
       console.warn(`❌ Unknown facial expression: ${expression}`);
-      console.log("Available expressions:", Object.keys(FACIAL_EXPRESSIONS));
+      console.log('Available expressions:', Object.keys(FACIAL_EXPRESSIONS));
       return;
     }
 
@@ -263,7 +263,7 @@ export function AvatarModel({
     const availableMorphs: string[] = [];
     const missingMorphs: string[] = [];
 
-    Object.keys(expressionData).forEach((morphTarget) => {
+    Object.keys(expressionData).forEach(morphTarget => {
       if (morphTargetDictionary[morphTarget] !== undefined) {
         availableMorphs.push(morphTarget);
       } else {
@@ -278,7 +278,7 @@ export function AvatarModel({
 
     if (availableMorphs.length === 0) {
       console.warn(
-        `❌ No compatible morph targets found for expression "${expression}"`,
+        `❌ No compatible morph targets found for expression "${expression}"`
       );
       return;
     }
@@ -316,7 +316,7 @@ export function AvatarModel({
 
           if (progress === 1) {
             console.log(
-              `🔧 Applied ${morphTarget}: ${interpolatedValue.toFixed(3)} (target: ${targetValue})`,
+              `🔧 Applied ${morphTarget}: ${interpolatedValue.toFixed(3)} (target: ${targetValue})`
             );
           }
         }
@@ -327,11 +327,11 @@ export function AvatarModel({
         requestAnimationFrame(animateTransition);
       } else {
         console.log(
-          `✅ Applied facial expression: ${expression} (${appliedCount}/${Object.keys(expressionData).length} morph targets)`,
+          `✅ Applied facial expression: ${expression} (${appliedCount}/${Object.keys(expressionData).length} morph targets)`
         );
 
         // Log current state of all morph targets for debugging
-        console.log("🔍 Current morph target state:");
+        console.log('🔍 Current morph target state:');
         Object.entries(morphTargetDictionary).forEach(([name, index]) => {
           const value = headMesh.morphTargetInfluences![index];
           if (value !== 0) {
@@ -349,7 +349,7 @@ export function AvatarModel({
   const findHeadMesh = (scene: THREE.Group) => {
     let foundHeadMesh: THREE.SkinnedMesh | null = null;
 
-    console.log("🔍 Searching for head mesh with morph targets...");
+    console.log('🔍 Searching for head mesh with morph targets...');
 
     // First, let's log ALL meshes in the scene for debugging
     const allMeshes: Array<{
@@ -359,30 +359,30 @@ export function AvatarModel({
       material?: string;
     }> = [];
 
-    scene.traverse((child) => {
+    scene.traverse(child => {
       if (child instanceof THREE.SkinnedMesh) {
         const morphTargetCount = child.morphTargetInfluences?.length || 0;
         const materialName =
           child.material?.name ||
           (Array.isArray(child.material)
-            ? child.material.map((m) => m.name).join(", ")
-            : "unknown");
+            ? child.material.map(m => m.name).join(', ')
+            : 'unknown');
 
         allMeshes.push({
           name: child.name,
-          type: "SkinnedMesh",
+          type: 'SkinnedMesh',
           morphTargets: morphTargetCount,
           material: materialName,
         });
 
         console.log(
-          `📦 SkinnedMesh: "${child.name}" | Material: "${materialName}" | Morph Targets: ${morphTargetCount}`,
+          `📦 SkinnedMesh: "${child.name}" | Material: "${materialName}" | Morph Targets: ${morphTargetCount}`
         );
 
         if (morphTargetCount > 0) {
           console.log(
             `  🎯 Morph target dictionary:`,
-            Object.keys(child.morphTargetDictionary || {}),
+            Object.keys(child.morphTargetDictionary || {})
           );
         }
       } else if (child instanceof THREE.Mesh) {
@@ -390,12 +390,12 @@ export function AvatarModel({
         if (morphTargetCount > 0) {
           allMeshes.push({
             name: child.name,
-            type: "Mesh",
+            type: 'Mesh',
             morphTargets: morphTargetCount,
-            material: child.material?.name || "unknown",
+            material: child.material?.name || 'unknown',
           });
           console.log(
-            `📦 Mesh: "${child.name}" | Material: "${child.material?.name}" | Morph Targets: ${morphTargetCount}`,
+            `📦 Mesh: "${child.name}" | Material: "${child.material?.name}" | Morph Targets: ${morphTargetCount}`
           );
         }
       }
@@ -403,245 +403,245 @@ export function AvatarModel({
 
     console.log(`📊 Total meshes found: ${allMeshes.length}`);
     console.log(
-      `📊 Meshes with morph targets: ${allMeshes.filter((m) => m.morphTargets > 0).length}`,
+      `📊 Meshes with morph targets: ${allMeshes.filter(m => m.morphTargets > 0).length}`
     );
 
-    scene.traverse((child) => {
+    scene.traverse(child => {
       if (child instanceof THREE.SkinnedMesh) {
         // Look for head-related meshes that have morph targets
         if (
           child.morphTargetInfluences &&
           child.morphTargetInfluences.length > 0 &&
-          (child.name.toLowerCase().includes("head") ||
-            child.name.toLowerCase().includes("face") ||
-            child.name.toLowerCase().includes("wolf3d_head") ||
-            child.material?.name?.toLowerCase().includes("head"))
+          (child.name.toLowerCase().includes('head') ||
+            child.name.toLowerCase().includes('face') ||
+            child.name.toLowerCase().includes('wolf3d_head') ||
+            child.material?.name?.toLowerCase().includes('head'))
         ) {
           foundHeadMesh = child;
           console.log(
-            `🎭 Found head mesh: ${child.name} with ${child.morphTargetInfluences.length} morph targets`,
+            `🎭 Found head mesh: ${child.name} with ${child.morphTargetInfluences.length} morph targets`
           );
 
           // Log available morph targets for debugging
           if (child.morphTargetDictionary) {
             const availableMorphs = Object.keys(child.morphTargetDictionary);
-            console.log("📋 Available morph targets:", availableMorphs);
+            console.log('📋 Available morph targets:', availableMorphs);
             console.log(
-              `📊 Total morph targets found: ${availableMorphs.length}`,
+              `📊 Total morph targets found: ${availableMorphs.length}`
             );
 
             // Check for ARKit compatibility
             const arkitMorphs = [
-              "eyeBlinkLeft",
-              "eyeLookDownLeft",
-              "eyeLookInLeft",
-              "eyeLookOutLeft",
-              "eyeLookUpLeft",
-              "eyeSquintLeft",
-              "eyeWideLeft",
-              "eyeBlinkRight",
-              "eyeLookDownRight",
-              "eyeLookInRight",
-              "eyeLookOutRight",
-              "eyeLookUpRight",
-              "eyeSquintRight",
-              "eyeWideRight",
-              "jawForward",
-              "jawLeft",
-              "jawRight",
-              "jawOpen",
-              "mouthClose",
-              "mouthFunnel",
-              "mouthPucker",
-              "mouthLeft",
-              "mouthRight",
-              "mouthSmileLeft",
-              "mouthSmileRight",
-              "mouthFrownLeft",
-              "mouthFrownRight",
-              "mouthDimpleLeft",
-              "mouthDimpleRight",
-              "mouthStretchLeft",
-              "mouthStretchRight",
-              "mouthRollLower",
-              "mouthRollUpper",
-              "mouthShrugLower",
-              "mouthShrugUpper",
-              "mouthPressLeft",
-              "mouthPressRight",
-              "mouthLowerDownLeft",
-              "mouthLowerDownRight",
-              "mouthUpperUpLeft",
-              "mouthUpperUpRight",
-              "browDownLeft",
-              "browDownRight",
-              "browInnerUp",
-              "browOuterUpLeft",
-              "browOuterUpRight",
-              "cheekPuff",
-              "cheekSquintLeft",
-              "cheekSquintRight",
-              "noseSneerLeft",
-              "noseSneerRight",
-              "tongueOut",
+              'eyeBlinkLeft',
+              'eyeLookDownLeft',
+              'eyeLookInLeft',
+              'eyeLookOutLeft',
+              'eyeLookUpLeft',
+              'eyeSquintLeft',
+              'eyeWideLeft',
+              'eyeBlinkRight',
+              'eyeLookDownRight',
+              'eyeLookInRight',
+              'eyeLookOutRight',
+              'eyeLookUpRight',
+              'eyeSquintRight',
+              'eyeWideRight',
+              'jawForward',
+              'jawLeft',
+              'jawRight',
+              'jawOpen',
+              'mouthClose',
+              'mouthFunnel',
+              'mouthPucker',
+              'mouthLeft',
+              'mouthRight',
+              'mouthSmileLeft',
+              'mouthSmileRight',
+              'mouthFrownLeft',
+              'mouthFrownRight',
+              'mouthDimpleLeft',
+              'mouthDimpleRight',
+              'mouthStretchLeft',
+              'mouthStretchRight',
+              'mouthRollLower',
+              'mouthRollUpper',
+              'mouthShrugLower',
+              'mouthShrugUpper',
+              'mouthPressLeft',
+              'mouthPressRight',
+              'mouthLowerDownLeft',
+              'mouthLowerDownRight',
+              'mouthUpperUpLeft',
+              'mouthUpperUpRight',
+              'browDownLeft',
+              'browDownRight',
+              'browInnerUp',
+              'browOuterUpLeft',
+              'browOuterUpRight',
+              'cheekPuff',
+              'cheekSquintLeft',
+              'cheekSquintRight',
+              'noseSneerLeft',
+              'noseSneerRight',
+              'tongueOut',
             ];
 
-            const presentARKitMorphs = arkitMorphs.filter((morph) =>
-              availableMorphs.includes(morph),
+            const presentARKitMorphs = arkitMorphs.filter(morph =>
+              availableMorphs.includes(morph)
             );
             const missingARKitMorphs = arkitMorphs.filter(
-              (morph) => !availableMorphs.includes(morph),
+              morph => !availableMorphs.includes(morph)
             );
             const extraMorphs = availableMorphs.filter(
-              (morph) => !arkitMorphs.includes(morph),
+              morph => !arkitMorphs.includes(morph)
             );
 
             console.log(
               `🎯 ARKit morph targets present (${presentARKitMorphs.length}/52):`,
-              presentARKitMorphs,
+              presentARKitMorphs
             );
             console.log(
               `❌ ARKit morph targets missing (${missingARKitMorphs.length}/52):`,
-              missingARKitMorphs,
+              missingARKitMorphs
             );
             if (extraMorphs.length > 0) {
               console.log(
                 `➕ Additional (non-ARKit) morph targets (${extraMorphs.length}):`,
-                extraMorphs,
+                extraMorphs
               );
             }
 
             // Check for additional common morph targets
             const commonExtraMorphs = [
-              "mouthOpen",
-              "mouthSmile",
-              "eyesClosed",
-              "eyesLookUp",
-              "eyesLookDown",
+              'mouthOpen',
+              'mouthSmile',
+              'eyesClosed',
+              'eyesLookUp',
+              'eyesLookDown',
             ];
-            const presentExtraMorphs = commonExtraMorphs.filter((morph) =>
-              availableMorphs.includes(morph),
+            const presentExtraMorphs = commonExtraMorphs.filter(morph =>
+              availableMorphs.includes(morph)
             );
             if (presentExtraMorphs.length > 0) {
               console.log(
                 `🔧 Common additional morph targets present:`,
-                presentExtraMorphs,
+                presentExtraMorphs
               );
             }
 
             // Dynamically update facial expressions based on available morph targets
             console.log(
-              "🔄 Updating facial expressions based on available morph targets...",
+              '🔄 Updating facial expressions based on available morph targets...'
             );
 
             // Update happy expression based on available morphs
             const happyExpression: { [key: string]: number } = {};
-            if (availableMorphs.includes("mouthSmileLeft"))
+            if (availableMorphs.includes('mouthSmileLeft'))
               happyExpression.mouthSmileLeft = 0.8;
-            if (availableMorphs.includes("mouthSmileRight"))
+            if (availableMorphs.includes('mouthSmileRight'))
               happyExpression.mouthSmileRight = 0.8;
-            if (availableMorphs.includes("mouthSmile"))
+            if (availableMorphs.includes('mouthSmile'))
               happyExpression.mouthSmile = 0.7;
-            if (availableMorphs.includes("jawOpen"))
+            if (availableMorphs.includes('jawOpen'))
               happyExpression.jawOpen = 0.1;
-            if (availableMorphs.includes("cheekSquintLeft"))
+            if (availableMorphs.includes('cheekSquintLeft'))
               happyExpression.cheekSquintLeft = 0.3;
-            if (availableMorphs.includes("cheekSquintRight"))
+            if (availableMorphs.includes('cheekSquintRight'))
               happyExpression.cheekSquintRight = 0.3;
             if (Object.keys(happyExpression).length > 0) {
               FACIAL_EXPRESSIONS.happy = happyExpression;
-              console.log("✅ Updated happy expression:", happyExpression);
+              console.log('✅ Updated happy expression:', happyExpression);
             }
 
             // Update sad expression
             const sadExpression: { [key: string]: number } = {};
-            if (availableMorphs.includes("mouthFrownLeft"))
+            if (availableMorphs.includes('mouthFrownLeft'))
               sadExpression.mouthFrownLeft = 0.7;
-            if (availableMorphs.includes("mouthFrownRight"))
+            if (availableMorphs.includes('mouthFrownRight'))
               sadExpression.mouthFrownRight = 0.7;
-            if (availableMorphs.includes("browDownLeft"))
+            if (availableMorphs.includes('browDownLeft'))
               sadExpression.browDownLeft = 0.5;
-            if (availableMorphs.includes("browDownRight"))
+            if (availableMorphs.includes('browDownRight'))
               sadExpression.browDownRight = 0.5;
-            if (availableMorphs.includes("mouthLowerDownLeft"))
+            if (availableMorphs.includes('mouthLowerDownLeft'))
               sadExpression.mouthLowerDownLeft = 0.3;
-            if (availableMorphs.includes("mouthLowerDownRight"))
+            if (availableMorphs.includes('mouthLowerDownRight'))
               sadExpression.mouthLowerDownRight = 0.3;
             // Fallback for basic sad expression
             if (
               Object.keys(sadExpression).length === 0 &&
-              availableMorphs.includes("mouthSmile")
+              availableMorphs.includes('mouthSmile')
             ) {
               sadExpression.mouthSmile = -0.3;
             }
             if (Object.keys(sadExpression).length > 0) {
               FACIAL_EXPRESSIONS.sad = sadExpression;
-              console.log("✅ Updated sad expression:", sadExpression);
+              console.log('✅ Updated sad expression:', sadExpression);
             }
 
             // Update surprised expression
             const surprisedExpression: { [key: string]: number } = {};
-            if (availableMorphs.includes("eyeWideLeft"))
+            if (availableMorphs.includes('eyeWideLeft'))
               surprisedExpression.eyeWideLeft = 0.9;
-            if (availableMorphs.includes("eyeWideRight"))
+            if (availableMorphs.includes('eyeWideRight'))
               surprisedExpression.eyeWideRight = 0.9;
-            if (availableMorphs.includes("jawOpen"))
+            if (availableMorphs.includes('jawOpen'))
               surprisedExpression.jawOpen = 0.7;
-            if (availableMorphs.includes("mouthFunnel"))
+            if (availableMorphs.includes('mouthFunnel'))
               surprisedExpression.mouthFunnel = 0.4;
-            if (availableMorphs.includes("browInnerUp"))
+            if (availableMorphs.includes('browInnerUp'))
               surprisedExpression.browInnerUp = 0.6;
-            if (availableMorphs.includes("browOuterUpLeft"))
+            if (availableMorphs.includes('browOuterUpLeft'))
               surprisedExpression.browOuterUpLeft = 0.5;
-            if (availableMorphs.includes("browOuterUpRight"))
+            if (availableMorphs.includes('browOuterUpRight'))
               surprisedExpression.browOuterUpRight = 0.5;
             // Fallback
             if (Object.keys(surprisedExpression).length === 0) {
-              if (availableMorphs.includes("mouthOpen"))
+              if (availableMorphs.includes('mouthOpen'))
                 surprisedExpression.mouthOpen = 0.6;
-              if (availableMorphs.includes("mouthSmile"))
+              if (availableMorphs.includes('mouthSmile'))
                 surprisedExpression.mouthSmile = 0.2;
             }
             if (Object.keys(surprisedExpression).length > 0) {
               FACIAL_EXPRESSIONS.surprised = surprisedExpression;
               console.log(
-                "✅ Updated surprised expression:",
-                surprisedExpression,
+                '✅ Updated surprised expression:',
+                surprisedExpression
               );
             }
 
             // Update coughing expression
             const coughingExpression: { [key: string]: number } = {};
-            if (availableMorphs.includes("jawOpen"))
+            if (availableMorphs.includes('jawOpen'))
               coughingExpression.jawOpen = 0.5;
-            if (availableMorphs.includes("mouthOpen"))
+            if (availableMorphs.includes('mouthOpen'))
               coughingExpression.mouthOpen = 0.6;
-            if (availableMorphs.includes("eyeSquintLeft"))
+            if (availableMorphs.includes('eyeSquintLeft'))
               coughingExpression.eyeSquintLeft = 0.4;
-            if (availableMorphs.includes("eyeSquintRight"))
+            if (availableMorphs.includes('eyeSquintRight'))
               coughingExpression.eyeSquintRight = 0.4;
-            if (availableMorphs.includes("browDownLeft"))
+            if (availableMorphs.includes('browDownLeft'))
               coughingExpression.browDownLeft = 0.3;
-            if (availableMorphs.includes("browDownRight"))
+            if (availableMorphs.includes('browDownRight'))
               coughingExpression.browDownRight = 0.3;
             // Fallback
             if (Object.keys(coughingExpression).length === 0) {
-              if (availableMorphs.includes("mouthOpen"))
+              if (availableMorphs.includes('mouthOpen'))
                 coughingExpression.mouthOpen = 0.7;
-              if (availableMorphs.includes("mouthSmile"))
+              if (availableMorphs.includes('mouthSmile'))
                 coughingExpression.mouthSmile = -0.1;
             }
             if (Object.keys(coughingExpression).length > 0) {
               FACIAL_EXPRESSIONS.coughing = coughingExpression;
               console.log(
-                "✅ Updated coughing expression:",
-                coughingExpression,
+                '✅ Updated coughing expression:',
+                coughingExpression
               );
             }
 
             console.log(
-              "🎭 Final facial expressions configuration:",
-              FACIAL_EXPRESSIONS,
+              '🎭 Final facial expressions configuration:',
+              FACIAL_EXPRESSIONS
             );
 
             // Update the test expression with the first available morph target
@@ -654,66 +654,62 @@ export function AvatarModel({
             // Check which expression morph targets are available
             const allExpressionMorphs = new Set<string>();
 
-            Object.values(FACIAL_EXPRESSIONS).forEach((expression) => {
-              Object.keys(expression).forEach((morph) =>
-                allExpressionMorphs.add(morph),
+            Object.values(FACIAL_EXPRESSIONS).forEach(expression => {
+              Object.keys(expression).forEach(morph =>
+                allExpressionMorphs.add(morph)
               );
             });
 
             const missingMorphs = Array.from(allExpressionMorphs).filter(
-              (morph) => !availableMorphs.includes(morph),
+              morph => !availableMorphs.includes(morph)
             );
 
             const presentMorphs = Array.from(allExpressionMorphs).filter(
-              (morph) => availableMorphs.includes(morph),
+              morph => availableMorphs.includes(morph)
             );
 
             if (presentMorphs.length > 0) {
               console.log(
-                "✅ Present expression morph targets:",
-                presentMorphs,
+                '✅ Present expression morph targets:',
+                presentMorphs
               );
             }
 
             if (missingMorphs.length > 0) {
               console.log(
-                "❌ Missing morph targets for expressions:",
-                missingMorphs,
+                '❌ Missing morph targets for expressions:',
+                missingMorphs
               );
             }
 
             console.log(
-              "📊 Expression system compatibility:",
+              '📊 Expression system compatibility:',
               Math.round(
                 ((allExpressionMorphs.size - missingMorphs.length) /
                   allExpressionMorphs.size) *
-                  100,
-              ) + "%",
+                  100
+              ) + '%'
             );
 
             // Look for common patterns in morph target names
             const patterns = {
-              mouth: availableMorphs.filter((m) =>
-                m.toLowerCase().includes("mouth"),
+              mouth: availableMorphs.filter(m =>
+                m.toLowerCase().includes('mouth')
               ),
-              eye: availableMorphs.filter((m) =>
-                m.toLowerCase().includes("eye"),
+              eye: availableMorphs.filter(m => m.toLowerCase().includes('eye')),
+              brow: availableMorphs.filter(m =>
+                m.toLowerCase().includes('brow')
               ),
-              brow: availableMorphs.filter((m) =>
-                m.toLowerCase().includes("brow"),
+              jaw: availableMorphs.filter(m => m.toLowerCase().includes('jaw')),
+              smile: availableMorphs.filter(m =>
+                m.toLowerCase().includes('smile')
               ),
-              jaw: availableMorphs.filter((m) =>
-                m.toLowerCase().includes("jaw"),
-              ),
-              smile: availableMorphs.filter((m) =>
-                m.toLowerCase().includes("smile"),
-              ),
-              frown: availableMorphs.filter((m) =>
-                m.toLowerCase().includes("frown"),
+              frown: availableMorphs.filter(m =>
+                m.toLowerCase().includes('frown')
               ),
             };
 
-            console.log("🔍 Morph target patterns found:");
+            console.log('🔍 Morph target patterns found:');
             Object.entries(patterns).forEach(([pattern, morphs]) => {
               if (morphs.length > 0) {
                 console.log(`  ${pattern}:`, morphs);
@@ -727,20 +723,20 @@ export function AvatarModel({
     // If no head mesh found, try a more aggressive search
     if (!foundHeadMesh) {
       console.log(
-        "⚠️ No head-specific mesh found, searching ALL meshes with morph targets...",
+        '⚠️ No head-specific mesh found, searching ALL meshes with morph targets...'
       );
 
       let bestMesh: THREE.SkinnedMesh | null = null;
       let maxMorphTargets = 0;
 
-      scene.traverse((child) => {
+      scene.traverse(child => {
         if (
           child instanceof THREE.SkinnedMesh &&
           child.morphTargetInfluences &&
           child.morphTargetInfluences.length > 0
         ) {
           console.log(
-            `🔍 Alternative mesh: "${child.name}" with ${child.morphTargetInfluences.length} morph targets`,
+            `🔍 Alternative mesh: "${child.name}" with ${child.morphTargetInfluences.length} morph targets`
           );
 
           if (child.morphTargetInfluences.length > maxMorphTargets) {
@@ -752,7 +748,7 @@ export function AvatarModel({
 
       if (bestMesh) {
         console.log(
-          `🎯 Using mesh with most morph targets: "${(bestMesh as THREE.SkinnedMesh).name}" (${maxMorphTargets} targets)`,
+          `🎯 Using mesh with most morph targets: "${(bestMesh as THREE.SkinnedMesh).name}" (${maxMorphTargets} targets)`
         );
         foundHeadMesh = bestMesh as THREE.SkinnedMesh;
 
@@ -760,29 +756,29 @@ export function AvatarModel({
         const mesh = bestMesh as THREE.SkinnedMesh;
         if (mesh.morphTargetDictionary) {
           console.log(
-            "📋 Morph targets in selected mesh:",
-            Object.keys(mesh.morphTargetDictionary),
+            '📋 Morph targets in selected mesh:',
+            Object.keys(mesh.morphTargetDictionary)
           );
         }
       }
     }
 
     // Add avatar URL diagnostics
-    console.log("🔗 Avatar URL analysis:");
+    console.log('🔗 Avatar URL analysis:');
     console.log(`  URL: ${url}`);
-    console.log(`  File extension: ${url.split(".").pop()}`);
+    console.log(`  File extension: ${url.split('.').pop()}`);
     console.log(
-      `  Is Ready Player Me URL: ${url.includes("readyplayerme") || url.includes("rpm")}`,
+      `  Is Ready Player Me URL: ${url.includes('readyplayerme') || url.includes('rpm')}`
     );
 
     if (!foundHeadMesh) {
-      console.error("❌ No mesh with morph targets found in the entire scene!");
-      console.log("💡 This could mean:");
+      console.error('❌ No mesh with morph targets found in the entire scene!');
+      console.log('💡 This could mean:');
       console.log("  - The avatar wasn't exported with facial blend shapes");
       console.log("  - The file format doesn't support morph targets");
-      console.log("  - The avatar is an older version without ARKit support");
+      console.log('  - The avatar is an older version without ARKit support');
       console.log(
-        "  - The morph targets are on a different mesh than expected",
+        '  - The morph targets are on a different mesh than expected'
       );
     }
 
@@ -794,7 +790,7 @@ export function AvatarModel({
     const targetPosition = new THREE.Vector3();
     const targetLookAt = new THREE.Vector3(0, 0, 0);
 
-    if (activeAnimation === "mixamo.com") {
+    if (activeAnimation === 'mixamo.com') {
       // Position camera for left side view of coughing animation
       targetPosition.set(-3, 1.2, 4);
     } else {
@@ -834,7 +830,7 @@ export function AvatarModel({
   useEffect(() => {
     if (scene) {
       console.log(
-        "Scene loaded. Configuring materials for mobile compatibility.",
+        'Scene loaded. Configuring materials for mobile compatibility.'
       );
 
       const compatibleMaterial = new THREE.MeshStandardMaterial({
@@ -843,7 +839,7 @@ export function AvatarModel({
         metalness: 0.1,
       });
 
-      scene.traverse((child) => {
+      scene.traverse(child => {
         if (child instanceof THREE.Mesh) {
           if (
             child.material &&
@@ -855,13 +851,13 @@ export function AvatarModel({
             // Apply skin tone adjustment to skin materials
             if (
               skinToneAdjustment !== 0 &&
-              (child.name.toLowerCase().includes("body") ||
-                child.name.toLowerCase().includes("head") ||
-                child.name.toLowerCase().includes("face") ||
-                child.name.toLowerCase().includes("arm") ||
-                child.name.toLowerCase().includes("leg") ||
-                child.material.name?.toLowerCase().includes("skin") ||
-                child.material.name?.toLowerCase().includes("body"))
+              (child.name.toLowerCase().includes('body') ||
+                child.name.toLowerCase().includes('head') ||
+                child.name.toLowerCase().includes('face') ||
+                child.name.toLowerCase().includes('arm') ||
+                child.name.toLowerCase().includes('leg') ||
+                child.material.name?.toLowerCase().includes('skin') ||
+                child.material.name?.toLowerCase().includes('body'))
             ) {
               // Create a copy of the material to avoid affecting other meshes
               const adjustedMaterial = child.material.clone();
@@ -876,7 +872,7 @@ export function AvatarModel({
                 // Darken: lerp towards darker brown/black
                 currentColor.lerp(
                   new THREE.Color(0.2, 0.15, 0.1),
-                  Math.abs(skinToneAdjustment),
+                  Math.abs(skinToneAdjustment)
                 );
               }
 
@@ -885,7 +881,7 @@ export function AvatarModel({
               child.material = adjustedMaterial;
 
               console.log(
-                `Applied skin tone adjustment ${skinToneAdjustment} to mesh: ${child.name}`,
+                `Applied skin tone adjustment ${skinToneAdjustment} to mesh: ${child.name}`
               );
             }
           } else {
@@ -898,7 +894,7 @@ export function AvatarModel({
       });
 
       sceneRef.current = scene;
-      console.log("Model materials configured for mobile.");
+      console.log('Model materials configured for mobile.');
     }
   }, [scene, skinToneAdjustment]);
 
@@ -906,7 +902,7 @@ export function AvatarModel({
   useEffect(() => {
     if (!scene) return;
 
-    console.log("Loading GLB animations with caching...");
+    console.log('Loading GLB animations with caching...');
     const loadGLBAnimations = async () => {
       setIsLoadingAnimations(true);
 
@@ -915,32 +911,32 @@ export function AvatarModel({
 
         const animationAssets = [
           {
-            asset: require("../../../assets/animations/laying_severe_cough.glb"),
-            name: "laying_severe_cough",
+            asset: require('../../../assets/animations/laying_severe_cough.glb'),
+            name: 'laying_severe_cough',
           },
           {
-            asset: require("../../../assets/animations/M_Standing_Expressions_007.glb"),
-            name: "M_Standing_Expressions_007",
+            asset: require('../../../assets/animations/M_Standing_Expressions_007.glb'),
+            name: 'M_Standing_Expressions_007',
           },
           {
-            asset: require("../../../assets/animations/M_Standing_Idle_Variations_003.glb"),
-            name: "M_Standing_Idle_Variations_003",
+            asset: require('../../../assets/animations/M_Standing_Idle_Variations_003.glb'),
+            name: 'M_Standing_Idle_Variations_003',
           },
           {
-            asset: require("../../../assets/animations/M_Standing_Idle_Variations_007.glb"),
-            name: "M_Standing_Idle_Variations_007",
+            asset: require('../../../assets/animations/M_Standing_Idle_Variations_007.glb'),
+            name: 'M_Standing_Idle_Variations_007',
           },
           {
-            asset: require("../../../assets/animations/wiping_sweat.glb"),
-            name: "wiping_sweat",
+            asset: require('../../../assets/animations/wiping_sweat.glb'),
+            name: 'wiping_sweat',
           },
           {
-            asset: require("../../../assets/animations/shock.glb"),
-            name: "shock",
+            asset: require('../../../assets/animations/shock.glb'),
+            name: 'shock',
           },
           {
-            asset: require("../../../assets/animations/swat_bugs.glb"),
-            name: "swat_bugs",
+            asset: require('../../../assets/animations/swat_bugs.glb'),
+            name: 'swat_bugs',
           },
           // {
           //   asset: require("../../../assets/animations/mild_cough.glb"),
@@ -951,7 +947,7 @@ export function AvatarModel({
         setLoadingProgress({
           loaded: 0,
           total: animationAssets.length,
-          item: "Preparing animations...",
+          item: 'Preparing animations...',
         });
 
         const animationPromises = animationAssets.map(
@@ -983,7 +979,7 @@ export function AvatarModel({
               });
               return null;
             }
-          },
+          }
         );
 
         const loadedAnimations = await Promise.all(animationPromises);
@@ -998,24 +994,24 @@ export function AvatarModel({
 
         if (successfulAnimations.length > 0) {
           console.log(
-            `🎬 Loaded ${successfulAnimations.length} GLB animation clips from cache/download`,
+            `🎬 Loaded ${successfulAnimations.length} GLB animation clips from cache/download`
           );
           setGlbAnimations(successfulAnimations);
         } else {
-          console.log("❌ No GLB animations loaded, will use fallback");
+          console.log('❌ No GLB animations loaded, will use fallback');
         }
 
         setLoadingProgress({
           loaded: animationAssets.length,
           total: animationAssets.length,
-          item: "Animations ready!",
+          item: 'Animations ready!',
         });
       } catch (error) {
-        console.error("❌ Error loading FBX animations:", error);
+        console.error('❌ Error loading FBX animations:', error);
         setLoadingProgress({
           loaded: 0,
           total: 0,
-          item: "Animation loading failed",
+          item: 'Animation loading failed',
         });
       } finally {
         setIsLoadingAnimations(false);
@@ -1029,7 +1025,7 @@ export function AvatarModel({
   useEffect(() => {
     if (!scene) return;
 
-    console.log("Setting up animation mixer...");
+    console.log('Setting up animation mixer...');
 
     // Clean up existing mixer
     if (mixerRef.current) {
@@ -1048,14 +1044,14 @@ export function AvatarModel({
 
       let avatarSkeleton: THREE.Skeleton | null = null;
       let avatarSkinnedMesh: THREE.SkinnedMesh | null = null;
-      scene.traverse((child) => {
+      scene.traverse(child => {
         if (child instanceof THREE.SkinnedMesh && child.skeleton) {
           avatarSkeleton = child.skeleton;
           avatarSkinnedMesh = child;
           console.log(
-            "Found avatar skeleton with",
+            'Found avatar skeleton with',
             child.skeleton.bones.length,
-            "bones",
+            'bones'
           );
         }
       });
@@ -1063,22 +1059,22 @@ export function AvatarModel({
       if (avatarSkeleton && avatarSkinnedMesh) {
         const skeleton = avatarSkeleton as THREE.Skeleton;
         console.log(
-          "Avatar skeleton bones:",
-          skeleton.bones.map((bone: THREE.Bone) => bone.name),
+          'Avatar skeleton bones:',
+          skeleton.bones.map((bone: THREE.Bone) => bone.name)
         );
 
         glbAnimations.forEach((clip: THREE.AnimationClip, index: number) => {
           try {
             console.log(`Setting up GLB animation ${index}: ${clip.name}`);
 
-            const filteredTracks = clip.tracks.filter((track) => {
-              const trackParts = track.name.split(".");
+            const filteredTracks = clip.tracks.filter(track => {
+              const trackParts = track.name.split('.');
               if (trackParts.length >= 2) {
                 const boneName = trackParts[0];
 
                 const findMatchingBone = (animationBoneName: string) => {
                   let matchedBone = skeleton.bones.find(
-                    (bone: THREE.Bone) => bone.name === animationBoneName,
+                    (bone: THREE.Bone) => bone.name === animationBoneName
                   );
 
                   if (matchedBone) return matchedBone;
@@ -1086,156 +1082,156 @@ export function AvatarModel({
                   // Common animation bone name to ReadyPlayerMe mappings
                   const boneMapping: { [key: string]: string } = {
                     // Core body bones
-                    mixamorigHips: "Hips",
-                    mixamorigSpine: "Spine",
-                    mixamorigSpine1: "Spine1",
-                    mixamorigSpine2: "Spine2",
-                    mixamorigNeck: "Neck",
-                    mixamorigHead: "Head",
-                    mixamorigHeadTop_End: "HeadTop_End",
+                    mixamorigHips: 'Hips',
+                    mixamorigSpine: 'Spine',
+                    mixamorigSpine1: 'Spine1',
+                    mixamorigSpine2: 'Spine2',
+                    mixamorigNeck: 'Neck',
+                    mixamorigHead: 'Head',
+                    mixamorigHeadTop_End: 'HeadTop_End',
 
                     // Left arm bones
-                    mixamorigLeftShoulder: "LeftShoulder",
-                    mixamorigLeftArm: "LeftUpperArm",
-                    mixamorigLeftForeArm: "LeftLowerArm",
-                    mixamorigLeftHand: "LeftHand",
+                    mixamorigLeftShoulder: 'LeftShoulder',
+                    mixamorigLeftArm: 'LeftUpperArm',
+                    mixamorigLeftForeArm: 'LeftLowerArm',
+                    mixamorigLeftHand: 'LeftHand',
 
                     // Left hand finger bones
-                    mixamorigLeftHandThumb1: "LeftHandThumb1",
-                    mixamorigLeftHandThumb2: "LeftHandThumb2",
-                    mixamorigLeftHandThumb3: "LeftHandThumb3",
-                    mixamorigLeftHandThumb4: "LeftHandThumb4",
-                    mixamorigLeftHandIndex1: "LeftHandIndex1",
-                    mixamorigLeftHandIndex2: "LeftHandIndex2",
-                    mixamorigLeftHandIndex3: "LeftHandIndex3",
-                    mixamorigLeftHandIndex4: "LeftHandIndex4",
-                    mixamorigLeftHandMiddle1: "LeftHandMiddle1",
-                    mixamorigLeftHandMiddle2: "LeftHandMiddle2",
-                    mixamorigLeftHandMiddle3: "LeftHandMiddle3",
-                    mixamorigLeftHandMiddle4: "LeftHandMiddle4",
-                    mixamorigLeftHandRing1: "LeftHandRing1",
-                    mixamorigLeftHandRing2: "LeftHandRing2",
-                    mixamorigLeftHandRing3: "LeftHandRing3",
-                    mixamorigLeftHandRing4: "LeftHandRing4",
-                    mixamorigLeftHandPinky1: "LeftHandPinky1",
-                    mixamorigLeftHandPinky2: "LeftHandPinky2",
-                    mixamorigLeftHandPinky3: "LeftHandPinky3",
-                    mixamorigLeftHandPinky4: "LeftHandPinky4",
+                    mixamorigLeftHandThumb1: 'LeftHandThumb1',
+                    mixamorigLeftHandThumb2: 'LeftHandThumb2',
+                    mixamorigLeftHandThumb3: 'LeftHandThumb3',
+                    mixamorigLeftHandThumb4: 'LeftHandThumb4',
+                    mixamorigLeftHandIndex1: 'LeftHandIndex1',
+                    mixamorigLeftHandIndex2: 'LeftHandIndex2',
+                    mixamorigLeftHandIndex3: 'LeftHandIndex3',
+                    mixamorigLeftHandIndex4: 'LeftHandIndex4',
+                    mixamorigLeftHandMiddle1: 'LeftHandMiddle1',
+                    mixamorigLeftHandMiddle2: 'LeftHandMiddle2',
+                    mixamorigLeftHandMiddle3: 'LeftHandMiddle3',
+                    mixamorigLeftHandMiddle4: 'LeftHandMiddle4',
+                    mixamorigLeftHandRing1: 'LeftHandRing1',
+                    mixamorigLeftHandRing2: 'LeftHandRing2',
+                    mixamorigLeftHandRing3: 'LeftHandRing3',
+                    mixamorigLeftHandRing4: 'LeftHandRing4',
+                    mixamorigLeftHandPinky1: 'LeftHandPinky1',
+                    mixamorigLeftHandPinky2: 'LeftHandPinky2',
+                    mixamorigLeftHandPinky3: 'LeftHandPinky3',
+                    mixamorigLeftHandPinky4: 'LeftHandPinky4',
 
                     // Right arm bones
-                    mixamorigRightShoulder: "RightShoulder",
-                    mixamorigRightArm: "RightUpperArm",
-                    mixamorigRightForeArm: "RightLowerArm",
-                    mixamorigRightHand: "RightHand",
+                    mixamorigRightShoulder: 'RightShoulder',
+                    mixamorigRightArm: 'RightUpperArm',
+                    mixamorigRightForeArm: 'RightLowerArm',
+                    mixamorigRightHand: 'RightHand',
 
                     // Right hand finger bones
-                    mixamorigRightHandThumb1: "RightHandThumb1",
-                    mixamorigRightHandThumb2: "RightHandThumb2",
-                    mixamorigRightHandThumb3: "RightHandThumb3",
-                    mixamorigRightHandThumb4: "RightHandThumb4",
-                    mixamorigRightHandIndex1: "RightHandIndex1",
-                    mixamorigRightHandIndex2: "RightHandIndex2",
-                    mixamorigRightHandIndex3: "RightHandIndex3",
-                    mixamorigRightHandIndex4: "RightHandIndex4",
-                    mixamorigRightHandMiddle1: "RightHandMiddle1",
-                    mixamorigRightHandMiddle2: "RightHandMiddle2",
-                    mixamorigRightHandMiddle3: "RightHandMiddle3",
-                    mixamorigRightHandMiddle4: "RightHandMiddle4",
-                    mixamorigRightHandRing1: "RightHandRing1",
-                    mixamorigRightHandRing2: "RightHandRing2",
-                    mixamorigRightHandRing3: "RightHandRing3",
-                    mixamorigRightHandRing4: "RightHandRing4",
-                    mixamorigRightHandPinky1: "RightHandPinky1",
-                    mixamorigRightHandPinky2: "RightHandPinky2",
-                    mixamorigRightHandPinky3: "RightHandPinky3",
-                    mixamorigRightHandPinky4: "RightHandPinky4",
+                    mixamorigRightHandThumb1: 'RightHandThumb1',
+                    mixamorigRightHandThumb2: 'RightHandThumb2',
+                    mixamorigRightHandThumb3: 'RightHandThumb3',
+                    mixamorigRightHandThumb4: 'RightHandThumb4',
+                    mixamorigRightHandIndex1: 'RightHandIndex1',
+                    mixamorigRightHandIndex2: 'RightHandIndex2',
+                    mixamorigRightHandIndex3: 'RightHandIndex3',
+                    mixamorigRightHandIndex4: 'RightHandIndex4',
+                    mixamorigRightHandMiddle1: 'RightHandMiddle1',
+                    mixamorigRightHandMiddle2: 'RightHandMiddle2',
+                    mixamorigRightHandMiddle3: 'RightHandMiddle3',
+                    mixamorigRightHandMiddle4: 'RightHandMiddle4',
+                    mixamorigRightHandRing1: 'RightHandRing1',
+                    mixamorigRightHandRing2: 'RightHandRing2',
+                    mixamorigRightHandRing3: 'RightHandRing3',
+                    mixamorigRightHandRing4: 'RightHandRing4',
+                    mixamorigRightHandPinky1: 'RightHandPinky1',
+                    mixamorigRightHandPinky2: 'RightHandPinky2',
+                    mixamorigRightHandPinky3: 'RightHandPinky3',
+                    mixamorigRightHandPinky4: 'RightHandPinky4',
 
                     // Left leg bones
-                    mixamorigLeftUpLeg: "LeftUpperLeg",
-                    mixamorigLeftLeg: "LeftLowerLeg",
-                    mixamorigLeftFoot: "LeftFoot",
-                    mixamorigLeftToeBase: "LeftToeBase",
-                    mixamorigLeftToe_End: "LeftToe_End",
+                    mixamorigLeftUpLeg: 'LeftUpperLeg',
+                    mixamorigLeftLeg: 'LeftLowerLeg',
+                    mixamorigLeftFoot: 'LeftFoot',
+                    mixamorigLeftToeBase: 'LeftToeBase',
+                    mixamorigLeftToe_End: 'LeftToe_End',
 
                     // Right leg bones
-                    mixamorigRightUpLeg: "RightUpperLeg",
-                    mixamorigRightLeg: "RightLowerLeg",
-                    mixamorigRightFoot: "RightFoot",
-                    mixamorigRightToeBase: "RightToeBase",
-                    mixamorigRightToe_End: "RightToe_End",
+                    mixamorigRightUpLeg: 'RightUpperLeg',
+                    mixamorigRightLeg: 'RightLowerLeg',
+                    mixamorigRightFoot: 'RightFoot',
+                    mixamorigRightToeBase: 'RightToeBase',
+                    mixamorigRightToe_End: 'RightToe_End',
 
                     // Direct mappings for animations that already use ReadyPlayerMe naming
-                    Hips: "Hips",
-                    Spine: "Spine",
-                    Spine1: "Spine1",
-                    Spine2: "Spine2",
-                    Neck: "Neck",
-                    Head: "Head",
-                    HeadTop_End: "HeadTop_End",
-                    LeftShoulder: "LeftShoulder",
-                    LeftArm: "LeftArm",
-                    LeftForeArm: "LeftForeArm",
-                    LeftHand: "LeftHand",
-                    LeftHandThumb1: "LeftHandThumb1",
-                    LeftHandThumb2: "LeftHandThumb2",
-                    LeftHandThumb3: "LeftHandThumb3",
-                    LeftHandThumb4: "LeftHandThumb4",
-                    LeftHandIndex1: "LeftHandIndex1",
-                    LeftHandIndex2: "LeftHandIndex2",
-                    LeftHandIndex3: "LeftHandIndex3",
-                    LeftHandIndex4: "LeftHandIndex4",
-                    LeftHandMiddle1: "LeftHandMiddle1",
-                    LeftHandMiddle2: "LeftHandMiddle2",
-                    LeftHandMiddle3: "LeftHandMiddle3",
-                    LeftHandMiddle4: "LeftHandMiddle4",
-                    LeftHandRing1: "LeftHandRing1",
-                    LeftHandRing2: "LeftHandRing2",
-                    LeftHandRing3: "LeftHandRing3",
-                    LeftHandRing4: "LeftHandRing4",
-                    LeftHandPinky1: "LeftHandPinky1",
-                    LeftHandPinky2: "LeftHandPinky2",
-                    LeftHandPinky3: "LeftHandPinky3",
-                    LeftHandPinky4: "LeftHandPinky4",
-                    RightShoulder: "RightShoulder",
-                    RightArm: "RightArm",
-                    RightForeArm: "RightForeArm",
-                    RightHand: "RightHand",
-                    RightHandThumb1: "RightHandThumb1",
-                    RightHandThumb2: "RightHandThumb2",
-                    RightHandThumb3: "RightHandThumb3",
-                    RightHandThumb4: "RightHandThumb4",
-                    RightHandIndex1: "RightHandIndex1",
-                    RightHandIndex2: "RightHandIndex2",
-                    RightHandIndex3: "RightHandIndex3",
-                    RightHandIndex4: "RightHandIndex4",
-                    RightHandMiddle1: "RightHandMiddle1",
-                    RightHandMiddle2: "RightHandMiddle2",
-                    RightHandMiddle3: "RightHandMiddle3",
-                    RightHandMiddle4: "RightHandMiddle4",
-                    RightHandRing1: "RightHandRing1",
-                    RightHandRing2: "RightHandRing2",
-                    RightHandRing3: "RightHandRing3",
-                    RightHandRing4: "RightHandRing4",
-                    RightHandPinky1: "RightHandPinky1",
-                    RightHandPinky2: "RightHandPinky2",
-                    RightHandPinky3: "RightHandPinky3",
-                    RightHandPinky4: "RightHandPinky4",
-                    LeftUpLeg: "LeftUpLeg",
-                    LeftLeg: "LeftLeg",
-                    LeftFoot: "LeftFoot",
-                    LeftToeBase: "LeftToeBase",
-                    LeftToe_End: "LeftToe_End",
-                    RightUpLeg: "RightUpLeg",
-                    RightLeg: "RightLeg",
-                    RightFoot: "RightFoot",
-                    RightToeBase: "RightToeBase",
-                    RightToe_End: "RightToe_End",
+                    Hips: 'Hips',
+                    Spine: 'Spine',
+                    Spine1: 'Spine1',
+                    Spine2: 'Spine2',
+                    Neck: 'Neck',
+                    Head: 'Head',
+                    HeadTop_End: 'HeadTop_End',
+                    LeftShoulder: 'LeftShoulder',
+                    LeftArm: 'LeftArm',
+                    LeftForeArm: 'LeftForeArm',
+                    LeftHand: 'LeftHand',
+                    LeftHandThumb1: 'LeftHandThumb1',
+                    LeftHandThumb2: 'LeftHandThumb2',
+                    LeftHandThumb3: 'LeftHandThumb3',
+                    LeftHandThumb4: 'LeftHandThumb4',
+                    LeftHandIndex1: 'LeftHandIndex1',
+                    LeftHandIndex2: 'LeftHandIndex2',
+                    LeftHandIndex3: 'LeftHandIndex3',
+                    LeftHandIndex4: 'LeftHandIndex4',
+                    LeftHandMiddle1: 'LeftHandMiddle1',
+                    LeftHandMiddle2: 'LeftHandMiddle2',
+                    LeftHandMiddle3: 'LeftHandMiddle3',
+                    LeftHandMiddle4: 'LeftHandMiddle4',
+                    LeftHandRing1: 'LeftHandRing1',
+                    LeftHandRing2: 'LeftHandRing2',
+                    LeftHandRing3: 'LeftHandRing3',
+                    LeftHandRing4: 'LeftHandRing4',
+                    LeftHandPinky1: 'LeftHandPinky1',
+                    LeftHandPinky2: 'LeftHandPinky2',
+                    LeftHandPinky3: 'LeftHandPinky3',
+                    LeftHandPinky4: 'LeftHandPinky4',
+                    RightShoulder: 'RightShoulder',
+                    RightArm: 'RightArm',
+                    RightForeArm: 'RightForeArm',
+                    RightHand: 'RightHand',
+                    RightHandThumb1: 'RightHandThumb1',
+                    RightHandThumb2: 'RightHandThumb2',
+                    RightHandThumb3: 'RightHandThumb3',
+                    RightHandThumb4: 'RightHandThumb4',
+                    RightHandIndex1: 'RightHandIndex1',
+                    RightHandIndex2: 'RightHandIndex2',
+                    RightHandIndex3: 'RightHandIndex3',
+                    RightHandIndex4: 'RightHandIndex4',
+                    RightHandMiddle1: 'RightHandMiddle1',
+                    RightHandMiddle2: 'RightHandMiddle2',
+                    RightHandMiddle3: 'RightHandMiddle3',
+                    RightHandMiddle4: 'RightHandMiddle4',
+                    RightHandRing1: 'RightHandRing1',
+                    RightHandRing2: 'RightHandRing2',
+                    RightHandRing3: 'RightHandRing3',
+                    RightHandRing4: 'RightHandRing4',
+                    RightHandPinky1: 'RightHandPinky1',
+                    RightHandPinky2: 'RightHandPinky2',
+                    RightHandPinky3: 'RightHandPinky3',
+                    RightHandPinky4: 'RightHandPinky4',
+                    LeftUpLeg: 'LeftUpLeg',
+                    LeftLeg: 'LeftLeg',
+                    LeftFoot: 'LeftFoot',
+                    LeftToeBase: 'LeftToeBase',
+                    LeftToe_End: 'LeftToe_End',
+                    RightUpLeg: 'RightUpLeg',
+                    RightLeg: 'RightLeg',
+                    RightFoot: 'RightFoot',
+                    RightToeBase: 'RightToeBase',
+                    RightToe_End: 'RightToe_End',
                   };
 
                   const mappedName = boneMapping[animationBoneName];
                   if (mappedName) {
                     matchedBone = skeleton.bones.find(
-                      (bone: THREE.Bone) => bone.name === mappedName,
+                      (bone: THREE.Bone) => bone.name === mappedName
                     );
                   }
 
@@ -1249,7 +1245,7 @@ export function AvatarModel({
                         .includes(animationBoneName.toLowerCase()) ||
                       animationBoneName
                         .toLowerCase()
-                        .includes(bone.name.toLowerCase()),
+                        .includes(bone.name.toLowerCase())
                   );
 
                   return matchedBone;
@@ -1258,7 +1254,7 @@ export function AvatarModel({
                 const matchedBone = findMatchingBone(boneName);
                 if (!matchedBone) {
                   console.log(
-                    `Skipping track for non-existent bone: ${boneName}`,
+                    `Skipping track for non-existent bone: ${boneName}`
                   );
                   return false;
                 }
@@ -1267,7 +1263,7 @@ export function AvatarModel({
                   const property = trackParts[1];
                   track.name = `${matchedBone.name}.${property}`;
                   console.log(
-                    `Remapped bone: ${boneName} -> ${matchedBone.name}`,
+                    `Remapped bone: ${boneName} -> ${matchedBone.name}`
                   );
                 }
 
@@ -1278,20 +1274,20 @@ export function AvatarModel({
 
             if (filteredTracks.length > 0) {
               console.log(
-                `Keeping ${filteredTracks.length}/${clip.tracks.length} tracks`,
+                `Keeping ${filteredTracks.length}/${clip.tracks.length} tracks`
               );
 
               // Remove position and scale tracks to prevent avatar displacement
-              const safeTracks = filteredTracks.filter((track) => {
-                if (track.name.includes(".position")) {
+              const safeTracks = filteredTracks.filter(track => {
+                if (track.name.includes('.position')) {
                   console.log(
-                    `Removing ${track.name} track to prevent avatar displacement`,
+                    `Removing ${track.name} track to prevent avatar displacement`
                   );
                   return false;
                 }
-                if (track.name.includes(".scale")) {
+                if (track.name.includes('.scale')) {
                   console.log(
-                    `Removing ${track.name} track to prevent avatar scaling issues`,
+                    `Removing ${track.name} track to prevent avatar scaling issues`
                   );
                   return false;
                 }
@@ -1299,9 +1295,9 @@ export function AvatarModel({
               });
 
               const filteredClip = new THREE.AnimationClip(
-                clip.name + "_filtered",
+                clip.name + '_filtered',
                 clip.duration,
-                safeTracks,
+                safeTracks
               );
 
               const action = mixer.clipAction(filteredClip);
@@ -1310,11 +1306,11 @@ export function AvatarModel({
               action.setEffectiveWeight(1.0);
 
               if (
-                clip.name.toLowerCase().includes("mixamo") ||
-                clip.name.toLowerCase().includes("cough")
+                clip.name.toLowerCase().includes('mixamo') ||
+                clip.name.toLowerCase().includes('cough')
               ) {
                 action.setEffectiveTimeScale(1.0);
-                console.log("Applied Mixamo-specific settings to animation");
+                console.log('Applied Mixamo-specific settings to animation');
               }
 
               actionsMap.set(clip.name, action);
@@ -1328,15 +1324,15 @@ export function AvatarModel({
 
         if (actionsMap.size > 0) {
           console.log(
-            `Successfully set up ${actionsMap.size} filtered FBX animations`,
+            `Successfully set up ${actionsMap.size} filtered FBX animations`
           );
-          console.log("Available animations:", Array.from(actionsMap.keys()));
+          console.log('Available animations:', Array.from(actionsMap.keys()));
           setAnimationActionsMap(actionsMap);
           return;
         }
       } else {
         console.warn(
-          "No skeleton found in avatar, cannot apply FBX animations",
+          'No skeleton found in avatar, cannot apply FBX animations'
         );
       }
     }
@@ -1365,52 +1361,52 @@ export function AvatarModel({
 
     // Priority 3: Create fallback animation
     console.log(
-      "No FBX or GLB animations found, creating simple idle animation...",
+      'No FBX or GLB animations found, creating simple idle animation...'
     );
 
     try {
       let targetObject: THREE.Object3D = scene;
       let foundSkinned = false;
 
-      scene.traverse((child) => {
+      scene.traverse(child => {
         if (!foundSkinned && child instanceof THREE.SkinnedMesh) {
           targetObject = child;
           foundSkinned = true;
-          console.log("Found SkinnedMesh for animation:", child.name);
+          console.log('Found SkinnedMesh for animation:', child.name);
         } else if (
           !foundSkinned &&
-          (child.name.toLowerCase().includes("avatar") ||
-            child.name.toLowerCase().includes("armature") ||
-            child.name.toLowerCase().includes("skeleton"))
+          (child.name.toLowerCase().includes('avatar') ||
+            child.name.toLowerCase().includes('armature') ||
+            child.name.toLowerCase().includes('skeleton'))
         ) {
           targetObject = child;
-          console.log("Found potential animation target:", child.name);
+          console.log('Found potential animation target:', child.name);
         }
       });
 
       console.log(
-        "Creating fallback animation for:",
-        targetObject.name || "scene",
+        'Creating fallback animation for:',
+        targetObject.name || 'scene'
       );
 
       const times = [0, 1, 2];
       const scaleValues = [1, 1.01, 1];
 
       const scaleKF = new THREE.VectorKeyframeTrack(
-        targetObject.uuid + ".scale",
+        targetObject.uuid + '.scale',
         times,
-        scaleValues.flatMap((val) => [val, val, val]),
+        scaleValues.flatMap(val => [val, val, val])
       );
 
-      const clip = new THREE.AnimationClip("idle_breathing", 2, [scaleKF]);
+      const clip = new THREE.AnimationClip('idle_breathing', 2, [scaleKF]);
       const action = mixer.clipAction(clip);
       action.setLoop(THREE.LoopRepeat, Infinity);
 
-      actionsMap.set("idle_breathing", action);
+      actionsMap.set('idle_breathing', action);
       setAnimationActionsMap(actionsMap);
-      console.log("Created fallback idle animation");
+      console.log('Created fallback idle animation');
     } catch (error) {
-      console.error("Error creating fallback animation:", error);
+      console.error('Error creating fallback animation:', error);
       setAnimationActionsMap(new Map());
     }
   }, [scene, animations, glbAnimations]);
@@ -1418,7 +1414,7 @@ export function AvatarModel({
   // Control animation playback
   useEffect(() => {
     console.log(
-      `Animation state changed: activeAnimation=${activeAnimation}, available actions: ${animationActionsMap.size}`,
+      `Animation state changed: activeAnimation=${activeAnimation}, available actions: ${animationActionsMap.size}`
     );
 
     // Clear existing idle timer
@@ -1435,7 +1431,7 @@ export function AvatarModel({
             console.log(`Stopping animation: ${name}`);
             action.stop();
           }
-        },
+        }
       );
 
       // Determine which animation to play
@@ -1454,7 +1450,7 @@ export function AvatarModel({
               cycleToNextIdleAnimation();
             }, 12000); // 12 seconds between idle animation changes
             console.log(
-              `Started idle animation cycling timer for ${availableIdles.length} animations`,
+              `Started idle animation cycling timer for ${availableIdles.length} animations`
             );
           }
         }
@@ -1462,13 +1458,13 @@ export function AvatarModel({
 
       // Reset avatar to safe state when stopping animations
       if (!animationToPlay && scene) {
-        scene.traverse((child) => {
+        scene.traverse(child => {
           if (child instanceof THREE.SkinnedMesh) {
             child.visible = true;
             child.scale.set(1, 1, 1);
             child.position.x = 0;
             child.position.z = 0;
-            console.log("Reset avatar to safe state after stopping animations");
+            console.log('Reset avatar to safe state after stopping animations');
           }
         });
       }
@@ -1481,7 +1477,7 @@ export function AvatarModel({
 
           const originalTransforms = new Map();
           if (scene) {
-            scene.traverse((child) => {
+            scene.traverse(child => {
               if (child instanceof THREE.SkinnedMesh) {
                 originalTransforms.set(child.uuid, {
                   position: child.position.clone(),
@@ -1499,7 +1495,7 @@ export function AvatarModel({
 
           // Ensure avatar stays visible and in position
           if (scene) {
-            scene.traverse((child) => {
+            scene.traverse(child => {
               if (child instanceof THREE.SkinnedMesh) {
                 const original = originalTransforms.get(child.uuid);
                 if (original) {
@@ -1527,10 +1523,10 @@ export function AvatarModel({
       } else if (animationToPlay) {
         console.warn(`Animation not found: ${animationToPlay}`);
       } else {
-        console.log("No animation requested, all animations stopped");
+        console.log('No animation requested, all animations stopped');
       }
     } else {
-      console.log("No animation actions available");
+      console.log('No animation actions available');
     }
   }, [activeAnimation, animationActionsMap, scene]);
 
@@ -1541,7 +1537,7 @@ export function AvatarModel({
       const newIdleAnimation = getCurrentIdleAnimation();
       if (newIdleAnimation && animationActionsMap.has(newIdleAnimation)) {
         // Stop current animations
-        animationActionsMap.forEach((action) => {
+        animationActionsMap.forEach(action => {
           if (action.isRunning()) {
             action.stop();
           }
@@ -1558,7 +1554,7 @@ export function AvatarModel({
         } catch (error) {
           console.error(
             `Error switching to idle animation ${newIdleAnimation}:`,
-            error,
+            error
           );
         }
       }
@@ -1584,14 +1580,14 @@ export function AvatarModel({
         if (scene) {
           // Check if any animation is currently running
           const hasRunningAnimation = Array.from(
-            animationActionsMap.values(),
-          ).some((action) => action.isRunning());
+            animationActionsMap.values()
+          ).some(action => action.isRunning());
 
-          scene.traverse((child) => {
+          scene.traverse(child => {
             if (child instanceof THREE.SkinnedMesh) {
               if (!child.visible) {
                 console.warn(
-                  "Avatar became invisible during animation, fixing...",
+                  'Avatar became invisible during animation, fixing...'
                 );
                 child.visible = true;
               }
@@ -1602,7 +1598,7 @@ export function AvatarModel({
                 child.scale.z < 0.01
               ) {
                 console.warn(
-                  "Avatar became too small during animation, fixing...",
+                  'Avatar became too small during animation, fixing...'
                 );
                 child.scale.set(1, 1, 1);
               }
@@ -1612,13 +1608,13 @@ export function AvatarModel({
                 Math.abs(child.position.z) > 10
               ) {
                 console.warn(
-                  "Avatar moved too far during animation, fixing...",
+                  'Avatar moved too far during animation, fixing...'
                 );
                 child.position.x = 0;
                 child.position.z = 0;
               }
 
-              if (activeAnimation === "mixamo.com") {
+              if (activeAnimation === 'mixamo.com') {
                 if (child.position.y > -0.2) {
                   child.position.y = -0.2;
                 }
@@ -1650,7 +1646,7 @@ export function AvatarModel({
         // }
         // }
       } catch (error) {
-        console.error("Animation mixer update error:", error);
+        console.error('Animation mixer update error:', error);
       }
     }
   });

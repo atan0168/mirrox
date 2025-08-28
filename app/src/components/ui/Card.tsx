@@ -1,20 +1,20 @@
-import * as React from "react";
-import { View, StyleSheet, ViewProps, ViewStyle } from "react-native";
-import { colors, spacing, borderRadius, shadows } from "../../theme";
+import * as React from 'react';
+import { View, StyleSheet, ViewProps, ViewStyle } from 'react-native';
+import { colors, spacing, borderRadius, shadows } from '../../theme';
 
 export interface CardProps extends ViewProps {
   children: React.ReactNode;
-  variant?: "default" | "elevated" | "outline";
-  padding?: "none" | "sm" | "md" | "lg";
-  shadow?: "none" | "sm" | "md" | "lg";
+  variant?: 'default' | 'elevated' | 'outline';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
+  shadow?: 'none' | 'sm' | 'md' | 'lg';
   style?: ViewStyle;
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
-  variant = "default",
-  padding = "md",
-  shadow = "sm",
+  variant = 'default',
+  padding = 'md',
+  shadow = 'sm',
   style,
   ...viewProps
 }) => {
@@ -38,17 +38,17 @@ export const Card: React.FC<CardProps> = ({
   );
 };
 
-const getVariantStyles = (variant: CardProps["variant"]) => {
+const getVariantStyles = (variant: CardProps['variant']) => {
   switch (variant) {
-    case "elevated":
+    case 'elevated':
       return {
         backgroundColor: colors.white,
         borderWidth: 0,
         ...shadows.medium,
       };
-    case "outline":
+    case 'outline':
       return {
-        backgroundColor: "transparent",
+        backgroundColor: 'transparent',
         borderWidth: 1,
         borderColor: colors.neutral[200],
         ...shadows.none,
@@ -63,15 +63,15 @@ const getVariantStyles = (variant: CardProps["variant"]) => {
   }
 };
 
-const getPaddingStyles = (padding: CardProps["padding"]) => {
+const getPaddingStyles = (padding: CardProps['padding']) => {
   switch (padding) {
-    case "none":
+    case 'none':
       return {};
-    case "sm":
+    case 'sm':
       return {
         padding: spacing.sm,
       };
-    case "lg":
+    case 'lg':
       return {
         padding: spacing.lg,
       };
@@ -82,15 +82,15 @@ const getPaddingStyles = (padding: CardProps["padding"]) => {
   }
 };
 
-const getShadowStyles = (shadow: CardProps["shadow"]) => {
+const getShadowStyles = (shadow: CardProps['shadow']) => {
   switch (shadow) {
-    case "none":
+    case 'none':
       return shadows.none;
-    case "sm":
+    case 'sm':
       return shadows.soft;
-    case "md":
+    case 'md':
       return shadows.medium;
-    case "lg":
+    case 'lg':
       return shadows.hard;
     default: // sm
       return shadows.soft;
@@ -100,6 +100,6 @@ const getShadowStyles = (shadow: CardProps["shadow"]) => {
 const styles = StyleSheet.create({
   container: {
     borderRadius: borderRadius.lg,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
 });

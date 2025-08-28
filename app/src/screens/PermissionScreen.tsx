@@ -1,5 +1,5 @@
-import * as Location from "expo-location";
-import React, { useState } from "react";
+import * as Location from 'expo-location';
+import React, { useState } from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -7,10 +7,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { Button, Card } from "../components/ui";
-import { borderRadius, colors, fontSize, spacing } from "../theme";
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Button, Card } from '../components/ui';
+import { borderRadius, colors, fontSize, spacing } from '../theme';
 
 interface PermissionScreenProps {
   navigation: any;
@@ -25,16 +25,16 @@ const PermissionScreen: React.FC<PermissionScreenProps> = ({ navigation }) => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
 
-      if (status !== "granted") {
+      if (status !== 'granted') {
         Alert.alert(
-          "Permission Denied",
-          "Location access is needed to personalize your experience. You can manually select your city instead.",
+          'Permission Denied',
+          'Location access is needed to personalize your experience. You can manually select your city instead.',
           [
             {
-              text: "OK",
-              onPress: () => navigation.navigate("CitySelection"),
+              text: 'OK',
+              onPress: () => navigation.navigate('CitySelection'),
             },
-          ],
+          ]
         );
         return;
       }
@@ -45,20 +45,20 @@ const PermissionScreen: React.FC<PermissionScreenProps> = ({ navigation }) => {
       });
 
       const { latitude, longitude } = location.coords;
-      navigation.navigate("Questionnaire", {
+      navigation.navigate('Questionnaire', {
         location: { latitude, longitude },
       });
     } catch (error) {
-      console.error("Location error:", error);
+      console.error('Location error:', error);
       Alert.alert(
-        "Location Error",
-        "Could not fetch location. You can manually select your city instead.",
+        'Location Error',
+        'Could not fetch location. You can manually select your city instead.',
         [
           {
-            text: "OK",
-            onPress: () => navigation.navigate("CitySelection"),
+            text: 'OK',
+            onPress: () => navigation.navigate('CitySelection'),
           },
-        ],
+        ]
       );
     } finally {
       setIsLoading(false);
@@ -66,7 +66,7 @@ const PermissionScreen: React.FC<PermissionScreenProps> = ({ navigation }) => {
   };
 
   const handleChooseManually = () => {
-    navigation.navigate("CitySelection");
+    navigation.navigate('CitySelection');
   };
 
   const handleClose = () => {
@@ -154,7 +154,7 @@ const PermissionScreen: React.FC<PermissionScreenProps> = ({ navigation }) => {
             disabled={isLoading}
             onPress={handleAllowLocation}
           >
-            {isLoading ? "Getting Location..." : "Allow Location Access"}
+            {isLoading ? 'Getting Location...' : 'Allow Location Access'}
           </Button>
 
           <Button
@@ -182,13 +182,13 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   closeButton: {
-    alignSelf: "flex-end",
+    alignSelf: 'flex-end',
     padding: spacing.sm,
   },
   content: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
   },
   iconContainer: {
@@ -199,24 +199,24 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: borderRadius.full,
     backgroundColor: colors.neutral[100],
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: fontSize.xl,
-    fontWeight: "600",
-    textAlign: "center",
+    fontWeight: '600',
+    textAlign: 'center',
     marginBottom: spacing.xl,
     color: colors.black,
     lineHeight: 28,
   },
   benefitsList: {
-    width: "100%",
+    width: '100%',
     gap: spacing.lg,
   },
   benefitItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   benefitIcon: {
     marginTop: 2,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   },
   benefitTitle: {
     fontSize: fontSize.base,
-    fontWeight: "500",
+    fontWeight: '500',
     color: colors.black,
     marginBottom: spacing.xs,
   },

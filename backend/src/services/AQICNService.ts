@@ -1,13 +1,13 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse } from 'axios';
 import {
   AQICNResponse,
   AQICNData,
   AirQualityData,
   StationSearchResult,
-} from "../models/AirQuality";
-import { cacheService } from "./CacheService";
-import { aqicnRateLimiterService } from "./AQICNRateLimiterService";
-import config from "../utils/config";
+} from '../models/AirQuality';
+import { cacheService } from './CacheService';
+import { aqicnRateLimiterService } from './AQICNRateLimiterService';
+import config from '../utils/config';
 
 class AQICNService {
   private readonly axiosInstance;
@@ -17,17 +17,17 @@ class AQICNService {
       baseURL: config.aqicn.baseUrl,
       timeout: 10000,
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
     });
 
     // Add response interceptor for error handling
     this.axiosInstance.interceptors.response.use(
       (response: AxiosResponse) => response,
-      (error) => {
-        console.error("AQICN API Error:", error.message);
+      error => {
+        console.error('AQICN API Error:', error.message);
         return Promise.reject(error);
-      },
+      }
     );
   }
 
@@ -54,45 +54,45 @@ class AQICNService {
   } {
     if (aqi <= 50) {
       return {
-        classification: "Good",
-        colorCode: "#00E400",
+        classification: 'Good',
+        colorCode: '#00E400',
         healthAdvice:
-          "Air quality is considered satisfactory, and air pollution poses little or no risk.",
+          'Air quality is considered satisfactory, and air pollution poses little or no risk.',
       };
     } else if (aqi <= 100) {
       return {
-        classification: "Moderate",
-        colorCode: "#FFFF00",
+        classification: 'Moderate',
+        colorCode: '#FFFF00',
         healthAdvice:
-          "Air quality is acceptable for most people. However, sensitive people may experience minor respiratory symptoms.",
+          'Air quality is acceptable for most people. However, sensitive people may experience minor respiratory symptoms.',
       };
     } else if (aqi <= 150) {
       return {
-        classification: "Unhealthy for Sensitive Groups",
-        colorCode: "#FF7E00",
+        classification: 'Unhealthy for Sensitive Groups',
+        colorCode: '#FF7E00',
         healthAdvice:
-          "Members of sensitive groups may experience health effects. The general public is not likely to be affected.",
+          'Members of sensitive groups may experience health effects. The general public is not likely to be affected.',
       };
     } else if (aqi <= 200) {
       return {
-        classification: "Unhealthy",
-        colorCode: "#FF0000",
+        classification: 'Unhealthy',
+        colorCode: '#FF0000',
         healthAdvice:
-          "Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.",
+          'Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.',
       };
     } else if (aqi <= 300) {
       return {
-        classification: "Very Unhealthy",
-        colorCode: "#8F3F97",
+        classification: 'Very Unhealthy',
+        colorCode: '#8F3F97',
         healthAdvice:
-          "Health warnings of emergency conditions. The entire population is more likely to be affected.",
+          'Health warnings of emergency conditions. The entire population is more likely to be affected.',
       };
     } else {
       return {
-        classification: "Hazardous",
-        colorCode: "#7E0023",
+        classification: 'Hazardous',
+        colorCode: '#7E0023',
         healthAdvice:
-          "Health alert: everyone may experience more serious health effects.",
+          'Health alert: everyone may experience more serious health effects.',
       };
     }
   }
@@ -121,8 +121,8 @@ class AQICNService {
       timezone: aqicnData.time.tz,
       country: {
         id: 0,
-        code: "",
-        name: "",
+        code: '',
+        name: '',
       },
       coordinates: {
         latitude: aqicnData.city.geo[0],
@@ -162,7 +162,7 @@ class AQICNService {
       classification: aqiInfo.classification,
       colorCode: aqiInfo.colorCode,
       healthAdvice: aqiInfo.healthAdvice,
-      source: "aqicn" as const,
+      source: 'aqicn' as const,
       timestamp: aqicnData.time.s,
       stationUrl: aqicnData.city.url,
       attributions: aqicnData.attributions,
@@ -170,7 +170,7 @@ class AQICNService {
       classification: string;
       colorCode: string;
       healthAdvice: string;
-      source: "aqicn";
+      source: 'aqicn';
       timestamp: string;
       stationUrl: string;
       attributions: typeof aqicnData.attributions;
@@ -182,7 +182,7 @@ class AQICNService {
    */
   public async fetchAirQualityByCoordinates(
     latitude: number,
-    longitude: number,
+    longitude: number
   ): Promise<AirQualityData> {
     try {
       // Generate cache key
@@ -192,7 +192,7 @@ class AQICNService {
       const cachedData = cacheService.get<AirQualityData>(cacheKey);
       if (cachedData) {
         console.log(
-          `Returning cached AQICN data for ${latitude}, ${longitude}`,
+          `Returning cached AQICN data for ${latitude}, ${longitude}`
         );
         return cachedData;
       }
@@ -204,10 +204,10 @@ class AQICNService {
         `/feed/geo:${latitude};${longitude}/`,
         {
           token: config.aqicn.apiKey,
-        },
+        }
       );
 
-      if (responseData.status !== "ok") {
+      if (responseData.status !== 'ok') {
         throw new Error(`AQICN API error: ${responseData.status}`);
       }
 
@@ -218,34 +218,34 @@ class AQICNService {
       cacheService.set(cacheKey, airQualityData, config.cache.airQualityTtl);
 
       console.log(
-        `AQICN data fetched and cached for ${latitude}, ${longitude}`,
+        `AQICN data fetched and cached for ${latitude}, ${longitude}`
       );
 
       return airQualityData;
     } catch (error) {
-      console.error("Failed to fetch air quality from AQICN:", error);
+      console.error('Failed to fetch air quality from AQICN:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
           throw new Error(
-            "AQICN API authentication failed. Please check the API key.",
+            'AQICN API authentication failed. Please check the API key.'
           );
         } else if (error.response?.status === 429) {
           const rateLimitStatus = this.getRateLimitStatus();
           throw new Error(
-            `Too many requests to AQICN API. Rate limit exceeded (${rateLimitStatus.requestCount}/${rateLimitStatus.limit}). Please try again in ${Math.ceil(rateLimitStatus.timeUntilReset / 1000)} seconds.`,
+            `Too many requests to AQICN API. Rate limit exceeded (${rateLimitStatus.requestCount}/${rateLimitStatus.limit}). Please try again in ${Math.ceil(rateLimitStatus.timeUntilReset / 1000)} seconds.`
           );
         } else if (error.response?.status === 404) {
           throw new Error(
-            "No air quality monitoring stations found in your area (AQICN).",
+            'No air quality monitoring stations found in your area (AQICN).'
           );
         } else if (error.response && error.response.status >= 500) {
-          throw new Error("AQICN service is temporarily unavailable.");
+          throw new Error('AQICN service is temporarily unavailable.');
         }
       }
 
       throw new Error(
-        "Unable to connect to AQICN services. Please check your internet connection.",
+        'Unable to connect to AQICN services. Please check your internet connection.'
       );
     }
   }
@@ -254,7 +254,7 @@ class AQICNService {
    * Fetch air quality data by station ID
    */
   public async fetchAirQualityByStationId(
-    stationId: string,
+    stationId: string
   ): Promise<AirQualityData> {
     try {
       // Generate cache key
@@ -274,10 +274,10 @@ class AQICNService {
         `/feed/@${stationId}/`,
         {
           token: config.aqicn.apiKey,
-        },
+        }
       );
 
-      if (responseData.status !== "ok") {
+      if (responseData.status !== 'ok') {
         throw new Error(`AQICN API error: ${responseData.status}`);
       }
 
@@ -293,7 +293,7 @@ class AQICNService {
     } catch (error) {
       console.error(
         `Failed to fetch air quality from AQICN station ${stationId}:`,
-        error,
+        error
       );
       throw error;
     }
@@ -305,7 +305,7 @@ class AQICNService {
   public async searchStations(
     latitude: number,
     longitude: number,
-    radius: number = 50,
+    radius: number = 50
   ): Promise<StationSearchResult[]> {
     try {
       // AQICN doesn't have a direct search endpoint, so we'll use the main feed
@@ -322,7 +322,7 @@ class AQICNService {
         },
       ];
     } catch (error) {
-      console.error("Failed to search AQICN stations:", error);
+      console.error('Failed to search AQICN stations:', error);
       return [];
     }
   }
@@ -349,9 +349,9 @@ class AQICNService {
   public clearCache(): void {
     // Get all cache keys and filter for AQICN keys
     const stats = cacheService.getStats();
-    const aqicnKeys = stats.keys.filter((key) => key.startsWith("aqicn_"));
+    const aqicnKeys = stats.keys.filter(key => key.startsWith('aqicn_'));
 
-    aqicnKeys.forEach((key) => {
+    aqicnKeys.forEach(key => {
       cacheService.delete(key);
     });
 
@@ -395,7 +395,7 @@ class AQICNService {
     };
   } {
     const stats = cacheService.getStats();
-    const aqicnKeys = stats.keys.filter((key) => key.startsWith("aqicn_"));
+    const aqicnKeys = stats.keys.filter(key => key.startsWith('aqicn_'));
 
     return {
       cache: {

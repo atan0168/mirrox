@@ -3,7 +3,7 @@
  * Handles client-side rate limiting for AQICN API since they don't provide rate limit headers
  */
 
-import config from "../utils/config";
+import config from '../utils/config';
 
 interface AQICNRateLimitState {
   requestCount: number;
@@ -109,7 +109,7 @@ class AQICNRateLimiterService {
     const now = Date.now();
     const timeUntilReset = Math.max(
       0,
-      this.windowMs - (now - this.state.windowStart),
+      this.windowMs - (now - this.state.windowStart)
     );
 
     return {
@@ -176,7 +176,7 @@ class AQICNRateLimiterService {
    * Sleep utility
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**

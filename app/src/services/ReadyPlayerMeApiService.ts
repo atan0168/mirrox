@@ -1,6 +1,6 @@
-import { RPM_APPLICATION_ID, RPM_SUBDOMAIN } from "../constants";
-import { UserProfile } from "../models/User";
-import { localStorageService } from "./LocalStorageService";
+import { RPM_APPLICATION_ID, RPM_SUBDOMAIN } from '../constants';
+import { UserProfile } from '../models/User';
+import { localStorageService } from './LocalStorageService';
 
 interface RPMUser {
   id: string;
@@ -11,7 +11,7 @@ interface RPMTemplate {
   id: string;
   imageUrl: string;
   modelUrl: string;
-  gender: "male" | "female";
+  gender: 'male' | 'female';
   outfit: string;
 }
 
@@ -24,7 +24,7 @@ interface RPMAvatar {
 interface RPMAsset {
   id: string;
   type: string;
-  gender: "male" | "female";
+  gender: 'male' | 'female';
   name: string;
   iconUrl: string;
 }
@@ -37,7 +37,7 @@ interface SkinToneOption {
 }
 
 class ReadyPlayerMeApiService {
-  private baseUrl = "https://api.readyplayer.me";
+  private baseUrl = 'https://api.readyplayer.me';
 
   /**
    * Step 1: Create an anonymous user and get access token
@@ -45,9 +45,9 @@ class ReadyPlayerMeApiService {
   async createAnonymousUser(): Promise<RPMUser> {
     try {
       const response = await fetch(`https://mirrox.readyplayer.me/api/users`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           data: {
@@ -61,13 +61,13 @@ class ReadyPlayerMeApiService {
       }
 
       const data = await response.json();
-      console.log("Created anonymous user:", data);
+      console.log('Created anonymous user:', data);
       return {
         id: data.data.id,
         token: data.data.token,
       };
     } catch (error) {
-      console.error("Error creating anonymous user:", error);
+      console.error('Error creating anonymous user:', error);
       throw error;
     }
   }
@@ -88,7 +88,7 @@ class ReadyPlayerMeApiService {
       }
 
       const data = await response.json();
-      console.log("Fetched templates:", data);
+      console.log('Fetched templates:', data);
       return data.data.map((template: any) => ({
         id: template.id,
         imageUrl: template.imageUrl,
@@ -97,7 +97,7 @@ class ReadyPlayerMeApiService {
         outfit: template.outfit,
       }));
     } catch (error) {
-      console.error("Error fetching templates:", error);
+      console.error('Error fetching templates:', error);
       throw error;
     }
   }
@@ -107,26 +107,28 @@ class ReadyPlayerMeApiService {
    */
   async selectTemplateByGender(
     token: string,
-    gender: "male" | "female"
+    gender: 'male' | 'female'
   ): Promise<RPMTemplate> {
     try {
       const templates = await this.getTemplates(token);
-      
+
       // Filter templates by gender
-      const genderTemplates = templates.filter(template => template.gender === gender);
-      
+      const genderTemplates = templates.filter(
+        template => template.gender === gender
+      );
+
       if (genderTemplates.length === 0) {
         throw new Error(`No templates found for gender: ${gender}`);
       }
-      
+
       // For now, return the first template of the specified gender
       // You could add additional logic here to select based on other criteria
       const selectedTemplate = genderTemplates[0];
       console.log(`Selected template for ${gender}:`, selectedTemplate);
-      
+
       return selectedTemplate;
     } catch (error) {
-      console.error("Error selecting template by gender:", error);
+      console.error('Error selecting template by gender:', error);
       throw error;
     }
   }
@@ -136,7 +138,7 @@ class ReadyPlayerMeApiService {
    */
   async getSkinToneAssets(
     token: string,
-    gender: "male" | "female",
+    gender: 'male' | 'female'
   ): Promise<SkinToneOption[]> {
     try {
       const response = await fetch(`${this.baseUrl}/v2/assets`, {
@@ -153,7 +155,7 @@ class ReadyPlayerMeApiService {
 
       // Filter for skin tone assets
       const skinToneAssets = data.data.filter(
-        (asset: any) => asset.type === "skin" && asset.gender === gender,
+        (asset: any) => asset.type === 'skin' && asset.gender === gender
       );
 
       return skinToneAssets.map((asset: any, index: number) => ({
@@ -163,7 +165,7 @@ class ReadyPlayerMeApiService {
         value: index / (skinToneAssets.length - 1), // Normalize to 0-1 scale
       }));
     } catch (error) {
-      console.error("Error fetching skin tone assets:", error);
+      console.error('Error fetching skin tone assets:', error);
       throw error;
     }
   }
@@ -174,13 +176,13 @@ class ReadyPlayerMeApiService {
   async updateAvatarSkinTone(
     token: string,
     avatarId: string,
-    skinToneAssetId: string,
+    skinToneAssetId: string
   ): Promise<void> {
     try {
       const response = await fetch(`${this.baseUrl}/v2/avatars/${avatarId}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -194,13 +196,13 @@ class ReadyPlayerMeApiService {
 
       if (!response.ok) {
         throw new Error(
-          `Failed to update avatar skin tone: ${response.statusText}`,
+          `Failed to update avatar skin tone: ${response.statusText}`
         );
       }
 
-      console.log("Avatar skin tone updated successfully");
+      console.log('Avatar skin tone updated successfully');
     } catch (error) {
-      console.error("Error updating avatar skin tone:", error);
+      console.error('Error updating avatar skin tone:', error);
       throw error;
     }
   }
@@ -211,16 +213,16 @@ class ReadyPlayerMeApiService {
   async createAvatarFromTemplate(
     token: string,
     templateId: string,
-    bodyType: "fullbody" | "halfbody" = "fullbody",
+    bodyType: 'fullbody' | 'halfbody' = 'fullbody'
   ): Promise<string> {
     try {
       const response = await fetch(
         `${this.baseUrl}/v2/avatars/templates/${templateId}`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             data: {
@@ -228,17 +230,17 @@ class ReadyPlayerMeApiService {
               bodyType: bodyType,
             },
           }),
-        },
+        }
       );
 
-      console.log("RPM_SUBDOMAIN", RPM_SUBDOMAIN);
-      console.log("templateId", templateId);
-      console.log("bodyType", bodyType);
+      console.log('RPM_SUBDOMAIN', RPM_SUBDOMAIN);
+      console.log('templateId', templateId);
+      console.log('bodyType', bodyType);
       console.log(
-        "Response",
+        'Response',
         response.ok,
         response.statusText,
-        response.status,
+        response.status
       );
 
       if (!response.ok) {
@@ -248,7 +250,7 @@ class ReadyPlayerMeApiService {
       const data = await response.json();
       return data.data.id; // Returns avatar ID
     } catch (error) {
-      console.error("Error creating avatar from template:", error);
+      console.error('Error creating avatar from template:', error);
       throw error;
     }
   }
@@ -266,7 +268,7 @@ class ReadyPlayerMeApiService {
   async saveAvatar(token: string, avatarId: string): Promise<void> {
     try {
       const response = await fetch(`${this.baseUrl}/v2/avatars/${avatarId}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -279,7 +281,7 @@ class ReadyPlayerMeApiService {
       // After successful save, cache the avatar locally
       const avatarUrl = this.getSavedAvatarUrl(avatarId);
       console.log(
-        `Avatar saved successfully. Caching GLB file from: ${avatarUrl}`,
+        `Avatar saved successfully. Caching GLB file from: ${avatarUrl}`
       );
 
       try {
@@ -290,7 +292,7 @@ class ReadyPlayerMeApiService {
         // Don't throw here - avatar creation was successful, caching is optional
       }
     } catch (error) {
-      console.error("Error saving avatar:", error);
+      console.error('Error saving avatar:', error);
       throw error;
     }
   }
@@ -310,26 +312,26 @@ class ReadyPlayerMeApiService {
       // Step 1: Create anonymous user
       const user = await this.createAnonymousUser();
 
-      console.log("Created user", user);
-      
+      console.log('Created user', user);
+
       // Step 2: Select template based on user's gender
       const selectedTemplate = await this.selectTemplateByGender(
         user.token,
-        userProfile.gender,
+        userProfile.gender
       );
 
       // Step 3: Create avatar from template
       const avatarId = await this.createAvatarFromTemplate(
         user.token,
         selectedTemplate.id,
-        "fullbody",
+        'fullbody'
       );
 
       // Step 4: Optionally customize skin tone
       // Note: This requires additional API calls to get and apply skin tone assets
       // For now, we'll just log the user's preference
       console.log(`User selected skin tone: ${userProfile.skinTone}`);
-      
+
       // TODO: Implement skin tone customization
       // const skinToneAssets = await this.getSkinToneAssets(user.token, userProfile.gender);
       // const selectedSkinTone = this.mapSkinToneToAsset(userProfile.skinTone, skinToneAssets);
@@ -343,7 +345,7 @@ class ReadyPlayerMeApiService {
       // Step 6: Return final avatar URL
       return this.getSavedAvatarUrl(avatarId);
     } catch (error) {
-      console.error("Error in complete avatar creation flow:", error);
+      console.error('Error in complete avatar creation flow:', error);
       throw error;
     }
   }
@@ -352,23 +354,23 @@ class ReadyPlayerMeApiService {
    * Map user's skin tone preference to available assets
    */
   private mapSkinToneToAsset(
-    userSkinTone: "light" | "medium" | "dark",
+    userSkinTone: 'light' | 'medium' | 'dark',
     availableAssets: SkinToneOption[]
   ): SkinToneOption | null {
     if (availableAssets.length === 0) return null;
 
     // Sort assets by skin tone value (0 = lightest, 1 = darkest)
     const sortedAssets = [...availableAssets].sort((a, b) => a.value - b.value);
-    
+
     switch (userSkinTone) {
-      case "light":
+      case 'light':
         // Return the lightest skin tone (lowest value)
         return sortedAssets[0];
-      case "medium":
+      case 'medium':
         // Return middle skin tone
         const middleIndex = Math.floor(sortedAssets.length / 2);
         return sortedAssets[middleIndex];
-      case "dark":
+      case 'dark':
         // Return the darkest skin tone (highest value)
         return sortedAssets[sortedAssets.length - 1];
       default:
@@ -385,16 +387,16 @@ class ReadyPlayerMeApiService {
 
     // Map user profile to avatar customization
     if (userProfile.sleepHours < 6) {
-      options.eyes = "tired";
+      options.eyes = 'tired';
     } else if (userProfile.sleepHours >= 8) {
-      options.eyes = "happy";
+      options.eyes = 'happy';
     }
 
     if (
-      userProfile.commuteMode === "bike" ||
-      userProfile.commuteMode === "walk"
+      userProfile.commuteMode === 'bike' ||
+      userProfile.commuteMode === 'walk'
     ) {
-      options.body = "athletic";
+      options.body = 'athletic';
     }
 
     // Add more customization logic based on your needs

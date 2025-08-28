@@ -42,7 +42,9 @@ export function SkinToneButton({
         <Text style={styles.emoji}>{getSkinToneEmoji(skinToneAdjustment)}</Text>
         <View style={styles.textContainer}>
           <Text style={styles.label}>Skin Tone</Text>
-          <Text style={styles.value}>{getSkinToneLabel(skinToneAdjustment)}</Text>
+          <Text style={styles.value}>
+            {getSkinToneLabel(skinToneAdjustment)}
+          </Text>
         </View>
         <Text style={styles.arrow}>▶</Text>
       </TouchableOpacity>
@@ -64,7 +66,7 @@ export function SkinToneButton({
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.sliderContainer}>
               <SkinToneControls
                 skinToneAdjustment={skinToneAdjustment}

@@ -25,10 +25,10 @@ class RateLimiterService {
    * @param headers Response headers from OpenAQ API
    */
   updateFromHeaders(headers: Record<string, string | string[]>): void {
-    const used = this.getHeaderValue(headers, "x-ratelimit-used");
-    const remaining = this.getHeaderValue(headers, "x-ratelimit-remaining");
-    const limit = this.getHeaderValue(headers, "x-ratelimit-limit");
-    const reset = this.getHeaderValue(headers, "x-ratelimit-reset");
+    const used = this.getHeaderValue(headers, 'x-ratelimit-used');
+    const remaining = this.getHeaderValue(headers, 'x-ratelimit-remaining');
+    const limit = this.getHeaderValue(headers, 'x-ratelimit-limit');
+    const reset = this.getHeaderValue(headers, 'x-ratelimit-reset');
 
     if (
       used !== null &&
@@ -45,7 +45,7 @@ class RateLimiterService {
       };
 
       console.log(
-        `Rate limit updated: ${used}/${limit} used, ${remaining} remaining, resets in ${reset}s`,
+        `Rate limit updated: ${used}/${limit} used, ${remaining} remaining, resets in ${reset}s`
       );
     }
   }
@@ -72,14 +72,14 @@ class RateLimiterService {
     // Check if we're approaching the limit
     const safetyBuffer = Math.max(
       5,
-      Math.floor(this.rateLimitInfo.limit * 0.1),
+      Math.floor(this.rateLimitInfo.limit * 0.1)
     ); // 10% buffer or 5, whichever is larger
 
     if (this.rateLimitInfo.remaining <= safetyBuffer) {
       // Too close to limit, wait until reset
       const delayUntilReset = this.rateLimitInfo.reset - now;
       console.warn(
-        `Rate limit approaching, waiting ${Math.ceil(delayUntilReset / 1000)}s until reset`,
+        `Rate limit approaching, waiting ${Math.ceil(delayUntilReset / 1000)}s until reset`
       );
       return delayUntilReset + 1000; // Add 1 second buffer
     }
@@ -186,10 +186,10 @@ class RateLimiterService {
    */
   private getHeaderValue(
     headers: Record<string, string | string[]>,
-    key: string,
+    key: string
   ): number | null {
     const value = headers[key];
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       const parsed = parseInt(value, 10);
       return isNaN(parsed) ? null : parsed;
     } else if (
@@ -207,7 +207,7 @@ class RateLimiterService {
    * Sleep utility
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   /**

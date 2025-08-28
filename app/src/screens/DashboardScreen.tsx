@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,15 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
-} from "react-native";
-import { localStorageService } from "../services/LocalStorageService";
-import ThreeAvatar from "../components/ThreeAvatar";
-import { FacialExpressionControls } from "../components/controls/FacialExpressionControls";
-import { SkinToneButton } from "../components/controls/SkinToneButton";
-import { Card } from "../components/ui";
-import { UserProfile } from "../models/User";
-import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
-import { useAirQuality, useAQICNAirQuality } from "../hooks/useAirQuality";
+} from 'react-native';
+import { localStorageService } from '../services/LocalStorageService';
+import ThreeAvatar from '../components/ThreeAvatar';
+import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
+import { SkinToneButton } from '../components/controls/SkinToneButton';
+import { Card } from '../components/ui';
+import { UserProfile } from '../models/User';
+import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
+import { useAirQuality, useAQICNAirQuality } from '../hooks/useAirQuality';
 import {
   getAQIInfo,
   getShortClassification,
@@ -22,7 +22,7 @@ import {
   formatPollutantValue,
   formatTimestamp,
   isDataRecent,
-} from "../utils/aqiUtils";
+} from '../utils/aqiUtils';
 
 interface DashboardScreenProps {
   navigation: any;
@@ -30,7 +30,7 @@ interface DashboardScreenProps {
 
 const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [facialExpression, setFacialExpression] = useState<string>("neutral");
+  const [facialExpression, setFacialExpression] = useState<string>('neutral');
   const [skinToneAdjustment, setSkinToneAdjustment] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,12 +40,12 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
       try {
         const profile = await localStorageService.getUserProfile();
         if (!profile) {
-          throw new Error("User profile not found.");
+          throw new Error('User profile not found.');
         }
         setUserProfile(profile);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "An unexpected error occurred.",
+          err instanceof Error ? err.message : 'An unexpected error occurred.'
         );
       } finally {
         setIsLoading(false);
@@ -63,27 +63,27 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   } = useAQICNAirQuality(
     userProfile?.location.latitude || 0,
     userProfile?.location.longitude || 0,
-    !!userProfile,
+    !!userProfile
   );
 
   // Fallback to general air quality if AQICN fails
   const { data: fallbackAirQuality } = useAirQuality(
     userProfile?.location.latitude || 0,
     userProfile?.location.longitude || 0,
-    !!userProfile && !airQuality && !!airQualityError,
+    !!userProfile && !airQuality && !!airQualityError
   );
 
   // Use the best available air quality data
   const activeAirQuality = airQuality || fallbackAirQuality;
 
   const generateHealthVitalsMessage = (): string => {
-    if (!activeAirQuality) return "Analyzing your environment...";
+    if (!activeAirQuality) return 'Analyzing your environment...';
 
     const aqi = activeAirQuality.aqi;
-    if (!aqi) return "Air quality data unavailable";
+    if (!aqi) return 'Air quality data unavailable';
 
     const aqiInfo = getAQIInfo(aqi);
-    const primaryPollutant = activeAirQuality.primaryPollutant || "unknown";
+    const primaryPollutant = activeAirQuality.primaryPollutant || 'unknown';
 
     if (aqi > 100) {
       return `Your twin's lungs are starting with a major debuff due to ${aqiInfo.classification.toLowerCase()} air quality (AQI ${aqi}) in your area. The main pollutant is ${primaryPollutant}.`;
@@ -95,7 +95,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   };
 
   const getSleepMessage = (): string => {
-    if (!userProfile) return "";
+    if (!userProfile) return '';
 
     if (userProfile.sleepHours < 6) {
       return `Your twin looks tired because you only got ${userProfile.sleepHours} hours of sleep. Consider getting more rest!`;
@@ -107,14 +107,14 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   };
 
   const getCommuteMessage = (): string => {
-    if (!userProfile) return "";
+    if (!userProfile) return '';
 
     const commuteMessages = {
-      car: "Your twin drives to work. Consider eco-friendly alternatives!",
-      transit: "Your twin uses public transport. Great for the environment!",
-      wfh: "Your twin works from home. No commute stress!",
-      bike: "Your twin bikes to work. Excellent for health and environment!",
-      walk: "Your twin walks to work. Perfect for health and the planet!",
+      car: 'Your twin drives to work. Consider eco-friendly alternatives!',
+      transit: 'Your twin uses public transport. Great for the environment!',
+      wfh: 'Your twin works from home. No commute stress!',
+      bike: 'Your twin bikes to work. Excellent for health and environment!',
+      walk: 'Your twin walks to work. Perfect for health and the planet!',
     };
 
     return commuteMessages[userProfile.commuteMode];
@@ -229,7 +229,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                       },
                     ]}
                   >
-                    {activeAirQuality.aqi || "N/A"}
+                    {activeAirQuality.aqi || 'N/A'}
                   </Text>
                 </View>
                 <Text
@@ -244,7 +244,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                 >
                   {activeAirQuality.classification ||
                     getShortClassification(
-                      getAQIInfo(activeAirQuality.aqi || 0).classification,
+                      getAQIInfo(activeAirQuality.aqi || 0).classification
                     )}
                 </Text>
                 {activeAirQuality.healthAdvice && (
@@ -254,8 +254,8 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                 )}
                 {activeAirQuality.timestamp && (
                   <Text style={styles.dataTimestamp}>
-                    Updated {formatTimestamp(activeAirQuality.timestamp)} •{" "}
-                    {activeAirQuality.source?.toUpperCase() || "AQICN"}
+                    Updated {formatTimestamp(activeAirQuality.timestamp)} •{' '}
+                    {activeAirQuality.source?.toUpperCase() || 'AQICN'}
                   </Text>
                 )}
               </Card>
@@ -268,7 +268,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                     <View style={styles.pollutantItem}>
                       <Text style={styles.pollutantLabel}>PM2.5</Text>
                       <Text style={styles.pollutantValue}>
-                        {formatPollutantValue(activeAirQuality.pm25, "pm25")}
+                        {formatPollutantValue(activeAirQuality.pm25, 'pm25')}
                       </Text>
                     </View>
                   )}
@@ -276,7 +276,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                     <View style={styles.pollutantItem}>
                       <Text style={styles.pollutantLabel}>PM10</Text>
                       <Text style={styles.pollutantValue}>
-                        {formatPollutantValue(activeAirQuality.pm10, "pm10")}
+                        {formatPollutantValue(activeAirQuality.pm10, 'pm10')}
                       </Text>
                     </View>
                   )}
@@ -284,7 +284,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                     <View style={styles.pollutantItem}>
                       <Text style={styles.pollutantLabel}>Ozone</Text>
                       <Text style={styles.pollutantValue}>
-                        {formatPollutantValue(activeAirQuality.o3, "o3")}
+                        {formatPollutantValue(activeAirQuality.o3, 'o3')}
                       </Text>
                     </View>
                   )}
@@ -292,7 +292,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                     <View style={styles.pollutantItem}>
                       <Text style={styles.pollutantLabel}>NO₂</Text>
                       <Text style={styles.pollutantValue}>
-                        {formatPollutantValue(activeAirQuality.no2, "no2")}
+                        {formatPollutantValue(activeAirQuality.no2, 'no2')}
                       </Text>
                     </View>
                   )}
@@ -301,7 +301,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
                 <View style={styles.statRow}>
                   <Text style={styles.statLabel}>Primary Pollutant:</Text>
                   <Text style={styles.statValue}>
-                    {activeAirQuality.primaryPollutant || "N/A"}
+                    {activeAirQuality.primaryPollutant || 'N/A'}
                   </Text>
                 </View>
 
@@ -353,14 +353,14 @@ const styles = StyleSheet.create({
   },
   loadingContent: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
     marginTop: spacing.md,
     fontSize: fontSize.base,
     color: colors.neutral[600],
-    fontWeight: "500",
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
@@ -368,29 +368,29 @@ const styles = StyleSheet.create({
   },
   errorContent: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: spacing.lg,
   },
   errorText: {
     fontSize: fontSize.base,
     color: colors.neutral[700],
-    textAlign: "center",
+    textAlign: 'center',
   },
   title: {
     fontSize: 28,
-    fontWeight: "bold",
-    textAlign: "center",
+    fontWeight: 'bold',
+    textAlign: 'center',
     marginBottom: 30,
-    color: "#2D3748",
+    color: '#2D3748',
   },
   avatarContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: 30,
     padding: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -398,10 +398,10 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     marginBottom: 30,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -409,8 +409,8 @@ const styles = StyleSheet.create({
   },
   controlsTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#2D3748",
+    fontWeight: '600',
+    color: '#2D3748',
     marginBottom: 12,
   },
   vitalsContainer: {
@@ -419,16 +419,16 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 16,
-    color: "#2D3748",
+    color: '#2D3748',
   },
   vitalCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -436,20 +436,20 @@ const styles = StyleSheet.create({
   },
   vitalTitle: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: 8,
-    color: "#2D3748",
+    color: '#2D3748',
   },
   vitalDescription: {
     fontSize: 14,
-    color: "#4A5568",
+    color: '#4A5568',
     lineHeight: 20,
   },
   statsContainer: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -457,18 +457,18 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
   statLabel: {
     fontSize: 14,
-    color: "#4A5568",
+    color: '#4A5568',
   },
   statValue: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#2D3748",
+    fontWeight: '600',
+    color: '#2D3748',
   },
   // New AQI-specific styles
   aqiCard: {
@@ -476,23 +476,23 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   aqiHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.sm,
   },
   aqiTitle: {
     fontSize: fontSize.lg,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.neutral[700],
   },
   aqiValue: {
     fontSize: fontSize.xxl,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   aqiClassification: {
     fontSize: fontSize.base,
-    fontWeight: "600",
+    fontWeight: '600',
     marginBottom: spacing.sm,
   },
   healthAdvice: {
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   dataTimestamp: {
     fontSize: fontSize.xs,
     color: colors.neutral[500],
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
   pollutantsContainer: {
     backgroundColor: colors.neutral[50],
@@ -513,13 +513,13 @@ const styles = StyleSheet.create({
   },
   pollutantsTitle: {
     fontSize: fontSize.base,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.neutral[700],
     marginBottom: spacing.sm,
   },
   pollutantGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -527,34 +527,34 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[100],
     padding: spacing.sm,
     borderRadius: borderRadius.sm,
-    minWidth: "45%",
-    alignItems: "center",
+    minWidth: '45%',
+    alignItems: 'center',
   },
   pollutantLabel: {
     fontSize: fontSize.xs,
     color: colors.neutral[600],
-    fontWeight: "500",
+    fontWeight: '500',
   },
   pollutantValue: {
     fontSize: fontSize.sm,
     color: colors.neutral[800],
-    fontWeight: "600",
+    fontWeight: '600',
     marginTop: 2,
   },
   recommendationsCard: {
     padding: spacing.md,
-    backgroundColor: "#EBF8FF", // Light blue
-    borderColor: "#BEE3F8", // Medium blue
+    backgroundColor: '#EBF8FF', // Light blue
+    borderColor: '#BEE3F8', // Medium blue
   },
   recommendationsTitle: {
     fontSize: fontSize.base,
-    fontWeight: "600",
-    color: "#2B6CB0", // Dark blue
+    fontWeight: '600',
+    color: '#2B6CB0', // Dark blue
     marginBottom: spacing.sm,
   },
   recommendationItem: {
     fontSize: fontSize.sm,
-    color: "#2C5282", // Darker blue
+    color: '#2C5282', // Darker blue
     lineHeight: 18,
     marginBottom: 4,
   },

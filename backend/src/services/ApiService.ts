@@ -1,13 +1,13 @@
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosResponse } from 'axios';
 import {
   AirQualityData,
   AirQualityLocation,
   AirQualityMeasurement,
   OpenAQResponse,
-} from "../models/AirQuality";
-import { cacheService } from "./CacheService";
-import { rateLimiterService } from "./RateLimiterService";
-import config from "../utils/config";
+} from '../models/AirQuality';
+import { cacheService } from './CacheService';
+import { rateLimiterService } from './RateLimiterService';
+import config from '../utils/config';
 
 class ApiService {
   private readonly axiosInstance;
@@ -16,8 +16,8 @@ class ApiService {
     this.axiosInstance = axios.create({
       baseURL: config.openaq.baseUrl,
       headers: {
-        "X-API-Key": config.openaq.apiKey,
-        "Content-Type": "application/json",
+        'X-API-Key': config.openaq.apiKey,
+        'Content-Type': 'application/json',
       },
     });
 
@@ -34,7 +34,7 @@ class ApiService {
         rateLimiterService.updateFromHeaders(headers);
         return response;
       },
-      (error) => {
+      error => {
         // Handle rate limit headers even on error responses
         if (error.response?.headers) {
           const headers: Record<string, string | string[]> = {};
@@ -46,7 +46,7 @@ class ApiService {
           rateLimiterService.updateFromHeaders(headers);
         }
         return Promise.reject(error);
-      },
+      }
     );
   }
 
@@ -58,7 +58,7 @@ class ApiService {
    */
   private async makeRateLimitedRequest<T>(
     url: string,
-    params?: Record<string, any>,
+    params?: Record<string, any>
   ): Promise<AxiosResponse<T>> {
     return rateLimiterService.executeWithRateLimit(async () => {
       return this.axiosInstance.get<T>(url, { params });
@@ -101,26 +101,26 @@ class ApiService {
    * @returns Primary pollutant name
    */
   private determinePrimaryPollutant(
-    measurements: AirQualityMeasurement[],
+    measurements: AirQualityMeasurement[]
   ): string {
     // Find PM2.5 measurement (most commonly used for AQI)
     const pm25Measurement = measurements.find(
-      (m) =>
+      m =>
         m.sensorsId === 2366 || // Common PM2.5 sensor ID pattern
-        measurements.some((measure) => measure.sensorsId === m.sensorsId),
+        measurements.some(measure => measure.sensorsId === m.sensorsId)
     );
 
-    if (pm25Measurement) return "PM2.5";
+    if (pm25Measurement) return 'PM2.5';
 
     // Fallback to other pollutants
-    if (measurements.some((m) => m.sensorsId.toString().includes("pm10")))
-      return "PM10";
-    if (measurements.some((m) => m.sensorsId.toString().includes("no2")))
-      return "NO2";
-    if (measurements.some((m) => m.sensorsId.toString().includes("o3")))
-      return "O3";
+    if (measurements.some(m => m.sensorsId.toString().includes('pm10')))
+      return 'PM10';
+    if (measurements.some(m => m.sensorsId.toString().includes('no2')))
+      return 'NO2';
+    if (measurements.some(m => m.sensorsId.toString().includes('o3')))
+      return 'O3';
 
-    return "Unknown";
+    return 'Unknown';
   }
 
   /**
@@ -131,14 +131,12 @@ class ApiService {
    */
   private extractPollutantValues(
     measurements: AirQualityMeasurement[],
-    location: AirQualityLocation,
+    location: AirQualityLocation
   ) {
     const values: { [key: string]: number } = {};
 
-    measurements.forEach((measurement) => {
-      const sensor = location.sensors.find(
-        (s) => s.id === measurement.sensorsId,
-      );
+    measurements.forEach(measurement => {
+      const sensor = location.sensors.find(s => s.id === measurement.sensorsId);
       if (sensor) {
         const paramName = sensor.parameter.name.toLowerCase();
         values[paramName] = measurement.value;
@@ -156,7 +154,7 @@ class ApiService {
 
   public async fetchAirQuality(
     latitude: number,
-    longitude: number,
+    longitude: number
   ): Promise<AirQualityData> {
     try {
       // Generate cache key
@@ -166,13 +164,13 @@ class ApiService {
       const cachedData = cacheService.get<AirQualityData>(cacheKey);
       if (cachedData) {
         console.log(
-          `Returning cached air quality data for ${latitude}, ${longitude}`,
+          `Returning cached air quality data for ${latitude}, ${longitude}`
         );
         return cachedData;
       }
 
       console.log(
-        `Fetching fresh air quality data for ${latitude}, ${longitude}`,
+        `Fetching fresh air quality data for ${latitude}, ${longitude}`
       );
 
       // Step 1: Find nearby locations (with caching)
@@ -187,16 +185,16 @@ class ApiService {
       } else {
         const locationsResponse = await this.makeRateLimitedRequest<
           OpenAQResponse<AirQualityLocation>
-        >("/locations", {
+        >('/locations', {
           coordinates: `${latitude},${longitude}`,
           radius: 25000, // 25km radius
           limit: 1,
-          "order_by[]": "distance",
+          'order_by[]': 'distance',
         });
 
         if (!locationsResponse.data.results.length) {
           throw new Error(
-            "No air quality monitoring stations found in your area",
+            'No air quality monitoring stations found in your area'
           );
         }
 
@@ -206,7 +204,7 @@ class ApiService {
         cacheService.set(
           locationCacheKey,
           location,
-          config.cache.locationSearchTtl,
+          config.cache.locationSearchTtl
         );
       }
 
@@ -219,14 +217,14 @@ class ApiService {
 
       if (!measurements.length) {
         throw new Error(
-          "No recent air quality measurements available for your area",
+          'No recent air quality measurements available for your area'
         );
       }
 
       // Step 3: Process the data
       const pollutantValues = this.extractPollutantValues(
         measurements,
-        location,
+        location
       );
       const primaryPollutant = this.determinePrimaryPollutant(measurements);
 
@@ -256,44 +254,44 @@ class ApiService {
       cacheService.set(cacheKey, airQualityData, config.cache.airQualityTtl);
 
       console.log(
-        `Air quality data fetched and cached for ${latitude}, ${longitude}`,
+        `Air quality data fetched and cached for ${latitude}, ${longitude}`
       );
 
       return airQualityData;
     } catch (error) {
-      console.error("Failed to fetch air quality from OpenAQ:", error);
+      console.error('Failed to fetch air quality from OpenAQ:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 401) {
           throw new Error(
-            "API authentication failed. Please check the API key.",
+            'API authentication failed. Please check the API key.'
           );
         } else if (error.response?.status === 429) {
           // Rate limited - check if we have cached data we can return
           const cacheKey = cacheService.generateLocationKey(
             latitude,
-            longitude,
+            longitude
           );
           const staleData = cacheService.get<AirQualityData>(cacheKey);
 
           if (staleData) {
-            console.warn("Rate limited, returning cached data");
+            console.warn('Rate limited, returning cached data');
             return staleData;
           }
 
           const timeUntilReset = rateLimiterService.getTimeUntilReset();
           const minutesUntilReset = Math.ceil(timeUntilReset / (60 * 1000));
           throw new Error(
-            `Too many requests. Please try again in ${minutesUntilReset} minute(s).`,
+            `Too many requests. Please try again in ${minutesUntilReset} minute(s).`
           );
         } else if (error.response && error.response.status >= 500) {
-          throw new Error("Air quality service is temporarily unavailable.");
+          throw new Error('Air quality service is temporarily unavailable.');
         }
       }
 
       // Re-throw a custom error to be handled by the UI
       throw new Error(
-        "Unable to connect to air quality services. Please check your internet connection.",
+        'Unable to connect to air quality services. Please check your internet connection.'
       );
     }
   }
@@ -316,7 +314,7 @@ class ApiService {
    */
   public clearCache(): void {
     cacheService.clear();
-    console.log("Air quality cache cleared");
+    console.log('Air quality cache cleared');
   }
 
   /**

@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -6,9 +6,9 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { Card } from "../components/ui";
-import { borderRadius, colors, fontSize, spacing } from "../theme";
+} from 'react-native';
+import { Card } from '../components/ui';
+import { borderRadius, colors, fontSize, spacing } from '../theme';
 
 interface PrivacyScreenProps {
   navigation: any;
@@ -223,12 +223,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   backButton: {
-    alignSelf: "flex-start",
+    alignSelf: 'flex-start',
   },
   backButtonText: {
     fontSize: fontSize.base,
     color: colors.neutral[600],
-    fontWeight: "500",
+    fontWeight: '500',
   },
   container: {
     flex: 1,
@@ -240,17 +240,17 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.xxxl,
-    fontWeight: "700",
+    fontWeight: '700',
     color: colors.black,
     marginBottom: spacing.sm,
-    textAlign: "center",
+    textAlign: 'center',
   },
   effectiveDate: {
     fontSize: fontSize.sm,
     color: colors.neutral[500],
-    textAlign: "center",
+    textAlign: 'center',
     marginBottom: spacing.xl,
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
   introText: {
     fontSize: fontSize.base,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.xl,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.black,
     marginBottom: spacing.md,
   },
@@ -281,8 +281,8 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.md,
   },
   bulletRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: spacing.sm,
     paddingLeft: 0,
   },
@@ -301,14 +301,14 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   boldText: {
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.neutral[800],
   },
   contactInfo: {
     fontSize: fontSize.base,
     color: colors.neutral[600],
     marginTop: spacing.sm,
-    fontStyle: "italic",
+    fontStyle: 'italic',
   },
 });
 

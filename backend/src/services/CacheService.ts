@@ -98,7 +98,7 @@ class CacheService {
   generateLocationKey(
     latitude: number,
     longitude: number,
-    precision: number = 3,
+    precision: number = 3
   ): string {
     // Round coordinates to reduce cache fragmentation for nearby locations
     const roundedLat = Number(latitude.toFixed(precision));
@@ -120,7 +120,7 @@ class CacheService {
       }
     }
 
-    expiredKeys.forEach((key) => this.cache.delete(key));
+    expiredKeys.forEach(key => this.cache.delete(key));
   }
 
   /**

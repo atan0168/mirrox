@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,17 @@ import {
   Easing,
   SafeAreaView,
   TouchableOpacity,
-} from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { StackNavigationProp } from "@react-navigation/stack";
-import { Heart, RefreshCw } from "lucide-react-native";
-import { RootStackParamList } from "../../App";
-import { LocalStorageService } from "../services/LocalStorageService";
-import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { Heart, RefreshCw } from 'lucide-react-native';
+import { RootStackParamList } from '../../App';
+import { LocalStorageService } from '../services/LocalStorageService';
+import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
 
 type SplashScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
-  "Splash"
+  'Splash'
 >;
 
 export default function SplashScreen() {
@@ -29,7 +29,7 @@ export default function SplashScreen() {
 
   // Progress & text
   const [progressAnim] = useState(new Animated.Value(0)); // 0 -> 1 over 1.5s
-  const [loadingText, setLoadingText] = useState("Initializing...");
+  const [loadingText, setLoadingText] = useState('Initializing...');
 
   // Coordination flags
   const [initDone, setInitDone] = useState(false);
@@ -73,11 +73,11 @@ export default function SplashScreen() {
       }
 
       if (value < 0.4) {
-        setLoadingText("Initializing services...");
+        setLoadingText('Initializing services...');
       } else if (value < 0.8) {
-        setLoadingText("Checking user data...");
+        setLoadingText('Checking user data...');
       } else {
-        setLoadingText("Ready!");
+        setLoadingText('Ready!');
       }
     });
     return () => {
@@ -97,10 +97,10 @@ export default function SplashScreen() {
 
         // If authentication is required, wait for it
         if (authRequired) {
-          setLoadingText("Authentication required...");
+          setLoadingText('Authentication required...');
           const authSuccess = await localStorage.authenticateUser();
           if (!authSuccess) {
-            setLoadingText("Authentication failed or cancelled");
+            setLoadingText('Authentication failed or cancelled');
             setAuthenticationFailed(true);
             setAuthenticationCompleted(false);
             setInitDone(true);
@@ -117,8 +117,8 @@ export default function SplashScreen() {
         setHasUser(Boolean(userProfile && avatarUrl));
         setInitDone(true);
       } catch (error) {
-        console.error("❌ Error during app initialization:", error);
-        setLoadingText("Error occurred");
+        console.error('❌ Error during app initialization:', error);
+        setLoadingText('Error occurred');
         setHasUser(false);
         setAuthenticationCompleted(!authenticationRequired); // Set to true if auth not required
         setInitDone(true);
@@ -132,14 +132,14 @@ export default function SplashScreen() {
   const retryAuthentication = async () => {
     try {
       setAuthenticationFailed(false);
-      setLoadingText("Retrying authentication...");
+      setLoadingText('Retrying authentication...');
 
       const localStorage = new LocalStorageService();
       const authSuccess = await localStorage.authenticateUser();
 
       if (authSuccess) {
         setAuthenticationCompleted(true);
-        setLoadingText("Authentication successful");
+        setLoadingText('Authentication successful');
 
         // Proceed with loading user data
         const userProfile = await localStorage.getUserProfile();
@@ -147,12 +147,12 @@ export default function SplashScreen() {
         setHasUser(Boolean(userProfile && avatarUrl));
       } else {
         setAuthenticationFailed(true);
-        setLoadingText("Authentication failed or cancelled");
+        setLoadingText('Authentication failed or cancelled');
       }
     } catch (error) {
-      console.error("❌ Error during authentication retry:", error);
+      console.error('❌ Error during authentication retry:', error);
       setAuthenticationFailed(true);
-      setLoadingText("Authentication error");
+      setLoadingText('Authentication error');
     }
   };
 
@@ -164,7 +164,7 @@ export default function SplashScreen() {
       (authenticationCompleted || !authenticationRequired)
     ) {
       const t = setTimeout(() => {
-        navigation.replace(hasUser ? "Dashboard" : "Welcome");
+        navigation.replace(hasUser ? 'Dashboard' : 'Welcome');
       }, 250); // slight pause to let users see 100%
       return () => clearTimeout(t);
     }
@@ -202,7 +202,7 @@ export default function SplashScreen() {
                   {
                     width: progressAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: ["0%", "100%"],
+                      outputRange: ['0%', '100%'],
                     }),
                   },
                 ]}
@@ -234,16 +234,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: spacing.xl,
   },
   centerContent: {
-    alignItems: "center",
-    width: "100%",
+    alignItems: 'center',
+    width: '100%',
   },
   logoContainer: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: spacing.xxl,
   },
   logo: {
@@ -253,52 +253,52 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[800],
     borderWidth: 2,
     borderColor: colors.neutral[700],
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.lg,
     ...shadows.medium,
   },
   title: {
     fontSize: fontSize.xxxl + 4,
-    fontWeight: "700",
+    fontWeight: '700',
     color: colors.white,
-    textAlign: "center",
+    textAlign: 'center',
     marginBottom: spacing.md,
     letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: fontSize.base,
     color: colors.neutral[400],
-    textAlign: "center",
-    fontWeight: "500",
+    textAlign: 'center',
+    fontWeight: '500',
   },
   loadingContainer: {
-    width: "100%",
-    alignItems: "center",
+    width: '100%',
+    alignItems: 'center',
   },
   progressBar: {
-    width: "100%",
+    width: '100%',
     height: 3,
     backgroundColor: colors.neutral[800],
     borderRadius: borderRadius.full,
-    overflow: "hidden",
+    overflow: 'hidden',
     marginBottom: spacing.md,
   },
   progressFill: {
-    height: "100%",
+    height: '100%',
     backgroundColor: colors.white,
     borderRadius: borderRadius.full,
   },
   loadingText: {
     fontSize: fontSize.sm,
     color: colors.neutral[500],
-    textAlign: "center",
-    fontWeight: "500",
+    textAlign: 'center',
+    fontWeight: '500',
   },
   retryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   retryButtonText: {
     fontSize: fontSize.sm,
     color: colors.white,
-    fontWeight: "600",
+    fontWeight: '600',
     marginLeft: spacing.xs,
   },
 });

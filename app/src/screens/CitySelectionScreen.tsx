@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo } from 'react';
 import {
   FlatList,
   SafeAreaView,
@@ -6,10 +6,10 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { Button, Input } from "../components/ui";
-import { borderRadius, colors, fontSize, spacing } from "../theme";
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Button, Input } from '../components/ui';
+import { borderRadius, colors, fontSize, spacing } from '../theme';
 
 interface City {
   id: string;
@@ -27,123 +27,123 @@ interface CitySelectionScreenProps {
 
 const MALAYSIAN_CITIES: City[] = [
   {
-    id: "kl",
-    name: "Kuala Lumpur",
-    state: "Federal Territory",
+    id: 'kl',
+    name: 'Kuala Lumpur',
+    state: 'Federal Territory',
     coordinates: { latitude: 3.139, longitude: 101.6869 },
   },
   {
-    id: "george-town",
-    name: "George Town",
-    state: "Penang",
+    id: 'george-town',
+    name: 'George Town',
+    state: 'Penang',
     coordinates: { latitude: 5.4164, longitude: 100.3327 },
   },
   {
-    id: "johor-bahru",
-    name: "Johor Bahru",
-    state: "Johor",
+    id: 'johor-bahru',
+    name: 'Johor Bahru',
+    state: 'Johor',
     coordinates: { latitude: 1.4927, longitude: 103.7414 },
   },
   {
-    id: "ipoh",
-    name: "Ipoh",
-    state: "Perak",
+    id: 'ipoh',
+    name: 'Ipoh',
+    state: 'Perak',
     coordinates: { latitude: 4.5975, longitude: 101.0901 },
   },
   {
-    id: "shah-alam",
-    name: "Shah Alam",
-    state: "Selangor",
+    id: 'shah-alam',
+    name: 'Shah Alam',
+    state: 'Selangor',
     coordinates: { latitude: 3.0733, longitude: 101.5185 },
   },
   {
-    id: "petaling-jaya",
-    name: "Petaling Jaya",
-    state: "Selangor",
+    id: 'petaling-jaya',
+    name: 'Petaling Jaya',
+    state: 'Selangor',
     coordinates: { latitude: 3.1073, longitude: 101.6067 },
   },
   {
-    id: "malacca-city",
-    name: "Malacca City",
-    state: "Malacca",
+    id: 'malacca-city',
+    name: 'Malacca City',
+    state: 'Malacca',
     coordinates: { latitude: 2.2055, longitude: 102.2502 },
   },
   {
-    id: "alor-setar",
-    name: "Alor Setar",
-    state: "Kedah",
+    id: 'alor-setar',
+    name: 'Alor Setar',
+    state: 'Kedah',
     coordinates: { latitude: 6.1248, longitude: 100.3678 },
   },
   {
-    id: "kota-kinabalu",
-    name: "Kota Kinabalu",
-    state: "Sabah",
+    id: 'kota-kinabalu',
+    name: 'Kota Kinabalu',
+    state: 'Sabah',
     coordinates: { latitude: 5.9804, longitude: 116.0735 },
   },
   {
-    id: "kuching",
-    name: "Kuching",
-    state: "Sarawak",
+    id: 'kuching',
+    name: 'Kuching',
+    state: 'Sarawak',
     coordinates: { latitude: 1.5535, longitude: 110.3593 },
   },
   {
-    id: "kuantan",
-    name: "Kuantan",
-    state: "Pahang",
+    id: 'kuantan',
+    name: 'Kuantan',
+    state: 'Pahang',
     coordinates: { latitude: 3.8077, longitude: 103.326 },
   },
   {
-    id: "kota-bharu",
-    name: "Kota Bharu",
-    state: "Kelantan",
+    id: 'kota-bharu',
+    name: 'Kota Bharu',
+    state: 'Kelantan',
     coordinates: { latitude: 6.1248, longitude: 102.2386 },
   },
   {
-    id: "kuala-terengganu",
-    name: "Kuala Terengganu",
-    state: "Terengganu",
+    id: 'kuala-terengganu',
+    name: 'Kuala Terengganu',
+    state: 'Terengganu',
     coordinates: { latitude: 5.3302, longitude: 103.1408 },
   },
   {
-    id: "seremban",
-    name: "Seremban",
-    state: "Negeri Sembilan",
+    id: 'seremban',
+    name: 'Seremban',
+    state: 'Negeri Sembilan',
     coordinates: { latitude: 2.7297, longitude: 101.9381 },
   },
   {
-    id: "putrajaya",
-    name: "Putrajaya",
-    state: "Federal Territory",
+    id: 'putrajaya',
+    name: 'Putrajaya',
+    state: 'Federal Territory',
     coordinates: { latitude: 2.9264, longitude: 101.6964 },
   },
   {
-    id: "cyberjaya",
-    name: "Cyberjaya",
-    state: "Selangor",
+    id: 'cyberjaya',
+    name: 'Cyberjaya',
+    state: 'Selangor',
     coordinates: { latitude: 2.9213, longitude: 101.6559 },
   },
   {
-    id: "klang",
-    name: "Klang",
-    state: "Selangor",
+    id: 'klang',
+    name: 'Klang',
+    state: 'Selangor',
     coordinates: { latitude: 3.0319, longitude: 101.4443 },
   },
   {
-    id: "subang-jaya",
-    name: "Subang Jaya",
-    state: "Selangor",
+    id: 'subang-jaya',
+    name: 'Subang Jaya',
+    state: 'Selangor',
     coordinates: { latitude: 3.1478, longitude: 101.5811 },
   },
   {
-    id: "ampang",
-    name: "Ampang",
-    state: "Selangor",
+    id: 'ampang',
+    name: 'Ampang',
+    state: 'Selangor',
     coordinates: { latitude: 3.1478, longitude: 101.7617 },
   },
   {
-    id: "kajang",
-    name: "Kajang",
-    state: "Selangor",
+    id: 'kajang',
+    name: 'Kajang',
+    state: 'Selangor',
     coordinates: { latitude: 2.9929, longitude: 101.7904 },
   },
 ];
@@ -151,16 +151,16 @@ const MALAYSIAN_CITIES: City[] = [
 const CitySelectionScreen: React.FC<CitySelectionScreenProps> = ({
   navigation,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
 
   const filteredCities = useMemo(() => {
     if (!searchQuery.trim()) return MALAYSIAN_CITIES;
 
     return MALAYSIAN_CITIES.filter(
-      (city) =>
+      city =>
         city.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        city.state.toLowerCase().includes(searchQuery.toLowerCase()),
+        city.state.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery]);
 
@@ -170,7 +170,7 @@ const CitySelectionScreen: React.FC<CitySelectionScreenProps> = ({
 
   const handleContinue = () => {
     if (selectedCity) {
-      navigation.navigate("Questionnaire", {
+      navigation.navigate('Questionnaire', {
         location: {
           latitude: selectedCity.coordinates.latitude,
           longitude: selectedCity.coordinates.longitude,
@@ -233,7 +233,7 @@ const CitySelectionScreen: React.FC<CitySelectionScreenProps> = ({
         <FlatList
           data={filteredCities}
           renderItem={renderCityItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           style={styles.cityList}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -264,9 +264,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: fontSize.lg,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.black,
   },
   placeholder: {
@@ -292,9 +292,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   cityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
   },
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   },
   cityName: {
     fontSize: fontSize.base,
-    fontWeight: "500",
+    fontWeight: '500',
     color: colors.black,
     marginBottom: spacing.xs,
   },

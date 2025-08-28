@@ -22,7 +22,10 @@ interface CacheManagerProps {
   onClose?: () => void;
 }
 
-const CacheManager: React.FC<CacheManagerProps> = ({ visible = true, onClose }) => {
+const CacheManager: React.FC<CacheManagerProps> = ({
+  visible = true,
+  onClose,
+}) => {
   const [stats, setStats] = useState<CacheStats>({
     totalFiles: 0,
     totalSize: 0,
@@ -100,9 +103,13 @@ const CacheManager: React.FC<CacheManagerProps> = ({ visible = true, onClose }) 
           onPress: async () => {
             try {
               setLoading(true);
-              const removedCount = await localStorageService.cleanupOldCache(30);
+              const removedCount =
+                await localStorageService.cleanupOldCache(30);
               await loadCacheStats();
-              Alert.alert('Success', `Removed ${removedCount} old cached avatars`);
+              Alert.alert(
+                'Success',
+                `Removed ${removedCount} old cached avatars`
+              );
             } catch (error) {
               console.error('Error cleaning up cache:', error);
               Alert.alert('Error', 'Failed to cleanup cache');
@@ -140,38 +147,44 @@ const CacheManager: React.FC<CacheManagerProps> = ({ visible = true, onClose }) 
           <>
             <View style={styles.statsContainer}>
               <Text style={styles.sectionTitle}>Cache Statistics</Text>
-              
+
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Cached Files:</Text>
                 <Text style={styles.statValue}>{stats.totalFiles}</Text>
               </View>
-              
+
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Total Size:</Text>
-                <Text style={styles.statValue}>{formatFileSize(stats.totalSize)}</Text>
+                <Text style={styles.statValue}>
+                  {formatFileSize(stats.totalSize)}
+                </Text>
               </View>
-              
+
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Oldest Cache:</Text>
-                <Text style={styles.statValue}>{formatDate(stats.oldestDownload)}</Text>
+                <Text style={styles.statValue}>
+                  {formatDate(stats.oldestDownload)}
+                </Text>
               </View>
-              
+
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Newest Cache:</Text>
-                <Text style={styles.statValue}>{formatDate(stats.newestDownload)}</Text>
+                <Text style={styles.statValue}>
+                  {formatDate(stats.newestDownload)}
+                </Text>
               </View>
             </View>
 
             <View style={styles.actionsContainer}>
               <Text style={styles.sectionTitle}>Cache Actions</Text>
-              
+
               <TouchableOpacity
                 style={[styles.actionButton, styles.refreshButton]}
                 onPress={loadCacheStats}
               >
                 <Text style={styles.actionButtonText}>Refresh Stats</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[styles.actionButton, styles.cleanupButton]}
                 onPress={handleCleanupOldCache}
@@ -179,7 +192,7 @@ const CacheManager: React.FC<CacheManagerProps> = ({ visible = true, onClose }) 
               >
                 <Text style={styles.actionButtonText}>Cleanup Old Cache</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[styles.actionButton, styles.clearButton]}
                 onPress={handleClearCache}
@@ -192,8 +205,9 @@ const CacheManager: React.FC<CacheManagerProps> = ({ visible = true, onClose }) 
             <View style={styles.infoContainer}>
               <Text style={styles.infoTitle}>About Avatar Caching</Text>
               <Text style={styles.infoText}>
-                Avatar files are cached locally to improve loading times and reduce data usage. 
-                Cached avatars load instantly without requiring an internet connection.
+                Avatar files are cached locally to improve loading times and
+                reduce data usage. Cached avatars load instantly without
+                requiring an internet connection.
               </Text>
               <Text style={styles.infoText}>
                 • New avatars are automatically cached after creation

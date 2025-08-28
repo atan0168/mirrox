@@ -1,5 +1,5 @@
-import { Bot, Palette, Zap } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import { Bot, Palette, Zap } from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -7,14 +7,14 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native";
-import { WebView } from "react-native-webview";
-import Loader from "../components/ui/Loader";
-import { UserProfile } from "../models/User";
-import { localStorageService } from "../services/LocalStorageService";
-import { readyPlayerMeApiService } from "../services/ReadyPlayerMeApiService";
-import { borderRadius, colors, fontSize, shadows, spacing } from "../theme";
-import { RPM_SUBDOMAIN } from "../constants";
+} from 'react-native';
+import { WebView } from 'react-native-webview';
+import Loader from '../components/ui/Loader';
+import { UserProfile } from '../models/User';
+import { localStorageService } from '../services/LocalStorageService';
+import { readyPlayerMeApiService } from '../services/ReadyPlayerMeApiService';
+import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
+import { RPM_SUBDOMAIN } from '../constants';
 
 // Replace 'demo' with your actual subdomain from Ready Player Me
 
@@ -29,8 +29,8 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isFrameReady, setIsFrameReady] = useState(false);
   const [showCreationOptions, setShowCreationOptions] = useState(true);
-  const [creationMethod, setCreationMethod] = useState<"api" | "iframe" | null>(
-    null,
+  const [creationMethod, setCreationMethod] = useState<'api' | 'iframe' | null>(
+    null
   );
   const webViewRef = useRef<WebView>(null);
 
@@ -41,8 +41,8 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
       const existingAvatarUrl = await localStorageService.getAvatarUrl();
       if (!mounted) return;
       if (existingAvatarUrl) {
-        console.log("Avatar already exists, navigating to dashboard");
-        navigation.navigate("Dashboard");
+        console.log('Avatar already exists, navigating to dashboard');
+        navigation.navigate('Dashboard');
         return;
       }
 
@@ -59,65 +59,65 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
   const handleWebViewMessage = async (event: any) => {
     try {
       const json = JSON.parse(event.nativeEvent.data);
-      console.log("Received message from ReadyPlayerMe:", json);
+      console.log('Received message from ReadyPlayerMe:', json);
 
       // Check for avatar export event
-      if (json.eventName === "v1.avatar.exported") {
+      if (json.eventName === 'v1.avatar.exported') {
         const url = json.data.url;
-        console.log("Avatar exported:", url);
+        console.log('Avatar exported:', url);
 
         // Save the avatar URL
         await localStorageService.saveAvatarUrl(url);
 
         // Navigate to dashboard
-        navigation.navigate("Dashboard");
+        navigation.navigate('Dashboard');
       }
 
       // Check for frame ready event
-      if (json.eventName === "v1.frame.ready") {
-        console.log("Frame ready");
+      if (json.eventName === 'v1.frame.ready') {
+        console.log('Frame ready');
         setIsFrameReady(true);
         setIsLoading(false);
 
         // Subscribe to all events
         webViewRef.current?.postMessage(
           JSON.stringify({
-            target: "readyplayerme",
-            type: "subscribe",
-            eventName: "v1.**",
-          }),
+            target: 'readyplayerme',
+            type: 'subscribe',
+            eventName: 'v1.**',
+          })
         );
 
         // TODO: You can send custom configuration based on user profile
         if (userProfile) {
           // Example: Set gender or other preferences based on user data
           // This would require additional user profile fields
-          console.log("User profile available for customization:", userProfile);
+          console.log('User profile available for customization:', userProfile);
         }
       }
 
       // Handle user set event (when user clicks "Next" in the creator)
-      if (json.eventName === "v1.user.set") {
-        console.log("User set event:", json.data);
+      if (json.eventName === 'v1.user.set') {
+        console.log('User set event:', json.data);
       }
 
       // Handle avatar loading events
-      if (json.eventName === "v1.avatar.loading") {
-        console.log("Avatar loading...");
+      if (json.eventName === 'v1.avatar.loading') {
+        console.log('Avatar loading...');
       }
     } catch (e) {
-      console.log("Error parsing message from ReadyPlayerMe iframe", e);
+      console.log('Error parsing message from ReadyPlayerMe iframe', e);
     }
   };
 
   const handleQuickCreate = async () => {
     if (!userProfile) {
-      Alert.alert("Error", "User profile not found");
+      Alert.alert('Error', 'User profile not found');
       return;
     }
 
     setIsLoading(true);
-    setCreationMethod("api");
+    setCreationMethod('api');
     setShowCreationOptions(false);
 
     try {
@@ -128,36 +128,36 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
       await localStorageService.saveAvatarUrl(avatarUrl);
 
       // Navigate to dashboard
-      navigation.navigate("Dashboard");
+      navigation.navigate('Dashboard');
     } catch (error) {
-      console.error("Error creating avatar via API:", error);
+      console.error('Error creating avatar via API:', error);
       Alert.alert(
-        "Error",
-        "Failed to create avatar automatically. Please try the custom creation option.",
+        'Error',
+        'Failed to create avatar automatically. Please try the custom creation option.',
         [
           {
-            text: "Try Custom Creation",
+            text: 'Try Custom Creation',
             onPress: () => {
-              setCreationMethod("iframe");
+              setCreationMethod('iframe');
               setShowCreationOptions(false);
               setIsLoading(false);
             },
           },
           {
-            text: "Retry",
+            text: 'Retry',
             onPress: () => {
               setIsLoading(false);
               setShowCreationOptions(true);
               setCreationMethod(null);
             },
           },
-        ],
+        ]
       );
     }
   };
 
   const handleCustomCreate = () => {
-    setCreationMethod("iframe");
+    setCreationMethod('iframe');
     setShowCreationOptions(false);
     setIsLoading(true);
   };
@@ -170,10 +170,10 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
 
     // You can add custom parameters here based on your needs
     if (userProfile?.gender) {
-      params.append("gender", userProfile.gender);
+      params.append('gender', userProfile.gender);
     }
-    params.append("bodyType", "fullbody");
-    params.append("language", "en");
+    params.append('bodyType', 'fullbody');
+    params.append('language', 'en');
 
     const queryString = params.toString();
     if (queryString) {
@@ -235,18 +235,18 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>
-          {creationMethod === "api"
-            ? "Creating Your Avatar"
-            : "Customize Your Avatar"}
+          {creationMethod === 'api'
+            ? 'Creating Your Avatar'
+            : 'Customize Your Avatar'}
         </Text>
         <Text style={styles.subtitle}>
-          {creationMethod === "api"
-            ? "Please wait while we generate your personalized avatar..."
-            : "Design your digital twin that will represent you in the app"}
+          {creationMethod === 'api'
+            ? 'Please wait while we generate your personalized avatar...'
+            : 'Design your digital twin that will represent you in the app'}
         </Text>
       </View>
 
-      {creationMethod === "api" ? (
+      {creationMethod === 'api' ? (
         <View style={styles.apiCreationContainer}>
           <Loader />
           <Text style={styles.loadingText}>Generating your avatar...</Text>
@@ -277,31 +277,31 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
                 setIsLoading(false);
               }
             }}
-            onError={(syntheticEvent) => {
+            onError={syntheticEvent => {
               const { nativeEvent } = syntheticEvent;
-              console.warn("WebView error: ", nativeEvent.description);
+              console.warn('WebView error: ', nativeEvent.description);
               setIsLoading(false);
               Alert.alert(
-                "Error",
-                "Failed to load avatar creator. Please check your internet connection and try again.",
+                'Error',
+                'Failed to load avatar creator. Please check your internet connection and try again.',
                 [
                   {
-                    text: "Retry",
+                    text: 'Retry',
                     onPress: () => {
                       setIsLoading(true);
                       setIsFrameReady(false);
                       webViewRef.current?.reload();
                     },
                   },
-                ],
+                ]
               );
             }}
-            onHttpError={(syntheticEvent) => {
+            onHttpError={syntheticEvent => {
               const { nativeEvent } = syntheticEvent;
               console.warn(
-                "HTTP error response",
+                'HTTP error response',
                 nativeEvent.statusCode,
-                nativeEvent.url,
+                nativeEvent.url
               );
             }}
             // Additional WebView props for better performance
@@ -316,13 +316,13 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
 
       <View style={styles.footer}>
         <View style={styles.footerRow}>
-          {creationMethod === "api" && (
+          {creationMethod === 'api' && (
             <Bot size={16} color={colors.neutral[600]} />
           )}
           <Text style={styles.footerText}>
-            {creationMethod === "api"
-              ? "Creating your perfect avatar..."
-              : "Tip: Take your time to customize your avatar. It will represent you throughout the app!"}
+            {creationMethod === 'api'
+              ? 'Creating your perfect avatar...'
+              : 'Tip: Take your time to customize your avatar. It will represent you throughout the app!'}
           </Text>
         </View>
       </View>
@@ -344,14 +344,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.xxl,
-    fontWeight: "700",
-    textAlign: "center",
+    fontWeight: '700',
+    textAlign: 'center',
     marginBottom: spacing.xs,
     color: colors.black,
   },
   subtitle: {
     fontSize: fontSize.base,
-    textAlign: "center",
+    textAlign: 'center',
     color: colors.neutral[600],
     lineHeight: 22,
     marginTop: spacing.md,
@@ -359,33 +359,33 @@ const styles = StyleSheet.create({
   },
   webviewContainer: {
     flex: 1,
-    position: "relative",
+    position: 'relative',
   },
   webview: {
     flex: 1,
     backgroundColor: colors.white,
   },
   loadingOverlay: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1000,
   },
   loadingText: {
     marginTop: spacing.md,
     fontSize: fontSize.base,
     color: colors.neutral[600],
-    textAlign: "center",
+    textAlign: 'center',
   },
   optionsContainer: {
     flex: 1,
     padding: spacing.lg,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   optionCard: {
     backgroundColor: colors.white,
@@ -403,21 +403,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[100],
     borderWidth: 1,
     borderColor: colors.neutral[200],
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.md,
-    alignSelf: "center",
+    alignSelf: 'center',
   },
   optionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: "600",
-    textAlign: "center",
+    fontWeight: '600',
+    textAlign: 'center',
     marginBottom: spacing.xs,
     color: colors.black,
   },
   optionDescription: {
     fontSize: fontSize.sm,
-    textAlign: "center",
+    textAlign: 'center',
     color: colors.neutral[600],
     lineHeight: 20,
     marginBottom: spacing.lg,
@@ -427,23 +427,23 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
-    alignItems: "center",
+    alignItems: 'center',
   },
   optionButtonText: {
     color: colors.white,
     fontSize: fontSize.base,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   apiCreationContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: spacing.xl,
   },
   loadingSubtext: {
     fontSize: fontSize.sm,
     color: colors.neutral[500],
-    textAlign: "center",
+    textAlign: 'center',
     marginTop: spacing.xs,
     lineHeight: 20,
   },
@@ -452,17 +452,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.neutral[200],
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   footerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
   },
   footerText: {
     fontSize: fontSize.sm,
-    textAlign: "center",
+    textAlign: 'center',
     color: colors.neutral[500],
     lineHeight: 20,
   },

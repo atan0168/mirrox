@@ -195,19 +195,19 @@ interface UserProfile {
     latitude: number;
     longitude: number;
   };
-  commuteMode: "car" | "transit" | "wfh" | "bike" | "walk";
+  commuteMode: 'car' | 'transit' | 'wfh' | 'bike' | 'walk';
   sleepHours: number;
-  gender: "male" | "female";
-  skinTone: "light" | "medium" | "dark";
+  gender: 'male' | 'female';
+  skinTone: 'light' | 'medium' | 'dark';
   createdAt: string; // ISO 8601 date string
   schemaVersion?: number; // For future data migrations
   // Optional fields for future avatar customization
-  ageRange?: "young" | "adult" | "senior";
-  preferredStyle?: "casual" | "professional" | "sporty";
+  ageRange?: 'young' | 'adult' | 'senior';
+  preferredStyle?: 'casual' | 'professional' | 'sporty';
   // Security settings
   security?: {
     requireAuthentication: boolean;
-    authMethod?: "pin" | "biometric" | "both";
+    authMethod?: 'pin' | 'biometric' | 'both';
     lastAuthenticatedAt?: string;
   };
 }

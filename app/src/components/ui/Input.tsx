@@ -47,7 +47,7 @@ export const Input: React.FC<InputProps> = ({
           {label}
         </Text>
       )}
-      
+
       <View
         style={[
           styles.inputContainer,
@@ -56,12 +56,8 @@ export const Input: React.FC<InputProps> = ({
           hasError && styles.errorContainer,
         ]}
       >
-        {leftElement && (
-          <View style={styles.leftElement}>
-            {leftElement}
-          </View>
-        )}
-        
+        {leftElement && <View style={styles.leftElement}>{leftElement}</View>}
+
         <TextInput
           style={[
             styles.input,
@@ -74,14 +70,12 @@ export const Input: React.FC<InputProps> = ({
           placeholderTextColor={colors.neutral[400]}
           {...textInputProps}
         />
-        
+
         {rightElement && (
-          <View style={styles.rightElement}>
-            {rightElement}
-          </View>
+          <View style={styles.rightElement}>{rightElement}</View>
         )}
       </View>
-      
+
       {(error || helperText) && (
         <Text
           style={[

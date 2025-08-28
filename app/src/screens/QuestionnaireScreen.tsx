@@ -1,14 +1,14 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from "react-native";
-import { MapPin } from "lucide-react-native";
-import { CommutePicker } from "../components/CommutePicker";
-import { SleepSlider } from "../components/SleepSlider";
-import { GenderPicker } from "../components/GenderPicker";
-import { SkinTonePicker, SkinTone } from "../components/SkinTonePicker";
-import { Button, Card, Badge } from "../components/ui";
-import { localStorageService } from "../services/LocalStorageService";
-import { UserProfile } from "../models/User";
-import { colors, spacing, fontSize, borderRadius } from "../theme";
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import { MapPin } from 'lucide-react-native';
+import { CommutePicker } from '../components/CommutePicker';
+import { SleepSlider } from '../components/SleepSlider';
+import { GenderPicker } from '../components/GenderPicker';
+import { SkinTonePicker, SkinTone } from '../components/SkinTonePicker';
+import { Button, Card, Badge } from '../components/ui';
+import { localStorageService } from '../services/LocalStorageService';
+import { UserProfile } from '../models/User';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 interface QuestionnaireScreenProps {
   route: {
@@ -25,11 +25,11 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
 }) => {
   const { location } = route.params;
   const [commuteMode, setCommuteMode] = useState<
-    "car" | "transit" | "wfh" | "bike" | "walk"
-  >("wfh");
+    'car' | 'transit' | 'wfh' | 'bike' | 'walk'
+  >('wfh');
   const [sleepHours, setSleepHours] = useState<number>(7);
-  const [gender, setGender] = useState<"male" | "female">("male");
-  const [skinTone, setSkinTone] = useState<SkinTone>("medium");
+  const [gender, setGender] = useState<'male' | 'female'>('male');
+  const [skinTone, setSkinTone] = useState<SkinTone>('medium');
 
   const handleCompleteOnboarding = () => {
     // If no location was provided, use a default location (you could show a city picker here)
@@ -53,7 +53,7 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
     })();
 
     // Navigate to a temporary loading screen while we fetch API data
-    navigation.navigate("GeneratingTwin");
+    navigation.navigate('GeneratingTwin');
   };
 
   return (
@@ -81,10 +81,7 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
           )}
 
           <Card style={styles.formCard}>
-            <GenderPicker
-              selectedValue={gender}
-              onValueChange={setGender}
-            />
+            <GenderPicker selectedValue={gender} onValueChange={setGender} />
             <View style={styles.separator} />
             <SkinTonePicker
               selectedValue={skinTone}
@@ -128,19 +125,19 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   header: {
-    alignItems: "center",
+    alignItems: 'center',
     marginBottom: spacing.md,
   },
   title: {
     fontSize: fontSize.xxxl,
-    fontWeight: "700",
-    textAlign: "center",
+    fontWeight: '700',
+    textAlign: 'center',
     marginBottom: spacing.xs,
     color: colors.black,
   },
   subtitle: {
     fontSize: fontSize.base,
-    textAlign: "center",
+    textAlign: 'center',
     color: colors.neutral[600],
     lineHeight: 24,
   },
@@ -148,9 +145,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   locationNoticeContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.sm,
   },
   locationIcon: {
@@ -158,13 +155,13 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: borderRadius.full,
     backgroundColor: colors.neutral[100],
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   locationNoticeText: {
     color: colors.neutral[700],
     fontSize: fontSize.sm,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   formCard: {
     padding: spacing.lg,

@@ -82,10 +82,10 @@ The React Native app now uses `BackendApiService` instead of direct OpenAQ calls
 
 ```typescript
 // OLD: Direct OpenAQ API calls
-import { apiService } from "./ApiService"; // Complex, rate-limited OpenAQ client
+import { apiService } from './ApiService'; // Complex, rate-limited OpenAQ client
 
 // NEW: Simple backend API calls
-import { backendApiService } from "./BackendApiService"; // Clean, simple HTTP client
+import { backendApiService } from './BackendApiService'; // Clean, simple HTTP client
 ```
 
 ### Updated ApiService
@@ -117,8 +117,8 @@ CACHE_TTL_LOCATION_SEARCH=3600000
 ```typescript
 // BackendApiService automatically detects environment
 const API_BASE_URL = __DEV__
-  ? "http://localhost:3000/api" // Development
-  : "https://your-api.com/api"; // Production
+  ? 'http://localhost:3000/api' // Development
+  : 'https://your-api.com/api'; // Production
 ```
 
 ## Benefits

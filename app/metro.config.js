@@ -1,5 +1,5 @@
 // metro.config.js
-const { getDefaultConfig } = require("expo/metro-config");
+const { getDefaultConfig } = require('expo/metro-config');
 
 module.exports = (async () => {
   // 1. Get the default Expo configuration.
@@ -13,15 +13,17 @@ module.exports = (async () => {
   // 3. Add 'svg' to sourceExts and remove it from assetExts.
   //    This tells Metro to treat '.svg' files as source code, not static assets.
   //    Also add 'fbx' and 'glb' to assetExts for 3D model support.
-  const updatedAssetExts = assetExts.filter((ext) => ext !== "svg").concat(['fbx', 'glb', 'gltf']);
-  const updatedSourceExts = [...sourceExts, "svg"];
+  const updatedAssetExts = assetExts
+    .filter(ext => ext !== 'svg')
+    .concat(['fbx', 'glb', 'gltf']);
+  const updatedSourceExts = [...sourceExts, 'svg'];
 
   // 4. Return the merged configuration.
   return {
     ...defaultConfig,
     transformer: {
       ...defaultConfig.transformer,
-      babelTransformerPath: require.resolve("react-native-svg-transformer"),
+      babelTransformerPath: require.resolve('react-native-svg-transformer'),
     },
     resolver: {
       ...defaultConfig.resolver,
@@ -29,7 +31,7 @@ module.exports = (async () => {
       sourceExts: updatedSourceExts,
       // Force all Three.js imports to use the same instance
       alias: {
-        'three': require.resolve('three'),
+        three: require.resolve('three'),
         'three/src/Three': require.resolve('three'),
         'three/src/Three.js': require.resolve('three'),
       },

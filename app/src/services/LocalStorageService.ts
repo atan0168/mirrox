@@ -2,19 +2,23 @@ import { MMKV } from 'react-native-mmkv';
 import * as FileSystem from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
 import * as Keychain from 'react-native-keychain';
-import { UserProfile } from "../models/User";
-import { AVATAR_CACHE_KEY, AVATAR_URL_KEY, USER_PROFILE_KEY } from '../constants';
+import { UserProfile } from '../models/User';
+import {
+  AVATAR_CACHE_KEY,
+  AVATAR_URL_KEY,
+  USER_PROFILE_KEY,
+} from '../constants';
 
 /**
  * LocalStorageService - Encrypted storage service using MMKV
- * 
+ *
  * Features:
  * - Fast, efficient key-value storage using MMKV
  * - AES-256 encryption for all stored data
  * - Secure encryption key management using iOS Keychain/Android Keystore
  * - Cryptographically secure key generation using expo-crypto
  * - Avatar caching with file system integration
- * 
+ *
  * Security:
  * - Encryption key is securely stored in iOS Keychain/Android Keystore
  * - Hardware-backed security when available
@@ -46,13 +50,13 @@ export class LocalStorageService {
     try {
       // Get or generate encryption key from secure storage
       const encryptionKey = await this.getOrGenerateEncryptionKey();
-      
+
       // Create encrypted storage
       this.storage = new MMKV({
         id: 'encrypted-storage',
         encryptionKey: encryptionKey,
       });
-      
+
       await this.init();
     } catch (error) {
       console.error('Failed to initialize secure storage:', error);
@@ -67,8 +71,10 @@ export class LocalStorageService {
   private async getOrGenerateEncryptionKey(): Promise<string> {
     try {
       // Try to get existing key from secure storage
-      const credentials = await Keychain.getInternetCredentials(ENCRYPTION_KEY_SERVICE);
-      
+      const credentials = await Keychain.getInternetCredentials(
+        ENCRYPTION_KEY_SERVICE
+      );
+
       if (credentials && credentials.password) {
         console.log('Retrieved existing encryption key from secure storage');
         return credentials.password;
@@ -79,7 +85,7 @@ export class LocalStorageService {
 
     // Generate a new encryption key
     const encryptionKey = await this.generateRandomKey();
-    
+
     try {
       // Store in secure storage with hardware backing when available
       // Note: No access control by default - authentication is optional
@@ -94,7 +100,10 @@ export class LocalStorageService {
       );
       console.log('Generated and stored new encryption key in secure storage');
     } catch (error) {
-      console.warn('Failed to store in secure hardware, falling back to software storage:', error);
+      console.warn(
+        'Failed to store in secure hardware, falling back to software storage:',
+        error
+      );
       // Fallback to software-only storage
       await Keychain.setInternetCredentials(
         ENCRYPTION_KEY_SERVICE,
@@ -105,7 +114,7 @@ export class LocalStorageService {
         }
       );
     }
-    
+
     return encryptionKey;
   }
 
@@ -114,26 +123,39 @@ export class LocalStorageService {
       // Use expo-crypto for cryptographically secure random generation
       // Generate 32 bytes (256 bits) for AES-256 encryption key
       const randomBytes = await Crypto.getRandomBytesAsync(32);
-      
+
       // Convert Uint8Array to hex string
-      return Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+      return Array.from(randomBytes, byte =>
+        byte.toString(16).padStart(2, '0')
+      ).join('');
     } catch (error) {
-      console.error('Failed to generate secure random key with expo-crypto:', error);
-      
+      console.error(
+        'Failed to generate secure random key with expo-crypto:',
+        error
+      );
+
       // Fallback: Use Web Crypto API if available
       const randomBytes = new Uint8Array(32);
-      
-      if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.getRandomValues) {
+
+      if (
+        typeof globalThis !== 'undefined' &&
+        globalThis.crypto &&
+        globalThis.crypto.getRandomValues
+      ) {
         globalThis.crypto.getRandomValues(randomBytes);
         console.warn('Using Web Crypto API fallback for key generation');
       } else {
         // Last resort fallback with warning
-        console.error('No secure random generation available! Using insecure fallback.');
+        console.error(
+          'No secure random generation available! Using insecure fallback.'
+        );
         throw new Error('Secure random generation not available');
       }
-      
+
       // Convert to hex string
-      return Array.from(randomBytes, byte => byte.toString(16).padStart(2, '0')).join('');
+      return Array.from(randomBytes, byte =>
+        byte.toString(16).padStart(2, '0')
+      ).join('');
     }
   }
 
@@ -166,13 +188,18 @@ export class LocalStorageService {
     return cached ? JSON.parse(cached) : {};
   }
 
-  private async setCachedAvatarsData(data: Record<string, CachedAvatar>): Promise<void> {
+  private async setCachedAvatarsData(
+    data: Record<string, CachedAvatar>
+  ): Promise<void> {
     await this.setItem(AVATAR_CACHE_KEY, JSON.stringify(data));
   }
 
   public async saveUserProfile(profile: UserProfile): Promise<void> {
     try {
-      const withVersion = { ...(profile as any), schemaVersion: profile.schemaVersion || CURRENT_SCHEMA_VERSION };
+      const withVersion = {
+        ...(profile as any),
+        schemaVersion: profile.schemaVersion || CURRENT_SCHEMA_VERSION,
+      };
       await this.setItem(USER_PROFILE_KEY, JSON.stringify(withVersion));
     } catch (error) {
       console.error('Failed to save user profile:', error);
@@ -237,7 +264,7 @@ export class LocalStorageService {
   public async authenticateUser(): Promise<boolean> {
     try {
       const profile = await this.getUserProfile();
-      
+
       // If authentication is not required, return true
       if (!profile?.security?.requireAuthentication) {
         return true;
@@ -247,11 +274,12 @@ export class LocalStorageService {
       // We'll use a separate keychain entry with access control for this
       const authKeyService = 'MirroxAppAuth';
       const authKeyAccount = 'auth_verification';
-      
+
       try {
         // Try to access the authentication key (this will prompt for biometric/PIN)
-        const authCredentials = await Keychain.getInternetCredentials(authKeyService);
-        
+        const authCredentials =
+          await Keychain.getInternetCredentials(authKeyService);
+
         if (authCredentials && authCredentials.password) {
           // Update last authenticated timestamp
           if (profile.security) {
@@ -260,24 +288,25 @@ export class LocalStorageService {
           }
           return true;
         }
-        
+
         // If no auth key exists, create one (this will also prompt for authentication)
         await Keychain.setInternetCredentials(
           authKeyService,
           authKeyAccount,
           'authenticated',
           {
-            accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
+            accessControl:
+              Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
             securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
           }
         );
-        
+
         // Update last authenticated timestamp
         if (profile.security) {
           profile.security.lastAuthenticatedAt = new Date().toISOString();
           await this.saveUserProfile(profile);
         }
-        
+
         return true;
       } catch (authError) {
         console.log('Authentication failed or cancelled:', authError);
@@ -299,22 +328,26 @@ export class LocalStorageService {
         profile.security = {
           requireAuthentication: settings.requireAuthentication,
           authMethod: settings.authMethod || 'biometric',
-          lastAuthenticatedAt: settings.requireAuthentication ? undefined : profile.security?.lastAuthenticatedAt,
+          lastAuthenticatedAt: settings.requireAuthentication
+            ? undefined
+            : profile.security?.lastAuthenticatedAt,
         };
         await this.saveUserProfile(profile);
-        
+
         // If enabling authentication, set up the auth keychain entry
         if (settings.requireAuthentication) {
           const authKeyService = 'MirroxAppAuth';
           const authKeyAccount = 'auth_verification';
-          
+
           try {
             await Keychain.setInternetCredentials(
               authKeyService,
               authKeyAccount,
               'authenticated',
               {
-                accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
+                accessControl:
+                  Keychain.ACCESS_CONTROL
+                    .BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
                 securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
               }
             );
@@ -332,7 +365,11 @@ export class LocalStorageService {
         } else {
           // If disabling authentication, remove the auth keychain entry
           try {
-            await Keychain.setInternetCredentials('MirroxAppAuth', 'auth_verification', '');
+            await Keychain.setInternetCredentials(
+              'MirroxAppAuth',
+              'auth_verification',
+              ''
+            );
           } catch (error) {
             console.warn('Failed to remove auth keychain entry:', error);
           }
@@ -351,20 +388,24 @@ export class LocalStorageService {
     try {
       // Clear encrypted storage
       this.storage.clearAll();
-      
+
       // Clear secure storage (this makes old encrypted data unrecoverable)
       try {
         // Delete the stored credentials by setting them to empty and then trying to delete
-        await Keychain.setInternetCredentials(ENCRYPTION_KEY_SERVICE, ENCRYPTION_KEY_ACCOUNT, '');
+        await Keychain.setInternetCredentials(
+          ENCRYPTION_KEY_SERVICE,
+          ENCRYPTION_KEY_ACCOUNT,
+          ''
+        );
         // Then attempt to reset (if the API signature is correct)
         // Note: This might need adjustment based on actual keychain API
       } catch (error) {
         console.warn('Failed to clear keychain credentials:', error);
       }
-      
+
       // Reinitialize with new encryption key
       await this.initializeStorage();
-      
+
       console.log('Complete reset performed - new encryption key generated');
     } catch (error) {
       console.error('Failed to perform complete reset:', error);
@@ -376,7 +417,9 @@ export class LocalStorageService {
    */
   public async isEncrypted(): Promise<boolean> {
     try {
-      const credentials = await Keychain.getInternetCredentials(ENCRYPTION_KEY_SERVICE);
+      const credentials = await Keychain.getInternetCredentials(
+        ENCRYPTION_KEY_SERVICE
+      );
       return credentials !== false;
     } catch (error) {
       return false;
@@ -406,7 +449,7 @@ export class LocalStorageService {
   public async getCachedAvatarPath(avatarId: string): Promise<string | null> {
     try {
       await this.ready;
-      
+
       // Check cache data for entry
       const cachedAvatars = await this.getCachedAvatarsData();
       const cached = cachedAvatars[avatarId];
@@ -434,10 +477,12 @@ export class LocalStorageService {
   /**
    * Download and cache a GLB file from URL
    */
-  public async downloadAndCacheAvatar(remoteUrl: string): Promise<string | null> {
+  public async downloadAndCacheAvatar(
+    remoteUrl: string
+  ): Promise<string | null> {
     try {
       await this.ready;
-      
+
       const avatarId = this.extractAvatarId(remoteUrl);
       if (!avatarId) {
         console.error('Could not extract avatar ID from URL:', remoteUrl);
@@ -451,19 +496,27 @@ export class LocalStorageService {
       }
 
       console.log(`Downloading avatar ${avatarId} from ${remoteUrl}`);
-      
+
       const localPath = `${FileSystem.documentDirectory}avatars/${avatarId}.glb`;
-      
+
       // Download the file
-      const downloadResult = await FileSystem.downloadAsync(remoteUrl, localPath);
-      
+      const downloadResult = await FileSystem.downloadAsync(
+        remoteUrl,
+        localPath
+      );
+
       if (downloadResult.status !== 200) {
-        throw new Error(`Download failed with status: ${downloadResult.status}`);
+        throw new Error(
+          `Download failed with status: ${downloadResult.status}`
+        );
       }
 
       // Get file info for size
       const fileInfo = await FileSystem.getInfoAsync(localPath);
-      const fileSize = (fileInfo.exists && !fileInfo.isDirectory) ? (fileInfo as any).size || 0 : 0;
+      const fileSize =
+        fileInfo.exists && !fileInfo.isDirectory
+          ? (fileInfo as any).size || 0
+          : 0;
 
       // Save to cache
       const cachedAvatars = await this.getCachedAvatarsData();
@@ -472,7 +525,7 @@ export class LocalStorageService {
         localPath,
         remoteUrl,
         downloadedAt: Date.now(),
-        fileSize
+        fileSize,
       };
       await this.setCachedAvatarsData(cachedAvatars);
 
@@ -487,10 +540,12 @@ export class LocalStorageService {
   /**
    * Get avatar URL with caching - checks cache first, downloads if needed
    */
-  public async getAvatarWithCaching(remoteUrl?: string): Promise<string | null> {
+  public async getAvatarWithCaching(
+    remoteUrl?: string
+  ): Promise<string | null> {
     try {
       // First try to get from saved URL if no remote URL provided
-      const url = remoteUrl || await this.getAvatarUrl();
+      const url = remoteUrl || (await this.getAvatarUrl());
       if (!url) {
         return null;
       }
@@ -512,7 +567,7 @@ export class LocalStorageService {
       return downloadedPath || url; // Fallback to remote URL if download fails
     } catch (error) {
       console.error('Error getting avatar with caching:', error);
-      return remoteUrl || await this.getAvatarUrl();
+      return remoteUrl || (await this.getAvatarUrl());
     }
   }
 
@@ -522,7 +577,7 @@ export class LocalStorageService {
   public async removeCachedAvatar(avatarId: string): Promise<void> {
     try {
       await this.ready;
-      
+
       // Get cache entry
       const cachedAvatars = await this.getCachedAvatarsData();
       const cached = cachedAvatars[avatarId];
@@ -551,7 +606,7 @@ export class LocalStorageService {
   public async clearAvatarCache(): Promise<void> {
     try {
       await this.ready;
-      
+
       // Get all cached avatars
       const cachedAvatars = await this.getCachedAvatarsData();
       const avatarEntries = Object.values(cachedAvatars);
@@ -564,13 +619,16 @@ export class LocalStorageService {
             await FileSystem.deleteAsync(cached.localPath);
           }
         } catch (error) {
-          console.warn(`Failed to delete cached file: ${cached.localPath}`, error);
+          console.warn(
+            `Failed to delete cached file: ${cached.localPath}`,
+            error
+          );
         }
       }
 
       // Clear cache data
       await this.setCachedAvatarsData({});
-      
+
       console.log(`Cleared ${avatarEntries.length} cached avatars`);
     } catch (error) {
       console.error('Error clearing avatar cache:', error);
@@ -588,23 +646,35 @@ export class LocalStorageService {
   }> {
     try {
       await this.ready;
-      
+
       const cachedAvatars = await this.getCachedAvatarsData();
       const avatarEntries = Object.values(cachedAvatars);
 
       const totalFiles = avatarEntries.length;
-      const totalSize = avatarEntries.reduce((sum: number, item: CachedAvatar) => sum + item.fileSize, 0);
-      const downloadTimes = avatarEntries.map((item: CachedAvatar) => item.downloadedAt);
-      
+      const totalSize = avatarEntries.reduce(
+        (sum: number, item: CachedAvatar) => sum + item.fileSize,
+        0
+      );
+      const downloadTimes = avatarEntries.map(
+        (item: CachedAvatar) => item.downloadedAt
+      );
+
       return {
         totalFiles,
         totalSize,
-        oldestDownload: downloadTimes.length > 0 ? Math.min(...downloadTimes) : null,
-        newestDownload: downloadTimes.length > 0 ? Math.max(...downloadTimes) : null,
+        oldestDownload:
+          downloadTimes.length > 0 ? Math.min(...downloadTimes) : null,
+        newestDownload:
+          downloadTimes.length > 0 ? Math.max(...downloadTimes) : null,
       };
     } catch (error) {
       console.error('Error getting cache stats:', error);
-      return { totalFiles: 0, totalSize: 0, oldestDownload: null, newestDownload: null };
+      return {
+        totalFiles: 0,
+        totalSize: 0,
+        oldestDownload: null,
+        newestDownload: null,
+      };
     }
   }
 
@@ -614,9 +684,9 @@ export class LocalStorageService {
   public async cleanupOldCache(maxAgeInDays: number = 30): Promise<number> {
     try {
       await this.ready;
-      
-      const cutoffTime = Date.now() - (maxAgeInDays * 24 * 60 * 60 * 1000);
-      
+
+      const cutoffTime = Date.now() - maxAgeInDays * 24 * 60 * 60 * 1000;
+
       // Get old entries
       const cachedAvatars = await this.getCachedAvatarsData();
       const oldEntries = Object.values(cachedAvatars).filter(

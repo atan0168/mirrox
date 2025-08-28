@@ -1,18 +1,18 @@
-import { Router } from "express";
-import airQualityRoutes from "./airQuality";
+import { Router } from 'express';
+import airQualityRoutes from './airQuality';
 
 const router = Router();
 
 // API Routes
-router.use("/air-quality", airQualityRoutes);
+router.use('/air-quality', airQualityRoutes);
 
 // General health check
-router.get("/health", (req, res) => {
+router.get('/health', (req, res) => {
   res.json({
     success: true,
-    message: "Digital Twin Backend API is running",
+    message: 'Digital Twin Backend API is running',
     timestamp: new Date().toISOString(),
-    version: "1.0.0",
+    version: '1.0.0',
   });
 });
 

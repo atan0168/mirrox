@@ -42,7 +42,7 @@ export interface AQICNData {
   classification?: string;
   colorCode?: string;
   healthAdvice?: string;
-  source?: "aqicn";
+  source?: 'aqicn';
   timestamp?: string;
   stationUrl?: string;
 }
@@ -89,7 +89,7 @@ export interface AirQualityData {
   classification?: string;
   colorCode?: string;
   healthAdvice?: string;
-  source?: "openaq" | "aqicn" | "myeqms";
+  source?: 'openaq' | 'aqicn' | 'myeqms';
   timestamp?: string;
   stationUrl?: string;
   attributions?: Array<{
@@ -219,7 +219,7 @@ export interface MyEQMSResponse {
 
 // Unified air quality data structure
 export interface UnifiedAirQualityData {
-  source: "openaq" | "myeqms";
+  source: 'openaq' | 'myeqms';
   stationId: string;
   location: {
     latitude: number;

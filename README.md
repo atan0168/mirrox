@@ -5,12 +5,14 @@ A React Native Expo app that creates a "digital twin" of the user to promote wel
 ## 🚀 Quick Start
 
 1. **Install dependencies**:
+
    ```bash
    cd app
    npm install
    ```
 
 2. **Start the development server**:
+
    ```bash
    npx expo start
    ```
@@ -22,18 +24,20 @@ A React Native Expo app that creates a "digital twin" of the user to promote wel
 ## 📱 App Flow
 
 1. **Welcome Screen** - Requests location permission
-2. **Questionnaire** - Collects sleep hours and commute preferences  
+2. **Questionnaire** - Collects sleep hours and commute preferences
 3. **Generating Twin** - Loading screen with progress indicators
 4. **Dashboard** - Shows personalized avatar and health insights
 
 ## 🏗️ Architecture
 
 ### Privacy-First Design
+
 - **No PII stored on backend** - All user data stays on device
 - **Local storage only** - Uses MMKV for fast, encrypted local storage
 - **Backend as proxy** - Server only proxies external API calls
 
 ### Tech Stack
+
 - **React Native + Expo** - Cross-platform mobile development
 - **TypeScript** - Type safety and better DX
 - **MMKV** - Fast local storage
@@ -69,7 +73,7 @@ src/
 ✅ **Local data persistence** using MMKV  
 ✅ **Dynamic avatar** based on sleep and environment  
 ✅ **Health insights** from user lifestyle data  
-✅ **Mock air quality integration** (ready for real API)  
+✅ **Mock air quality integration** (ready for real API)
 
 ## 🛠️ Next Steps
 
@@ -104,6 +108,7 @@ src/
 ## 🧪 Development
 
 The app is set up with:
+
 - Hot reloading for fast development
 - TypeScript for type safety
 - Modular architecture for easy testing
@@ -120,4 +125,4 @@ When ready to connect the real backend:
 
 ---
 
-*Built with privacy-first principles and user wellness in mind* 🌱
+_Built with privacy-first principles and user wellness in mind_ 🌱

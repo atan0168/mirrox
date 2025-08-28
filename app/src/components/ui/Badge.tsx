@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 
 export interface BadgeProps {
@@ -37,12 +31,7 @@ export const Badge: React.FC<BadgeProps> = ({
     >
       {typeof children === 'string' ? (
         <Text
-          style={[
-            styles.text,
-            sizeStyles.text,
-            variantStyles.text,
-            textStyle,
-          ]}
+          style={[styles.text, sizeStyles.text, variantStyles.text, textStyle]}
         >
           {children}
         </Text>

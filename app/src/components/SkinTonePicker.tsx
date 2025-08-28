@@ -1,8 +1,8 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { colors, spacing, fontSize, borderRadius } from "../theme";
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
 
-export type SkinTone = "light" | "medium" | "dark";
+export type SkinTone = 'light' | 'medium' | 'dark';
 
 interface SkinTonePickerProps {
   selectedValue: SkinTone;
@@ -15,19 +15,19 @@ export const SkinTonePicker: React.FC<SkinTonePickerProps> = ({
 }) => {
   const options: { value: SkinTone; label: string; color: string }[] = [
     {
-      value: "light",
-      label: "Light",
-      color: "#F7D2A7",
+      value: 'light',
+      label: 'Light',
+      color: '#F7D2A7',
     },
     {
-      value: "medium",
-      label: "Medium",
-      color: "#E2A868",
+      value: 'medium',
+      label: 'Medium',
+      color: '#E2A868',
     },
     {
-      value: "dark",
-      label: "Dark",
-      color: "#8B4513",
+      value: 'dark',
+      label: 'Dark',
+      color: '#8B4513',
     },
   ];
 
@@ -38,28 +38,29 @@ export const SkinTonePicker: React.FC<SkinTonePickerProps> = ({
         Choose the skin tone that best represents you
       </Text>
       <View style={styles.optionsContainer}>
-        {options.map((option) => {
+        {options.map(option => {
           const isSelected = selectedValue === option.value;
-          
+
           return (
             <TouchableOpacity
               key={option.value}
-              style={[
-                styles.option,
-                isSelected && styles.selectedOption,
-              ]}
+              style={[styles.option, isSelected && styles.selectedOption]}
               onPress={() => onValueChange(option.value)}
               activeOpacity={0.7}
             >
-              <View style={[
-                styles.swatch,
-                { backgroundColor: option.color },
-                isSelected && styles.selectedSwatch,
-              ]} />
-              <Text style={[
-                styles.optionText,
-                isSelected && styles.selectedOptionText,
-              ]}>
+              <View
+                style={[
+                  styles.swatch,
+                  { backgroundColor: option.color },
+                  isSelected && styles.selectedSwatch,
+                ]}
+              />
+              <Text
+                style={[
+                  styles.optionText,
+                  isSelected && styles.selectedOptionText,
+                ]}
+              >
                 {option.label}
               </Text>
             </TouchableOpacity>
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: fontSize.lg,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.black,
   },
   description: {
@@ -85,13 +86,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   optionsContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: spacing.md,
     marginTop: spacing.sm,
   },
   option: {
     flex: 1,
-    alignItems: "center",
+    alignItems: 'center',
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
@@ -116,11 +117,11 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: fontSize.sm,
-    fontWeight: "500",
+    fontWeight: '500',
     color: colors.neutral[700],
   },
   selectedOptionText: {
     color: colors.neutral[800],
-    fontWeight: "600",
+    fontWeight: '600',
   },
 });
