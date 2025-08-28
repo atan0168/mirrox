@@ -13,6 +13,46 @@ export interface AirQualityMeasurement {
   locationsId: number;
 }
 
+// AQICN API interfaces
+export interface AQICNResponse {
+  status: string;
+  data: AQICNData;
+}
+
+export interface AQICNData {
+  aqi: number;
+  idx: number;
+  attributions: Array<{
+    url: string;
+    name: string;
+    logo?: string;
+  }>;
+  city: {
+    geo: [number, number]; // [latitude, longitude]
+    name: string;
+    url: string;
+  };
+  dominentpol: string;
+  iaqi: {
+    [pollutant: string]: {
+      v: number;
+    };
+  };
+  time: {
+    s: string; // ISO timestamp
+    tz: string; // timezone
+    v: number; // unix timestamp
+  };
+  forecast?: {
+    daily: {
+      o3: Array<{ avg: number; day: string; max: number; min: number }>;
+      pm10: Array<{ avg: number; day: string; max: number; min: number }>;
+      pm25: Array<{ avg: number; day: string; max: number; min: number }>;
+      uvi?: Array<{ avg: number; day: string; max: number; min: number }>;
+    };
+  };
+}
+
 export interface AirQualityLocation {
   id: number;
   name: string;
@@ -296,10 +336,21 @@ export interface OpenAQResponse<T> {
 // API Response interfaces
 export interface AirQualityApiResponse {
   success: boolean;
-  data?: AirQualityData | UnifiedAirQualityData | UnifiedAirQualityData[];
+  data?:
+    | AirQualityData
+    | UnifiedAirQualityData
+    | UnifiedAirQualityData[]
+    | StationSearchResult[];
   error?: string;
   cached?: boolean;
   cacheAge?: number | undefined;
+}
+
+export interface StationSearchResult {
+  name: string;
+  stationId: string;
+  distance: number;
+  aqi: number;
 }
 
 export interface ServiceStatusResponse {
@@ -308,9 +359,20 @@ export interface ServiceStatusResponse {
     cache: {
       size: number;
       keys: string[];
+      breakdown?: {
+        aqicn: number;
+        openaq: number;
+        myeqms: number;
+        other: number;
+      };
     };
     rateLimit: any;
     uptime: number;
     timestamp: string;
+    services?: {
+      aqicn: string;
+      openaq: string;
+      myeqms: string;
+    };
   };
 }

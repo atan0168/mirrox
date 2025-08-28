@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from "axios";
 
 // Define the API base URL - this should be configurable
 const API_BASE_URL = __DEV__
-  ? "http://localhost:3000/api"
+  ? "http://10.10.0.133:3000/api"
   : "https://your-production-api.com/api";
 
 export interface AirQualityApiResponse {
@@ -28,10 +28,29 @@ export interface AirQualityApiResponse {
     no2?: number;
     co?: number;
     o3?: number;
+    // AQICN specific fields
+    classification?: string;
+    colorCode?: string;
+    healthAdvice?: string;
+    source?: "openaq" | "aqicn" | "myeqms";
+    timestamp?: string;
+    stationUrl?: string;
+    attributions?: Array<{
+      url: string;
+      name: string;
+      logo?: string;
+    }>;
   };
   error?: string;
   cached?: boolean;
   cacheAge?: number;
+}
+
+export interface StationSearchResult {
+  name: string;
+  stationId: string;
+  distance: number;
+  aqi: number;
 }
 
 class BackendApiService {
@@ -116,6 +135,121 @@ class BackendApiService {
       throw new Error(
         "An unexpected error occurred while fetching air quality data.",
       );
+    }
+  }
+
+  /**
+   * Fetch air quality data from AQICN by coordinates
+   * @param latitude Latitude coordinate
+   * @param longitude Longitude coordinate
+   * @returns Promise with AQICN air quality data
+   */
+  async fetchAQICNAirQuality(
+    latitude: number,
+    longitude: number,
+  ): Promise<AirQualityApiResponse> {
+    try {
+      const response = await this.axiosInstance.get<AirQualityApiResponse>(
+        "/air-quality/aqicn",
+        {
+          params: {
+            latitude,
+            longitude,
+          },
+        },
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch AQICN air quality data:", error);
+
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.error) {
+          throw new Error(error.response.data.error);
+        }
+      }
+
+      throw new Error(
+        "An unexpected error occurred while fetching AQICN air quality data.",
+      );
+    }
+  }
+
+  /**
+   * Fetch air quality data from AQICN by station ID
+   * @param stationId AQICN station ID
+   * @returns Promise with AQICN station data
+   */
+  async fetchAQICNStationData(
+    stationId: string,
+  ): Promise<AirQualityApiResponse> {
+    try {
+      const response = await this.axiosInstance.get<AirQualityApiResponse>(
+        `/air-quality/aqicn/station/${stationId}`,
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch AQICN station data:", error);
+
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.error) {
+          throw new Error(error.response.data.error);
+        }
+      }
+
+      throw new Error(
+        "An unexpected error occurred while fetching AQICN station data.",
+      );
+    }
+  }
+
+  /**
+   * Search for AQICN stations near coordinates
+   * @param latitude Latitude coordinate
+   * @param longitude Longitude coordinate
+   * @param radius Search radius in kilometers (optional)
+   * @returns Promise with array of stations
+   */
+  async searchAQICNStations(
+    latitude: number,
+    longitude: number,
+    radius?: number,
+  ): Promise<{ success: boolean; data?: StationSearchResult[]; error?: string }> {
+    try {
+      const params: any = { latitude, longitude };
+      if (radius) params.radius = radius;
+
+      const response = await this.axiosInstance.get(
+        "/air-quality/aqicn/search",
+        { params },
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Failed to search AQICN stations:", error);
+
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.error) {
+          throw new Error(error.response.data.error);
+        }
+      }
+
+      throw new Error(
+        "An unexpected error occurred while searching AQICN stations.",
+      );
+    }
+  }
+
+  /**
+   * Clear AQICN cache (development only)
+   */
+  async clearAQICNCache(): Promise<void> {
+    try {
+      await this.axiosInstance.post("/air-quality/aqicn/clear-cache");
+    } catch (error) {
+      console.error("Failed to clear AQICN cache:", error);
+      throw error;
     }
   }
 

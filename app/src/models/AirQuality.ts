@@ -13,6 +13,40 @@ export interface AirQualityMeasurement {
   locationsId: number;
 }
 
+// AQICN API interfaces
+export interface AQICNData {
+  aqi: number;
+  idx: number;
+  city: {
+    geo: [number, number]; // [latitude, longitude]
+    name: string;
+    url: string;
+  };
+  dominentpol: string;
+  iaqi: {
+    [pollutant: string]: {
+      v: number;
+    };
+  };
+  time: {
+    s: string; // ISO timestamp
+    tz: string; // timezone
+    v: number; // unix timestamp
+  };
+  attributions?: Array<{
+    url: string;
+    name: string;
+    logo?: string;
+  }>;
+  // Additional AQICN specific fields that might be returned
+  classification?: string;
+  colorCode?: string;
+  healthAdvice?: string;
+  source?: "aqicn";
+  timestamp?: string;
+  stationUrl?: string;
+}
+
 export interface AirQualityLocation {
   id: number;
   name: string;
@@ -51,6 +85,18 @@ export interface AirQualityData {
   no2?: number;
   co?: number;
   o3?: number;
+  // AQICN specific fields
+  classification?: string;
+  colorCode?: string;
+  healthAdvice?: string;
+  source?: "openaq" | "aqicn" | "myeqms";
+  timestamp?: string;
+  stationUrl?: string;
+  attributions?: Array<{
+    url: string;
+    name: string;
+    logo?: string;
+  }>;
 }
 
 // MyEQMS API interfaces (Malaysian government data)

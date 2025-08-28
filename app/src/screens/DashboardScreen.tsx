@@ -13,9 +13,16 @@ import { FacialExpressionControls } from "../components/controls/FacialExpressio
 import { SkinToneButton } from "../components/controls/SkinToneButton";
 import { Card } from "../components/ui";
 import { UserProfile } from "../models/User";
-import { AirQualityData } from "../models/AirQuality";
 import { colors, spacing, fontSize, borderRadius, shadows } from "../theme";
-import { useAirQuality } from "../hooks/useAirQuality";
+import { useAirQuality, useAQICNAirQuality } from "../hooks/useAirQuality";
+import {
+  getAQIInfo,
+  getShortClassification,
+  getHealthRecommendations,
+  formatPollutantValue,
+  formatTimestamp,
+  isDataRecent,
+} from "../utils/aqiUtils";
 
 interface DashboardScreenProps {
   navigation: any;
@@ -48,26 +55,43 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
     initializeDashboard();
   }, []);
 
-  // Use React Query for air quality data
-  const { data: airQuality, isLoading: isAirQualityLoading, error: airQualityError } = useAirQuality(
+  // Use React Query for air quality data - prefer AQICN for better data quality
+  const {
+    data: airQuality,
+    isLoading: isAirQualityLoading,
+    error: airQualityError,
+  } = useAQICNAirQuality(
     userProfile?.location.latitude || 0,
     userProfile?.location.longitude || 0,
-    !!userProfile
+    !!userProfile,
   );
 
-  const generateHealthVitalsMessage = (): string => {
-    if (!airQuality) return "Analyzing your environment...";
+  // Fallback to general air quality if AQICN fails
+  const { data: fallbackAirQuality } = useAirQuality(
+    userProfile?.location.latitude || 0,
+    userProfile?.location.longitude || 0,
+    !!userProfile && !airQuality && !!airQualityError,
+  );
 
-    const aqi = airQuality.aqi;
+  // Use the best available air quality data
+  const activeAirQuality = airQuality || fallbackAirQuality;
+
+  const generateHealthVitalsMessage = (): string => {
+    if (!activeAirQuality) return "Analyzing your environment...";
+
+    const aqi = activeAirQuality.aqi;
     if (!aqi) return "Air quality data unavailable";
 
+    const aqiInfo = getAQIInfo(aqi);
+    const primaryPollutant = activeAirQuality.primaryPollutant || "unknown";
+
     if (aqi > 100) {
-      return `Your twin's lungs are starting with a major debuff due to poor air quality (${aqi}) in your area. The main pollutant is ${airQuality.primaryPollutant || 'unknown'}.`;
+      return `Your twin's lungs are starting with a major debuff due to ${aqiInfo.classification.toLowerCase()} air quality (AQI ${aqi}) in your area. The main pollutant is ${primaryPollutant}.`;
     }
     if (aqi > 50) {
-      return `Your twin's lungs are starting with a slight debuff due to today's air quality (${aqi}) in your area.`;
+      return `Your twin's lungs are starting with a slight debuff due to ${aqiInfo.classification.toLowerCase()} air quality (AQI ${aqi}) in your area.`;
     }
-    return `Your twin is breathing clean air today! The air quality in your area is good (${aqi}).`;
+    return `Your twin is breathing clean air today! The air quality in your area is ${aqiInfo.classification.toLowerCase()} (AQI ${aqi}).`;
   };
 
   const getSleepMessage = (): string => {
@@ -179,33 +203,131 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
             </View>
           </View>
 
-          {airQuality && (
+          {activeAirQuality && (
             <View style={styles.statsContainer}>
               <Text style={styles.sectionTitle}>Environmental Data</Text>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Air Quality Index:</Text>
+
+              {/* Main AQI Display */}
+              <Card
+                variant="outline"
+                style={{
+                  ...styles.aqiCard,
+                  borderColor:
+                    activeAirQuality.colorCode ||
+                    getAQIInfo(activeAirQuality.aqi || 0).colorCode,
+                }}
+              >
+                <View style={styles.aqiHeader}>
+                  <Text style={styles.aqiTitle}>Air Quality Index</Text>
+                  <Text
+                    style={[
+                      styles.aqiValue,
+                      {
+                        color:
+                          activeAirQuality.colorCode ||
+                          getAQIInfo(activeAirQuality.aqi || 0).colorCode,
+                      },
+                    ]}
+                  >
+                    {activeAirQuality.aqi || "N/A"}
+                  </Text>
+                </View>
                 <Text
                   style={[
-                    styles.statValue,
+                    styles.aqiClassification,
                     {
                       color:
-                        (airQuality.aqi || 0) > 100
-                          ? "#E53E3E"
-                          : (airQuality.aqi || 0) > 50
-                            ? "#D69E2E"
-                            : "#38A169",
+                        activeAirQuality.colorCode ||
+                        getAQIInfo(activeAirQuality.aqi || 0).colorCode,
                     },
                   ]}
                 >
-                  {airQuality.aqi || 'N/A'}
+                  {activeAirQuality.classification ||
+                    getShortClassification(
+                      getAQIInfo(activeAirQuality.aqi || 0).classification,
+                    )}
                 </Text>
+                {activeAirQuality.healthAdvice && (
+                  <Text style={styles.healthAdvice} numberOfLines={2}>
+                    {activeAirQuality.healthAdvice}
+                  </Text>
+                )}
+                {activeAirQuality.timestamp && (
+                  <Text style={styles.dataTimestamp}>
+                    Updated {formatTimestamp(activeAirQuality.timestamp)} •{" "}
+                    {activeAirQuality.source?.toUpperCase() || "AQICN"}
+                  </Text>
+                )}
+              </Card>
+
+              {/* Pollutant Details */}
+              <View style={styles.pollutantsContainer}>
+                <Text style={styles.pollutantsTitle}>Pollutant Levels</Text>
+                <View style={styles.pollutantGrid}>
+                  {activeAirQuality.pm25 && (
+                    <View style={styles.pollutantItem}>
+                      <Text style={styles.pollutantLabel}>PM2.5</Text>
+                      <Text style={styles.pollutantValue}>
+                        {formatPollutantValue(activeAirQuality.pm25, "pm25")}
+                      </Text>
+                    </View>
+                  )}
+                  {activeAirQuality.pm10 && (
+                    <View style={styles.pollutantItem}>
+                      <Text style={styles.pollutantLabel}>PM10</Text>
+                      <Text style={styles.pollutantValue}>
+                        {formatPollutantValue(activeAirQuality.pm10, "pm10")}
+                      </Text>
+                    </View>
+                  )}
+                  {activeAirQuality.o3 && (
+                    <View style={styles.pollutantItem}>
+                      <Text style={styles.pollutantLabel}>Ozone</Text>
+                      <Text style={styles.pollutantValue}>
+                        {formatPollutantValue(activeAirQuality.o3, "o3")}
+                      </Text>
+                    </View>
+                  )}
+                  {activeAirQuality.no2 && (
+                    <View style={styles.pollutantItem}>
+                      <Text style={styles.pollutantLabel}>NO₂</Text>
+                      <Text style={styles.pollutantValue}>
+                        {formatPollutantValue(activeAirQuality.no2, "no2")}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>Primary Pollutant:</Text>
+                  <Text style={styles.statValue}>
+                    {activeAirQuality.primaryPollutant || "N/A"}
+                  </Text>
+                </View>
+
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>Station:</Text>
+                  <Text style={styles.statValue} numberOfLines={1}>
+                    {activeAirQuality.location.name}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Primary Pollutant:</Text>
-                <Text style={styles.statValue}>
-                  {airQuality.primaryPollutant || 'N/A'}
-                </Text>
-              </View>
+
+              {/* Health Recommendations */}
+              {activeAirQuality.aqi && activeAirQuality.aqi > 50 && (
+                <Card variant="outline" style={styles.recommendationsCard}>
+                  <Text style={styles.recommendationsTitle}>
+                    Health Recommendations
+                  </Text>
+                  {getHealthRecommendations(activeAirQuality.aqi)
+                    .slice(0, 3)
+                    .map((recommendation, index) => (
+                      <Text key={index} style={styles.recommendationItem}>
+                        • {recommendation}
+                      </Text>
+                    ))}
+                </Card>
+              )}
             </View>
           )}
         </View>
@@ -332,6 +454,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    gap: spacing.md,
   },
   statRow: {
     flexDirection: "row",
@@ -346,6 +469,94 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#2D3748",
+  },
+  // New AQI-specific styles
+  aqiCard: {
+    padding: spacing.lg,
+    borderWidth: 2,
+  },
+  aqiHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  aqiTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: "600",
+    color: colors.neutral[700],
+  },
+  aqiValue: {
+    fontSize: fontSize.xxl,
+    fontWeight: "bold",
+  },
+  aqiClassification: {
+    fontSize: fontSize.base,
+    fontWeight: "600",
+    marginBottom: spacing.sm,
+  },
+  healthAdvice: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[600],
+    lineHeight: 18,
+    marginBottom: spacing.sm,
+  },
+  dataTimestamp: {
+    fontSize: fontSize.xs,
+    color: colors.neutral[500],
+    fontStyle: "italic",
+  },
+  pollutantsContainer: {
+    backgroundColor: colors.neutral[50],
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  pollutantsTitle: {
+    fontSize: fontSize.base,
+    fontWeight: "600",
+    color: colors.neutral[700],
+    marginBottom: spacing.sm,
+  },
+  pollutantGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  pollutantItem: {
+    backgroundColor: colors.neutral[100],
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    minWidth: "45%",
+    alignItems: "center",
+  },
+  pollutantLabel: {
+    fontSize: fontSize.xs,
+    color: colors.neutral[600],
+    fontWeight: "500",
+  },
+  pollutantValue: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[800],
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  recommendationsCard: {
+    padding: spacing.md,
+    backgroundColor: "#EBF8FF", // Light blue
+    borderColor: "#BEE3F8", // Medium blue
+  },
+  recommendationsTitle: {
+    fontSize: fontSize.base,
+    fontWeight: "600",
+    color: "#2B6CB0", // Dark blue
+    marginBottom: spacing.sm,
+  },
+  recommendationItem: {
+    fontSize: fontSize.sm,
+    color: "#2C5282", // Darker blue
+    lineHeight: 18,
+    marginBottom: 4,
   },
 });
 

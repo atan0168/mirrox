@@ -115,4 +115,52 @@ router.get(
   airQualityController.getMalaysianStationTrend.bind(airQualityController),
 );
 
+// AQICN Routes for World Air Quality Index Data
+
+/**
+ * @route GET /api/air-quality/aqicn
+ * @desc Get air quality data from AQICN by coordinates
+ * @query latitude - Latitude coordinate (required)
+ * @query longitude - Longitude coordinate (required)
+ * @returns AQICN air quality data for the nearest monitoring station
+ */
+router.get(
+  "/aqicn",
+  airQualityController.getAQICNAirQuality.bind(airQualityController),
+);
+
+/**
+ * @route GET /api/air-quality/aqicn/station/:stationId
+ * @desc Get air quality data from AQICN by station ID
+ * @param stationId - AQICN station ID
+ * @returns AQICN air quality data for the specified station
+ */
+router.get(
+  "/aqicn/station/:stationId",
+  airQualityController.getAQICNStationData.bind(airQualityController),
+);
+
+/**
+ * @route GET /api/air-quality/aqicn/search
+ * @desc Search for AQICN stations near coordinates
+ * @query latitude - Latitude coordinate (required)
+ * @query longitude - Longitude coordinate (required)
+ * @query radius - Search radius in kilometers (optional, default: 50)
+ * @returns AQICN stations within the specified radius
+ */
+router.get(
+  "/aqicn/search",
+  airQualityController.searchAQICNStations.bind(airQualityController),
+);
+
+/**
+ * @route POST /api/air-quality/aqicn/clear-cache
+ * @desc Clear the AQICN cache
+ * @returns Success message
+ */
+router.post(
+  "/aqicn/clear-cache",
+  airQualityController.clearAQICNCache.bind(airQualityController),
+);
+
 export default router;
