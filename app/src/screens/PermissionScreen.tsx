@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Card } from '../components/ui';
+import { Button } from '../components/ui';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
 
 interface PermissionScreenProps {

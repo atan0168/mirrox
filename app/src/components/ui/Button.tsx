@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
   Pressable,
-  View,
   Text,
   StyleSheet,
   PressableProps,
@@ -32,6 +31,7 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const sizeStyles = getSizeStyles(size);
   const variantStyles = getVariantStyles(variant);
+  const variantHasShadow = variant === 'primary' || variant === 'secondary';
 
   return (
     <Pressable
@@ -39,6 +39,7 @@ export const Button: React.FC<ButtonProps> = ({
         styles.container,
         sizeStyles.container,
         variantStyles.container,
+        variantHasShadow && shadows.soft,
         fullWidth && styles.fullWidth,
         disabled && styles.disabled,
         style,
@@ -158,9 +159,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
     position: 'relative',
-    ...shadows.soft,
   },
   gradientOverlay: {
     borderRadius: borderRadius.lg,
