@@ -1,6 +1,7 @@
 import { RPM_APPLICATION_ID, RPM_SUBDOMAIN } from '../constants';
 import { UserProfile } from '../models/User';
 import { localStorageService } from './LocalStorageService';
+import axios from 'axios';
 
 interface RPMUser {
   id: string;
@@ -13,20 +14,6 @@ interface RPMTemplate {
   modelUrl: string;
   gender: 'male' | 'female';
   outfit: string;
-}
-
-interface RPMAvatar {
-  id: string;
-  modelUrl: string;
-  imageUrl: string;
-}
-
-interface RPMAsset {
-  id: string;
-  type: string;
-  gender: 'male' | 'female';
-  name: string;
-  iconUrl: string;
 }
 
 interface SkinToneOption {
@@ -44,23 +31,21 @@ class ReadyPlayerMeApiService {
    */
   async createAnonymousUser(): Promise<RPMUser> {
     try {
-      const response = await fetch(`https://mirrox.readyplayer.me/api/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await axios.post(
+        `https://mirrox.readyplayer.me/api/users`,
+        {
           data: {
             applicationId: RPM_APPLICATION_ID,
           },
-        }),
-      });
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`Failed to create user: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
       console.log('Created anonymous user:', data);
       return {
         id: data.data.id,
@@ -77,19 +62,15 @@ class ReadyPlayerMeApiService {
    */
   async getTemplates(token: string): Promise<RPMTemplate[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/v2/avatars/templates`, {
+      const response = await axios.get(`${this.baseUrl}/v2/avatars/templates`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch templates: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data: { data: RPMTemplate[] } = response.data;
       console.log('Fetched templates:', data);
-      return data.data.map((template: any) => ({
+      return data.data.map((template: RPMTemplate) => ({
         id: template.id,
         imageUrl: template.imageUrl,
         modelUrl: template.modelUrl,
@@ -103,7 +84,84 @@ class ReadyPlayerMeApiService {
   }
 
   /**
-   * Step 2.2: Select a template based on gender
+   * Extract ethnicity from template image URL
+   */
+  private extractEthnicityFromImageUrl(imageUrl: string): string | null {
+    const ethnicityPatterns = ['white', 'asian', 'indian', 'black'];
+
+    for (const ethnicity of ethnicityPatterns) {
+      if (imageUrl.includes(`${ethnicity}-`)) {
+        return ethnicity;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Map skin tone preference to ethnicity
+   */
+  private mapSkinToneToEthnicity(
+    skinTone: 'light' | 'medium' | 'dark'
+  ): string {
+    switch (skinTone) {
+      case 'light':
+        return 'white';
+      case 'medium':
+        return 'asian';
+      case 'dark':
+        return 'indian';
+      default:
+        return 'white';
+    }
+  }
+
+  /**
+   * Step 2.2: Select a template based on gender and skin tone
+   */
+  async selectTemplateByGenderAndSkinTone(
+    token: string,
+    gender: 'male' | 'female',
+    skinTone: 'light' | 'medium' | 'dark'
+  ): Promise<RPMTemplate> {
+    try {
+      const templates = await this.getTemplates(token);
+      const targetEthnicity = this.mapSkinToneToEthnicity(skinTone);
+
+      // Filter templates by gender and ethnicity
+      const filteredTemplates = templates.filter(template => {
+        const templateEthnicity = this.extractEthnicityFromImageUrl(
+          template.imageUrl
+        );
+        return (
+          template.gender === gender && templateEthnicity === targetEthnicity
+        );
+      });
+
+      if (filteredTemplates.length === 0) {
+        throw new Error(
+          `No templates found for gender: ${gender} and skin tone: ${skinTone} (${targetEthnicity})`
+        );
+      }
+
+      // Randomize selection from filtered templates
+      const randomIndex = Math.floor(Math.random() * filteredTemplates.length);
+      const selectedTemplate = filteredTemplates[randomIndex];
+
+      console.log(
+        `Selected random template for ${gender} with ${skinTone} skin tone (${targetEthnicity}):`,
+        selectedTemplate
+      );
+
+      return selectedTemplate;
+    } catch (error) {
+      console.error('Error selecting template by gender and skin tone:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Step 2.2: Select a template based on gender (legacy method for backward compatibility)
    */
   async selectTemplateByGender(
     token: string,
@@ -121,10 +179,10 @@ class ReadyPlayerMeApiService {
         throw new Error(`No templates found for gender: ${gender}`);
       }
 
-      // For now, return the first template of the specified gender
-      // You could add additional logic here to select based on other criteria
-      const selectedTemplate = genderTemplates[0];
-      console.log(`Selected template for ${gender}:`, selectedTemplate);
+      // Randomize selection from all gender templates
+      const randomIndex = Math.floor(Math.random() * genderTemplates.length);
+      const selectedTemplate = genderTemplates[randomIndex];
+      console.log(`Selected random template for ${gender}:`, selectedTemplate);
 
       return selectedTemplate;
     } catch (error) {
@@ -141,17 +199,13 @@ class ReadyPlayerMeApiService {
     gender: 'male' | 'female'
   ): Promise<SkinToneOption[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/v2/assets`, {
+      const response = await axios.get(`${this.baseUrl}/v2/assets`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch assets: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       // Filter for skin tone assets
       const skinToneAssets = data.data.filter(
@@ -179,26 +233,22 @@ class ReadyPlayerMeApiService {
     skinToneAssetId: string
   ): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/v2/avatars/${avatarId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await axios.patch(
+        `${this.baseUrl}/v2/avatars/${avatarId}`,
+        {
           data: {
             assets: {
               skin: skinToneAssetId,
             },
           },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to update avatar skin tone: ${response.statusText}`
-        );
-      }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       console.log('Avatar skin tone updated successfully');
     } catch (error) {
@@ -216,38 +266,28 @@ class ReadyPlayerMeApiService {
     bodyType: 'fullbody' | 'halfbody' = 'fullbody'
   ): Promise<string> {
     try {
-      const response = await fetch(
+      const response = await axios.post(
         `${this.baseUrl}/v2/avatars/templates/${templateId}`,
         {
-          method: 'POST',
+          data: {
+            partner: RPM_SUBDOMAIN,
+            bodyType: bodyType,
+          },
+        },
+        {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            data: {
-              partner: RPM_SUBDOMAIN,
-              bodyType: bodyType,
-            },
-          }),
         }
       );
 
       console.log('RPM_SUBDOMAIN', RPM_SUBDOMAIN);
       console.log('templateId', templateId);
       console.log('bodyType', bodyType);
-      console.log(
-        'Response',
-        response.ok,
-        response.statusText,
-        response.status
-      );
+      console.log('Response', true, response.statusText, response.status);
 
-      if (!response.ok) {
-        throw new Error(`Failed to create avatar: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
       return data.data.id; // Returns avatar ID
     } catch (error) {
       console.error('Error creating avatar from template:', error);
@@ -267,16 +307,11 @@ class ReadyPlayerMeApiService {
    */
   async saveAvatar(token: string, avatarId: string): Promise<void> {
     try {
-      const response = await fetch(`${this.baseUrl}/v2/avatars/${avatarId}`, {
-        method: 'PUT',
+      await axios.put(`${this.baseUrl}/v2/avatars/${avatarId}`, undefined, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to save avatar: ${response.statusText}`);
-      }
 
       // After successful save, cache the avatar locally
       const avatarUrl = this.getSavedAvatarUrl(avatarId);
@@ -314,30 +349,22 @@ class ReadyPlayerMeApiService {
 
       console.log('Created user', user);
 
-      // Step 2: Select template based on user's gender
-      const selectedTemplate = await this.selectTemplateByGender(
+      // Step 2: Select template based on user's gender and skin tone
+      const selectedTemplate = await this.selectTemplateByGenderAndSkinTone(
         user.token,
-        userProfile.gender
+        userProfile.gender,
+        userProfile.skinTone
       );
 
-      // Step 3: Create avatar from template
+      // Step 3: Optionally customize character assests
+      // Note: This requires additional API calls to get and apply character assets
+
+      // Step 4: Create avatar from template
       const avatarId = await this.createAvatarFromTemplate(
         user.token,
         selectedTemplate.id,
         'fullbody'
       );
-
-      // Step 4: Optionally customize skin tone
-      // Note: This requires additional API calls to get and apply skin tone assets
-      // For now, we'll just log the user's preference
-      console.log(`User selected skin tone: ${userProfile.skinTone}`);
-
-      // TODO: Implement skin tone customization
-      // const skinToneAssets = await this.getSkinToneAssets(user.token, userProfile.gender);
-      // const selectedSkinTone = this.mapSkinToneToAsset(userProfile.skinTone, skinToneAssets);
-      // if (selectedSkinTone) {
-      //   await this.updateAvatarSkinTone(user.token, avatarId, selectedSkinTone.id);
-      // }
 
       // Step 5: Save avatar
       await this.saveAvatar(user.token, avatarId);

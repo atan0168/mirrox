@@ -1,5 +1,6 @@
 import { BACKEND_API_URL } from '../constants';
 import { UnifiedAirQualityData } from '../models/AirQuality';
+import axios from 'axios';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -29,22 +30,19 @@ export class MyEQMSService {
    * Make request to backend (React Query will handle caching)
    */
   private async makeRequest<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${BACKEND_API_URL}${endpoint}`, {
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        // Add authentication headers if needed
-        // 'Authorization': `Bearer ${await getAuthToken()}`,
-      },
-    });
+    const response = await axios.get<ApiResponse<T>>(
+      `${BACKEND_API_URL}${endpoint}`,
+      {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          // Add authentication headers if needed
+          // 'Authorization': `Bearer ${await getAuthToken()}`,
+        },
+      }
+    );
 
-    if (!response.ok) {
-      throw new Error(
-        `Backend API error: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const result: ApiResponse<T> = await response.json();
+    const result = response.data;
 
     if (!result.success) {
       throw new Error(result.error || 'Unknown backend error');
