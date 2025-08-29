@@ -14,3 +14,7 @@ export { Input } from './Input';
 export type { InputProps } from './Input';
 
 export { default as HealthSummary } from './HealthSummary';
+
+export { default as Tooltip } from './Tooltip';
+
+export { default as ProgressRow } from './ProgressRow';
