@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Loader from '../components/ui/Loader';
-import { UserProfile } from '../models/User';
 import { localStorageService } from '../services/LocalStorageService';
 import { readyPlayerMeApiService } from '../services/ReadyPlayerMeApiService';
 import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
