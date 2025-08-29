@@ -75,4 +75,3 @@ export const hexToRgba = (hex: string, opacity: number): string => {
   const b = parseInt(cleanHex.substr(4, 2), 16);
   return `rgba(${r}, ${g}, ${b}, ${opacity})`;
 };
-

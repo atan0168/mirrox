@@ -13,6 +13,8 @@ import {
   getLungExplanation,
   getSkinGlowExplanation,
 } from '../../utils/healthMetrics';
+import { getSkinGlowTooltipContent } from '../../utils/tooltipContent';
+// getEnergyExplanation now returns a React node
 
 interface HealthSummaryProps {
   userProfile?: UserProfile;
@@ -33,10 +35,7 @@ const HealthSummary: React.FC<HealthSummaryProps> = ({
   const tooltips = {
     energy: getEnergyExplanation(userProfile?.sleepHours),
     lung: getLungExplanation(airQuality?.aqi),
-    skin: getSkinGlowExplanation(
-      userProfile?.sleepHours,
-      userProfile?.commuteMode
-    ),
+    skin: getSkinGlowTooltipContent(),
   };
 
   return (

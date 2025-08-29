@@ -3,7 +3,11 @@
  * Functions to derive health scores from various inputs
  */
 
+import React from 'react';
+import { View, Text } from 'react-native';
 import { clamp } from './mathUtils';
+import InfoTable, { TableRow } from '../components/ui/InfoTable';
+import { colors, fontSize, spacing } from '../theme';
 
 /**
  * Calculate energy level based on sleep hours
@@ -79,16 +83,48 @@ export const deriveSkinGlow = (
  * @param sleep Sleep hours
  * @returns Explanation string
  */
-export const getEnergyExplanation = (sleep?: number | null): string => {
-  const baseText = 'Energy levels are based on your sleep duration. ';
-  const ranges =
-    'Getting 8+ hours gives you 90% energy, 7+ hours gives 80%, 6+ hours gives 65%, 4+ hours gives 45%, and less than 4 hours gives only 25% energy.';
+export const getEnergyExplanation = (
+  sleep?: number | null
+): React.ReactNode => {
+  const rows: TableRow[] = [
+    { label: '8+ hours', value: '90%', description: 'Excellent sleep' },
+    { label: '7+ hours', value: '80%', description: 'Good sleep' },
+    { label: '6+ hours', value: '65%', description: 'Fair sleep' },
+    { label: '4+ hours', value: '45%', description: 'Low sleep' },
+    { label: '< 4 hours', value: '25%', description: 'Very low sleep' },
+  ];
 
-  if (sleep == null) {
-    return baseText + 'No sleep data available, showing default 50%. ' + ranges;
-  }
+  return (
+    <View>
+      <Text
+        style={{
+          fontSize: fontSize.base,
+          color: colors.neutral[700],
+          lineHeight: 22,
+          marginBottom: spacing.md,
+        }}
+      >
+        Energy levels are based on your sleep duration. Better sleep yields
+        better energy.
+      </Text>
 
-  return baseText + ranges;
+      <InfoTable title="Sleep Hours → Energy" rows={rows} />
+
+      {sleep == null && (
+        <Text
+          style={{
+            fontSize: fontSize.sm,
+            color: colors.neutral[600],
+            lineHeight: 20,
+            marginTop: spacing.md,
+            fontStyle: 'italic',
+          }}
+        >
+          No sleep data available for today — showing a default energy estimate.
+        </Text>
+      )}
+    </View>
+  );
 };
 
 /**
@@ -96,18 +132,51 @@ export const getEnergyExplanation = (sleep?: number | null): string => {
  * @param aqi Air Quality Index
  * @returns Explanation string
  */
-export const getLungExplanation = (aqi?: number | null): string => {
-  const baseText = 'Lung health is determined by air quality (AQI). ';
-  const ranges =
-    'Excellent air (AQI ≤50) gives 90% lung health, good air (≤100) gives 75%, moderate (≤150) gives 60%, unhealthy (≤200) gives 45%, very unhealthy (≤300) gives 30%, and hazardous air gives only 15%.';
+export const getLungExplanation = (aqi?: number | null): React.ReactNode => {
+  const rows: TableRow[] = [
+    { label: 'AQI 0–50', value: '90%', description: 'Excellent air quality' },
+    { label: 'AQI 51–100', value: '75%', description: 'Good air quality' },
+    { label: 'AQI 101–150', value: '60%', description: 'Moderate air quality' },
+    {
+      label: 'AQI 151–200',
+      value: '45%',
+      description: 'Unhealthy for sensitive groups',
+    },
+    { label: 'AQI 201–300', value: '30%', description: 'Very unhealthy' },
+    { label: 'AQI 301+', value: '15%', description: 'Hazardous air quality' },
+  ];
 
-  if (aqi == null) {
-    return (
-      baseText + 'No air quality data available, showing default 60%. ' + ranges
-    );
-  }
+  return (
+    <View>
+      <Text
+        style={{
+          fontSize: fontSize.base,
+          color: colors.neutral[700],
+          lineHeight: 22,
+          marginBottom: spacing.md,
+        }}
+      >
+        Lung health is determined by local air quality (AQI). Lower AQI
+        indicates cleaner air and better lung health.
+      </Text>
 
-  return baseText + ranges;
+      <InfoTable title="AQI → Lung Health" rows={rows} />
+
+      {aqi == null && (
+        <Text
+          style={{
+            fontSize: fontSize.sm,
+            color: colors.neutral[600],
+            lineHeight: 20,
+            marginTop: spacing.md,
+            fontStyle: 'italic',
+          }}
+        >
+          No air quality data available — showing a default estimate.
+        </Text>
+      )}
+    </View>
+  );
 };
 
 /**
@@ -145,4 +214,3 @@ export const calculateOverallHealth = (
   const weighted = energy * 0.4 + lung * 0.35 + skin * 0.25;
   return Math.round(clamp(weighted));
 };
-

@@ -7,6 +7,7 @@ import {
   Easing,
   TouchableOpacity,
 } from 'react-native';
+import { Info } from 'lucide-react-native';
 import Tooltip from './Tooltip';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { getBarColor } from '../../utils/colorUtils';
@@ -15,13 +16,15 @@ import { clamp } from '../../utils/mathUtils';
 interface ProgressRowProps {
   label: string;
   value: number;
-  tooltipContent: string;
+  tooltipContent: string | React.ReactNode;
+  tooltipTitle?: string;
 }
 
 const ProgressRow: React.FC<ProgressRowProps> = ({
   label,
   value,
   tooltipContent,
+  tooltipTitle,
 }) => {
   const animated = useRef(new Animated.Value(0)).current;
   const [showTooltip, setShowTooltip] = useState(false);
@@ -44,33 +47,42 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
 
   return (
     <>
-      <TouchableOpacity
-        style={styles.row}
-        onPress={() => setShowTooltip(true)}
-        accessibilityRole="button"
-        accessibilityLabel={`${label} ${clamped} percent. Tap for more information.`}
-        accessibilityHint="Double tap to learn more about this health metric"
-      >
+      <View style={styles.container}>
         <View style={styles.rowHeader}>
-          <Text style={styles.label}>{label}</Text>
+          <View style={styles.labelContainer}>
+            <Text style={styles.label}>{label}</Text>
+            <TouchableOpacity
+              style={styles.infoButton}
+              onPress={() => setShowTooltip(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Information about ${label}`}
+              accessibilityHint="Tap to learn more about this health metric"
+            >
+              <Info size={18} color={colors.neutral[500]} />
+            </TouchableOpacity>
+          </View>
           <Text style={styles.percent}>{clamped}%</Text>
         </View>
-        <View style={styles.track}>
-          <Animated.View
-            style={[
-              styles.fill,
-              {
-                width: widthInterpolate,
-                backgroundColor: getBarColor(clamped),
-              },
-            ]}
-          />
+
+        <View style={styles.progressContainer}>
+          <View style={styles.track}>
+            <Animated.View
+              style={[
+                styles.fill,
+                {
+                  width: widthInterpolate,
+                  backgroundColor: getBarColor(clamped),
+                },
+              ]}
+            />
+          </View>
         </View>
-      </TouchableOpacity>
+      </View>
 
       <Tooltip
         visible={showTooltip}
         content={tooltipContent}
+        title={tooltipTitle}
         onClose={() => setShowTooltip(false)}
       />
     </>
@@ -78,38 +90,66 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
 };
 
 const styles = StyleSheet.create({
-  row: {
+  container: {
+    backgroundColor: colors.neutral[50],
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
     marginBottom: spacing.md,
-  },
-  label: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[700],
-    fontWeight: '500',
-  },
-  track: {
-    width: '100%',
-    height: 12,
-    backgroundColor: colors.neutral[200],
-    borderRadius: borderRadius.full,
-    overflow: 'hidden',
-    marginTop: spacing.xs,
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: colors.neutral[800], // overridden dynamically
-    borderRadius: borderRadius.full,
-  },
-  percent: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: colors.neutral[800],
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    shadowColor: colors.neutral[900],
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   rowHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  label: {
+    fontSize: fontSize.base,
+    color: colors.neutral[800],
+    fontWeight: '600',
+    marginRight: spacing.xs,
+  },
+  infoButton: {
+    padding: spacing.xs / 2,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
+  },
+  percent: {
+    fontSize: fontSize.lg,
+    fontWeight: '700',
+    color: colors.neutral[900],
+    minWidth: 50,
+    textAlign: 'right',
+  },
+  progressContainer: {
+    marginTop: spacing.xs,
+  },
+  track: {
+    width: '100%',
+    height: 14,
+    backgroundColor: colors.neutral[200],
+    borderRadius: borderRadius.full,
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    backgroundColor: colors.neutral[800],
+    borderRadius: borderRadius.full,
   },
 });
 
 export default ProgressRow;
-

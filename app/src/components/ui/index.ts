@@ -18,3 +18,5 @@ export { default as HealthSummary } from './HealthSummary';
 export { default as Tooltip } from './Tooltip';
 
 export { default as ProgressRow } from './ProgressRow';
+
+export { default as InfoTable } from './InfoTable';

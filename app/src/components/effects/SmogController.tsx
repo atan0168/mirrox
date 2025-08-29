@@ -172,7 +172,7 @@ export function SmogController({
         groupRef.current = null;
         particlesRef.current = [];
       }
-      
+
       // Clear material cache when disabled
       if (particleMaterial.clearCache) {
         particleMaterial.clearCache();
@@ -217,7 +217,6 @@ export function SmogController({
     camera,
     color,
   ]);
-
 
   // Animation loop for background smoke effect
   useFrame((state, delta) => {
