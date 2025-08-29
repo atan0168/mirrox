@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,13 @@ import {
   Easing,
   ViewStyle,
 } from 'react-native';
-import { localStorageService } from '../services/LocalStorageService';
 import ThreeAvatar from '../components/ThreeAvatar';
 import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
 import { SkinToneButton } from '../components/controls/SkinToneButton';
 import { Card, HealthSummary } from '../components/ui';
-import { UserProfile } from '../models/User';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
+import { useUserProfile } from '../hooks/useUserProfile';
 import {
   getAQIInfo,
   getShortClassification,
@@ -32,32 +31,10 @@ import {
 } from '../utils/skinEffectsUtils';
 
 const DashboardScreen: React.FC = () => {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { data: userProfile, isLoading, error } = useUserProfile();
   const [facialExpression, setFacialExpression] = useState<string>('neutral');
   const [skinToneAdjustment, setSkinToneAdjustment] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [skeletonAnim] = useState(new Animated.Value(0));
-
-  useEffect(() => {
-    const initializeDashboard = async () => {
-      try {
-        const profile = await localStorageService.getUserProfile();
-        if (!profile) {
-          throw new Error('User profile not found.');
-        }
-        setUserProfile(profile);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'An unexpected error occurred.'
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeDashboard();
-  }, []);
 
   // Animate skeleton shimmer/pulse
   useEffect(() => {
@@ -106,9 +83,13 @@ const DashboardScreen: React.FC = () => {
     );
 
   // Calculate skin effects based on air quality
-  const skinEffects = React.useMemo(() => {
+  const skinEffects = useMemo(() => {
     if (!airQuality) {
-      return { adjustment: 0, primaryFactor: 'none', description: 'No air quality data available' };
+      return {
+        adjustment: 0,
+        primaryFactor: 'none',
+        description: 'No air quality data available',
+      };
     }
     return calculateCombinedSkinEffects({
       pm25: airQuality.pm25,
@@ -118,9 +99,15 @@ const DashboardScreen: React.FC = () => {
   }, [airQuality]);
 
   // Calculate smog effects based on air quality
-  const smogEffects = React.useMemo(() => {
+  const smogEffects = useMemo(() => {
     if (!airQuality) {
-      return { enabled: false, intensity: 0, opacity: 0, density: 0, description: 'No air quality data available' };
+      return {
+        enabled: false,
+        intensity: 0,
+        opacity: 0,
+        density: 0,
+        description: 'No air quality data available',
+      };
     }
     return calculateSmogEffects({
       aqi: airQuality.aqi,
@@ -130,15 +117,15 @@ const DashboardScreen: React.FC = () => {
   }, [airQuality]);
 
   // Auto-adjust facial expression based on air quality
-  const recommendedExpression = React.useMemo(() => {
+  const recommendedExpression = useMemo(() => {
     if (!airQuality) return 'neutral';
     return getRecommendedFacialExpression(airQuality.pm25, airQuality.aqi);
   }, [airQuality]);
 
   // Update facial expression when air quality changes (but allow manual override)
   const [hasManualExpression, setHasManualExpression] = useState(false);
-  
-  React.useEffect(() => {
+
+  useEffect(() => {
     if (!hasManualExpression && recommendedExpression !== facialExpression) {
       setFacialExpression(recommendedExpression);
     }
@@ -168,7 +155,7 @@ const DashboardScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.errorContainer}>
         <View style={styles.errorContent}>
-          <Text style={styles.errorText}>Error: {error}</Text>
+          <Text style={styles.errorText}>Error: {error.message}</Text>
         </View>
       </SafeAreaView>
     );
@@ -183,11 +170,15 @@ const DashboardScreen: React.FC = () => {
               showAnimationButton={true}
               facialExpression={facialExpression}
               skinToneAdjustment={skinToneAdjustment + skinEffects.adjustment}
-              airQualityData={airQuality ? {
-                aqi: airQuality.aqi,
-                pm25: airQuality.pm25,
-                pm10: airQuality.pm10,
-              } : null}
+              airQualityData={
+                airQuality
+                  ? {
+                      aqi: airQuality.aqi,
+                      pm25: airQuality.pm25,
+                      pm10: airQuality.pm10,
+                    }
+                  : null
+              }
             />
           </View>
 
@@ -198,12 +189,14 @@ const DashboardScreen: React.FC = () => {
               skinToneAdjustment={skinToneAdjustment}
               onSkinToneChange={handleSkinToneChange}
             />
-            
+
             {/* Air Quality Effects Indicator */}
             {(skinEffects.adjustment !== 0 || smogEffects.enabled) && (
               <View style={styles.skinEffectsIndicator}>
-                <Text style={styles.skinEffectsTitle}>Air Quality Effects on Avatar</Text>
-                
+                <Text style={styles.skinEffectsTitle}>
+                  Air Quality Effects on Avatar
+                </Text>
+
                 {/* Skin Effects */}
                 {skinEffects.adjustment !== 0 && (
                   <View style={styles.effectSection}>
@@ -212,27 +205,35 @@ const DashboardScreen: React.FC = () => {
                       {skinEffects.description}
                     </Text>
                     <Text style={styles.skinEffectsLabel}>
-                      Adjustment: {(skinEffects.adjustment * 100).toFixed(0)}% darker
+                      Adjustment: {(skinEffects.adjustment * 100).toFixed(0)}%
+                      darker
                     </Text>
                   </View>
                 )}
-                
+
                 {/* Smog Effects */}
                 {smogEffects.enabled && (
                   <View style={styles.effectSection}>
-                    <Text style={styles.effectSubtitle}>Atmospheric Effects:</Text>
+                    <Text style={styles.effectSubtitle}>
+                      Atmospheric Effects:
+                    </Text>
                     <Text style={styles.skinEffectsDescription}>
                       {smogEffects.description}
                     </Text>
                     <Text style={styles.skinEffectsLabel}>
-                      Smog intensity: {(smogEffects.intensity * 100).toFixed(0)}% • Opacity: {(smogEffects.opacity * 100).toFixed(0)}%
+                      Smog intensity: {(smogEffects.intensity * 100).toFixed(0)}
+                      % • Opacity: {(smogEffects.opacity * 100).toFixed(0)}%
                     </Text>
                   </View>
                 )}
-                
+
                 <View style={styles.skinEffectsDetails}>
                   <Text style={styles.skinEffectsSource}>
-                    Based on {skinEffects.primaryFactor || smogEffects.description.includes('PM2.5') ? 'PM2.5' : 'AQI'}
+                    Based on{' '}
+                    {skinEffects.primaryFactor ||
+                    smogEffects.description.includes('PM2.5')
+                      ? 'PM2.5'
+                      : 'AQI'}
                   </Text>
                 </View>
               </View>
@@ -248,10 +249,7 @@ const DashboardScreen: React.FC = () => {
           </View>
 
           {/* Health Summary */}
-          <HealthSummary
-            userProfile={userProfile}
-            airQuality={airQuality || null}
-          />
+          <HealthSummary userProfile={userProfile} airQuality={airQuality} />
 
           {(isAirQualityLoading || airQuality) && (
             <View style={styles.statsContainer}>

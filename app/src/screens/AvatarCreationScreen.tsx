@@ -17,6 +17,7 @@ import { localStorageService } from '../services/LocalStorageService';
 import { readyPlayerMeApiService } from '../services/ReadyPlayerMeApiService';
 import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 import { RPM_SUBDOMAIN } from '../constants';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 // Replace 'demo' with your actual subdomain from Ready Player Me
 
@@ -28,8 +29,8 @@ interface AvatarCreationScreenProps {
 const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
   navigation,
 }) => {
+  const { data: userProfile } = useUserProfile();
   const [isLoading, setIsLoading] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isFrameReady, setIsFrameReady] = useState(false);
   const [showCreationOptions, setShowCreationOptions] = useState(true);
   const [creationMethod, setCreationMethod] = useState<'api' | 'iframe' | null>(
@@ -48,11 +49,6 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
         navigation.navigate('Dashboard');
         return;
       }
-
-      // Get user profile to potentially customize avatar based on user data
-      const profile = await localStorageService.getUserProfile();
-      if (!mounted) return;
-      if (profile) setUserProfile(profile);
     })();
     return () => {
       mounted = false;
@@ -92,7 +88,7 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
           })
         );
 
-        // TODO: You can send custom configuration based on user profile
+        // TODO: Send custom configuration based on user profile
         if (userProfile) {
           // Example: Set gender or other preferences based on user data
           // This would require additional user profile fields

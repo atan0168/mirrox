@@ -6,8 +6,8 @@ import { UserProfile } from '../../models/User';
 import { AirQualityData } from '../../models/AirQuality';
 
 interface HealthSummaryProps {
-  userProfile: UserProfile | null;
-  airQuality: AirQualityData | null;
+  userProfile?: UserProfile;
+  airQuality?: AirQualityData;
 }
 
 const clamp = (v: number, min = 0, max = 100) =>
