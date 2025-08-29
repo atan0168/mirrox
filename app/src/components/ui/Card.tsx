@@ -4,7 +4,7 @@ import { colors, spacing, borderRadius, shadows } from '../../theme';
 
 export interface CardProps extends ViewProps {
   children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'outline';
+  variant?: 'default' | 'elevated' | 'outline' | 'ghost';
   padding?: 'none' | 'sm' | 'md' | 'lg';
   shadow?: 'none' | 'sm' | 'md' | 'lg';
   style?: ViewStyle;
@@ -51,6 +51,12 @@ const getVariantStyles = (variant: CardProps['variant']) => {
         backgroundColor: 'transparent',
         borderWidth: 1,
         borderColor: colors.neutral[200],
+        ...shadows.none,
+      };
+    case 'ghost':
+      return {
+        backgroundColor: colors.neutral[50],
+        borderWidth: 0,
         ...shadows.none,
       };
     default: // default
