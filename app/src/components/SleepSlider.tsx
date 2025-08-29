@@ -64,7 +64,7 @@ export const SleepSlider: React.FC<SleepSliderProps> = ({
           step={0.5}
           minimumTrackTintColor={colors.neutral[400]}
           maximumTrackTintColor={colors.neutral[200]}
-          thumbTintColor={colors.white}
+          thumbTintColor={colors.neutral[700]}
         />
 
         <View style={styles.rangeLabels}>

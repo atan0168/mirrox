@@ -7,6 +7,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import Loader from '../components/ui/Loader';
@@ -19,6 +21,7 @@ import { RPM_SUBDOMAIN } from '../constants';
 // Replace 'demo' with your actual subdomain from Ready Player Me
 
 interface AvatarCreationScreenProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   navigation: any;
 }
 
@@ -56,6 +59,7 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
     };
   }, [navigation]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleWebViewMessage = async (event: any) => {
     try {
       const json = JSON.parse(event.nativeEvent.data);
@@ -330,6 +334,9 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
   );
 };
 
+const ANDROID_STATUSBAR_HEIGHT =
+  Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -337,7 +344,9 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    // Add status bar height on Android to avoid content appearing too high / cramped
+    paddingTop: spacing.lg - ANDROID_STATUSBAR_HEIGHT,
+    paddingBottom: spacing.md, // give a little more breathing room before the cards
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.neutral[200],
