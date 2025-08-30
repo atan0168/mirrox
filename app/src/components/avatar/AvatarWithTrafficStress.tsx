@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Canvas } from '@react-three/fiber/native';
 import { OrbitControls } from '@react-three/drei/native';
@@ -9,7 +9,6 @@ import { SmogController } from '../effects/SmogController';
 import { StressAura } from '../effects/StressAura';
 import { FloatingStressIcon } from '../effects/FloatingStressIcon';
 import { AnimationControls } from '../controls/AnimationControls';
-import { EffectControls } from '../controls/EffectControls';
 import { SkinToneControls } from '../controls/SkinToneControls';
 import { LoadingState, ErrorState } from '../ui/StateComponents';
 import AvatarLoadingIndicator from '../ui/AvatarLoadingIndicator';
@@ -29,6 +28,7 @@ import {
   shouldOverrideAnimation,
 } from '../../utils/animationUtils';
 import { useState, useEffect, useRef } from 'react';
+import { StressInfoModal } from '../ui/StressInfoModal';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -75,23 +75,19 @@ function AvatarWithTrafficStress({
   const [error, setError] = useState<string | null>(null);
   const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
   const [isManualAnimation, setIsManualAnimation] = useState<boolean>(false);
-  const [hazeEnabled, setHazeEnabled] = useState<boolean>(false);
-  const [smogIntensity, setSmogIntensity] = useState<number>(1.0);
   const [isAvatarLoading, setIsAvatarLoading] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<{
     loaded: number;
     total: number;
     item: string;
   }>({ loaded: 0, total: 0, item: '' });
+  const [showStressInfoModal, setShowStressInfoModal] =
+    useState<boolean>(false);
   const canvasRef = useRef<View | null>(null);
   const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch traffic data
-  const {
-    data: trafficData,
-    loading: trafficLoading,
-    error: trafficError,
-  } = useTrafficData({
+  const { data: trafficData, loading: trafficLoading } = useTrafficData({
     latitude,
     longitude,
     enabled: enableTrafficStress && !!latitude && !!longitude,
@@ -110,7 +106,7 @@ function AvatarWithTrafficStress({
     }
 
     const { stressLevel, congestionFactor } = trafficData;
-    
+
     // Calculate intensity based on congestion factor
     let intensity = 0;
     switch (stressLevel) {
@@ -170,10 +166,8 @@ function AvatarWithTrafficStress({
   }, [airQualityData]);
 
   // Use automatic smog effects, but allow manual override via controls
-  const effectiveHazeEnabled = autoSmogEffects.enabled || hazeEnabled;
-  const effectiveSmogIntensity = autoSmogEffects.enabled
-    ? autoSmogEffects.intensity
-    : smogIntensity;
+  const effectiveHazeEnabled = autoSmogEffects.enabled;
+  const effectiveSmogIntensity = autoSmogEffects.intensity;
   const effectiveSmogOpacity = autoSmogEffects.enabled
     ? autoSmogEffects.opacity
     : 0.3;
@@ -201,7 +195,9 @@ function AvatarWithTrafficStress({
     if (!isManualAnimation) {
       // Traffic stress animations take priority over AQI animations
       if (stressEffects.stressLevel === 'high') {
-        console.log('🚨 High traffic stress detected - triggering stress animation');
+        console.log(
+          '🚨 High traffic stress detected - triggering stress animation'
+        );
         setActiveAnimation('M_Standing_Expressions_007'); // Cough animation for high stress
       } else if (aqiAnimationRecommendation) {
         if (
@@ -306,16 +302,6 @@ function AvatarWithTrafficStress({
     }
   };
 
-  const handleHazeToggle = () => {
-    setHazeEnabled(!hazeEnabled);
-    console.log(`Smog effect ${!hazeEnabled ? 'enabled' : 'disabled'}`);
-  };
-
-  const handleIntensityChange = (intensity: number) => {
-    setSmogIntensity(intensity);
-    console.log(`Smog intensity changed to: ${intensity}`);
-  };
-
   const handleAvatarLoadingChange = (loading: boolean) => {
     setIsAvatarLoading(loading);
   };
@@ -401,6 +387,9 @@ function AvatarWithTrafficStress({
               stressLevel={stressEffects.stressLevel}
               congestionFactor={stressEffects.congestionFactor || 1.0}
               enabled={stressEffects.shouldShowIcon}
+              onPress={() => {
+                setShowStressInfoModal(true);
+              }}
               position={[0, 2.5, 0]}
             />
           </>
@@ -426,23 +415,21 @@ function AvatarWithTrafficStress({
       </Canvas>
 
       {/* UI Overlays */}
-      <EffectControls
-        hazeEnabled={hazeEnabled}
-        onHazeToggle={handleHazeToggle}
-        intensity={smogIntensity}
-        onIntensityChange={handleIntensityChange}
-      />
-      <SkinToneControls
-        skinToneAdjustment={skinToneAdjustment}
-        onSkinToneChange={onSkinToneChange || (() => {})}
-        visible={showSkinToneControls}
-      />
-      <AnimationControls
-        availableAnimations={AVAILABLE_ANIMATIONS}
-        activeAnimation={activeAnimation}
-        onAnimationToggle={handleAnimationToggle}
-        visible={showAnimationButton}
-      />
+      {__DEV__ && (
+        <>
+          <SkinToneControls
+            skinToneAdjustment={skinToneAdjustment}
+            onSkinToneChange={onSkinToneChange || (() => {})}
+            visible={showSkinToneControls}
+          />
+          <AnimationControls
+            availableAnimations={AVAILABLE_ANIMATIONS}
+            activeAnimation={activeAnimation}
+            onAnimationToggle={handleAnimationToggle}
+            visible={showAnimationButton}
+          />
+        </>
+      )}
 
       {/* Loading Indicator Overlay */}
       <AvatarLoadingIndicator
@@ -451,21 +438,41 @@ function AvatarWithTrafficStress({
       />
 
       {/* Traffic Status Indicator */}
-      {enableTrafficStress && trafficData && stressEffects.stressLevel !== 'none' && (
-        <View style={styles.trafficStatus}>
-          <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(stressEffects.stressLevel) }]} />
-        </View>
-      )}
+      {enableTrafficStress &&
+        trafficData &&
+        stressEffects.stressLevel !== 'none' && (
+          <View style={styles.trafficStatus}>
+            <View
+              style={[
+                styles.statusIndicator,
+                { backgroundColor: getStatusColor(stressEffects.stressLevel) },
+              ]}
+            />
+          </View>
+        )}
+
+      <StressInfoModal
+        visible={showStressInfoModal}
+        onClose={() => setShowStressInfoModal(false)}
+        stressLevel="moderate"
+        congestionFactor={2.0}
+        // stressLevel={stressEffects.stressLevel}
+        // congestionFactor={stressEffects.congestionFactor || 1.0}
+      />
     </View>
   );
 }
 
 const getStatusColor = (stressLevel: string): string => {
   switch (stressLevel) {
-    case 'mild': return '#FFC107';
-    case 'moderate': return '#FF9800';
-    case 'high': return '#F44336';
-    default: return '#4CAF50';
+    case 'mild':
+      return '#FFC107';
+    case 'moderate':
+      return '#FF9800';
+    case 'high':
+      return '#F44336';
+    default:
+      return '#4CAF50';
   }
 };
 

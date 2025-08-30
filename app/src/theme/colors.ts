@@ -18,6 +18,12 @@ export const colors = {
     950: '#0A0A0A',
   },
 
+  // Semantic colors
+  secondary: '#F59E0B',
+  success: '#10B981',
+  warning: '#FBBF24',
+  error: '#EF4444',
+
   // Opacity utilities for overlays
   overlay: {
     light: 'rgba(255, 255, 255, 0.2)',
