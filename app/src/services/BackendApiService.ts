@@ -1,9 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
-
-// Define the API base URL - this should be configurable
-const API_BASE_URL = __DEV__
-  ? 'http://10.10.0.134:3000/api'
-  : 'https://your-production-api.com/api';
+import { API_BASE_URL } from '../constants';
 
 export interface AirQualityApiResponse {
   success: boolean;

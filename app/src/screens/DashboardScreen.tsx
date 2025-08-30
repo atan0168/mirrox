@@ -10,10 +10,11 @@ import {
   Easing,
   ViewStyle,
 } from 'react-native';
-import ThreeAvatar from '../components/ThreeAvatar';
+import AvatarWithTrafficStress from '../components/avatar/AvatarWithTrafficStress';
 import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
 import { SkinToneButton } from '../components/controls/SkinToneButton';
 import { Card, HealthSummary } from '../components/ui';
+import { TrafficInfoCard } from '../components/ui/TrafficInfoCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -186,12 +187,16 @@ const DashboardScreen: React.FC = () => {
       <ScrollView style={styles.container}>
         <View style={styles.content}>
           <View style={styles.avatarContainer}>
-            <ThreeAvatar
+            <AvatarWithTrafficStress
               showAnimationButton={true}
               facialExpression={facialExpression}
               skinToneAdjustment={
                 skinToneAdjustment + skinEffects.totalAdjustment
               }
+              latitude={userProfile?.location.latitude}
+              longitude={userProfile?.location.longitude}
+              enableTrafficStress={true}
+              trafficRefreshInterval={300000} // 5 minutes
               airQualityData={
                 airQuality
                   ? {
@@ -269,6 +274,13 @@ const DashboardScreen: React.FC = () => {
               onExpressionChange={handleFacialExpressionChange}
             />
           </View>
+
+          {/* Traffic Information */}
+          <TrafficInfoCard
+            latitude={userProfile?.location.latitude}
+            longitude={userProfile?.location.longitude}
+            enabled={!!userProfile?.location}
+          />
 
           {/* Health Summary */}
           <HealthSummary userProfile={userProfile} airQuality={airQuality} />
