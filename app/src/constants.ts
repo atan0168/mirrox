@@ -1,4 +1,12 @@
 // Define available idle animations in order of preference
+export const AVAILABLE_ANIMATIONS = [
+  { name: 'M_Standing_Expressions_007', label: 'Cough' },
+  { name: 'wiping_sweat', label: 'Wipe Sweat' },
+  { name: 'shock', label: 'Shock' },
+  { name: 'swat_bugs', label: 'Swat Bugs' },
+  { name: 'breathing', label: 'Breathing' },
+];
+
 export const IDLE_ANIMATIONS = [
   'M_Standing_Idle_Variations_007',
   'M_Standing_Idle_Variations_003',

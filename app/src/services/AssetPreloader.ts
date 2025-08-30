@@ -91,10 +91,6 @@ export class AssetPreloader {
       // Define all assets to preload
       const animationAssets = [
         {
-          asset: require('../../assets/animations/laying_severe_cough.glb'),
-          name: 'laying_severe_cough',
-        },
-        {
           asset: require('../../assets/animations/M_Standing_Expressions_007.glb'),
           name: 'M_Standing_Expressions_007',
         },
@@ -109,6 +105,10 @@ export class AssetPreloader {
         {
           asset: require('../../assets/animations/wiping_sweat.glb'),
           name: 'wiping_sweat',
+        },
+        {
+          asset: require('../../assets/animations/breathing.glb'),
+          name: 'breathing',
         },
         {
           asset: require('../../assets/animations/shock.glb'),

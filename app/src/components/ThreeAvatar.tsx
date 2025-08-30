@@ -19,6 +19,12 @@ import {
   configureTextureLoader,
 } from '../utils/ThreeUtils';
 import { calculateSmogEffects } from '../utils/skinEffectsUtils';
+import { AVAILABLE_ANIMATIONS } from '../constants';
+import {
+  getAnimationForAQI,
+  getAnimationCycleForAQI,
+  shouldOverrideAnimation,
+} from '../utils/animationUtils';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -41,15 +47,6 @@ interface ThreeAvatarProps {
   } | null;
 }
 
-const AVAILABLE_ANIMATIONS = [
-  { name: 'M_Standing_Expressions_007', label: 'Cough' },
-  { name: 'wiping_sweat', label: 'Wipe Sweat' },
-  { name: 'shock', label: 'Shock' },
-  { name: 'swat_bugs', label: 'Swat Bugs' },
-  // { name: "cough", label: "Mild Cough" },
-  { name: 'laying_severe_cough', label: 'Bad Cough' },
-];
-
 function ThreeAvatar({
   showAnimationButton = false,
   showSkinToneControls = false,
@@ -63,6 +60,7 @@ function ThreeAvatar({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
+  const [isManualAnimation, setIsManualAnimation] = useState<boolean>(false);
   const [hazeEnabled, setHazeEnabled] = useState<boolean>(false);
   const [smogIntensity, setSmogIntensity] = useState<number>(1.0);
   const [isAvatarLoading, setIsAvatarLoading] = useState<boolean>(false);
@@ -72,6 +70,7 @@ function ThreeAvatar({
     item: string;
   }>({ loaded: 0, total: 0, item: '' });
   const canvasRef = useRef<any>(null);
+  const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use external facial expression prop, fallback to "neutral"
   const facialExpression = externalFacialExpression;
@@ -101,6 +100,68 @@ function ThreeAvatar({
   const effectiveSmogDensity = autoSmogEffects.enabled
     ? autoSmogEffects.density
     : 60;
+
+  // Get AQI-based animation recommendation
+  const aqiAnimationRecommendation = useMemo(() => {
+    const aqi = airQualityData?.aqi;
+    return getAnimationForAQI(aqi);
+  }, [airQualityData?.aqi]);
+
+  // Automatic animation control based on AQI
+  useEffect(() => {
+    const aqi = airQualityData?.aqi;
+
+    // Clear any existing animation cycle timer
+    if (animationCycleRef.current) {
+      clearInterval(animationCycleRef.current);
+      animationCycleRef.current = null;
+    }
+
+    // Only apply automatic animations if not manually set
+    if (!isManualAnimation && aqiAnimationRecommendation) {
+      if (
+        shouldOverrideAnimation(
+          activeAnimation,
+          aqiAnimationRecommendation,
+          isManualAnimation
+        )
+      ) {
+        console.log(
+          `🌬️ AQI-based animation: ${aqiAnimationRecommendation.reason}`
+        );
+        setActiveAnimation(aqiAnimationRecommendation.animation);
+
+        // For unhealthy air quality, set up animation cycling between cough and breathing
+        if (aqi && aqi >= 101) {
+          const cycleAnimations = getAnimationCycleForAQI(aqi);
+          if (cycleAnimations.length > 1) {
+            let currentIndex = 0;
+            animationCycleRef.current = setInterval(() => {
+              currentIndex = (currentIndex + 1) % cycleAnimations.length;
+              const nextAnimation = cycleAnimations[currentIndex];
+              console.log(
+                `🔄 Cycling to animation: ${nextAnimation} (unhealthy AQI: ${aqi})`
+              );
+              setActiveAnimation(nextAnimation);
+            }, 8000); // Change animation every 8 seconds for unhealthy air quality
+          }
+        }
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if (animationCycleRef.current) {
+        clearInterval(animationCycleRef.current);
+        animationCycleRef.current = null;
+      }
+    };
+  }, [
+    airQualityData?.aqi,
+    isManualAnimation,
+    aqiAnimationRecommendation,
+    activeAnimation,
+  ]);
 
   useEffect(() => {
     const loadAvatar = async () => {
@@ -132,13 +193,31 @@ function ThreeAvatar({
     loadAvatar();
   }, []);
 
+  // Cleanup animation cycle timer on unmount
+  useEffect(() => {
+    return () => {
+      if (animationCycleRef.current) {
+        clearInterval(animationCycleRef.current);
+        animationCycleRef.current = null;
+      }
+    };
+  }, []);
+
   const handleAnimationToggle = (animationName: string) => {
+    // Clear any automatic animation cycling when user manually controls animations
+    if (animationCycleRef.current) {
+      clearInterval(animationCycleRef.current);
+      animationCycleRef.current = null;
+    }
+
     if (activeAnimation === animationName) {
       console.log(`Stopping animation: ${animationName}`);
       setActiveAnimation(null);
+      setIsManualAnimation(false); // Allow automatic control again when stopping
     } else {
       console.log(`Starting animation: ${animationName}`);
       setActiveAnimation(animationName);
+      setIsManualAnimation(true); // Mark as manually controlled
     }
   };
 
