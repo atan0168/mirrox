@@ -44,8 +44,8 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
       const existingAvatarUrl = await localStorageService.getAvatarUrl();
       if (!mounted) return;
       if (existingAvatarUrl) {
-        console.log('Avatar already exists, navigating to dashboard');
-        navigation.navigate('Dashboard');
+        console.log('Avatar already exists, navigating to main tabs');
+        navigation.navigate('MainTabs');
         return;
       }
     })();
@@ -68,8 +68,8 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
         // Save the avatar URL
         await localStorageService.saveAvatarUrl(url);
 
-        // Navigate to dashboard
-        navigation.navigate('Dashboard');
+        // Navigate to main tabs
+        navigation.navigate('MainTabs');
       }
 
       // Check for frame ready event
@@ -126,8 +126,8 @@ const AvatarCreationScreen: React.FC<AvatarCreationScreenProps> = ({
       // Save the avatar URL
       await localStorageService.saveAvatarUrl(avatarUrl);
 
-      // Navigate to dashboard
-      navigation.navigate('Dashboard');
+      // Navigate to main tabs
+      navigation.navigate('MainTabs');
     } catch (error) {
       console.error('Error creating avatar via API:', error);
       Alert.alert(

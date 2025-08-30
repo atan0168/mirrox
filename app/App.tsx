@@ -1,9 +1,7 @@
 import 'react-native-gesture-handler';
-import { TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Settings } from 'lucide-react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Import screens
@@ -14,9 +12,10 @@ import CitySelectionScreen from './src/screens/CitySelectionScreen';
 import QuestionnaireScreen from './src/screens/QuestionnaireScreen';
 import GeneratingTwinScreen from './src/screens/GeneratingTwinScreen';
 import AvatarCreationScreen from './src/screens/AvatarCreationScreen';
-import DashboardScreen from './src/screens/DashboardScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
+
+// Import tab navigator
+import MainTabNavigator from './src/navigation/MainTabNavigator';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -34,8 +33,7 @@ export type RootStackParamList = {
   };
   GeneratingTwin: undefined;
   AvatarCreation: undefined;
-  Dashboard: undefined;
-  Settings: undefined;
+  MainTabs: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -116,26 +114,11 @@ export default function App() {
             }}
           />
           <Stack.Screen
-            name="Dashboard"
-            component={DashboardScreen}
-            options={({ navigation }) => ({
-              title: 'Your Digital Twin',
-              headerRight: () => (
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('Settings')}
-                  style={{ marginRight: 16 }}
-                >
-                  <Settings size={24} color="#000000" />
-                </TouchableOpacity>
-              ),
-              // headerLeft: () => null, // Prevent going back
-            })}
-          />
-          <Stack.Screen
-            name="Settings"
-            component={SettingsScreen}
+            name="MainTabs"
+            component={MainTabNavigator}
             options={{
-              title: 'Settings',
+              headerShown: false,
+              // headerLeft: () => null, // Prevent going back
             }}
           />
         </Stack.Navigator>
