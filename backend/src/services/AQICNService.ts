@@ -1,4 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import {
   AQICNResponse,
   AQICNData,
@@ -8,6 +11,10 @@ import {
 import { cacheService } from './CacheService';
 import { aqicnRateLimiterService } from './AQICNRateLimiterService';
 import config from '../utils/config';
+
+// Extend dayjs with timezone support
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 class AQICNService {
   private readonly axiosInstance;
@@ -42,6 +49,33 @@ class AQICNService {
       const response = await this.axiosInstance.get<T>(url, { params });
       return response.data;
     });
+  }
+
+  /**
+   * Parse timezone offset from AQICN format (e.g., "+08:00") to minutes
+   */
+  private parseTimezoneOffset(timezoneStr: string): number {
+    try {
+      // Handle formats like "+08:00", "-05:00", etc.
+      const match = timezoneStr.match(/^([+-])(\d{2}):(\d{2})$/);
+      if (!match) {
+        console.warn(
+          `Unable to parse timezone: ${timezoneStr}, defaulting to UTC`
+        );
+        return 0;
+      }
+
+      const [, sign, hours, minutes] = match;
+      if (!hours || !minutes) {
+        console.warn(`Invalid timezone format: ${timezoneStr}`);
+        return 0;
+      }
+      const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
+      return sign === '+' ? totalMinutes : -totalMinutes;
+    } catch (error) {
+      console.warn(`Error parsing timezone ${timezoneStr}:`, error);
+      return 0;
+    }
   }
 
   /**
@@ -113,6 +147,54 @@ class AQICNService {
       co: aqicnData.iaqi.co?.v || null,
     };
 
+    // Extract UV data from forecast if available
+    const uvForecast = aqicnData.forecast?.daily?.uvi || null;
+    let currentUVIndex: number | null = null;
+
+    if (uvForecast && uvForecast.length > 0) {
+      // Parse timezone from AQICN data (e.g., "+08:00")
+      const stationTimezone = aqicnData.time.tz;
+      const timezoneOffsetMinutes = this.parseTimezoneOffset(stationTimezone);
+
+      // Get today's date in the station's timezone
+      const todayInStationTz = dayjs()
+        .utc()
+        .add(timezoneOffsetMinutes, 'minute')
+        .format('YYYY-MM-DD');
+
+      console.log(
+        `Looking for UV forecast for date: ${todayInStationTz} in timezone: ${stationTimezone} (offset: ${timezoneOffsetMinutes} minutes)`
+      );
+
+      // Find today's UV forecast
+      const todaysForecast = uvForecast.find(
+        (forecast: { avg: number; day: string; max: number; min: number }) =>
+          forecast.day === todayInStationTz
+      );
+
+      if (todaysForecast) {
+        currentUVIndex = todaysForecast.avg;
+        console.log(
+          `Found UV forecast for today (${todayInStationTz}): UV Index ${currentUVIndex} (avg), max: ${todaysForecast.max}, min: ${todaysForecast.min}`
+        );
+      } else {
+        // Try to find the closest date or use first available
+        console.log(
+          `Available UV forecast dates:`,
+          uvForecast.map(f => f.day)
+        );
+
+        // Fallback to first forecast entry if today's date not found
+        const firstForecast = uvForecast[0];
+        currentUVIndex = firstForecast?.avg || 0;
+        console.log(
+          `Today's UV forecast not found for ${todayInStationTz}, using first available: UV Index ${currentUVIndex} for date: ${firstForecast?.day || 'unknown'}`
+        );
+      }
+    } else {
+      console.log('No UV forecast data available in AQICN response');
+    }
+
     // Create a mock location object compatible with existing interface
     const location = {
       id: aqicnData.idx,
@@ -158,6 +240,9 @@ class AQICNService {
       no2: pollutants.no2,
       co: pollutants.co,
       o3: pollutants.o3,
+      // Add UV data
+      uvIndex: currentUVIndex,
+      uvForecast: uvForecast,
       // Add AQICN specific data
       classification: aqiInfo.classification,
       colorCode: aqiInfo.colorCode,

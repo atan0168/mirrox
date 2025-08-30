@@ -27,6 +27,7 @@ import {
 } from '../utils/aqiUtils';
 import {
   calculateCombinedSkinEffects,
+  calculateCombinedEnvironmentalSkinEffects,
   getRecommendedFacialExpression,
   calculateSmogEffects,
 } from '../utils/skinEffectsUtils';
@@ -83,21 +84,39 @@ const DashboardScreen: React.FC = () => {
       !!userProfile
     );
 
-  // Calculate skin effects based on air quality
+  // Calculate combined environmental skin effects (air quality + UV)
   const skinEffects = useMemo(() => {
     if (!airQuality) {
       return {
-        adjustment: 0,
+        totalAdjustment: 0,
+        pollutionEffect: 0,
+        uvEffect: 0,
+        redness: 0,
         primaryFactor: 'none',
-        description: 'No air quality data available',
+        description: 'No environmental data available',
+        recommendations: [],
       };
     }
-    return calculateCombinedSkinEffects({
-      pm25: airQuality.pm25,
-      pm10: airQuality.pm10,
-      aqi: airQuality.aqi,
-    });
-  }, [airQuality]);
+    
+    // Get current UV index from forecast data (use today's average if available)
+    const currentUVIndex = airQuality.uvIndex || 
+      (airQuality.uvForecast && airQuality.uvForecast.length > 0 
+        ? airQuality.uvForecast[0].avg 
+        : undefined);
+    
+    return calculateCombinedEnvironmentalSkinEffects(
+      {
+        pm25: airQuality.pm25,
+        pm10: airQuality.pm10,
+        aqi: airQuality.aqi,
+      },
+      {
+        uvIndex: currentUVIndex,
+        exposureHours: 2, // Assume 2 hours of outdoor exposure
+      },
+      skinToneAdjustment // Use current skin tone as base
+    );
+  }, [airQuality, skinToneAdjustment]);
 
   // Calculate smog effects based on air quality
   const smogEffects = useMemo(() => {
@@ -170,7 +189,7 @@ const DashboardScreen: React.FC = () => {
             <ThreeAvatar
               showAnimationButton={true}
               facialExpression={facialExpression}
-              skinToneAdjustment={skinToneAdjustment + skinEffects.adjustment}
+              skinToneAdjustment={skinToneAdjustment + skinEffects.totalAdjustment}
               airQualityData={
                 airQuality
                   ? {

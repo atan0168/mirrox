@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 
 // Define the API base URL - this should be configurable
 const API_BASE_URL = __DEV__
-  ? 'http://10.10.0.133:3000/api'
+  ? 'http://10.10.0.134:3000/api'
   : 'https://your-production-api.com/api';
 
 export interface AirQualityApiResponse {
@@ -28,6 +28,9 @@ export interface AirQualityApiResponse {
     no2?: number;
     co?: number;
     o3?: number;
+    // UV data from AQICN forecast
+    uvIndex?: number;
+    uvForecast?: Array<{ avg: number; day: string; max: number; min: number }>;
     // AQICN specific fields
     classification?: string;
     colorCode?: string;

@@ -137,6 +137,205 @@ export function calculateCombinedSkinEffects(airQualityData: {
 }
 
 /**
+ * Calculate skin tone adjustment based on UV Index levels
+ * Higher UV levels cause skin to appear more reddish/darker due to sunburn/tanning effects
+ * @param uvIndex UV Index value (0-11+)
+ * @param exposureHours Estimated hours of sun exposure (default: 2 hours)
+ * @param baseSkinTone Base skin tone (-1 to 1, where -1 is darkest, 1 is lightest)
+ * @returns Skin tone adjustment value for UV effects
+ */
+export function calculateSkinEffectFromUV(
+  uvIndex: number | null | undefined,
+  exposureHours: number = 2,
+  baseSkinTone: number = 0
+): {
+  adjustment: number;
+  redness: number;
+  description: string;
+} {
+  if (uvIndex === null || uvIndex === undefined || uvIndex < 0) {
+    return {
+      adjustment: 0,
+      redness: 0,
+      description: 'No UV data available'
+    };
+  }
+
+  // UV Index scale and skin effects:
+  // 0-2: Low - minimal skin effects
+  // 3-5: Moderate - slight tanning possible
+  // 6-7: High - tanning and potential mild sunburn
+  // 8-10: Very High - significant tanning/burning risk
+  // 11+: Extreme - severe sunburn risk
+
+  let baseEffect = 0;
+  let rednessEffect = 0;
+  let description = '';
+
+  // Adjust effects based on base skin tone
+  // Lighter skin tones (positive values) burn more easily and show more redness
+  // Darker skin tones (negative values) tan more and show less redness
+  const skinSensitivity = Math.max(0.3, 1 + baseSkinTone * 0.7); // 0.3 to 1.7 multiplier
+
+  if (uvIndex <= 2) {
+    // Low UV - minimal effects
+    baseEffect = 0;
+    rednessEffect = 0;
+    description = 'Low UV - minimal skin effects';
+  } else if (uvIndex <= 5) {
+    // Moderate UV - slight tanning
+    const factor = (uvIndex - 2) / 3; // 0 to 1
+    baseEffect = factor * 0.1 * exposureHours * skinSensitivity;
+    rednessEffect = factor * 0.05 * exposureHours * skinSensitivity;
+    description = 'Moderate UV - slight tanning possible';
+  } else if (uvIndex <= 7) {
+    // High UV - noticeable tanning/burning
+    const factor = (uvIndex - 5) / 2; // 0 to 1
+    baseEffect = (0.1 + factor * 0.15) * exposureHours * skinSensitivity;
+    rednessEffect = (0.05 + factor * 0.1) * exposureHours * skinSensitivity;
+    description = 'High UV - tanning and potential mild sunburn';
+  } else if (uvIndex <= 10) {
+    // Very High UV - significant effects
+    const factor = (uvIndex - 7) / 3; // 0 to 1
+    baseEffect = (0.25 + factor * 0.2) * exposureHours * skinSensitivity;
+    rednessEffect = (0.15 + factor * 0.15) * exposureHours * skinSensitivity;
+    description = 'Very High UV - significant tanning/burning risk';
+  } else {
+    // Extreme UV - severe effects
+    const factor = Math.min((uvIndex - 10) / 5, 1); // Cap at reasonable level
+    baseEffect = (0.45 + factor * 0.25) * exposureHours * skinSensitivity;
+    rednessEffect = (0.3 + factor * 0.2) * exposureHours * skinSensitivity;
+    description = 'Extreme UV - severe sunburn risk';
+  }
+
+  // For lighter skin tones, emphasize redness (sunburn)
+  // For darker skin tones, emphasize darkening (tanning)
+  let finalAdjustment;
+  if (baseSkinTone > 0) {
+    // Lighter skin - more redness, less darkening
+    finalAdjustment = rednessEffect * 0.7 - baseEffect * 0.3;
+  } else {
+    // Darker skin - more darkening, less redness
+    finalAdjustment = -baseEffect * 0.8 + rednessEffect * 0.2;
+  }
+
+  // Cap the effects to reasonable levels
+  finalAdjustment = Math.max(-0.4, Math.min(0.3, finalAdjustment));
+  rednessEffect = Math.max(0, Math.min(0.5, rednessEffect));
+
+  return {
+    adjustment: finalAdjustment,
+    redness: rednessEffect,
+    description
+  };
+}
+
+/**
+ * Get UV protection recommendation based on UV Index
+ * @param uvIndex UV Index value
+ * @returns Protection recommendation
+ */
+export function getUVProtectionRecommendation(uvIndex: number | null | undefined): string {
+  if (uvIndex === null || uvIndex === undefined || uvIndex < 0) {
+    return 'UV data not available';
+  }
+
+  if (uvIndex <= 2) {
+    return 'Low UV - minimal protection needed';
+  } else if (uvIndex <= 5) {
+    return 'Moderate UV - wear sunglasses, use sunscreen';
+  } else if (uvIndex <= 7) {
+    return 'High UV - seek shade, wear protective clothing';
+  } else if (uvIndex <= 10) {
+    return 'Very High UV - avoid sun exposure, use SPF 30+';
+  } else {
+    return 'Extreme UV - stay indoors, use maximum protection';
+  }
+}
+
+/**
+ * Calculate combined skin effects from both air quality and UV exposure
+ * @param airQualityData Object containing pollutant concentrations
+ * @param uvData Object containing UV index and exposure info
+ * @param baseSkinTone Base skin tone of the user
+ * @returns Combined skin effects
+ */
+export function calculateCombinedEnvironmentalSkinEffects(
+  airQualityData: {
+    pm25?: number | null;
+    pm10?: number | null;
+    aqi?: number | null;
+  },
+  uvData: {
+    uvIndex?: number | null;
+    exposureHours?: number;
+  } = {},
+  baseSkinTone: number = 0
+): {
+  totalAdjustment: number;
+  pollutionEffect: number;
+  uvEffect: number;
+  redness: number;
+  primaryFactor: string;
+  description: string;
+  recommendations: string[];
+} {
+  // Calculate pollution effects
+  const pollutionEffects = calculateCombinedSkinEffects(airQualityData);
+  
+  // Calculate UV effects
+  const uvEffects = calculateSkinEffectFromUV(
+    uvData.uvIndex,
+    uvData.exposureHours || 2,
+    baseSkinTone
+  );
+
+  // Combine effects
+  const totalAdjustment = pollutionEffects.adjustment + uvEffects.adjustment;
+  
+  // Determine primary factor
+  let primaryFactor = 'none';
+  if (Math.abs(pollutionEffects.adjustment) > Math.abs(uvEffects.adjustment)) {
+    primaryFactor = pollutionEffects.primaryFactor;
+  } else if (uvEffects.adjustment !== 0) {
+    primaryFactor = 'UV exposure';
+  }
+
+  // Create combined description
+  const descriptions = [];
+  if (pollutionEffects.adjustment !== 0) {
+    descriptions.push(pollutionEffects.description);
+  }
+  if (uvEffects.adjustment !== 0) {
+    descriptions.push(uvEffects.description);
+  }
+  
+  const combinedDescription = descriptions.length > 0 
+    ? descriptions.join(' + ') 
+    : 'No environmental effects on skin';
+
+  // Generate recommendations
+  const recommendations = [];
+  if (pollutionEffects.adjustment < -0.1) {
+    recommendations.push('Consider wearing a face mask outdoors');
+    recommendations.push('Use antioxidant skincare products');
+  }
+  if (uvData.uvIndex && uvData.uvIndex > 3) {
+    recommendations.push(getUVProtectionRecommendation(uvData.uvIndex));
+  }
+
+  return {
+    totalAdjustment: Math.max(-0.8, Math.min(0.5, totalAdjustment)),
+    pollutionEffect: pollutionEffects.adjustment,
+    uvEffect: uvEffects.adjustment,
+    redness: uvEffects.redness,
+    primaryFactor,
+    description: combinedDescription,
+    recommendations
+  };
+}
+
+/**
  * Get facial expression recommendation based on air quality
  * @param pm25 PM2.5 concentration in µg/m³
  * @param aqi Air Quality Index

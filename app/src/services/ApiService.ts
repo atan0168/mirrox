@@ -51,6 +51,9 @@ class ApiService {
         no2: response.data.no2,
         co: response.data.co,
         o3: response.data.o3,
+        // Include UV data
+        uvIndex: response.data.uvIndex,
+        uvForecast: response.data.uvForecast,
         // Include AQICN specific fields
         classification: response.data.classification,
         colorCode: response.data.colorCode,
@@ -188,6 +191,8 @@ class ApiService {
         no2: response.data.no2,
         co: response.data.co,
         o3: response.data.o3,
+        uvIndex: response.data.uvIndex,
+        uvForecast: response.data.uvForecast,
         classification: response.data.classification,
         colorCode: response.data.colorCode,
         healthAdvice: response.data.healthAdvice,

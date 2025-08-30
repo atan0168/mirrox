@@ -45,12 +45,19 @@ export interface AQICNData {
   };
   forecast?: {
     daily: {
-      o3: Array<{ avg: number; day: string; max: number; min: number }>;
-      pm10: Array<{ avg: number; day: string; max: number; min: number }>;
-      pm25: Array<{ avg: number; day: string; max: number; min: number }>;
-      uvi?: Array<{ avg: number; day: string; max: number; min: number }>;
+      o3: Array<ForecastMeasurement>;
+      pm10: Array<ForecastMeasurement>;
+      pm25: Array<ForecastMeasurement>;
+      uvi?: Array<ForecastMeasurement>;
     };
   };
+}
+
+export interface ForecastMeasurement {
+  day: string;
+  avg: number;
+  min: number;
+  max: number;
 }
 
 export interface AirQualityLocation {

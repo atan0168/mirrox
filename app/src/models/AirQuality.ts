@@ -85,6 +85,9 @@ export interface AirQualityData {
   no2?: number;
   co?: number;
   o3?: number;
+  // UV data from AQICN forecast
+  uvIndex?: number;
+  uvForecast?: Array<{ avg: number; day: string; max: number; min: number }>;
   // AQICN specific fields
   classification?: string;
   colorCode?: string;
