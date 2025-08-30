@@ -162,7 +162,7 @@ export default function SplashScreen() {
     ) {
       const t = setTimeout(() => {
         console.log('🎉 All assets preloaded, navigating to next screen');
-        navigation.replace(hasUser ? 'Dashboard' : 'Welcome');
+        navigation.replace(hasUser ? 'MainTabs' : 'Welcome');
       }, 500); // slight pause to let users see completion
       return () => clearTimeout(t);
     }

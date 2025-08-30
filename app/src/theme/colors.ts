@@ -2,6 +2,11 @@ export const colors = {
   // Pure monochrome palette
   black: '#000000',
   white: '#FFFFFF',
+  // App core brand / accent colors (added)
+  primary: '#374151', // deep neutral used for primary UI elements
+
+  // Common UI line / divider color (added)
+  divider: '#E5E7EB',
 
   // Neutral grays
   neutral: {

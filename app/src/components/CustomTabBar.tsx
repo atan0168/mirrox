@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
+  Text,
   TouchableOpacity,
   StyleSheet,
   Animated,
@@ -8,9 +9,11 @@ import {
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Home, BarChart3, Settings } from 'lucide-react-native';
+import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
-const TAB_WIDTH = screenWidth / 3;
+// Measure actual tab bar width (inside horizontal padding) for accurate centering.
+const HORIZONTAL_PADDING = spacing.md; // matches styles.tabBar paddingHorizontal
 
 interface TabConfig {
   name: string;
@@ -41,40 +44,92 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
   descriptors,
   navigation,
 }) => {
-  const animatedValue = React.useRef(new Animated.Value(0)).current;
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const routeCount = state.routes.length;
+  const [textWidths, setTextWidths] = useState<number[]>(
+    Array(routeCount).fill(0)
+  );
+  const [tabBarWidth, setTabBarWidth] = useState<number | null>(null);
 
-  React.useEffect(() => {
+  // Ensure textWidths array length matches route count (in case of dynamic tabs)
+  useEffect(() => {
+    setTextWidths(prev => {
+      if (prev.length === routeCount) return prev;
+      const next = Array(routeCount).fill(0);
+      prev.forEach((w, i) => {
+        if (i < next.length) next[i] = w;
+      });
+      return next;
+    });
+  }, [routeCount]);
+
+  useEffect(() => {
     Animated.spring(animatedValue, {
       toValue: state.index,
       useNativeDriver: false,
       tension: 100,
-      friction: 8,
+      friction: 50,
     }).start();
   }, [state.index, animatedValue]);
 
+  // Calculate pill widths based on text measurements
+  const pillWidths = textWidths.map(textWidth =>
+    textWidth > 0 ? textWidth + 56 : 60
+  );
+
+  const innerWidth = (tabBarWidth ?? screenWidth) - HORIZONTAL_PADDING * 2;
+  const tabWidth = innerWidth / routeCount;
+
+  // Compute centered X for each tab within innerWidth, offset by horizontal padding.
+  const translateXOutputRange = pillWidths.map(
+    (w, i) => HORIZONTAL_PADDING + i * tabWidth + (tabWidth - w) / 2
+  );
+
   const translateX = animatedValue.interpolate({
-    inputRange: [0, 1, 2],
-    outputRange: [
-      (TAB_WIDTH - 80) / 2, // Center Home pill
-      TAB_WIDTH + (TAB_WIDTH - 90) / 2, // Center Stats pill
-      TAB_WIDTH * 2 + (TAB_WIDTH - 110) / 2, // Center Settings pill
-    ],
+    inputRange: state.routes.map((_, i) => i),
+    outputRange: translateXOutputRange,
     extrapolate: 'clamp',
   });
 
   const pillWidth = animatedValue.interpolate({
     inputRange: [0, 1, 2],
-    outputRange: [
-      80, // Home pill width (icon + text)
-      90, // Stats pill width (icon + text)
-      110, // Settings pill width (icon + text)
-    ],
+    outputRange: pillWidths,
     extrapolate: 'clamp',
   });
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabBar}>
+      {/* Hidden text elements for measuring */}
+      <View style={styles.hiddenMeasureContainer}>
+        {state.routes.map((route, index) => {
+          const tabConfig = tabConfigs[route.name];
+          if (!tabConfig) return null;
+          return (
+            <Text
+              key={`measure-${route.key}`}
+              style={styles.measureText}
+              onLayout={event => {
+                const { width } = event.nativeEvent.layout;
+                setTextWidths(prev => {
+                  const newWidths = [...prev];
+                  newWidths[index] = width;
+                  return newWidths;
+                });
+              }}
+            >
+              {tabConfig.label}
+            </Text>
+          );
+        })}
+      </View>
+
+      <View
+        style={styles.tabBar}
+        onLayout={e => {
+          const { width } = e.nativeEvent.layout;
+          if (width !== tabBarWidth) setTabBarWidth(width);
+        }}
+      >
         {/* Animated pill background */}
         <Animated.View
           style={[
@@ -121,7 +176,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
               accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={options.tabBarTestID}
+              testID={`tab-${route.name.toLowerCase()}`}
               onPress={onPress}
               onLongPress={onLongPress}
               style={styles.tab}
@@ -130,7 +185,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               <View style={styles.tabContent}>
                 <IconComponent
                   size={24}
-                  color={isFocused ? '#FFFFFF' : '#9CA3AF'}
+                  color={isFocused ? colors.white : colors.neutral[400]}
                 />
                 {isFocused && (
                   <Animated.Text
@@ -159,32 +214,36 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
-    paddingBottom: 34, // Safe area padding for iPhone
-    paddingTop: 16,
+    backgroundColor: colors.white,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: colors.divider,
+  },
+  hiddenMeasureContainer: {
+    position: 'absolute',
+    opacity: 0,
+    pointerEvents: 'none',
+    top: -1000, // Move far off screen
+  },
+  measureText: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: 'transparent',
   },
   tabBar: {
     flexDirection: 'row',
     height: 56,
     position: 'relative',
-    paddingHorizontal: 16,
+    paddingHorizontal: HORIZONTAL_PADDING,
   },
   pill: {
     position: 'absolute',
     height: 40,
-    backgroundColor: '#374151', // Dark neutral color
-    borderRadius: 20,
+    backgroundColor: colors.primary, // Dark neutral color
+    borderRadius: borderRadius.full,
     top: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadows.medium,
   },
   tab: {
     flex: 1,
@@ -197,14 +256,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: spacing.md,
     height: 40,
   },
   tabLabel: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: colors.white,
+    fontSize: fontSize.base,
     fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: spacing.sm,
   },
 });
 
