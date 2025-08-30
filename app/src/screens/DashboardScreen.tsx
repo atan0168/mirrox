@@ -23,6 +23,7 @@ import {
   getHealthRecommendations,
   formatPollutantValue,
   formatTimestamp,
+  mapPrimaryPollutant,
 } from '../utils/aqiUtils';
 import {
   calculateCombinedSkinEffects,
@@ -370,7 +371,9 @@ const DashboardScreen: React.FC = () => {
                   <View style={styles.statRow}>
                     <Text style={styles.statLabel}>Primary Pollutant:</Text>
                     <Text style={styles.statValue}>
-                      {airQuality.primaryPollutant || 'N/A'}
+                      {mapPrimaryPollutant(
+                        airQuality.primaryPollutant || 'N/A'
+                      )}
                     </Text>
                   </View>
 

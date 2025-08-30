@@ -66,6 +66,17 @@ export function getAQIInfo(aqi: number): AQIInfo {
   }
 }
 
+export function mapPrimaryPollutant(pollutant: string): string {
+  switch (pollutant) {
+    case 'pm25':
+      return 'PM2.5';
+    case 'pm10':
+      return 'PM10';
+    default:
+      return pollutant;
+  }
+}
+
 /**
  * Get a shortened version of the AQI classification for UI display
  * @param classification Full classification string
@@ -152,50 +163,6 @@ export function formatPollutantValue(
     : 'mg/m³';
 
   return `${value.toFixed(1)} ${units}`;
-}
-
-/**
- * Get the most concerning pollutant from air quality data
- * @param data Object with pollutant values
- * @returns Object with the primary pollutant info
- */
-export function getPrimaryPollutant(data: {
-  pm25?: number | null;
-  pm10?: number | null;
-  no2?: number | null;
-  so2?: number | null;
-  o3?: number | null;
-  co?: number | null;
-}): { name: string; value: number; displayName: string } | null {
-  const pollutants = [
-    { name: 'pm25', value: data.pm25, displayName: 'PM2.5', threshold: 35.4 },
-    { name: 'pm10', value: data.pm10, displayName: 'PM10', threshold: 154 },
-    { name: 'o3', value: data.o3, displayName: 'Ozone', threshold: 164 },
-    { name: 'no2', value: data.no2, displayName: 'NO₂', threshold: 100 },
-    { name: 'so2', value: data.so2, displayName: 'SO₂', threshold: 185 },
-    { name: 'co', value: data.co, displayName: 'CO', threshold: 12.4 },
-  ];
-
-  const validPollutants = pollutants.filter(
-    p => p.value !== null && p.value !== undefined
-  );
-
-  if (validPollutants.length === 0) {
-    return null;
-  }
-
-  // Find the pollutant with the highest ratio to its threshold
-  const primaryPollutant = validPollutants.reduce((max, current) => {
-    const currentRatio = current.value! / current.threshold;
-    const maxRatio = max.value! / max.threshold;
-    return currentRatio > maxRatio ? current : max;
-  });
-
-  return {
-    name: primaryPollutant.name,
-    value: primaryPollutant.value!,
-    displayName: primaryPollutant.displayName,
-  };
 }
 
 /**
