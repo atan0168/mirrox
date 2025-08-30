@@ -44,7 +44,7 @@ export const getDefaultParticleMaterialGenerator =
   (): ParticleMaterialGenerator => {
     const materials: THREE.MeshBasicMaterial[] = [];
 
-    const generator = (index, textures, { opacity, color }) => {
+    const generator = (index: number, textures: THREE.Texture[], { opacity, color }: { opacity: number; color: THREE.Color }) => {
       // Always create fresh materials to avoid caching issues with opacity changes
       const texture = textures[index % textures.length];
 

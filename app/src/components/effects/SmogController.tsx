@@ -61,7 +61,7 @@ export function SmogController({
         const loader = new THREE.TextureLoader();
         const texture = await new Promise<THREE.Texture>((resolve, reject) => {
           loader.load(
-            imageUri,
+            imageUri!,
             texture => resolve(texture),
             undefined,
             error => reject(error)
@@ -71,7 +71,7 @@ export function SmogController({
         setSmokeTexture(texture);
         console.log(
           '✅ Smoke texture loaded:',
-          imageUri.startsWith('file://') ? 'from cache' : 'from bundle'
+          imageUri!.startsWith('file://') ? 'from cache' : 'from bundle'
         );
       } catch (error) {
         console.error('❌ Failed to load smoke texture:', error);
