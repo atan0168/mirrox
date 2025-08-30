@@ -959,10 +959,6 @@ export function AvatarModel({
 
       const animationAssets = [
         {
-          asset: require('../../../assets/animations/laying_severe_cough.glb'),
-          name: 'laying_severe_cough',
-        },
-        {
           asset: require('../../../assets/animations/M_Standing_Expressions_007.glb'),
           name: 'M_Standing_Expressions_007',
         },

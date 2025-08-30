@@ -26,7 +26,6 @@ import {
   mapPrimaryPollutant,
 } from '../utils/aqiUtils';
 import {
-  calculateCombinedSkinEffects,
   calculateCombinedEnvironmentalSkinEffects,
   getRecommendedFacialExpression,
   calculateSmogEffects,
@@ -97,13 +96,14 @@ const DashboardScreen: React.FC = () => {
         recommendations: [],
       };
     }
-    
+
     // Get current UV index from forecast data (use today's average if available)
-    const currentUVIndex = airQuality.uvIndex || 
-      (airQuality.uvForecast && airQuality.uvForecast.length > 0 
-        ? airQuality.uvForecast[0].avg 
+    const currentUVIndex =
+      airQuality.uvIndex ||
+      (airQuality.uvForecast && airQuality.uvForecast.length > 0
+        ? airQuality.uvForecast[0].avg
         : undefined);
-    
+
     return calculateCombinedEnvironmentalSkinEffects(
       {
         pm25: airQuality.pm25,
@@ -189,7 +189,9 @@ const DashboardScreen: React.FC = () => {
             <ThreeAvatar
               showAnimationButton={true}
               facialExpression={facialExpression}
-              skinToneAdjustment={skinToneAdjustment + skinEffects.totalAdjustment}
+              skinToneAdjustment={
+                skinToneAdjustment + skinEffects.totalAdjustment
+              }
               airQualityData={
                 airQuality
                   ? {
@@ -211,22 +213,22 @@ const DashboardScreen: React.FC = () => {
             />
 
             {/* Air Quality Effects Indicator */}
-            {(skinEffects.adjustment !== 0 || smogEffects.enabled) && (
+            {(skinEffects.totalAdjustment !== 0 || smogEffects.enabled) && (
               <View style={styles.skinEffectsIndicator}>
                 <Text style={styles.skinEffectsTitle}>
                   Air Quality Effects on Avatar
                 </Text>
 
                 {/* Skin Effects */}
-                {skinEffects.adjustment !== 0 && (
+                {skinEffects.totalAdjustment !== 0 && (
                   <View style={styles.effectSection}>
                     <Text style={styles.effectSubtitle}>Skin Effects:</Text>
                     <Text style={styles.skinEffectsDescription}>
                       {skinEffects.description}
                     </Text>
                     <Text style={styles.skinEffectsLabel}>
-                      Adjustment: {(skinEffects.adjustment * 100).toFixed(0)}%
-                      darker
+                      Adjustment:{' '}
+                      {(skinEffects.totalAdjustment * 100).toFixed(0)}% darker
                     </Text>
                   </View>
                 )}

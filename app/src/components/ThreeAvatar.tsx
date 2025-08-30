@@ -69,7 +69,7 @@ function ThreeAvatar({
     total: number;
     item: string;
   }>({ loaded: 0, total: 0, item: '' });
-  const canvasRef = useRef<any>(null);
+  const canvasRef = useRef<View | null>(null);
   const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use external facial expression prop, fallback to "neutral"
@@ -107,7 +107,7 @@ function ThreeAvatar({
     return getAnimationForAQI(aqi);
   }, [airQualityData?.aqi]);
 
-  // Automatic animation control based on AQI
+  // Automatic animation control based on AQI and facial expressions
   useEffect(() => {
     const aqi = airQualityData?.aqi;
 
@@ -161,6 +161,7 @@ function ThreeAvatar({
     isManualAnimation,
     aqiAnimationRecommendation,
     activeAnimation,
+    facialExpression, // Add facial expression as dependency
   ]);
 
   useEffect(() => {

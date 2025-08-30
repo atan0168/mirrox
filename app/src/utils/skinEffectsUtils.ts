@@ -157,7 +157,7 @@ export function calculateSkinEffectFromUV(
     return {
       adjustment: 0,
       redness: 0,
-      description: 'No UV data available'
+      description: 'No UV data available',
     };
   }
 
@@ -226,7 +226,7 @@ export function calculateSkinEffectFromUV(
   return {
     adjustment: finalAdjustment,
     redness: rednessEffect,
-    description
+    description,
   };
 }
 
@@ -235,7 +235,9 @@ export function calculateSkinEffectFromUV(
  * @param uvIndex UV Index value
  * @returns Protection recommendation
  */
-export function getUVProtectionRecommendation(uvIndex: number | null | undefined): string {
+export function getUVProtectionRecommendation(
+  uvIndex: number | null | undefined
+): string {
   if (uvIndex === null || uvIndex === undefined || uvIndex < 0) {
     return 'UV data not available';
   }
@@ -282,7 +284,7 @@ export function calculateCombinedEnvironmentalSkinEffects(
 } {
   // Calculate pollution effects
   const pollutionEffects = calculateCombinedSkinEffects(airQualityData);
-  
+
   // Calculate UV effects
   const uvEffects = calculateSkinEffectFromUV(
     uvData.uvIndex,
@@ -292,7 +294,7 @@ export function calculateCombinedEnvironmentalSkinEffects(
 
   // Combine effects
   const totalAdjustment = pollutionEffects.adjustment + uvEffects.adjustment;
-  
+
   // Determine primary factor
   let primaryFactor = 'none';
   if (Math.abs(pollutionEffects.adjustment) > Math.abs(uvEffects.adjustment)) {
@@ -309,10 +311,11 @@ export function calculateCombinedEnvironmentalSkinEffects(
   if (uvEffects.adjustment !== 0) {
     descriptions.push(uvEffects.description);
   }
-  
-  const combinedDescription = descriptions.length > 0 
-    ? descriptions.join(' + ') 
-    : 'No environmental effects on skin';
+
+  const combinedDescription =
+    descriptions.length > 0
+      ? descriptions.join(' + ')
+      : 'No environmental effects on skin';
 
   // Generate recommendations
   const recommendations = [];
@@ -331,7 +334,7 @@ export function calculateCombinedEnvironmentalSkinEffects(
     redness: uvEffects.redness,
     primaryFactor,
     description: combinedDescription,
-    recommendations
+    recommendations,
   };
 }
 
@@ -345,18 +348,37 @@ export function getRecommendedFacialExpression(
   pm25: number | null | undefined,
   aqi: number | null | undefined
 ): string {
-  const effectiveValue = pm25 || (aqi ? aqi * 0.5 : 0); // Rough conversion for fallback
+  // Use PM2.5 as primary indicator, fallback to AQI with conversion
+  let effectiveValue = 0;
 
+  if (pm25 !== null && pm25 !== undefined) {
+    effectiveValue = pm25;
+  } else if (aqi !== null && aqi !== undefined) {
+    // Convert AQI to estimated PM2.5 for consistent thresholds
+    if (aqi <= 50) {
+      effectiveValue = aqi * 0.24; // ~12 µg/m³ at AQI 50
+    } else if (aqi <= 100) {
+      effectiveValue = 12 + (aqi - 50) * 0.46; // ~35 µg/m³ at AQI 100
+    } else if (aqi <= 150) {
+      effectiveValue = 35 + (aqi - 100) * 0.4; // ~55 µg/m³ at AQI 150
+    } else {
+      effectiveValue = 55 + (aqi - 150) * 0.95;
+    }
+  }
+
+  // Progressive frowning as air quality worsens
   if (effectiveValue <= 12) {
-    return 'calm'; // Good air quality
-  } else if (effectiveValue <= 35) {
-    return 'neutral'; // Moderate air quality
+    return 'calm'; // Good air quality - happy/calm expression
+  } else if (effectiveValue <= 25) {
+    return 'neutral'; // Moderate air quality - neutral expression
   } else if (effectiveValue <= 55) {
-    return 'concerned'; // Unhealthy for sensitive groups
+    return 'concerned'; // Moderate to unhealthy - start showing concern
+  } else if (effectiveValue <= 100) {
+    return 'tired'; // Unhealthy for sensitive groups - more frowning/tired
   } else if (effectiveValue <= 150) {
-    return 'tired'; // Unhealthy air
+    return 'sick'; // Very unhealthy - sick expression
   } else {
-    return 'sick'; // Very unhealthy/hazardous
+    return 'exhausted'; // Hazardous - exhausted/severe expression
   }
 }
 
