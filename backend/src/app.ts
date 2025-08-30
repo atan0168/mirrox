@@ -68,6 +68,8 @@ app.get('/', (req, res) => {
       health: '/api/health',
       airQuality: '/api/air-quality',
       serviceStatus: '/api/air-quality/status',
+      traffic: '/api/traffic/congestion',
+      trafficStatus: '/api/traffic/status',
     },
   });
 });

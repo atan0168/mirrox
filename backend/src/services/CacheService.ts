@@ -89,21 +89,23 @@ class CacheService {
   }
 
   /**
-   * Generate a cache key for air quality data based on coordinates
+   * Generate a cache key for location-based data
    * @param latitude Latitude
    * @param longitude Longitude
+   * @param type Data type (defaults to 'air_quality')
    * @param precision Coordinate precision for grouping nearby requests
    * @returns Cache key
    */
   generateLocationKey(
     latitude: number,
     longitude: number,
+    type: string = 'air_quality',
     precision: number = 3
   ): string {
     // Round coordinates to reduce cache fragmentation for nearby locations
     const roundedLat = Number(latitude.toFixed(precision));
     const roundedLon = Number(longitude.toFixed(precision));
-    return `air_quality_${roundedLat}_${roundedLon}`;
+    return `${type}_${roundedLat}_${roundedLon}`;
   }
 
   /**

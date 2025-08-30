@@ -30,6 +30,10 @@ interface Config {
   cache: {
     airQualityTtl: number;
     locationSearchTtl: number;
+    trafficTtl: number;
+  };
+  tomtom: {
+    apiKey: string;
   };
 }
 
@@ -68,11 +72,15 @@ const config: Config = {
       process.env.CACHE_TTL_LOCATION_SEARCH || '3600000',
       10
     ), // 1 hour
+    trafficTtl: parseInt(process.env.CACHE_TTL_TRAFFIC || '300000', 10), // 5 minutes
+  },
+  tomtom: {
+    apiKey: process.env.TOMTOM_API_KEY || '',
   },
 };
 
 // Validate required environment variables
-const requiredVars = ['OPENAQ_API_KEY', 'AQICN_API_KEY'];
+const requiredVars = ['OPENAQ_API_KEY', 'AQICN_API_KEY', 'TOMTOM_API_KEY'];
 const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
