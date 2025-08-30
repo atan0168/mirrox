@@ -1,6 +1,7 @@
-import React, { useRef, useEffect, useMemo } from 'react';
-import { useFrame, useThree, useLoader } from '@react-three/fiber/native';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { useFrame, useThree } from '@react-three/fiber/native';
 import * as THREE from 'three';
+import { assetPreloader } from '../../services/AssetPreloader';
 import {
   getDefaultParticleGeometryGenerator,
   getDefaultParticleMaterialGenerator,
@@ -42,12 +43,43 @@ export function SmogController({
   const { scene, camera } = useThree();
   const particlesRef = useRef<THREE.Mesh[]>([]);
   const groupRef = useRef<THREE.Group>(null);
+  const [smokeTexture, setSmokeTexture] = useState<THREE.Texture | null>(null);
 
-  // Load the smoke texture
-  const smokeTexture = useLoader(
-    THREE.TextureLoader,
-    require('../../../assets/smoke-default.png')
-  ) as THREE.Texture;
+  // Load the smoke texture from preloaded assets
+  useEffect(() => {
+    const loadTexture = async () => {
+      try {
+        // Try to get preloaded image first
+        let imageUri = assetPreloader.getPreloadedImageUri('smoke-default');
+
+        if (!imageUri) {
+          // Fallback to require if not preloaded
+          console.warn('Smoke texture not preloaded, using fallback');
+          imageUri = require('../../../assets/smoke-default.png');
+        }
+
+        const loader = new THREE.TextureLoader();
+        const texture = await new Promise<THREE.Texture>((resolve, reject) => {
+          loader.load(
+            imageUri,
+            texture => resolve(texture),
+            undefined,
+            error => reject(error)
+          );
+        });
+
+        setSmokeTexture(texture);
+        console.log(
+          '✅ Smoke texture loaded:',
+          imageUri.startsWith('file://') ? 'from cache' : 'from bundle'
+        );
+      } catch (error) {
+        console.error('❌ Failed to load smoke texture:', error);
+      }
+    };
+
+    loadTexture();
+  }, []);
 
   // Frustum culling utilities
   const frustum = useMemo(() => new THREE.Frustum(), []);
@@ -74,9 +106,9 @@ export function SmogController({
     return smokeParticles;
   }, [density]);
 
-  // Initialize particles when enabled
+  // Initialize particles when enabled and texture is loaded
   useEffect(() => {
-    if (enabled) {
+    if (enabled && smokeTexture) {
       // Clear material cache to ensure fresh materials with correct opacity
       if (particleMaterial.clearCache) {
         particleMaterial.clearCache();
@@ -204,6 +236,7 @@ export function SmogController({
     };
   }, [
     enabled,
+    smokeTexture,
     particles,
     scene,
     particleGeometry,
@@ -211,11 +244,12 @@ export function SmogController({
     maxBounds,
     minBounds,
     enableTurbulence,
-    smokeTexture,
     size,
     density,
     camera,
     color,
+    opacity,
+    intensity,
   ]);
 
   // Animation loop for background smoke effect

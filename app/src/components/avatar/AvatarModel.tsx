@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber/native';
 import { useGLTF } from '@react-three/drei/native';
 import * as THREE from 'three';
 import { GLBAnimationLoader } from '../../utils/GLBAnimationLoader';
+import { assetPreloader } from '../../services/AssetPreloader';
 import { IDLE_ANIMATIONS } from '../../constants';
 
 interface AvatarModelProps {
@@ -898,124 +899,125 @@ export function AvatarModel({
     }
   }, [scene, skinToneAdjustment]);
 
-  // Load GLB animations with caching
+  // Load GLB animations from preloaded assets
   useEffect(() => {
     if (!scene) return;
 
-    console.log('Loading GLB animations with caching...');
+    console.log('Loading GLB animations from preloaded assets...');
     const loadGLBAnimations = async () => {
       setIsLoadingAnimations(true);
 
       try {
-        const glbLoader = new GLBAnimationLoader();
+        // Get preloaded animations
+        const preloadedAnimations = assetPreloader.getAllPreloadedAnimations();
 
-        const animationAssets = [
-          {
-            asset: require('../../../assets/animations/laying_severe_cough.glb'),
-            name: 'laying_severe_cough',
-          },
-          {
-            asset: require('../../../assets/animations/M_Standing_Expressions_007.glb'),
-            name: 'M_Standing_Expressions_007',
-          },
-          {
-            asset: require('../../../assets/animations/M_Standing_Idle_Variations_003.glb'),
-            name: 'M_Standing_Idle_Variations_003',
-          },
-          {
-            asset: require('../../../assets/animations/M_Standing_Idle_Variations_007.glb'),
-            name: 'M_Standing_Idle_Variations_007',
-          },
-          {
-            asset: require('../../../assets/animations/wiping_sweat.glb'),
-            name: 'wiping_sweat',
-          },
-          {
-            asset: require('../../../assets/animations/shock.glb'),
-            name: 'shock',
-          },
-          {
-            asset: require('../../../assets/animations/swat_bugs.glb'),
-            name: 'swat_bugs',
-          },
-          // {
-          //   asset: require("../../../assets/animations/mild_cough.glb"),
-          //   name: "mild_cough",
-          // },
-        ];
+        if (Object.keys(preloadedAnimations).length > 0) {
+          console.log('✅ Using preloaded animations');
 
-        setLoadingProgress({
-          loaded: 0,
-          total: animationAssets.length,
-          item: 'Preparing animations...',
-        });
-
-        const animationPromises = animationAssets.map(
-          async ({ asset, name }, index) => {
-            try {
-              setLoadingProgress({
-                loaded: index,
-                total: animationAssets.length,
-                item: `Loading ${name}...`,
-              });
-
-              // Load animation from local asset
-              const animations =
-                await glbLoader.loadGLBAnimationFromAsset(asset);
-
-              setLoadingProgress({
-                loaded: index + 1,
-                total: animationAssets.length,
-                item: `Loaded ${name}`,
-              });
-
-              return animations;
-            } catch (error) {
-              console.warn(`Failed to load animation ${name}:`, error);
-              setLoadingProgress({
-                loaded: index + 1,
-                total: animationAssets.length,
-                item: `Failed to load ${name}`,
-              });
-              return null;
+          const successfulAnimations: THREE.AnimationClip[] = [];
+          Object.entries(preloadedAnimations).forEach(([name, animations]) => {
+            if (animations && Array.isArray(animations)) {
+              console.log(
+                `✅ Found preloaded animation: ${name} (${animations.length} clips)`
+              );
+              successfulAnimations.push(...animations);
             }
+          });
+
+          if (successfulAnimations.length > 0) {
+            console.log(
+              `🎬 Using ${successfulAnimations.length} preloaded animation clips`
+            );
+            setGlbAnimations(successfulAnimations);
+            setLoadingProgress({
+              loaded: Object.keys(preloadedAnimations).length,
+              total: Object.keys(preloadedAnimations).length,
+              item: 'Preloaded animations ready!',
+            });
+          } else {
+            console.log(
+              '❌ No valid preloaded animations found, loading fallback'
+            );
+            await loadAnimationsFallback();
           }
-        );
-
-        const loadedAnimations = await Promise.all(animationPromises);
-
-        const successfulAnimations: THREE.AnimationClip[] = [];
-        loadedAnimations.forEach((result, index) => {
-          if (result) {
-            console.log(`✅ Successfully loaded cached animation ${index + 1}`);
-            successfulAnimations.push(...result);
-          }
-        });
-
-        if (successfulAnimations.length > 0) {
-          console.log(
-            `🎬 Loaded ${successfulAnimations.length} GLB animation clips from cache/download`
-          );
-          setGlbAnimations(successfulAnimations);
         } else {
-          console.log('❌ No GLB animations loaded, will use fallback');
+          console.log('❌ No preloaded animations found, loading fallback');
+          await loadAnimationsFallback();
         }
-
-        setLoadingProgress({
-          loaded: animationAssets.length,
-          total: animationAssets.length,
-          item: 'Animations ready!',
-        });
       } catch (error) {
-        console.error('❌ Error loading FBX animations:', error);
-        setLoadingProgress({
-          loaded: 0,
-          total: 0,
-          item: 'Animation loading failed',
-        });
+        console.error('❌ Error loading preloaded animations:', error);
+        await loadAnimationsFallback();
       } finally {
         setIsLoadingAnimations(false);
       }
+    };
+
+    // Fallback animation loading (same as original logic)
+    const loadAnimationsFallback = async () => {
+      console.log('Loading animations as fallback...');
+      const glbLoader = new GLBAnimationLoader();
+
+      const animationAssets = [
+        {
+          asset: require('../../../assets/animations/laying_severe_cough.glb'),
+          name: 'laying_severe_cough',
+        },
+        {
+          asset: require('../../../assets/animations/M_Standing_Expressions_007.glb'),
+          name: 'M_Standing_Expressions_007',
+        },
+        {
+          asset: require('../../../assets/animations/M_Standing_Idle_Variations_003.glb'),
+          name: 'M_Standing_Idle_Variations_003',
+        },
+        {
+          asset: require('../../../assets/animations/M_Standing_Idle_Variations_007.glb'),
+          name: 'M_Standing_Idle_Variations_007',
+        },
+        {
+          asset: require('../../../assets/animations/wiping_sweat.glb'),
+          name: 'wiping_sweat',
+        },
+        {
+          asset: require('../../../assets/animations/shock.glb'),
+          name: 'shock',
+        },
+        {
+          asset: require('../../../assets/animations/swat_bugs.glb'),
+          name: 'swat_bugs',
+        },
+      ];
+
+      const animationPromises = animationAssets.map(async ({ asset, name }) => {
+        try {
+          return await glbLoader.loadGLBAnimationFromAsset(asset);
+        } catch (error) {
+          console.warn(`Failed to load fallback animation ${name}:`, error);
+          return null;
+        }
+      });
+
+      const loadedAnimations = await Promise.all(animationPromises);
+      const successfulAnimations: THREE.AnimationClip[] = [];
+
+      loadedAnimations.forEach(result => {
+        if (result) {
+          successfulAnimations.push(...result);
+        }
+      });
+
+      if (successfulAnimations.length > 0) {
+        console.log(
+          `🎬 Loaded ${successfulAnimations.length} fallback animation clips`
+        );
+        setGlbAnimations(successfulAnimations);
+      }
+
+      setLoadingProgress({
+        loaded: animationAssets.length,
+        total: animationAssets.length,
+        item: 'Fallback animations ready!',
+      });
     };
 
     loadGLBAnimations();

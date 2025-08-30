@@ -13,6 +13,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Heart, RefreshCw } from 'lucide-react-native';
 import { RootStackParamList } from '../../App';
 import { LocalStorageService } from '../services/LocalStorageService';
+import { assetPreloader, PreloadProgress } from '../services/AssetPreloader';
 import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
 
 type SplashScreenNavigationProp = StackNavigationProp<
@@ -28,18 +29,19 @@ export default function SplashScreen() {
   const [scaleAnim] = useState(new Animated.Value(0.8));
 
   // Progress & text
-  const [progressAnim] = useState(new Animated.Value(0)); // 0 -> 1 over 1.5s
+  const [progressAnim] = useState(new Animated.Value(0)); // 0 -> 1 based on actual progress
   const [loadingText, setLoadingText] = useState('Initializing...');
 
   // Coordination flags
   const [initDone, setInitDone] = useState(false);
   const [progressDone, setProgressDone] = useState(false);
+  const [assetsPreloaded, setAssetsPreloaded] = useState(false);
   const [hasUser, setHasUser] = useState<boolean>(false);
   const [authenticationCompleted, setAuthenticationCompleted] = useState(false);
   const [authenticationRequired, setAuthenticationRequired] = useState(false);
   const [authenticationFailed, setAuthenticationFailed] = useState(false);
 
-  // Start entrance & progress animations once
+  // Start entrance animations once
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -55,37 +57,9 @@ export default function SplashScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: 1500,
-      easing: Easing.linear,
-      useNativeDriver: false, // width animation requires layout
-    }).start(() => setProgressDone(true));
   }, []);
 
-  // Derive loading text from progress value
-  useEffect(() => {
-    const id = progressAnim.addListener(({ value }) => {
-      if (authenticationRequired && !authenticationCompleted) {
-        // Don't change text while waiting for authentication
-        return;
-      }
-
-      if (value < 0.4) {
-        setLoadingText('Initializing services...');
-      } else if (value < 0.8) {
-        setLoadingText('Checking user data...');
-      } else {
-        setLoadingText('Ready!');
-      }
-    });
-    return () => {
-      progressAnim.removeListener(id);
-    };
-  }, [progressAnim, authenticationRequired, authenticationCompleted]);
-
-  // Do real initialization work in parallel
+  // Initialize app with asset preloading
   useEffect(() => {
     const initializeApp = async () => {
       try {
@@ -110,9 +84,29 @@ export default function SplashScreen() {
 
         setAuthenticationCompleted(true);
 
-        // Now proceed with loading user data
-        const userProfile = await localStorage.getUserProfile();
-        const avatarUrl = await localStorage.getAvatarUrl();
+        // Start asset preloading in parallel with user data loading
+        const [userProfile, avatarUrl] = await Promise.all([
+          localStorage.getUserProfile(),
+          localStorage.getAvatarUrl(),
+          // Start asset preloading
+          assetPreloader.preloadAssets((progress: PreloadProgress) => {
+            setLoadingText(progress.currentItem);
+
+            // Update progress animation based on actual progress
+            Animated.timing(progressAnim, {
+              toValue: progress.percentage / 100,
+              duration: 200,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: false,
+            }).start();
+
+            // Mark progress as done when we reach 100%
+            if (progress.percentage >= 100) {
+              setProgressDone(true);
+              setAssetsPreloaded(true);
+            }
+          }),
+        ]);
 
         setHasUser(Boolean(userProfile && avatarUrl));
         setInitDone(true);
@@ -120,13 +114,15 @@ export default function SplashScreen() {
         console.error('❌ Error during app initialization:', error);
         setLoadingText('Error occurred');
         setHasUser(false);
-        setAuthenticationCompleted(!authenticationRequired); // Set to true if auth not required
+        setAuthenticationCompleted(!authenticationRequired);
         setInitDone(true);
+        setProgressDone(true);
+        setAssetsPreloaded(false);
       }
     };
 
     initializeApp();
-  }, []);
+  }, [progressAnim]);
 
   // Handle retry authentication
   const retryAuthentication = async () => {
@@ -156,21 +152,24 @@ export default function SplashScreen() {
     }
   };
 
-  // Navigate when BOTH progress + init are done AND authentication is completed
+  // Navigate when ALL conditions are met: progress + init + assets + authentication
   useEffect(() => {
     if (
       progressDone &&
       initDone &&
+      assetsPreloaded &&
       (authenticationCompleted || !authenticationRequired)
     ) {
       const t = setTimeout(() => {
+        console.log('🎉 All assets preloaded, navigating to next screen');
         navigation.replace(hasUser ? 'Dashboard' : 'Welcome');
-      }, 250); // slight pause to let users see 100%
+      }, 500); // slight pause to let users see completion
       return () => clearTimeout(t);
     }
   }, [
     progressDone,
     initDone,
+    assetsPreloaded,
     hasUser,
     authenticationCompleted,
     authenticationRequired,

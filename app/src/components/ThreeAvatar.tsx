@@ -12,6 +12,7 @@ import { SkinToneControls } from './controls/SkinToneControls';
 import { LoadingState, ErrorState } from './ui/StateComponents';
 import AvatarLoadingIndicator from './ui/AvatarLoadingIndicator';
 import { localStorageService } from '../services/LocalStorageService';
+import { assetPreloader } from '../services/AssetPreloader';
 import {
   suppressEXGLWarnings,
   configureMobileCompatibility,
@@ -104,16 +105,24 @@ function ThreeAvatar({
   useEffect(() => {
     const loadAvatar = async () => {
       try {
-        console.log('Attempting to load avatar with caching...');
+        console.log('Loading avatar from preloaded assets...');
 
-        // Try to get cached avatar first, then fallback to remote
-        let url = await localStorageService.getAvatarWithCaching();
+        // First try to get from preloaded assets
+        let url = assetPreloader.getPreloadedAvatarUrl();
+
+        if (!url) {
+          console.log('No preloaded avatar found, falling back to cache...');
+          // Fallback to cache if preloading failed
+          url = await localStorageService.getAvatarWithCaching();
+        }
 
         if (!url) {
           throw new Error('Failed to load avatar');
         }
 
-        console.log(`Loading avatar from: ${url}`);
+        console.log(
+          `Loading avatar from: ${url.startsWith('file://') ? 'local cache' : 'remote'}`
+        );
         setAvatarUrl(url);
       } catch {
         setError('Failed to load avatar');
