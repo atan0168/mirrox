@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useMemo, useState } from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber/native';
 import * as THREE from 'three';
 import { assetPreloader } from '../../services/AssetPreloader';

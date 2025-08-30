@@ -155,7 +155,7 @@ The integration includes comprehensive error handling:
 
 ## Migration Notes
 
-- Existing OpenAQ and MyEQMS endpoints remain unchanged
+- Existing OpenAQ endpoints remain unchanged
 - Main air quality endpoint now defaults to AQICN
 - Cache keys are separate, so no cache conflicts
 - All existing client code continues to work without changes

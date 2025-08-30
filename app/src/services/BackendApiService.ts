@@ -35,7 +35,7 @@ export interface AirQualityApiResponse {
     classification?: string;
     colorCode?: string;
     healthAdvice?: string;
-    source?: 'openaq' | 'aqicn' | 'myeqms';
+    source?: 'openaq' | 'aqicn';
     timestamp?: string;
     stationUrl?: string;
     attributions?: Array<{

@@ -14,7 +14,7 @@ The Digital Twin application is a privacy-first mobile wellness platform that cr
 
 ### Data Segregation
 
-- **Public Data**: Air quality data from OpenAQ and MyEQMS APIs (backend)
+- **Public Data**: Air quality data from OpenAQ and AQICN APIs (backend)
 - **Personal Data**: User profiles, avatar preferences, health metrics (local device storage)
 
 ## System Architecture
@@ -46,7 +46,7 @@ graph TB
 
     subgraph "External APIs"
         K --> T[OpenAQ API]
-        K --> U[MyEQMS API]
+        K --> S[AQICN API]
     end
 
     subgraph "Infrastructure"
@@ -74,7 +74,7 @@ sequenceDiagram
     alt Cache Hit
         Cache-->>Backend: Return cached data
     else Cache Miss
-        Backend->>External: Fetch fresh air quality data (OpenAQ/MyEQMS)
+        Backend->>External: Fetch fresh air quality data (OpenAQ/AQICN)
         External-->>Backend: Return air quality data
         Backend->>Cache: Cache processed data
     end
@@ -153,7 +153,7 @@ graph TB
 
     subgraph "Service Layer"
         E --> I[OpenAQ API Service]
-        E --> J[MyEQMS Service]
+        E --> J[AQICN Service]
         E --> K[Rate Limiter Service]
 
         I --> M[Cache Service]
@@ -166,7 +166,7 @@ graph TB
 
     subgraph "External Integration"
         I --> P[OpenAQ API]
-        J --> Q[MyEQMS API]
+        J --> Q[AQICN API]
     end
 ```
 
@@ -224,13 +224,11 @@ GET /api/air-quality/status
 POST /api/air-quality/clear-cache
 GET /api/air-quality/health
 
-# Malaysian Air Quality (MyEQMS)
-GET /api/air-quality/malaysia?latitude={lat}&longitude={lon}&radius={km}
-GET /api/air-quality/malaysia/stations
-GET /api/air-quality/malaysia/state/{state}
-GET /api/air-quality/malaysia/region/{region}
-GET /api/air-quality/malaysia/station/{stationId}
-GET /api/air-quality/malaysia/station/{stationId}/trend
+# AQICN Endpoints
+GET /api/air-quality/aqicn?latitude={lat}&longitude={lon}
+GET /api/air-quality/aqicn/station/{stationId}
+GET /api/air-quality/aqicn/search?latitude={lat}&longitude={lon}&radius={km}
+POST /api/air-quality/aqicn/clear-cache
 
 # General Health Check
 GET /api/health
@@ -352,7 +350,7 @@ graph TB
 
     subgraph "External Services"
         H[OpenAQ API]
-        I[MyEQMS API]
+        I[AQICN API]
     end
 
     A --> C
@@ -375,7 +373,7 @@ graph TB
 #### Development
 
 - In-memory cache for air quality data
-- Direct external API access (OpenAQ, MyEQMS)
+- Direct external API access (OpenAQ, AQICN)
 - Hot reloading enabled
 - Development logging
 
@@ -431,7 +429,7 @@ graph TB
 
 - **Application Health**: API endpoint responsiveness
 - **Cache Health**: In-memory cache status and memory usage
-- **External API Health**: OpenAQ and MyEQMS service availability
+- **External API Health**: OpenAQ and AQICN service availability
 
 ## Development Workflow
 
@@ -474,8 +472,7 @@ npm start
 #### Backend (Node.js)
 
 - ✅ Express API with security middleware (helmet, CORS, rate limiting)
-- ✅ Air quality data from OpenAQ API
-- ✅ Malaysian air quality data from MyEQMS API
+- ✅ Air quality data from OpenAQ and AQICN APIs
 - ✅ In-memory caching with TTL
 - ✅ Rate limiting and request validation
 - ✅ Health check endpoints

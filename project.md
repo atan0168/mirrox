@@ -522,9 +522,9 @@ export interface AvatarProps {
       - **Secondary Fallback:** If the user still refuses, allow them to manually select their city from a predefined list (e.g., "Kuala Lumpur," "Petaling Jaya," "Shah Alam"). We can then use a geocoding service on the backend to get approximate coordinates for that city center to fetch the relevant air quality data. This respects user choice while still providing the core feature.
 
 2.  **Challenge: External API Unavailability**
-    - **Problem:** The Malaysia DOE API might be down, have rate limits, or return an error. This would block the user from seeing their "Health Vitals."
+    - **Problem:** The OpenAQ or AQICN APIs might be down, have rate limits, or return an error. This would block the user from seeing their "Health Vitals."
     - **Solution:** Build resilience in both the backend and frontend.
-      - **Backend Caching:** Our Node.js proxy can implement a short-term cache (e.g., using Redis or a simple in-memory cache). If we get multiple requests for the same approximate coordinates within a 15-minute window, we can serve the cached data instead of hitting the DOE API every time.
+      - **Backend Caching:** Our Node.js proxy can implement a short-term cache (e.g., using Redis or a simple in-memory cache). If we get multiple requests for the same approximate coordinates within a 15-minute window, we can serve the cached data instead of hitting the air quality APIs every time.
       - **Frontend Graceful Degradation:** If the `ApiService.fetchAirQuality` call fails, the `DashboardScreen.tsx` should catch the error and display a user-friendly message like, "We couldn't connect to environmental services right now. We'll try again later." The rest of the twin (avatar based on sleep/commute) should still render, ensuring the app doesn't feel broken.
 
 3.  **Challenge: Data Synchronization/Migration**

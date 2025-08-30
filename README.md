@@ -83,7 +83,7 @@ src/
 
 2. **Backend Integration**
    - Set up Node.js proxy server
-   - Integrate with Malaysia DOE Air Quality API
+   - Integrate with OpenAQ and AQICN Air Quality APIs
    - Add error handling and caching
 
 3. **Advanced Features**
