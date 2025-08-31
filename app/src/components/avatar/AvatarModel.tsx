@@ -1263,9 +1263,7 @@ export function AvatarModel({
                 };
 
                 // FIX: Skip all toe-related bones to prevent hawk leg deformation
-                const isToeRelatedBone =
-                  boneName.toLowerCase().includes('toe') ||
-                  boneName.toLowerCase().includes('toebase');
+                const isToeRelatedBone = boneName.toLowerCase().includes('toe');
 
                 if (isToeRelatedBone) {
                   console.log(
@@ -1315,15 +1313,7 @@ export function AvatarModel({
 
                 // FIX: Remove ALL toe-related tracks to prevent hawk leg deformation
                 const trackName = track.name.toLowerCase();
-                const toeRelatedPatterns = [
-                  'toe',
-                  'toebase',
-                  'toe_end',
-                  'leftfoot.quaternion',
-                  'rightfoot.quaternion',
-                  'leftfoot.rotation',
-                  'rightfoot.rotation',
-                ];
+                const toeRelatedPatterns = ['toe', 'toebase', 'toe_end'];
 
                 const isToeRelatedTrack = toeRelatedPatterns.some(pattern =>
                   trackName.includes(pattern.toLowerCase())
