@@ -12,18 +12,19 @@
  * - Actionable recommendations
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert as RNAlert,
+  Animated,
+  Easing,
 } from 'react-native';
 import { colors, fontSize, spacing } from '../../theme';
 import { useHealthMetrics } from '../../hooks/useHealthMetrics';
-import { HealthTrend, HealthAlert } from '../../services/HealthMetricsService';
+import { HealthTrend } from '../../services/HealthMetricsService';
 import {
   HealthMetrics,
   getEnergyExplanation,
@@ -33,17 +34,12 @@ import {
   getStressExplanation,
 } from '../../utils/healthMetrics';
 import ProgressRow from './ProgressRow';
-import { Badge } from './Badge';
 import { Card } from './Card';
 import CollapsibleCard from './CollapsibleCard';
 import {
   TrendingUp,
   TrendingDown,
   Minus,
-  AlertTriangle,
-  AlertOctagon,
-  Info as InfoIcon,
-  Lightbulb,
   Battery,
   Wind,
   Sun,
@@ -73,18 +69,140 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
     loading,
     error,
     trends,
-    alerts,
     recommendations,
-    dismissAlert,
     dataSources,
     dataAge,
   } = useHealthMetrics();
+
+  // Loading animations setup (hooks must be unconditional)
+  const iconComponents = [Battery, Wind, Sun, Brain, Activity] as const;
+  const iconAnimsRef = useRef(iconComponents.map(() => new Animated.Value(0)));
+  const iconAnims = iconAnimsRef.current;
+  const skeletonPulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!loading) return;
+    const iconLoops = iconAnims.map((val, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(val, {
+            toValue: 1,
+            duration: 400,
+            delay: i * 120,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(val, {
+            toValue: 0,
+            duration: 400,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ])
+      )
+    );
+
+    const skeletonLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(skeletonPulse, {
+          toValue: 1,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(skeletonPulse, {
+          toValue: 0,
+          duration: 900,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    iconLoops.forEach(loop => loop.start());
+    skeletonLoop.start();
+    return () => {
+      iconLoops.forEach(loop => loop.stop());
+      skeletonLoop.stop();
+    };
+  }, [loading, iconAnims, skeletonPulse]);
 
   if (loading) {
     return (
       <Card style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Calculating health metrics...</Text>
+          <Text style={styles.loadingText}>Crunching your health signals…</Text>
+          <View style={styles.loadingIconsRow}>
+            {iconComponents.map((Icon, idx) => {
+              const scale = iconAnims[idx].interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 1.25],
+              });
+              const rotate = iconAnims[idx].interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '15deg'],
+              });
+              return (
+                <Animated.View
+                  key={idx}
+                  style={[
+                    styles.loadingIconWrap,
+                    { transform: [{ scale }, { rotate }] },
+                  ]}
+                >
+                  <Icon size={18} color={colors.neutral[600]} />
+                </Animated.View>
+              );
+            })}
+          </View>
+
+          {/* Skeleton cards */}
+          <Animated.View
+            style={[
+              styles.skeletonBlockLarge,
+              {
+                opacity: skeletonPulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.6, 1],
+                }),
+              },
+            ]}
+          />
+          <View style={styles.skeletonRow}>
+            <Animated.View
+              style={[
+                styles.skeletonBlock,
+                {
+                  opacity: skeletonPulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.6, 1],
+                  }),
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.skeletonBlock,
+                {
+                  opacity: skeletonPulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.6, 1],
+                  }),
+                },
+              ]}
+            />
+          </View>
+          <Animated.View
+            style={[
+              styles.skeletonBlock,
+              {
+                opacity: skeletonPulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.6, 1],
+                }),
+              },
+            ]}
+          />
         </View>
       </Card>
     );
@@ -148,41 +266,11 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
     return <Minus size={16} color={colors.neutral[600]} />;
   };
 
-  const getAlertIcon = (alert: HealthAlert): React.ReactNode => {
-    switch (alert.type) {
-      case 'critical':
-        return <AlertOctagon size={18} color={colors.red[600]} />;
-      case 'warning':
-        return <AlertTriangle size={18} color={colors.yellow[600]} />;
-      case 'info':
-        return <InfoIcon size={18} color={colors.neutral[600]} />;
-      default:
-        return <InfoIcon size={18} color={colors.neutral[600]} />;
-    }
-  };
-
   const handleMetricPress = (metric: keyof HealthMetrics) => {
     if (onMetricPress) {
       onMetricPress(metric);
     }
   };
-
-  const handleAlertDismiss = (alert: HealthAlert) => {
-    RNAlert.alert(
-      'Dismiss Alert',
-      `Are you sure you want to dismiss this alert: "${alert.message}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Dismiss',
-          style: 'destructive',
-          onPress: () => dismissAlert(alert.id),
-        },
-      ]
-    );
-  };
-
-  // Collapsible handled by CollapsibleCard
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -393,12 +481,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loadingContainer: {
-    padding: spacing.lg,
+    padding: spacing.md,
     alignItems: 'center',
   },
   loadingText: {
     fontSize: fontSize.base,
     color: colors.neutral[600],
+    marginBottom: spacing.md,
+  },
+  loadingIconsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  loadingIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.neutral[100],
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  skeletonBlockLarge: {
+    width: '100%',
+    height: 80,
+    backgroundColor: colors.neutral[100],
+    borderRadius: 8,
+    marginTop: spacing.md,
+  },
+  skeletonBlock: {
+    flex: 1,
+    height: 48,
+    backgroundColor: colors.neutral[100],
+    borderRadius: 8,
   },
   errorContainer: {
     padding: spacing.lg,

@@ -72,28 +72,57 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     }).start();
   }, [state.index, animatedValue]);
 
+  // Hide the custom tab bar for routes not meant to show it (e.g., Alerts)
+  const currentRoute = state.routes[state.index];
+  if (currentRoute?.name === 'Alerts') {
+    return null;
+  }
+
   // Calculate pill widths based on text measurements
   const pillWidths = textWidths.map(textWidth =>
     textWidth > 0 ? textWidth + 56 : 60
   );
 
   const innerWidth = (tabBarWidth ?? screenWidth) - HORIZONTAL_PADDING * 2;
-  const tabWidth = innerWidth / routeCount;
+  // Determine visible routes (those we actually render)
+  const visibleRouteIndices = state.routes
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => !!tabConfigs[r.name])
+    .map(({ i }) => i);
+  const visibleCount = visibleRouteIndices.length || 1;
+  const tabWidth = innerWidth / visibleCount;
 
-  // Compute centered X for each tab within innerWidth, offset by horizontal padding.
-  const translateXOutputRange = pillWidths.map(
-    (w, i) => HORIZONTAL_PADDING + i * tabWidth + (tabWidth - w) / 2
-  );
+  // Output ranges aligned to full route list but only positioning visible ones
+  const translateXOutputRange: number[] = new Array(routeCount).fill(0);
+  const pillWidthsFull: number[] = new Array(routeCount).fill(60);
 
+  visibleRouteIndices.forEach((routeIdx, visIdx) => {
+    const w = pillWidths[routeIdx] ?? 60;
+    const x = HORIZONTAL_PADDING + visIdx * tabWidth + (tabWidth - w) / 2;
+    translateXOutputRange[routeIdx] = x;
+    pillWidthsFull[routeIdx] = w;
+  });
+  // For any hidden routes, use the nearest previous visible position for stability
+  for (let i = 0; i < routeCount; i++) {
+    if (translateXOutputRange[i] === 0 && !visibleRouteIndices.includes(i)) {
+      // find previous visible or fallback to first visible
+      const prevVisible = [...visibleRouteIndices].filter(idx => idx <= i).pop();
+      const fallbackIndex = prevVisible ?? visibleRouteIndices[0] ?? 0;
+      translateXOutputRange[i] = translateXOutputRange[fallbackIndex];
+      pillWidthsFull[i] = pillWidthsFull[fallbackIndex];
+    }
+  }
+
+  const routeIndices = state.routes.map((_, i) => i);
   const translateX = animatedValue.interpolate({
-    inputRange: state.routes.map((_, i) => i),
+    inputRange: routeIndices,
     outputRange: translateXOutputRange,
     extrapolate: 'clamp',
   });
 
   const pillWidth = animatedValue.interpolate({
-    inputRange: [0, 1, 2],
-    outputRange: pillWidths,
+    inputRange: routeIndices,
+    outputRange: pillWidthsFull,
     extrapolate: 'clamp',
   });
 

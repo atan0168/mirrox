@@ -15,6 +15,7 @@ import PrivacyScreen from './src/screens/PrivacyScreen';
 
 // Import tab navigator
 import MainTabNavigator from './src/navigation/MainTabNavigator';
+import AlertsScreen from './src/screens/AlertsScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -32,6 +33,7 @@ export type RootStackParamList = {
   };
   GeneratingTwin: undefined;
   MainTabs: undefined;
+  Alerts: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -112,6 +114,14 @@ export default function App() {
             options={{
               headerShown: false,
               // headerLeft: () => null, // Prevent going back
+            }}
+          />
+          <Stack.Screen
+            name="Alerts"
+            component={AlertsScreen}
+            options={{
+              title: 'Alerts',
+              headerBackTitle: 'Back',
             }}
           />
         </Stack.Navigator>
