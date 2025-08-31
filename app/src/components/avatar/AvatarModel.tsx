@@ -1150,6 +1150,10 @@ export function AvatarModel({
                     mixamorigLeftFoot: 'LeftFoot',
                     mixamorigLeftToeBase: 'LeftToeBase',
                     mixamorigLeftToe_End: 'LeftToe_End',
+                    // Additional Mixamo toe bone variations
+                    mixamorigLeftToeBase_End: 'LeftToe_End',
+                    'mixamorig:LeftToeBase': 'LeftToeBase',
+                    'mixamorig:LeftToe_End': 'LeftToe_End',
 
                     // Right leg bones
                     mixamorigRightUpLeg: 'RightUpperLeg',
@@ -1157,6 +1161,10 @@ export function AvatarModel({
                     mixamorigRightFoot: 'RightFoot',
                     mixamorigRightToeBase: 'RightToeBase',
                     mixamorigRightToe_End: 'RightToe_End',
+                    // Additional Mixamo toe bone variations
+                    mixamorigRightToeBase_End: 'RightToe_End',
+                    'mixamorig:RightToeBase': 'RightToeBase',
+                    'mixamorig:RightToe_End': 'RightToe_End',
 
                     // Direct mappings for animations that already use ReadyPlayerMe naming
                     Hips: 'Hips',
@@ -1214,16 +1222,21 @@ export function AvatarModel({
                     RightHandPinky2: 'RightHandPinky2',
                     RightHandPinky3: 'RightHandPinky3',
                     RightHandPinky4: 'RightHandPinky4',
-                    LeftUpLeg: 'LeftUpLeg',
-                    LeftLeg: 'LeftLeg',
+                    // Fixed leg bone mappings to be consistent with Mixamo mappings
+                    LeftUpLeg: 'LeftUpperLeg',
+                    LeftLeg: 'LeftLowerLeg',
                     LeftFoot: 'LeftFoot',
                     LeftToeBase: 'LeftToeBase',
                     LeftToe_End: 'LeftToe_End',
-                    RightUpLeg: 'RightUpLeg',
-                    RightLeg: 'RightLeg',
+                    RightUpLeg: 'RightUpperLeg',
+                    RightLeg: 'RightLowerLeg',
                     RightFoot: 'RightFoot',
                     RightToeBase: 'RightToeBase',
                     RightToe_End: 'RightToe_End',
+
+                    // Alternative ReadyPlayerMe toe bone names
+                    LeftToes: 'LeftToeBase',
+                    RightToes: 'RightToeBase',
                   };
 
                   const mappedName = boneMapping[animationBoneName];
@@ -1248,6 +1261,18 @@ export function AvatarModel({
 
                   return matchedBone;
                 };
+
+                // FIX: Skip all toe-related bones to prevent hawk leg deformation
+                const isToeRelatedBone =
+                  boneName.toLowerCase().includes('toe') ||
+                  boneName.toLowerCase().includes('toebase');
+
+                if (isToeRelatedBone) {
+                  console.log(
+                    `FIX: Skipping toe-related bone ${boneName} to prevent toe deformation`
+                  );
+                  return false;
+                }
 
                 const matchedBone = findMatchingBone(boneName);
                 if (!matchedBone) {
@@ -1276,19 +1301,41 @@ export function AvatarModel({
               );
 
               // Remove position and scale tracks to prevent avatar displacement
+              // Also filter out problematic toe tracks that can cause deformation
               const safeTracks = filteredTracks.filter(track => {
-                if (track.name.includes('.position')) {
+                if (
+                  track.name.includes('.position') ||
+                  track.name.includes('.scale')
+                ) {
                   console.log(
-                    `Removing ${track.name} track to prevent avatar displacement`
+                    `Removing ${track.name} track to prevent avatar displacement/scaling`
                   );
                   return false;
                 }
-                if (track.name.includes('.scale')) {
+
+                // FIX: Remove ALL toe-related tracks to prevent hawk leg deformation
+                const trackName = track.name.toLowerCase();
+                const toeRelatedPatterns = [
+                  'toe',
+                  'toebase',
+                  'toe_end',
+                  'leftfoot.quaternion',
+                  'rightfoot.quaternion',
+                  'leftfoot.rotation',
+                  'rightfoot.rotation',
+                ];
+
+                const isToeRelatedTrack = toeRelatedPatterns.some(pattern =>
+                  trackName.includes(pattern.toLowerCase())
+                );
+
+                if (isToeRelatedTrack) {
                   console.log(
-                    `Removing ${track.name} track to prevent avatar scaling issues`
+                    `FIX: Removing toe-related track ${track.name} to prevent toe deformation`
                   );
                   return false;
                 }
+
                 return true;
               });
 
@@ -1577,9 +1624,9 @@ export function AvatarModel({
         // Continuously check and fix avatar visibility during animations
         if (scene) {
           // Check if any animation is currently running
-          const hasRunningAnimation = Array.from(
-            animationActionsMap.values()
-          ).some(action => action.isRunning());
+          // const hasRunningAnimation = Array.from(
+          //   animationActionsMap.values()
+          // ).some(action => action.isRunning());
 
           scene.traverse(child => {
             if (child instanceof THREE.SkinnedMesh) {
