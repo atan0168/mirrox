@@ -83,48 +83,41 @@ class AQICNService {
    */
   private getAQIInfo(aqi: number): {
     classification: string;
-    colorCode: string;
     healthAdvice: string;
   } {
     if (aqi <= 50) {
       return {
         classification: 'Good',
-        colorCode: '#00E400',
         healthAdvice:
           'Air quality is considered satisfactory, and air pollution poses little or no risk.',
       };
     } else if (aqi <= 100) {
       return {
         classification: 'Moderate',
-        colorCode: '#FFFF00',
         healthAdvice:
           'Air quality is acceptable for most people. However, sensitive people may experience minor respiratory symptoms.',
       };
     } else if (aqi <= 150) {
       return {
         classification: 'Unhealthy for Sensitive Groups',
-        colorCode: '#FF7E00',
         healthAdvice:
           'Members of sensitive groups may experience health effects. The general public is not likely to be affected.',
       };
     } else if (aqi <= 200) {
       return {
         classification: 'Unhealthy',
-        colorCode: '#FF0000',
         healthAdvice:
           'Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.',
       };
     } else if (aqi <= 300) {
       return {
         classification: 'Very Unhealthy',
-        colorCode: '#8F3F97',
         healthAdvice:
           'Health warnings of emergency conditions. The entire population is more likely to be affected.',
       };
     } else {
       return {
         classification: 'Hazardous',
-        colorCode: '#7E0023',
         healthAdvice:
           'Health alert: everyone may experience more serious health effects.',
       };
@@ -245,7 +238,6 @@ class AQICNService {
       uvForecast: uvForecast,
       // Add AQICN specific data
       classification: aqiInfo.classification,
-      colorCode: aqiInfo.colorCode,
       healthAdvice: aqiInfo.healthAdvice,
       source: 'aqicn' as const,
       timestamp: aqicnData.time.s,
@@ -253,7 +245,6 @@ class AQICNService {
       attributions: aqicnData.attributions,
     } as AirQualityData & {
       classification: string;
-      colorCode: string;
       healthAdvice: string;
       source: 'aqicn';
       timestamp: string;

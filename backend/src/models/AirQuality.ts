@@ -175,7 +175,6 @@ export interface UnifiedAirQualityData {
 
   // Health advice
   healthAdvice: string;
-  colorCode: string; // Hex color for the classification
 }
 
 // Historical data for trends

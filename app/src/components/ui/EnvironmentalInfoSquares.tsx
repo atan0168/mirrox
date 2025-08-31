@@ -33,7 +33,6 @@ interface AirQualityData {
   o3?: number;
   no2?: number;
   classification?: string;
-  colorCode?: string;
   healthAdvice?: string;
   timestamp?: string;
   source?: string;
@@ -75,7 +74,7 @@ export const EnvironmentalInfoSquares: React.FC<
 
   const getAirQualityColor = () => {
     if (!airQuality?.aqi) return colors.neutral[400];
-    return airQuality.colorCode || getAQIInfo(airQuality.aqi).colorCode;
+    return getAQIInfo(airQuality.aqi).colorCode;
   };
 
   const getAirQualityIcon = () => {
@@ -97,7 +96,7 @@ export const EnvironmentalInfoSquares: React.FC<
       case 'mild':
         return '#FFC107';
       case 'moderate':
-        return '#FF9800';
+        return colors.orange[600];
       case 'high':
         return '#F44336';
       default:
@@ -146,10 +145,10 @@ export const EnvironmentalInfoSquares: React.FC<
             <>
               <Card
                 variant="outline"
-                style={[
-                  styles.detailCard,
-                  { borderColor: getAirQualityColor() },
-                ]}
+                style={{
+                  ...styles.detailCard,
+                  borderColor: getAirQualityColor(),
+                }}
               >
                 <View style={styles.aqiHeader}>
                   <Text style={styles.aqiTitle}>Air Quality Index</Text>
@@ -165,10 +164,10 @@ export const EnvironmentalInfoSquares: React.FC<
                     { color: getAirQualityColor() },
                   ]}
                 >
-                  {airQuality.classification ||
-                    getShortClassification(
-                      getAQIInfo(airQuality.aqi).classification
-                    )}
+                                  {airQuality.classification ||
+                  (airQuality.aqi && getShortClassification(
+                    getAQIInfo(airQuality.aqi).classification
+                  ))}
                 </Text>
                 {airQuality.healthAdvice && (
                   <Text style={styles.healthAdvice}>
@@ -260,7 +259,10 @@ export const EnvironmentalInfoSquares: React.FC<
             <>
               <Card
                 variant="outline"
-                style={[styles.detailCard, { borderColor: getTrafficColor() }]}
+                style={{
+                  ...styles.detailCard,
+                  borderColor: getTrafficColor(),
+                }}
               >
                 <View style={styles.trafficHeader}>
                   <Text style={styles.trafficTitle}>Current Conditions</Text>
@@ -350,10 +352,10 @@ export const EnvironmentalInfoSquares: React.FC<
             <Text
               style={[styles.squareStatus, { color: getAirQualityColor() }]}
             >
-              {airQuality.classification ||
-                getShortClassification(
-                  getAQIInfo(airQuality.aqi).classification
-                )}
+                          {airQuality.classification ||
+              (airQuality.aqi && getShortClassification(
+                getAQIInfo(airQuality.aqi).classification
+              ))}
             </Text>
           )}
         </TouchableOpacity>
@@ -440,7 +442,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.neutral[200],
-    backgroundColor: colors.neutral[0],
+    backgroundColor: colors.neutral[50],
   },
   modalTitle: {
     fontSize: fontSize.xl,
@@ -460,7 +462,7 @@ const styles = StyleSheet.create({
   },
   modalFooter: {
     padding: spacing.lg,
-    backgroundColor: colors.neutral[0],
+    backgroundColor: colors.neutral[50],
     borderTopWidth: 1,
     borderTopColor: colors.neutral[200],
   },
@@ -483,7 +485,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   aqiClassification: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.base,
     fontWeight: '600',
     marginBottom: spacing.sm,
   },
@@ -519,7 +521,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   sectionTitle: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.base,
     fontWeight: '600',
     color: colors.neutral[900],
     marginBottom: spacing.md,

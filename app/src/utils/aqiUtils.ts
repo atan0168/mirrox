@@ -26,7 +26,7 @@ export function getAQIInfo(aqi: number): AQIInfo {
   } else if (aqi <= 100) {
     return {
       classification: 'Moderate',
-      colorCode: '#FFFF00',
+      colorCode: '#FFD138',
       healthAdvice:
         'Air quality is acceptable for most people. However, sensitive people may experience minor respiratory symptoms.',
       level: 2,
