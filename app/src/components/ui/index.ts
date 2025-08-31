@@ -14,6 +14,7 @@ export { Input } from './Input';
 export type { InputProps } from './Input';
 
 export { default as HealthSummary } from './HealthSummary';
+export { default as EnhancedHealthSummary } from './EnhancedHealthSummary';
 
 export { default as Tooltip } from './Tooltip';
 

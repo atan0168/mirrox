@@ -16,8 +16,13 @@ import { clamp } from '../../utils/mathUtils';
 interface ProgressRowProps {
   label: string;
   value: number;
-  tooltipContent: string | React.ReactNode;
+  // Optional tooltip. If not provided, info button is hidden.
+  tooltipContent?: string | React.ReactNode;
   tooltipTitle?: string;
+  // Optional visual enhancements
+  color?: string; // override fill color
+  showTrend?: boolean;
+  trendIcon?: string; // e.g., ↗️ ↘️ →
 }
 
 const ProgressRow: React.FC<ProgressRowProps> = ({
@@ -25,6 +30,9 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
   value,
   tooltipContent,
   tooltipTitle,
+  color,
+  showTrend,
+  trendIcon,
 }) => {
   const animated = useRef(new Animated.Value(0)).current;
   const [showTooltip, setShowTooltip] = useState(false);
@@ -51,17 +59,26 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
         <View style={styles.rowHeader}>
           <View style={styles.labelContainer}>
             <Text style={styles.label}>{label}</Text>
-            <TouchableOpacity
-              style={styles.infoButton}
-              onPress={() => setShowTooltip(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`Information about ${label}`}
-              accessibilityHint="Tap to learn more about this health metric"
-            >
-              <Info size={18} color={colors.neutral[500]} />
-            </TouchableOpacity>
+            {tooltipContent != null && (
+              <TouchableOpacity
+                style={styles.infoButton}
+                onPress={() => setShowTooltip(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Information about ${label}`}
+                accessibilityHint="Tap to learn more about this health metric"
+              >
+                <Info size={18} color={colors.neutral[500]} />
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={styles.percent}>{clamped}%</Text>
+          <View style={styles.rightHeader}>
+            {showTrend && !!trendIcon && (
+              <Text style={styles.trendIcon} accessibilityLabel="trend">
+                {trendIcon}
+              </Text>
+            )}
+            <Text style={styles.percent}>{clamped}%</Text>
+          </View>
         </View>
 
         <View style={styles.progressContainer}>
@@ -71,7 +88,7 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
                 styles.fill,
                 {
                   width: widthInterpolate,
-                  backgroundColor: getBarColor(clamped),
+                  backgroundColor: color ?? getBarColor(clamped),
                 },
               ]}
             />
@@ -79,12 +96,14 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
         </View>
       </View>
 
-      <Tooltip
-        visible={showTooltip}
-        content={tooltipContent}
-        title={tooltipTitle}
-        onClose={() => setShowTooltip(false)}
-      />
+      {tooltipContent != null && (
+        <Tooltip
+          visible={showTooltip}
+          content={tooltipContent}
+          title={tooltipTitle}
+          onClose={() => setShowTooltip(false)}
+        />
+      )}
     </>
   );
 };
@@ -112,6 +131,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.sm,
   },
+  rightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   labelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -134,6 +158,9 @@ const styles = StyleSheet.create({
     color: colors.neutral[900],
     minWidth: 50,
     textAlign: 'right',
+  },
+  trendIcon: {
+    fontSize: fontSize.base,
   },
   progressContainer: {
     marginTop: spacing.xs,

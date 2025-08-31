@@ -4,10 +4,8 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import { AirQualityData } from '../../models/AirQuality';
 import { UserProfile } from '../../models/User';
 import { borderRadius, colors, fontSize, spacing } from '../../theme';
+import { useHealthMetrics } from '../../hooks/useHealthMetrics';
 import {
-  deriveEnergy,
-  deriveLung,
-  deriveSkinGlow,
   getEnergyExplanation,
   getLungExplanation,
 } from '../../utils/healthMetrics';
@@ -67,31 +65,32 @@ const HealthSummary: React.FC<HealthSummaryProps> = ({
   isError = false,
   errorMessage = 'Unable to load health data. Please try again.',
 }) => {
-  const energy = deriveEnergy(userProfile?.sleepHours);
-  const lung = deriveLung(airQuality?.aqi);
-  const skin = deriveSkinGlow(
-    userProfile?.sleepHours,
-    userProfile?.commuteMode
-  );
+  const { healthMetrics, loading, error } = useHealthMetrics({
+    userInputs: {
+      sleepHours: userProfile?.sleepHours,
+    },
+  });
 
   const tooltips = {
     energy: getEnergyExplanation(userProfile?.sleepHours),
-    lung: getLungExplanation(airQuality?.aqi),
+    lung: getLungExplanation({ aqi: airQuality?.aqi }),
     skin: getSkinGlowTooltipContent(),
   };
 
-  // Check if air quality data is available
-  const isAirQualityLoading = !airQuality || airQuality.aqi === undefined;
+  // Check if health metrics are loading
+  const isHealthMetricsLoading = loading || !healthMetrics;
 
   // Error state
-  if (isError) {
+  if (isError || error) {
     return (
       <View style={styles.container}>
         <Card variant="ghost">
           <Text style={styles.title}>Health Summary</Text>
           <View style={styles.errorContainer}>
             <AlertTriangle size={36} color={colors.red[600]} />
-            <Text style={styles.errorMessage}>{errorMessage}</Text>
+            <Text style={styles.errorMessage}>
+              {error?.message || errorMessage}
+            </Text>
             <Text style={styles.errorSubtext}>
               Check your connection and try refreshing
             </Text>
@@ -105,7 +104,7 @@ const HealthSummary: React.FC<HealthSummaryProps> = ({
     <View style={styles.container}>
       <Card variant="ghost">
         <Text style={styles.title}>Health Summary</Text>
-        {isAirQualityLoading ? (
+        {isHealthMetricsLoading ? (
           <>
             <ProgressRowSkeleton />
             <ProgressRowSkeleton />
@@ -115,18 +114,18 @@ const HealthSummary: React.FC<HealthSummaryProps> = ({
           <>
             <ProgressRow
               label="Energy"
-              value={energy}
+              value={healthMetrics.energy}
               tooltipContent={tooltips.energy}
             />
 
             <ProgressRow
               label="Lung Health"
-              value={lung}
+              value={healthMetrics.lungHealth}
               tooltipContent={tooltips.lung}
             />
             <ProgressRow
               label="Skin Glow"
-              value={skin}
+              value={healthMetrics.skinHealth}
               tooltipContent={tooltips.skin}
             />
           </>

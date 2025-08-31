@@ -10,7 +10,11 @@ import {
   Easing,
 } from 'react-native';
 import AvatarWithTrafficStress from '../components/avatar/AvatarWithTrafficStress';
-import { HealthSummary, EffectsList, EffectData } from '../components/ui';
+import {
+  EnhancedHealthSummary,
+  EffectsList,
+  EffectData,
+} from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -273,17 +277,11 @@ const DashboardScreen: React.FC = () => {
           <EffectsList effects={activeEffects} />
 
           {/* Health Summary */}
-          <HealthSummary
-            userProfile={userProfile}
-            airQuality={airQuality}
-            isError={!!error || !!airQualityError}
-            errorMessage={
-              error
-                ? 'Unable to load user profile data'
-                : airQualityError
-                  ? 'Unable to load air quality data for health calculations'
-                  : undefined
-            }
+          <EnhancedHealthSummary
+            showTrends={true}
+            showAlerts={true}
+            showRecommendations={true}
+            compact={false}
           />
         </View>
       </ScrollView>
