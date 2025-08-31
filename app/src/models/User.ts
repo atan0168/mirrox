@@ -21,5 +21,6 @@ export interface UserProfile {
   // Display preferences
   preferences?: {
     enableStressVisuals: boolean; // Whether to show stress animations and effects
+    enableDeveloperControls: boolean; // Whether to show developer controls and UI overlays
   };
 }

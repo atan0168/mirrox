@@ -9,9 +9,10 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { Shield, Lock, Smartphone, Eye } from 'lucide-react-native';
+import { Shield, Lock, Smartphone, Eye, Code } from 'lucide-react-native';
 import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
+import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 export default function SettingsScreen() {
@@ -26,6 +27,12 @@ export default function SettingsScreen() {
     stressVisualsEnabled: enableStressVisuals,
     updateStressVisualsPreference,
   } = useStressVisualsPreference();
+
+  // Use the developer controls preference hook
+  const {
+    developerControlsEnabled: enableDeveloperControls,
+    updateDeveloperControlsPreference,
+  } = useDeveloperControlsPreference();
 
   useEffect(() => {
     loadSecuritySettings();
@@ -146,6 +153,37 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleDeveloperControlsToggle = async (value: boolean) => {
+    try {
+      setLoading(true);
+
+      const success = await updateDeveloperControlsPreference(value);
+
+      if (success) {
+        const message = value
+          ? 'Developer controls have been enabled. You will now see skin tone controls in the dashboard and UI overlays in the avatar view.'
+          : 'Developer controls have been disabled. All developer controls and UI overlays will be hidden.';
+
+        Alert.alert('Developer Controls Updated', message, [{ text: 'OK' }]);
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to update developer controls setting. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to update developer controls setting:', error);
+      Alert.alert(
+        'Error',
+        'Failed to update developer controls setting. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const AuthMethodOption = ({
     method,
     title,
@@ -220,6 +258,32 @@ export default function SettingsScreen() {
             <Switch
               value={enableStressVisuals}
               onValueChange={handleStressVisualsToggle}
+              disabled={loading}
+              trackColor={{
+                false: colors.neutral[300],
+                true: colors.black,
+              }}
+              thumbColor={colors.white}
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Code size={24} color={colors.neutral[700]} />
+            <Text style={styles.sectionTitle}>Developer Options</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Developer Controls</Text>
+              <Text style={styles.settingDescription}>
+                Show developer controls like skin tone adjustments and UI overlays for testing and customization
+              </Text>
+            </View>
+            <Switch
+              value={enableDeveloperControls}
+              onValueChange={handleDeveloperControlsToggle}
               disabled={loading}
               trackColor={{
                 false: colors.neutral[300],

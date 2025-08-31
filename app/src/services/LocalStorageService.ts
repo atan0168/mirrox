@@ -382,6 +382,7 @@ export class LocalStorageService {
 
   public async updatePreferences(preferences: {
     enableStressVisuals?: boolean;
+    enableDeveloperControls?: boolean;
   }): Promise<void> {
     try {
       const profile = await this.getUserProfile();
@@ -393,6 +394,11 @@ export class LocalStorageService {
             preferences.enableStressVisuals ??
             profile.preferences?.enableStressVisuals ??
             true,
+          // Default to false for developer controls
+          enableDeveloperControls:
+            preferences.enableDeveloperControls ??
+            profile.preferences?.enableDeveloperControls ??
+            false,
         };
         await this.saveUserProfile(profile);
       }
@@ -408,6 +414,16 @@ export class LocalStorageService {
     } catch (error) {
       console.error('Failed to get stress visuals preference:', error);
       return true; // Default to enabled on error
+    }
+  }
+
+  public async getDeveloperControlsEnabled(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.preferences?.enableDeveloperControls ?? false; // Default to disabled
+    } catch (error) {
+      console.error('Failed to get developer controls preference:', error);
+      return false; // Default to disabled on error
     }
   }
 
@@ -457,11 +473,12 @@ export class LocalStorageService {
     }
   }
 
-  private migrateProfile(profile: any): UserProfile {
-    const version = profile.schemaVersion || 1;
+  private migrateProfile(profile: Partial<UserProfile>): UserProfile {
     // Add migration steps here as schema evolves
-    profile.schemaVersion = CURRENT_SCHEMA_VERSION;
-    return profile as UserProfile;
+    return {
+      ...profile,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+    } as UserProfile;
   }
 
   // ===== GLB CACHING METHODS =====

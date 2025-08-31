@@ -14,15 +14,21 @@ import { HealthSummary, EffectsList, EffectData } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
 import {
   calculateCombinedEnvironmentalSkinEffects,
   getRecommendedFacialExpression,
   calculateSmogEffects,
 } from '../utils/skinEffectsUtils';
+import { SkinToneButton } from '../components/controls/SkinToneButton';
 
 const DashboardScreen: React.FC = () => {
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
+  const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
+  
+  // Use developer controls preference
+  const { developerControlsEnabled } = useDeveloperControlsPreference();
 
   // Animate skeleton shimmer/pulse
   useEffect(() => {
@@ -233,7 +239,7 @@ const DashboardScreen: React.FC = () => {
         <View style={styles.content}>
           <View style={styles.avatarContainer}>
             <AvatarWithTrafficStress
-              showAnimationButton={true}
+              showAnimationButton={developerControlsEnabled}
               facialExpression="neutral"
               skinToneAdjustment={skinEffects.totalAdjustment}
               latitude={userProfile?.location.latitude}
@@ -253,12 +259,15 @@ const DashboardScreen: React.FC = () => {
           </View>
 
           {/* Skin Tone Controls - above facial expressions */}
-          {/* <View style={styles.controlsContainer}> */}
-          {/* <Text style={styles.controlsTitle}>Avatar Customization</Text> */}
-          {/* <SkinToneButton */}
-          {/*   skinToneAdjustment={skinToneAdjustment} */}
-          {/*   onSkinToneChange={handleSkinToneChange} */}
-          {/* /> */}
+          {developerControlsEnabled && (
+            <View style={styles.controlsContainer}>
+              <Text style={styles.controlsTitle}>Avatar Customization</Text>
+              <SkinToneButton
+                skinToneAdjustment={manualSkinToneAdjustment}
+                onSkinToneChange={setManualSkinToneAdjustment}
+              />
+            </View>
+          )}
 
           {/* Traffic Information */}
           <EffectsList effects={activeEffects} />

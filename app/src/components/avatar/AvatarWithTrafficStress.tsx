@@ -9,11 +9,11 @@ import { SmogController } from '../effects/SmogController';
 import { StressAura } from '../effects/StressAura';
 import { FloatingStressIcon } from '../effects/FloatingStressIcon';
 import { AnimationControls } from '../controls/AnimationControls';
-import { SkinToneControls } from '../controls/SkinToneControls';
 import { LoadingState, ErrorState } from '../ui/StateComponents';
 import AvatarLoadingIndicator from '../ui/AvatarLoadingIndicator';
 import { useTrafficData } from '../../hooks/useTrafficData';
 import { useStressVisualsPreference } from '../../hooks/useStressVisualsPreference';
+import { useDeveloperControlsPreference } from '../../hooks/useDeveloperControlsPreference';
 import { localStorageService } from '../../services/LocalStorageService';
 import { assetPreloader } from '../../services/AssetPreloader';
 import {
@@ -38,12 +38,10 @@ configureTextureLoader();
 
 interface AvatarWithTrafficStressProps {
   showAnimationButton?: boolean;
-  showSkinToneControls?: boolean;
   width?: number;
   height?: number;
   facialExpression?: string;
   skinToneAdjustment?: number;
-  onSkinToneChange?: (value: number) => void;
   // Location for traffic data
   latitude?: number;
   longitude?: number;
@@ -60,12 +58,10 @@ interface AvatarWithTrafficStressProps {
 
 function AvatarWithTrafficStress({
   showAnimationButton = false,
-  showSkinToneControls = false,
   width = 300,
   height = 500,
   facialExpression: externalFacialExpression = 'neutral',
   skinToneAdjustment = 0,
-  onSkinToneChange,
   latitude,
   longitude,
   airQualityData = null,
@@ -97,6 +93,9 @@ function AvatarWithTrafficStress({
 
   // Get stress visuals preference
   const { stressVisualsEnabled } = useStressVisualsPreference();
+
+  // Get developer controls preference
+  const { developerControlsEnabled } = useDeveloperControlsPreference();
 
   // Calculate stress effects from traffic data
   const stressEffects = useMemo(() => {
@@ -474,20 +473,13 @@ function AvatarWithTrafficStress({
       </Canvas>
 
       {/* UI Overlays */}
-      {__DEV__ && (
-        <>
-          <SkinToneControls
-            skinToneAdjustment={skinToneAdjustment}
-            onSkinToneChange={onSkinToneChange || (() => {})}
-            visible={showSkinToneControls}
-          />
-          <AnimationControls
-            availableAnimations={AVAILABLE_ANIMATIONS}
-            activeAnimation={activeAnimation}
-            onAnimationToggle={handleAnimationToggle}
-            visible={showAnimationButton}
-          />
-        </>
+      {developerControlsEnabled && (
+        <AnimationControls
+          availableAnimations={AVAILABLE_ANIMATIONS}
+          activeAnimation={activeAnimation}
+          onAnimationToggle={handleAnimationToggle}
+          visible={showAnimationButton}
+        />
       )}
 
       {/* Loading Indicator Overlay */}
