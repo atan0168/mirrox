@@ -1,10 +1,10 @@
 # Digital Twin Backend API
 
-A Node.js/Express.js backend service for the Digital Twin Air Quality application. This service provides air quality data from OpenAQ API with caching, rate limiting, and proper error handling.
+A Node.js/Express.js backend service for the Digital Twin application. This service provides various data such as air quality data from multiple sources including OpenAQ and AQICN APIs with caching, rate limiting, and proper error handling.
 
 ## Features
 
-- 🌬️ **Air Quality Data**: Fetch real-time air quality data from OpenAQ API
+- 🌬️ **Air Quality Data**: Fetch real-time air quality data from OpenAQ and AQICN APIs
 - 🚗 **Traffic Congestion**: Get real-time traffic congestion factors using TomTom API
 - 📊 **AQI Calculation**: Calculate US EPA Air Quality Index from PM2.5 data
 - 🚀 **Performance**: In-memory caching to reduce API calls
@@ -18,6 +18,7 @@ A Node.js/Express.js backend service for the Digital Twin Air Quality applicatio
 - Node.js 18+
 - npm or yarn
 - OpenAQ API key
+- AQICN API key
 - TomTom API key
 
 ## Installation
@@ -46,8 +47,9 @@ cp .env.example .env
 PORT=3000
 NODE_ENV=development
 OPENAQ_API_KEY=your_openaq_api_key_here
+AQICN_API_KEY=your_aqicn_api_key_here
 TOMTOM_API_KEY=your_tomtom_api_key_here
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8081,exp://192.168.1.0:8081
 ```
 
 ## Development
@@ -99,7 +101,7 @@ curl "http://localhost:3000/api/traffic/congestion?lat=3.1390&lng=101.6869"
 {
   "success": true,
   "data": {
-    "latitude": 3.1390,
+    "latitude": 3.139,
     "longitude": 101.6869,
     "congestionFactor": 1.45,
     "currentSpeed": 35,
@@ -119,7 +121,7 @@ curl "http://localhost:3000/api/traffic/congestion?lat=3.1390&lng=101.6869"
     "high": { "min": 3.0 }
   },
   "meta": {
-    "requestedCoordinates": { "latitude": 3.1390, "longitude": 101.6869 },
+    "requestedCoordinates": { "latitude": 3.139, "longitude": 101.6869 },
     "cacheAge": null,
     "timestamp": "2024-01-15T10:30:00.000Z"
   }
@@ -127,12 +129,14 @@ curl "http://localhost:3000/api/traffic/congestion?lat=3.1390&lng=101.6869"
 ```
 
 **Congestion Factor Interpretation:**
+
 - `1.0` - No congestion (free flow)
 - `1.3` - Light congestion (30% longer travel time)
 - `2.0` - Moderate congestion (twice as long)
 - `3.0+` - Heavy congestion (3x or more travel time)
 
 **Stress Levels:**
+
 - `none`: Factor ≤ 1.3 (up to 30% longer)
 - `mild`: Factor 1.3-2.0 (30%-100% longer)
 - `moderate`: Factor 2.0-3.0 (2x-3x longer)
@@ -211,18 +215,21 @@ API information and available endpoints.
 
 ## Environment Variables
 
-| Variable                    | Description             | Default                                       | Required |
-| --------------------------- | ----------------------- | --------------------------------------------- | -------- |
-| `PORT`                      | Server port             | `3000`                                        | No       |
-| `NODE_ENV`                  | Environment             | `development`                                 | No       |
-| `OPENAQ_API_KEY`            | OpenAQ API key          | -                                             | Yes      |
-| `TOMTOM_API_KEY`            | TomTom API key          | -                                             | Yes      |
-| `ALLOWED_ORIGINS`           | CORS allowed origins    | `http://localhost:3000,http://localhost:8081` | No       |
-| `RATE_LIMIT_WINDOW_MS`      | Rate limit window       | `900000` (15 min)                             | No       |
-| `RATE_LIMIT_MAX_REQUESTS`   | Max requests per window | `100`                                         | No       |
-| `CACHE_TTL_AIR_QUALITY`     | Air quality cache TTL   | `1800000` (30 min)                            | No       |
-| `CACHE_TTL_LOCATION_SEARCH` | Location cache TTL      | `3600000` (1 hour)                            | No       |
-| `CACHE_TTL_TRAFFIC`         | Traffic cache TTL       | `300000` (5 min)                              | No       |
+| Variable                      | Description               | Default                                                              | Required |
+| ----------------------------- | ------------------------- | -------------------------------------------------------------------- | -------- |
+| `PORT`                        | Server port               | `3000`                                                               | No       |
+| `NODE_ENV`                    | Environment               | `development`                                                        | No       |
+| `OPENAQ_API_KEY`              | OpenAQ API key            | -                                                                    | Yes      |
+| `AQICN_API_KEY`               | AQICN API key             | -                                                                    | Yes      |
+| `TOMTOM_API_KEY`              | TomTom API key            | -                                                                    | Yes      |
+| `ALLOWED_ORIGINS`             | CORS allowed origins      | `http://localhost:3000,http://localhost:8081,exp://192.168.1.0:8081` | No       |
+| `RATE_LIMIT_WINDOW_MS`        | Rate limit window         | `900000` (15 min)                                                    | No       |
+| `RATE_LIMIT_MAX_REQUESTS`     | Max requests per window   | `100`                                                                | No       |
+| `AQICN_RATE_LIMIT_PER_MINUTE` | AQICN requests per minute | `50`                                                                 | No       |
+| `AQICN_RATE_LIMIT_WINDOW_MS`  | AQICN rate limit window   | `60000` (1 min)                                                      | No       |
+| `CACHE_TTL_AIR_QUALITY`       | Air quality cache TTL     | `1800000` (30 min)                                                   | No       |
+| `CACHE_TTL_LOCATION_SEARCH`   | Location cache TTL        | `3600000` (1 hour)                                                   | No       |
+| `CACHE_TTL_TRAFFIC`           | Traffic cache TTL         | `300000` (5 min)                                                     | No       |
 
 ## Project Structure
 
@@ -250,6 +257,8 @@ backend/
 - `npm test` - Run tests (when implemented)
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Fix ESLint issues
+- `npm run format` - Format code with Prettier
+- `npm run format:check` - Check Prettier formatting
 
 ## Error Handling
 
