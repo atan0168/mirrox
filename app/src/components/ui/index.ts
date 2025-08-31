@@ -20,3 +20,7 @@ export { default as Tooltip } from './Tooltip';
 export { default as ProgressRow } from './ProgressRow';
 
 export { default as InfoTable } from './InfoTable';
+
+export { EffectsList } from './EffectsList';
+export { EffectsModal } from './EffectsModal';
+export type { EffectData } from './EffectsModal';

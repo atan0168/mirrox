@@ -11,10 +11,8 @@ import {
   deriveSkinGlow,
   getEnergyExplanation,
   getLungExplanation,
-  getSkinGlowExplanation,
 } from '../../utils/healthMetrics';
 import { getSkinGlowTooltipContent } from '../../utils/tooltipContent';
-// getEnergyExplanation now returns a React node
 
 interface HealthSummaryProps {
   userProfile?: UserProfile;

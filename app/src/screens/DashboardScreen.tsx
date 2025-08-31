@@ -13,7 +13,7 @@ import {
 import AvatarWithTrafficStress from '../components/avatar/AvatarWithTrafficStress';
 import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
 import { SkinToneButton } from '../components/controls/SkinToneButton';
-import { Card, HealthSummary } from '../components/ui';
+import { Card, HealthSummary, EffectsList, EffectData } from '../components/ui';
 import { TrafficInfoCard } from '../components/ui/TrafficInfoCard';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
@@ -143,6 +143,88 @@ const DashboardScreen: React.FC = () => {
     return getRecommendedFacialExpression(airQuality.pm25, airQuality.aqi);
   }, [airQuality]);
 
+  // Create effects data for the effects list
+  const activeEffects = useMemo((): EffectData[] => {
+    const effects: EffectData[] = [];
+
+    // Skin effects
+    if (skinEffects.totalAdjustment !== 0) {
+      const severity =
+        Math.abs(skinEffects.totalAdjustment) > 0.3
+          ? 'high'
+          : Math.abs(skinEffects.totalAdjustment) > 0.15
+            ? 'medium'
+            : 'low';
+
+      effects.push({
+        id: 'skin-effects',
+        title: 'Skin Tone Changes',
+        description: skinEffects.description,
+        details: [
+          `Total skin adjustment: ${(skinEffects.totalAdjustment * 100).toFixed(0)}% darker`,
+          `Pollution effect: ${(skinEffects.pollutionEffect * 100).toFixed(0)}%`,
+          `UV effect: ${(skinEffects.uvEffect * 100).toFixed(0)}%`,
+          `Redness factor: ${(skinEffects.redness * 100).toFixed(0)}%`,
+          `Primary factor: ${skinEffects.primaryFactor}`,
+          ...skinEffects.recommendations,
+        ],
+        severity,
+        source: airQuality?.source?.toUpperCase() || 'Environmental Data',
+      });
+    }
+
+    // Smog/atmospheric effects
+    if (smogEffects.enabled) {
+      const severity =
+        smogEffects.intensity > 0.7
+          ? 'high'
+          : smogEffects.intensity > 0.4
+            ? 'medium'
+            : 'low';
+
+      effects.push({
+        id: 'atmospheric-effects',
+        title: 'Atmospheric Effects',
+        description: smogEffects.description,
+        details: [
+          `Smog intensity: ${(smogEffects.intensity * 100).toFixed(0)}%`,
+          `Visibility opacity: ${(smogEffects.opacity * 100).toFixed(0)}%`,
+          `Particle density: ${(smogEffects.density / 20).toFixed(1)}x normal`,
+          'Simulates real-world air quality conditions',
+          'Based on PM2.5 and PM10 particulate matter levels',
+        ],
+        severity,
+        source: airQuality?.source?.toUpperCase() || 'Air Quality Data',
+      });
+    }
+
+    // Facial expression effects
+    if (recommendedExpression !== 'neutral') {
+      const severity =
+        airQuality?.aqi && airQuality.aqi > 150
+          ? 'high'
+          : airQuality?.aqi && airQuality.aqi > 100
+            ? 'medium'
+            : 'low';
+
+      effects.push({
+        id: 'facial-expression',
+        title: 'Facial Expression',
+        description: `Avatar expression adjusted to "${recommendedExpression}" based on air quality conditions`,
+        details: [
+          `Current expression: ${recommendedExpression}`,
+          `Based on AQI: ${airQuality?.aqi || 'N/A'}`,
+          `PM2.5 level: ${airQuality?.pm25 || 'N/A'} μg/m³`,
+          'Expression reflects health impact of air quality',
+        ],
+        severity,
+        source: 'Air Quality Analysis',
+      });
+    }
+
+    return effects;
+  }, [skinEffects, smogEffects, recommendedExpression, airQuality]);
+
   // Update facial expression when air quality changes (but allow manual override)
   const [hasManualExpression, setHasManualExpression] = useState(false);
 
@@ -210,80 +292,34 @@ const DashboardScreen: React.FC = () => {
           </View>
 
           {/* Skin Tone Controls - above facial expressions */}
-          <View style={styles.controlsContainer}>
-            <Text style={styles.controlsTitle}>Avatar Customization</Text>
-            <SkinToneButton
-              skinToneAdjustment={skinToneAdjustment}
-              onSkinToneChange={handleSkinToneChange}
-            />
+          {/* <View style={styles.controlsContainer}> */}
+          {/* <Text style={styles.controlsTitle}>Avatar Customization</Text> */}
+          {/* <SkinToneButton */}
+          {/*   skinToneAdjustment={skinToneAdjustment} */}
+          {/*   onSkinToneChange={handleSkinToneChange} */}
+          {/* /> */}
 
-            {/* Air Quality Effects Indicator */}
-            {(skinEffects.totalAdjustment !== 0 || smogEffects.enabled) && (
-              <View style={styles.skinEffectsIndicator}>
-                <Text style={styles.skinEffectsTitle}>
-                  Air Quality Effects on Avatar
-                </Text>
-
-                {/* Skin Effects */}
-                {skinEffects.totalAdjustment !== 0 && (
-                  <View style={styles.effectSection}>
-                    <Text style={styles.effectSubtitle}>Skin Effects:</Text>
-                    <Text style={styles.skinEffectsDescription}>
-                      {skinEffects.description}
-                    </Text>
-                    <Text style={styles.skinEffectsLabel}>
-                      Adjustment:{' '}
-                      {(skinEffects.totalAdjustment * 100).toFixed(0)}% darker
-                    </Text>
-                  </View>
-                )}
-
-                {/* Smog Effects */}
-                {smogEffects.enabled && (
-                  <View style={styles.effectSection}>
-                    <Text style={styles.effectSubtitle}>
-                      Atmospheric Effects:
-                    </Text>
-                    <Text style={styles.skinEffectsDescription}>
-                      {smogEffects.description}
-                    </Text>
-                    <Text style={styles.skinEffectsLabel}>
-                      Smog intensity: {(smogEffects.intensity * 100).toFixed(0)}
-                      % • Opacity: {(smogEffects.opacity * 100).toFixed(0)}%
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.skinEffectsDetails}>
-                  <Text style={styles.skinEffectsSource}>
-                    Based on{' '}
-                    {skinEffects.primaryFactor ||
-                    smogEffects.description.includes('PM2.5')
-                      ? 'PM2.5'
-                      : 'AQI'}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
+          {/* Air Quality Effects Indicator */}
 
           {/* Facial Expression Controls */}
-          <View style={styles.controlsContainer}>
-            <FacialExpressionControls
-              currentExpression={facialExpression}
-              onExpressionChange={handleFacialExpressionChange}
-            />
-          </View>
-
+          {/* <View style={styles.controlsContainer}> */}
+          {/*   <FacialExpressionControls */}
+          {/*     currentExpression={facialExpression} */}
+          {/*     onExpressionChange={handleFacialExpressionChange} */}
+          {/*   /> */}
+          {/* </View> */}
+          {/**/}
           {/* Traffic Information */}
+          <EffectsList effects={activeEffects} />
+
+          {/* Health Summary */}
+          <HealthSummary userProfile={userProfile} airQuality={airQuality} />
+
           <TrafficInfoCard
             latitude={userProfile?.location.latitude}
             longitude={userProfile?.location.longitude}
             enabled={!!userProfile?.location}
           />
-
-          {/* Health Summary */}
-          <HealthSummary userProfile={userProfile} airQuality={airQuality} />
 
           {(isAirQualityLoading || airQuality) && (
             <View style={styles.statsContainer}>
