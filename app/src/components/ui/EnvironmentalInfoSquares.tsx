@@ -58,6 +58,10 @@ interface EnvironmentalInfoSquaresProps {
   trafficData?: TrafficData | null;
   isAirQualityLoading?: boolean;
   isTrafficLoading?: boolean;
+  isAirQualityError?: boolean;
+  isTrafficError?: boolean;
+  airQualityErrorMessage?: string;
+  trafficErrorMessage?: string;
 }
 
 export const EnvironmentalInfoSquares: React.FC<
@@ -67,17 +71,24 @@ export const EnvironmentalInfoSquares: React.FC<
   trafficData,
   isAirQualityLoading = false,
   isTrafficLoading = false,
+  isAirQualityError = false,
+  isTrafficError = false,
+  airQualityErrorMessage = 'Unable to load air quality data',
+  trafficErrorMessage = 'Unable to load traffic data',
 }) => {
   const [selectedModal, setSelectedModal] = useState<'air' | 'traffic' | null>(
     null
   );
 
   const getAirQualityColor = () => {
+    if (isAirQualityError) return colors.red[500];
     if (!airQuality?.aqi) return colors.neutral[400];
     return getAQIInfo(airQuality.aqi).colorCode;
   };
 
   const getAirQualityIcon = () => {
+    if (isAirQualityError)
+      return <AlertTriangle size={24} color={colors.red[500]} />;
     if (!airQuality?.aqi) return <Wind size={24} color={colors.neutral[400]} />;
     const aqi = airQuality.aqi;
     const color = getAirQualityColor();
@@ -89,6 +100,7 @@ export const EnvironmentalInfoSquares: React.FC<
   };
 
   const getTrafficColor = () => {
+    if (isTrafficError) return colors.red[500];
     if (!trafficData) return colors.neutral[400];
     switch (trafficData.stressLevel) {
       case 'none':
@@ -105,6 +117,8 @@ export const EnvironmentalInfoSquares: React.FC<
   };
 
   const getTrafficIcon = () => {
+    if (isTrafficError)
+      return <AlertTriangle size={24} color={colors.red[500]} />;
     if (!trafficData) return <Car size={24} color={colors.neutral[400]} />;
     const color = getTrafficColor();
 
@@ -141,7 +155,25 @@ export const EnvironmentalInfoSquares: React.FC<
         </View>
 
         <ScrollView style={styles.modalContent}>
-          {airQuality && (
+          {isAirQualityError ? (
+            <Card
+              variant="outline"
+              style={{ ...styles.detailCard, borderColor: colors.red[500] }}
+            >
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorIcon}>⚠️</Text>
+                <Text style={styles.errorTitle}>
+                  Failed to Load Air Quality Data
+                </Text>
+                <Text style={styles.errorMessage}>
+                  {airQualityErrorMessage}
+                </Text>
+                <Text style={styles.errorSubtext}>
+                  Please check your connection and try again
+                </Text>
+              </View>
+            </Card>
+          ) : airQuality ? (
             <>
               <Card
                 variant="outline"
@@ -164,10 +196,11 @@ export const EnvironmentalInfoSquares: React.FC<
                     { color: getAirQualityColor() },
                   ]}
                 >
-                                  {airQuality.classification ||
-                  (airQuality.aqi && getShortClassification(
-                    getAQIInfo(airQuality.aqi).classification
-                  ))}
+                  {airQuality.classification ||
+                    (airQuality.aqi &&
+                      getShortClassification(
+                        getAQIInfo(airQuality.aqi).classification
+                      ))}
                 </Text>
                 {airQuality.healthAdvice && (
                   <Text style={styles.healthAdvice}>
@@ -220,7 +253,7 @@ export const EnvironmentalInfoSquares: React.FC<
                 </View>
               </View>
             </>
-          )}
+          ) : null}
         </ScrollView>
 
         <View style={styles.modalFooter}>
@@ -255,7 +288,23 @@ export const EnvironmentalInfoSquares: React.FC<
         </View>
 
         <ScrollView style={styles.modalContent}>
-          {trafficData && (
+          {isTrafficError ? (
+            <Card
+              variant="outline"
+              style={{ ...styles.detailCard, borderColor: colors.red[500] }}
+            >
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorIcon}>⚠️</Text>
+                <Text style={styles.errorTitle}>
+                  Failed to Load Traffic Data
+                </Text>
+                <Text style={styles.errorMessage}>{trafficErrorMessage}</Text>
+                <Text style={styles.errorSubtext}>
+                  Please check your connection and try again
+                </Text>
+              </View>
+            </Card>
+          ) : trafficData ? (
             <>
               <Card
                 variant="outline"
@@ -316,7 +365,7 @@ export const EnvironmentalInfoSquares: React.FC<
                 </View>
               </View>
             </>
-          )}
+          ) : null}
         </ScrollView>
 
         <View style={styles.modalFooter}>
@@ -341,43 +390,58 @@ export const EnvironmentalInfoSquares: React.FC<
         <TouchableOpacity
           style={[styles.square, { borderColor: getAirQualityColor() }]}
           onPress={() => setSelectedModal('air')}
-          disabled={isAirQualityLoading}
+          disabled={isAirQualityLoading || isAirQualityError}
         >
           <View style={styles.squareIcon}>{getAirQualityIcon()}</View>
           <Text style={styles.squareValue}>
-            {isAirQualityLoading ? '...' : airQuality?.aqi || 'N/A'}
+            {isAirQualityError
+              ? 'Error'
+              : isAirQualityLoading
+                ? '...'
+                : airQuality?.aqi || 'N/A'}
           </Text>
           <Text style={styles.squareLabel}>Air Quality</Text>
-          {airQuality && (
+          {isAirQualityError ? (
+            <Text style={[styles.squareError, { color: colors.red[500] }]}>
+              {airQualityErrorMessage}
+            </Text>
+          ) : airQuality ? (
             <Text
               style={[styles.squareStatus, { color: getAirQualityColor() }]}
             >
-                          {airQuality.classification ||
-              (airQuality.aqi && getShortClassification(
-                getAQIInfo(airQuality.aqi).classification
-              ))}
+              {airQuality.classification ||
+                (airQuality.aqi &&
+                  getShortClassification(
+                    getAQIInfo(airQuality.aqi).classification
+                  ))}
             </Text>
-          )}
+          ) : null}
         </TouchableOpacity>
 
         {/* Traffic Square */}
         <TouchableOpacity
           style={[styles.square, { borderColor: getTrafficColor() }]}
           onPress={() => setSelectedModal('traffic')}
-          disabled={isTrafficLoading}
+          disabled={isTrafficLoading || isTrafficError}
         >
           <View style={styles.squareIcon}>{getTrafficIcon()}</View>
           <Text style={styles.squareValue}>
-            {isTrafficLoading
-              ? '...'
-              : trafficData?.congestionFactor.toFixed(1) + 'x' || 'N/A'}
+            {isTrafficError
+              ? 'Error'
+              : isTrafficLoading
+                ? '...'
+                : trafficData?.congestionFactor.toFixed(1) + 'x' || 'N/A'}
           </Text>
           <Text style={styles.squareLabel}>Traffic</Text>
-          {trafficData && (
+          {isTrafficError ? (
+            <Text style={[styles.squareError, { color: colors.red[500] }]}>
+              {trafficErrorMessage}
+            </Text>
+          ) : trafficData ? (
             <Text style={[styles.squareStatus, { color: getTrafficColor() }]}>
               {trafficData.stressLevel}
             </Text>
-          )}
+          ) : null}
         </TouchableOpacity>
       </View>
 
@@ -431,6 +495,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'capitalize',
   },
+  squareError: {
+    fontSize: fontSize.xs,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: colors.neutral[50],
@@ -465,6 +535,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutral[50],
     borderTopWidth: 1,
     borderTopColor: colors.neutral[200],
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  errorIcon: {
+    fontSize: 32,
+    marginBottom: spacing.sm,
+  },
+  errorTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    color: colors.red[600],
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  errorMessage: {
+    fontSize: fontSize.base,
+    color: colors.red[500],
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  errorSubtext: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[600],
+    textAlign: 'center',
   },
   detailCard: {
     marginBottom: spacing.lg,

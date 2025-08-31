@@ -4,7 +4,6 @@ import {
   backendApiService,
   StationSearchResult,
 } from '../services/BackendApiService';
-import { AirQualityData } from '../models/AirQuality';
 
 export const useAirQuality = (
   latitude: number,

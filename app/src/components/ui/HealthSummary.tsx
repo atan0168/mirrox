@@ -1,10 +1,9 @@
+import { AlertTriangle } from 'lucide-react-native';
 import React from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
-import { Card } from './Card';
-import ProgressRow from './ProgressRow';
-import { colors, spacing, fontSize, borderRadius } from '../../theme';
-import { UserProfile } from '../../models/User';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import { AirQualityData } from '../../models/AirQuality';
+import { UserProfile } from '../../models/User';
+import { borderRadius, colors, fontSize, spacing } from '../../theme';
 import {
   deriveEnergy,
   deriveLung,
@@ -13,10 +12,14 @@ import {
   getLungExplanation,
 } from '../../utils/healthMetrics';
 import { getSkinGlowTooltipContent } from '../../utils/tooltipContent';
+import { Card } from './Card';
+import ProgressRow from './ProgressRow';
 
 interface HealthSummaryProps {
   userProfile?: UserProfile;
   airQuality?: AirQualityData;
+  isError?: boolean;
+  errorMessage?: string;
 }
 
 // Skeleton component for loading state
@@ -61,6 +64,8 @@ const ProgressRowSkeleton: React.FC = () => {
 const HealthSummary: React.FC<HealthSummaryProps> = ({
   userProfile,
   airQuality,
+  isError = false,
+  errorMessage = 'Unable to load health data. Please try again.',
 }) => {
   const energy = deriveEnergy(userProfile?.sleepHours);
   const lung = deriveLung(airQuality?.aqi);
@@ -77,6 +82,24 @@ const HealthSummary: React.FC<HealthSummaryProps> = ({
 
   // Check if air quality data is available
   const isAirQualityLoading = !airQuality || airQuality.aqi === undefined;
+
+  // Error state
+  if (isError) {
+    return (
+      <View style={styles.container}>
+        <Card variant="ghost">
+          <Text style={styles.title}>Health Summary</Text>
+          <View style={styles.errorContainer}>
+            <AlertTriangle size={36} color={colors.red[600]} />
+            <Text style={styles.errorMessage}>{errorMessage}</Text>
+            <Text style={styles.errorSubtext}>
+              Check your connection and try refreshing
+            </Text>
+          </View>
+        </Card>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -120,6 +143,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.md,
     color: colors.neutral[800],
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  errorIcon: {
+    fontSize: 32,
+    marginBottom: spacing.sm,
+  },
+  errorMessage: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.red[600],
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  errorSubtext: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[600],
+    textAlign: 'center',
   },
   skeletonRow: {
     marginBottom: spacing.md,

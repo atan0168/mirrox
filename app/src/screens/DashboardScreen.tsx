@@ -26,7 +26,7 @@ const DashboardScreen: React.FC = () => {
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
-  
+
   // Use developer controls preference
   const { developerControlsEnabled } = useDeveloperControlsPreference();
 
@@ -44,7 +44,7 @@ const DashboardScreen: React.FC = () => {
     return () => loop.stop();
   }, [skeletonAnim]);
 
-  const { data: airQuality } = useAQICNAirQuality(
+  const { data: airQuality, error: airQualityError } = useAQICNAirQuality(
     userProfile?.location.latitude || 0,
     userProfile?.location.longitude || 0,
     !!userProfile
@@ -273,7 +273,18 @@ const DashboardScreen: React.FC = () => {
           <EffectsList effects={activeEffects} />
 
           {/* Health Summary */}
-          <HealthSummary userProfile={userProfile} airQuality={airQuality} />
+          <HealthSummary
+            userProfile={userProfile}
+            airQuality={airQuality}
+            isError={!!error || !!airQualityError}
+            errorMessage={
+              error
+                ? 'Unable to load user profile data'
+                : airQualityError
+                  ? 'Unable to load air quality data for health calculations'
+                  : undefined
+            }
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

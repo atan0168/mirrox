@@ -278,7 +278,8 @@ export default function SettingsScreen() {
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Developer Controls</Text>
               <Text style={styles.settingDescription}>
-                Show developer controls like skin tone adjustments and UI overlays for testing and customization
+                Show developer controls like skin tone adjustments and UI
+                overlays for testing and customization
               </Text>
             </View>
             <Switch

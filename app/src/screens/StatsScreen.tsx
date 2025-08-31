@@ -12,15 +12,22 @@ import { getAQIInfo, getShortClassification } from '../utils/aqiUtils';
 
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();
-  const { data: airQuality, isLoading: isAirQualityLoading } =
-    useAQICNAirQuality(
-      userProfile?.location.latitude || 0,
-      userProfile?.location.longitude || 0,
-      !!userProfile
-    );
+  const {
+    data: airQuality,
+    isLoading: isAirQualityLoading,
+    error: airQualityError,
+  } = useAQICNAirQuality(
+    userProfile?.location.latitude || 0,
+    userProfile?.location.longitude || 0,
+    !!userProfile
+  );
 
   // Use traffic data hook
-  const { data: trafficData, loading: isTrafficLoading } = useTrafficData({
+  const {
+    data: trafficData,
+    loading: isTrafficLoading,
+    error: trafficError,
+  } = useTrafficData({
     latitude: userProfile?.location.latitude,
     longitude: userProfile?.location.longitude,
     enabled: !!userProfile?.location,
@@ -50,14 +57,22 @@ const StatsScreen: React.FC = () => {
         </View>
 
         {/* Environmental Info Squares */}
-        {isAirQualityLoading || isTrafficLoading || !airQuality?.aqi ? (
+        {isAirQualityLoading && isTrafficLoading ? (
           <EnvironmentalInfoSquaresSkeleton />
         ) : (
           <EnvironmentalInfoSquares
             airQuality={airQuality}
             trafficData={trafficData}
-            isAirQualityLoading={false}
-            isTrafficLoading={false}
+            isAirQualityLoading={isAirQualityLoading}
+            isTrafficLoading={isTrafficLoading}
+            isAirQualityError={!!airQualityError}
+            isTrafficError={!!trafficError}
+            airQualityErrorMessage={
+              airQualityError?.message || 'Unable to load air quality data'
+            }
+            trafficErrorMessage={
+              trafficError?.message || 'Unable to load traffic conditions'
+            }
           />
         )}
 

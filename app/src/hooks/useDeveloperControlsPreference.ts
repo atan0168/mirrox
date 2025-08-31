@@ -18,9 +18,8 @@ const notifyListeners = (enabled: boolean) => {
  * Syncs state across all instances of this hook
  */
 export function useDeveloperControlsPreference() {
-  const [developerControlsEnabled, setDeveloperControlsEnabled] = useState<boolean>(
-    globalDeveloperControlsEnabled
-  );
+  const [developerControlsEnabled, setDeveloperControlsEnabled] =
+    useState<boolean>(globalDeveloperControlsEnabled);
   const [loading, setLoading] = useState<boolean>(globalLoading);
 
   // Register listener for updates from other hook instances
