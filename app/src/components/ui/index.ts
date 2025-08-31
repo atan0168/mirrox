@@ -24,3 +24,6 @@ export { default as InfoTable } from './InfoTable';
 export { EffectsList } from './EffectsList';
 export { EffectsModal } from './EffectsModal';
 export type { EffectData } from './EffectsModal';
+
+export { EnvironmentalInfoSquares } from './EnvironmentalInfoSquares';
+export { EnvironmentalInfoSquaresSkeleton } from './EnvironmentalInfoSquaresSkeleton';

@@ -17,6 +17,7 @@ export interface EffectData {
   details: string[];
   severity: 'low' | 'medium' | 'high';
   source: string;
+  actionRecommendations?: string[];
 }
 
 interface EffectsModalProps {
@@ -101,6 +102,19 @@ export const EffectsModal: React.FC<EffectsModalProps> = ({
               </View>
             ))}
           </View>
+
+          {effect.actionRecommendations &&
+            effect.actionRecommendations.length > 0 && (
+              <View style={styles.actionsSection}>
+                <Text style={styles.actionsTitle}>Recommended Actions</Text>
+                {effect.actionRecommendations.map((action, index) => (
+                  <View key={index} style={styles.actionItem}>
+                    <Text style={styles.actionBullet}>✓</Text>
+                    <Text style={styles.actionText}>{action}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
           <View style={styles.sourceSection}>
             <Text style={styles.sourceLabel}>Data Source</Text>
@@ -213,10 +227,36 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.neutral[700],
   },
+  actionsSection: {
+    marginBottom: spacing.xl,
+  },
+  actionsTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    color: colors.neutral[900],
+    marginBottom: spacing.md,
+  },
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  actionBullet: {
+    fontSize: fontSize.base,
+    color: colors.green[600],
+    marginRight: spacing.sm,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  actionText: {
+    flex: 1,
+    fontSize: fontSize.base,
+    color: colors.neutral[700],
+    lineHeight: 22,
+  },
   footer: {
     padding: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.neutral[200],
   },
 });
-

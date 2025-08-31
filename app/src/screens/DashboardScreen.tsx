@@ -8,24 +8,12 @@ import {
   SafeAreaView,
   Animated,
   Easing,
-  ViewStyle,
 } from 'react-native';
 import AvatarWithTrafficStress from '../components/avatar/AvatarWithTrafficStress';
-import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
-import { SkinToneButton } from '../components/controls/SkinToneButton';
-import { Card, HealthSummary, EffectsList, EffectData } from '../components/ui';
-import { TrafficInfoCard } from '../components/ui/TrafficInfoCard';
+import { HealthSummary, EffectsList, EffectData } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
-import {
-  getAQIInfo,
-  getShortClassification,
-  getHealthRecommendations,
-  formatPollutantValue,
-  formatTimestamp,
-  mapPrimaryPollutant,
-} from '../utils/aqiUtils';
 import {
   calculateCombinedEnvironmentalSkinEffects,
   getRecommendedFacialExpression,
@@ -34,8 +22,6 @@ import {
 
 const DashboardScreen: React.FC = () => {
   const { data: userProfile, isLoading, error } = useUserProfile();
-  const [facialExpression, setFacialExpression] = useState<string>('neutral');
-  const [skinToneAdjustment, setSkinToneAdjustment] = useState<number>(0);
   const [skeletonAnim] = useState(new Animated.Value(0));
 
   // Animate skeleton shimmer/pulse
@@ -52,37 +38,11 @@ const DashboardScreen: React.FC = () => {
     return () => loop.stop();
   }, [skeletonAnim]);
 
-  const skeletonOpacity = skeletonAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.4, 1, 0.4],
-  });
-
-  const SkeletonBlock: React.FC<{
-    width: number | `${number}%` | 'auto';
-    height: number;
-    style?: ViewStyle;
-  }> = ({ width, height, style }) => (
-    <Animated.View
-      style={[
-        {
-          width,
-          height,
-          backgroundColor: colors.neutral[200],
-          borderRadius: 8,
-          opacity: skeletonOpacity,
-        },
-        style,
-      ]}
-    />
+  const { data: airQuality } = useAQICNAirQuality(
+    userProfile?.location.latitude || 0,
+    userProfile?.location.longitude || 0,
+    !!userProfile
   );
-
-  // Use React Query for air quality data - prefer AQICN for better data quality
-  const { data: airQuality, isLoading: isAirQualityLoading } =
-    useAQICNAirQuality(
-      userProfile?.location.latitude || 0,
-      userProfile?.location.longitude || 0,
-      !!userProfile
-    );
 
   // Calculate combined environmental skin effects (air quality + UV)
   const skinEffects = useMemo(() => {
@@ -115,9 +75,9 @@ const DashboardScreen: React.FC = () => {
         uvIndex: currentUVIndex,
         exposureHours: 2, // Assume 2 hours of outdoor exposure
       },
-      skinToneAdjustment // Use current skin tone as base
+      0 // Base skin tone adjustment
     );
-  }, [airQuality, skinToneAdjustment]);
+  }, [airQuality]);
 
   // Calculate smog effects based on air quality
   const smogEffects = useMemo(() => {
@@ -170,6 +130,13 @@ const DashboardScreen: React.FC = () => {
         ],
         severity,
         source: airQuality?.source?.toUpperCase() || 'Environmental Data',
+        actionRecommendations: [
+          'Use sunscreen with SPF 30+ when outdoors',
+          'Consider wearing protective clothing',
+          'Apply antioxidant-rich skincare products',
+          'Stay hydrated to maintain skin health',
+          'Limit outdoor activities during peak pollution hours',
+        ],
       });
     }
 
@@ -195,6 +162,13 @@ const DashboardScreen: React.FC = () => {
         ],
         severity,
         source: airQuality?.source?.toUpperCase() || 'Air Quality Data',
+        actionRecommendations: [
+          'Wear an N95 or KN95 mask when outdoors',
+          'Keep windows closed and use air purifiers indoors',
+          'Avoid outdoor exercise during high pollution periods',
+          'Use public transportation to reduce emissions',
+          'Check air quality before planning outdoor activities',
+        ],
       });
     }
 
@@ -219,29 +193,18 @@ const DashboardScreen: React.FC = () => {
         ],
         severity,
         source: 'Air Quality Analysis',
+        actionRecommendations: [
+          'Practice deep breathing exercises to reduce stress',
+          'Take breaks from outdoor activities if feeling discomfort',
+          'Monitor your symptoms and adjust activities accordingly',
+          'Consider using a humidifier to ease respiratory discomfort',
+          'Stay informed about air quality forecasts',
+        ],
       });
     }
 
     return effects;
   }, [skinEffects, smogEffects, recommendedExpression, airQuality]);
-
-  // Update facial expression when air quality changes (but allow manual override)
-  const [hasManualExpression, setHasManualExpression] = useState(false);
-
-  useEffect(() => {
-    if (!hasManualExpression && recommendedExpression !== facialExpression) {
-      setFacialExpression(recommendedExpression);
-    }
-  }, [recommendedExpression, hasManualExpression, facialExpression]);
-
-  const handleFacialExpressionChange = (expression: string) => {
-    setFacialExpression(expression);
-    setHasManualExpression(true); // Mark as manually set to prevent auto-override
-  };
-
-  const handleSkinToneChange = (value: number) => {
-    setSkinToneAdjustment(value);
-  };
 
   if (isLoading) {
     return (
@@ -271,10 +234,8 @@ const DashboardScreen: React.FC = () => {
           <View style={styles.avatarContainer}>
             <AvatarWithTrafficStress
               showAnimationButton={true}
-              facialExpression={facialExpression}
-              skinToneAdjustment={
-                skinToneAdjustment + skinEffects.totalAdjustment
-              }
+              facialExpression="neutral"
+              skinToneAdjustment={skinEffects.totalAdjustment}
               latitude={userProfile?.location.latitude}
               longitude={userProfile?.location.longitude}
               enableTrafficStress={true}
@@ -299,182 +260,11 @@ const DashboardScreen: React.FC = () => {
           {/*   onSkinToneChange={handleSkinToneChange} */}
           {/* /> */}
 
-          {/* Air Quality Effects Indicator */}
-
-          {/* Facial Expression Controls */}
-          {/* <View style={styles.controlsContainer}> */}
-          {/*   <FacialExpressionControls */}
-          {/*     currentExpression={facialExpression} */}
-          {/*     onExpressionChange={handleFacialExpressionChange} */}
-          {/*   /> */}
-          {/* </View> */}
-          {/**/}
           {/* Traffic Information */}
           <EffectsList effects={activeEffects} />
 
           {/* Health Summary */}
           <HealthSummary userProfile={userProfile} airQuality={airQuality} />
-
-          <TrafficInfoCard
-            latitude={userProfile?.location.latitude}
-            longitude={userProfile?.location.longitude}
-            enabled={!!userProfile?.location}
-          />
-
-          {(isAirQualityLoading || airQuality) && (
-            <View style={styles.statsContainer}>
-              <Text style={styles.sectionTitle}>Environmental Data</Text>
-
-              {/* Main AQI Display */}
-              {isAirQualityLoading ? (
-                <Card variant="outline" style={{ ...styles.aqiCard }}>
-                  <View style={styles.aqiHeader}>
-                    <SkeletonBlock width={140} height={18} />
-                    <SkeletonBlock width={60} height={28} />
-                  </View>
-                  <SkeletonBlock
-                    width={160}
-                    height={16}
-                    style={{ marginBottom: spacing.sm }}
-                  />
-                  <SkeletonBlock
-                    width={'100%'}
-                    height={14}
-                    style={{ marginBottom: spacing.sm }}
-                  />
-                  <SkeletonBlock width={'70%'} height={12} />
-                </Card>
-              ) : (
-                <Card
-                  variant="outline"
-                  style={{
-                    ...styles.aqiCard,
-                    borderColor:
-                      airQuality!.colorCode ||
-                      getAQIInfo(airQuality!.aqi || 0).colorCode,
-                  }}
-                >
-                  <View style={styles.aqiHeader}>
-                    <Text style={styles.aqiTitle}>Air Quality Index</Text>
-                    <Text
-                      style={[
-                        styles.aqiValue,
-                        {
-                          color:
-                            airQuality!.colorCode ||
-                            getAQIInfo(airQuality!.aqi || 0).colorCode,
-                        },
-                      ]}
-                    >
-                      {airQuality!.aqi || 'N/A'}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      styles.aqiClassification,
-                      {
-                        color:
-                          airQuality!.colorCode ||
-                          getAQIInfo(airQuality!.aqi || 0).colorCode,
-                      },
-                    ]}
-                  >
-                    {airQuality!.classification ||
-                      getShortClassification(
-                        getAQIInfo(airQuality!.aqi || 0).classification
-                      )}
-                  </Text>
-                  {airQuality!.healthAdvice && (
-                    <Text style={styles.healthAdvice} numberOfLines={2}>
-                      {airQuality!.healthAdvice}
-                    </Text>
-                  )}
-                  {airQuality!.timestamp && (
-                    <Text style={styles.dataTimestamp}>
-                      Updated {formatTimestamp(airQuality!.timestamp)} •{' '}
-                      {airQuality!.source?.toUpperCase() || 'AQICN'}
-                    </Text>
-                  )}
-                </Card>
-              )}
-
-              {/* Pollutant Details */}
-              {airQuality && !isAirQualityLoading && (
-                <View style={styles.pollutantsContainer}>
-                  <Text style={styles.pollutantsTitle}>Pollutant Levels</Text>
-                  <View style={styles.pollutantGrid}>
-                    {airQuality.pm25 && (
-                      <View style={styles.pollutantItem}>
-                        <Text style={styles.pollutantLabel}>PM2.5</Text>
-                        <Text style={styles.pollutantValue}>
-                          {formatPollutantValue(airQuality.pm25, 'pm25')}
-                        </Text>
-                      </View>
-                    )}
-                    {airQuality.pm10 && (
-                      <View style={styles.pollutantItem}>
-                        <Text style={styles.pollutantLabel}>PM10</Text>
-                        <Text style={styles.pollutantValue}>
-                          {formatPollutantValue(airQuality.pm10, 'pm10')}
-                        </Text>
-                      </View>
-                    )}
-                    {airQuality.o3 && (
-                      <View style={styles.pollutantItem}>
-                        <Text style={styles.pollutantLabel}>Ozone</Text>
-                        <Text style={styles.pollutantValue}>
-                          {formatPollutantValue(airQuality.o3, 'o3')}
-                        </Text>
-                      </View>
-                    )}
-                    {airQuality.no2 && (
-                      <View style={styles.pollutantItem}>
-                        <Text style={styles.pollutantLabel}>NO₂</Text>
-                        <Text style={styles.pollutantValue}>
-                          {formatPollutantValue(airQuality.no2, 'no2')}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <View style={styles.statRow}>
-                    <Text style={styles.statLabel}>Primary Pollutant:</Text>
-                    <Text style={styles.statValue}>
-                      {mapPrimaryPollutant(
-                        airQuality.primaryPollutant || 'N/A'
-                      )}
-                    </Text>
-                  </View>
-
-                  <View style={styles.statRow}>
-                    <Text style={styles.statLabel}>Station:</Text>
-                    <Text style={styles.statValue} numberOfLines={1}>
-                      {airQuality.location.name}
-                    </Text>
-                  </View>
-                </View>
-              )}
-
-              {/* Health Recommendations */}
-              {airQuality &&
-                !isAirQualityLoading &&
-                airQuality.aqi &&
-                airQuality.aqi > 50 && (
-                  <Card variant="outline" style={styles.recommendationsCard}>
-                    <Text style={styles.recommendationsTitle}>
-                      Health Recommendations
-                    </Text>
-                    {getHealthRecommendations(airQuality.aqi)
-                      .slice(0, 3)
-                      .map((recommendation, index) => (
-                        <Text key={index} style={styles.recommendationItem}>
-                          • {recommendation}
-                        </Text>
-                      ))}
-                  </Card>
-                )}
-            </View>
-          )}
         </View>
       </ScrollView>
     </SafeAreaView>
