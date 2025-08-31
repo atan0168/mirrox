@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { User, UserX } from 'lucide-react-native';
+import { Mars, Venus } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
 interface GenderPickerProps {
@@ -16,12 +16,12 @@ export const GenderPicker: React.FC<GenderPickerProps> = ({
     {
       value: 'male' as const,
       label: 'Male',
-      icon: User,
+      icon: Mars,
     },
     {
       value: 'female' as const,
       label: 'Female',
-      icon: UserX,
+      icon: Venus,
     },
   ];
 

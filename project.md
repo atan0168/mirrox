@@ -105,7 +105,7 @@ export const localStorageService = new LocalStorageService();
 
 The onboarding flow is composed of four main screens.
 
-**Screen Flow:** `WelcomeScreen.tsx` -> `QuestionnaireScreen.tsx` -> `GeneratingTwinScreen.tsx` -> `DashboardScreen.tsx`
+**Screen Flow:** `WelcomeScreen.tsx` -> `QuestionnaireScreen.tsx` -> `GeneratingTwinScreen.tsx` (with automatic avatar creation) -> `DashboardScreen.tsx`
 
 **1. `WelcomeScreen.tsx`:**
 This screen's primary job is to get location permission and access.

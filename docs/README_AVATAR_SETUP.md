@@ -30,7 +30,7 @@ const RPM_APPLICATION_ID = 'your-actual-app-id-here';
 Make sure the subdomain in both files matches your Ready Player Me subdomain:
 
 - `src/services/ReadyPlayerMeApiService.ts`
-- `src/screens/AvatarCreationScreen.tsx`
+- `src/screens/GeneratingTwinScreen.tsx`
 
 ```typescript
 const RPM_SUBDOMAIN = 'mirrox'; // Replace with your subdomain
@@ -38,20 +38,15 @@ const RPM_SUBDOMAIN = 'mirrox'; // Replace with your subdomain
 
 ## Features Implemented
 
-### Avatar Creation Options
+### Automatic Avatar Creation
 
-Users now have two options for creating avatars:
+The app now automatically creates avatars during the onboarding flow:
 
-1. **Quick Create (API-based)**
-   - Automatically creates an avatar based on user profile
-   - Uses Ready Player Me API with templates
-   - Fast and personalized
-   - Fallback to custom creation if API fails
-
-2. **Custom Create (iframe-based)**
-   - Full Ready Player Me iframe experience
-   - Complete customization options
-   - User has full control over avatar design
+1. **Profile-Based Creation**
+   - Automatically creates an avatar based on user profile data
+   - Uses Ready Player Me API with templates matching user preferences
+   - Integrated into the `GeneratingTwinScreen` for seamless experience
+   - Includes error handling with retry options
 
 ### Avatar Display
 
@@ -62,9 +57,9 @@ Users now have two options for creating avatars:
 
 ### User Flow
 
-1. Welcome → Questionnaire → GeneratingTwin → **AvatarCreation** → Dashboard
-2. Avatar creation is mandatory (no skip option)
-3. Avatar cannot be edited after creation
+1. Welcome → Questionnaire → **GeneratingTwin (with automatic avatar creation)** → Dashboard
+2. Avatar creation is automatic based on user profile
+3. No manual avatar customization step (streamlined experience)
 4. 3D avatar display in dashboard
 
 ## API Integration

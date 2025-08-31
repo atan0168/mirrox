@@ -5,8 +5,9 @@ import { CommutePicker } from '../components/CommutePicker';
 import { SleepSlider } from '../components/SleepSlider';
 import { GenderPicker } from '../components/GenderPicker';
 import { SkinTonePicker, SkinTone } from '../components/SkinTonePicker';
-import { Button, Card, Badge } from '../components/ui';
+import { Button, Card } from '../components/ui';
 import { localStorageService } from '../services/LocalStorageService';
+import { useQueryClient } from '@tanstack/react-query';
 import { UserProfile } from '../models/User';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
@@ -16,6 +17,7 @@ interface QuestionnaireScreenProps {
       location: { latitude: number; longitude: number } | null;
     };
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   navigation: any;
 }
 
@@ -24,6 +26,7 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
   navigation,
 }) => {
   const { location } = route.params;
+  const queryClient = useQueryClient();
   const [commuteMode, setCommuteMode] = useState<
     'car' | 'transit' | 'wfh' | 'bike' | 'walk'
   >('wfh');
@@ -31,7 +34,7 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [skinTone, setSkinTone] = useState<SkinTone>('medium');
 
-  const handleCompleteOnboarding = () => {
+  const handleCompleteOnboarding = async () => {
     // If no location was provided, use a default location (you could show a city picker here)
     const profileLocation = location || {
       latitude: 3.139, // Kuala Lumpur default
@@ -48,12 +51,17 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
       schemaVersion: 1,
     };
 
-    (async () => {
-      await localStorageService.saveUserProfile(profile);
-    })();
+  // Persist the updated profile BEFORE navigating so GeneratingTwin uses fresh data
+  await localStorageService.saveUserProfile(profile);
 
-    // Navigate to a temporary loading screen while we fetch API data
-    navigation.navigate('GeneratingTwin');
+  // Optimistically update / replace cached query data so next screen has latest immediately
+  queryClient.setQueryData(['userProfile'], profile);
+
+  // Invalidate to force a refetch later (keeps data fresh if storage changes elsewhere)
+  queryClient.invalidateQueries({ queryKey: ['userProfile'], exact: true });
+
+  // Navigate only after profile is stored & cache updated
+  navigation.navigate('GeneratingTwin');
   };
 
   return (

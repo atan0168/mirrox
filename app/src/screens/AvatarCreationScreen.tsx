@@ -18,8 +18,6 @@ import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 import { RPM_SUBDOMAIN } from '../constants';
 import { useUserProfile } from '../hooks/useUserProfile';
 
-// Replace 'demo' with your actual subdomain from Ready Player Me
-
 interface AvatarCreationScreenProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   navigation: any;
@@ -340,8 +338,8 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.lg,
     // Add status bar height on Android to avoid content appearing too high / cramped
-    paddingTop: spacing.lg - ANDROID_STATUSBAR_HEIGHT,
-    paddingBottom: spacing.md, // give a little more breathing room before the cards
+    paddingTop: ANDROID_STATUSBAR_HEIGHT,
+    paddingBottom: spacing.xxl, // give a little more breathing room before the cards
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.neutral[200],

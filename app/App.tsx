@@ -11,7 +11,6 @@ import PermissionScreen from './src/screens/PermissionScreen';
 import CitySelectionScreen from './src/screens/CitySelectionScreen';
 import QuestionnaireScreen from './src/screens/QuestionnaireScreen';
 import GeneratingTwinScreen from './src/screens/GeneratingTwinScreen';
-import AvatarCreationScreen from './src/screens/AvatarCreationScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
 
 // Import tab navigator
@@ -32,7 +31,6 @@ export type RootStackParamList = {
     } | null;
   };
   GeneratingTwin: undefined;
-  AvatarCreation: undefined;
   MainTabs: undefined;
 };
 
@@ -98,20 +96,15 @@ export default function App() {
           <Stack.Screen
             name="Questionnaire"
             component={QuestionnaireScreen}
-            options={{ title: 'About You' }}
+            options={{
+              title: 'About You',
+              headerLeft: () => null, // Prevent going back
+            }}
           />
           <Stack.Screen
             name="GeneratingTwin"
             component={GeneratingTwinScreen}
             options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="AvatarCreation"
-            component={AvatarCreationScreen}
-            options={{
-              title: 'Create Avatar',
-              // headerLeft: () => null, // Prevent going back
-            }}
           />
           <Stack.Screen
             name="MainTabs"

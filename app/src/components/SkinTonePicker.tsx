@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
   },
   optionText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontWeight: '500',
     color: colors.neutral[700],
   },
