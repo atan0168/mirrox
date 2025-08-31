@@ -603,6 +603,59 @@ export const getSkinGlowExplanation = (
   );
 };
 
+/**
+ * Get detailed explanation for cognitive function calculation
+ */
+export const getCognitiveExplanation = (
+  environmental?: EnvironmentalFactors,
+  lifestyle?: LifestyleFactors
+): React.ReactNode => {
+  const rows: TableRow[] = [
+    { label: 'Sleep ≥ 8h', value: '+15%', description: 'Optimal cognitive restoration' },
+    { label: 'Sleep 7–8h', value: '+10%', description: 'Good restoration' },
+    { label: 'Sleep 5–6h', value: '−15%', description: 'Noticeable impairment' },
+    { label: 'Sleep < 5h', value: '−25%', description: 'Severe cognitive impairment' },
+    { label: 'PM2.5 > 35', value: '−15%', description: 'Pollution affects brain function' },
+    { label: 'High stress', value: '−20%', description: 'Stress reduces focus and memory' },
+    { label: 'Work > 10h', value: '−15%', description: 'Mental fatigue from overwork' },
+  ];
+
+  return (
+    <View>
+      <Text style={{ fontSize: fontSize.base, color: colors.neutral[700], lineHeight: 22, marginBottom: spacing.md }}>
+        Cognitive function reflects sleep quality, air quality, and stress. Adequate sleep and lower stress improve focus and reaction, while pollution and overwork can reduce performance.
+      </Text>
+      <InfoTable title="Factors → Cognitive Change" rows={rows} />
+    </View>
+  );
+};
+
+/**
+ * Get detailed explanation for stress index calculation
+ */
+export const getStressExplanation = (
+  environmental?: EnvironmentalFactors,
+  lifestyle?: LifestyleFactors
+): React.ReactNode => {
+  const rows: TableRow[] = [
+    { label: 'Baseline', value: '20', description: 'Starting stress level' },
+    { label: 'Commute > 60m', value: '+15', description: 'Long commute adds stress' },
+    { label: 'Work > 10h', value: '+20', description: 'Overwork increases stress' },
+    { label: 'Sleep < 6h', value: '+15', description: 'Sleep deprivation' },
+    { label: 'AQI > 100', value: '+5–15', description: 'Poor air quality' },
+    { label: 'Low stress day', value: '−5', description: 'Good habits reduce stress' },
+  ];
+
+  return (
+    <View>
+      <Text style={{ fontSize: fontSize.base, color: colors.neutral[700], lineHeight: 22, marginBottom: spacing.md }}>
+        Stress index combines commute conditions, work hours, sleep, and environmental quality. Lower values are better and reflect calmer conditions.
+      </Text>
+      <InfoTable title="Contributors → Stress Index" rows={rows} />
+    </View>
+  );
+};
+
 // Legacy function compatibility (simplified versions for backward compatibility)
 export const deriveEnergyLegacy = (sleep?: number | null): number => {
   return deriveEnergy(sleep);

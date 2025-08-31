@@ -12,7 +12,7 @@
  * - Actionable recommendations
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -29,12 +29,27 @@ import {
   getEnergyExplanation,
   getLungExplanation,
   getSkinGlowExplanation,
+  getCognitiveExplanation,
+  getStressExplanation,
 } from '../../utils/healthMetrics';
 import ProgressRow from './ProgressRow';
 import { Badge } from './Badge';
 import { Card } from './Card';
-import { Button } from './Button';
-import Tooltip from './Tooltip';
+import CollapsibleCard from './CollapsibleCard';
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  AlertTriangle,
+  AlertOctagon,
+  Info as InfoIcon,
+  Lightbulb,
+  Battery,
+  Wind,
+  Sun,
+  Brain,
+  Activity,
+} from 'lucide-react-native';
 
 interface EnhancedHealthSummaryProps {
   showTrends?: boolean;
@@ -51,7 +66,7 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
   compact = false,
   onMetricPress,
 }) => {
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  // Using Accordion components for collapsible sections
 
   const {
     healthMetrics,
@@ -117,22 +132,32 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
     }
   };
 
-  const getTrendIcon = (trend: HealthTrend): string => {
-    if (trend.trend === 'improving') return '↗️';
-    if (trend.trend === 'declining') return '↘️';
-    return '→';
+  const metricColors = {
+    energy: colors.green[500],
+    lungHealth: colors.orange[500],
+    skinHealth: colors.yellow[500],
+    cognitiveFunction: colors.primary,
+    stressIndex: colors.red[500],
+  } as const;
+
+  const getTrendIcon = (trend: HealthTrend): React.ReactNode => {
+    if (trend.trend === 'improving')
+      return <TrendingUp size={16} color={colors.green[600]} />;
+    if (trend.trend === 'declining')
+      return <TrendingDown size={16} color={colors.red[600]} />;
+    return <Minus size={16} color={colors.neutral[600]} />;
   };
 
-  const getAlertIcon = (alert: HealthAlert): string => {
+  const getAlertIcon = (alert: HealthAlert): React.ReactNode => {
     switch (alert.type) {
       case 'critical':
-        return '🚨';
+        return <AlertOctagon size={18} color={colors.red[600]} />;
       case 'warning':
-        return '⚠️';
+        return <AlertTriangle size={18} color={colors.yellow[600]} />;
       case 'info':
-        return 'ℹ️';
+        return <InfoIcon size={18} color={colors.neutral[600]} />;
       default:
-        return '📋';
+        return <InfoIcon size={18} color={colors.neutral[600]} />;
     }
   };
 
@@ -157,9 +182,7 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
     );
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
+  // Collapsible handled by CollapsibleCard
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -227,7 +250,8 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
           <ProgressRow
             label="Energy Level"
             value={healthMetrics.energy}
-            color={getHealthColor(healthMetrics.energy)}
+            color={metricColors.energy}
+            icon={<Battery size={18} color={metricColors.energy} />}
             showTrend={showTrends}
             trendIcon={getTrendIcon(
               trends.find(t => t.metric === 'energy') || ({} as HealthTrend)
@@ -241,7 +265,8 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
           <ProgressRow
             label="Lung Health"
             value={healthMetrics.lungHealth}
-            color={getHealthColor(healthMetrics.lungHealth)}
+            color={metricColors.lungHealth}
+            icon={<Wind size={18} color={metricColors.lungHealth} />}
             showTrend={showTrends}
             trendIcon={getTrendIcon(
               trends.find(t => t.metric === 'lungHealth') || ({} as HealthTrend)
@@ -255,7 +280,8 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
           <ProgressRow
             label="Skin Health"
             value={healthMetrics.skinHealth}
-            color={getHealthColor(healthMetrics.skinHealth)}
+            color={metricColors.skinHealth}
+            icon={<Sun size={18} color={metricColors.skinHealth} />}
             showTrend={showTrends}
             trendIcon={getTrendIcon(
               trends.find(t => t.metric === 'skinHealth') || ({} as HealthTrend)
@@ -271,13 +297,15 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
           <ProgressRow
             label="Cognitive Function"
             value={healthMetrics.cognitiveFunction}
-            color={getHealthColor(healthMetrics.cognitiveFunction)}
+            color={metricColors.cognitiveFunction}
+            icon={<Brain size={18} color={colors.neutral[700]} />}
             showTrend={showTrends}
             trendIcon={getTrendIcon(
               trends.find(t => t.metric === 'cognitiveFunction') ||
                 ({} as HealthTrend)
             )}
             tooltipTitle="Cognition — Sleep, Air, Stress"
+            tooltipContent={getCognitiveExplanation()}
           />
         </TouchableOpacity>
 
@@ -285,133 +313,48 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
           <ProgressRow
             label="Stress Level"
             value={100 - healthMetrics.stressIndex} // Invert for display (higher = better)
-            color={getHealthColor(healthMetrics.stressIndex, true)}
+            color={metricColors.stressIndex}
+            icon={<Activity size={18} color={metricColors.stressIndex} />}
             showTrend={showTrends}
             trendIcon={getTrendIcon(
               trends.find(t => t.metric === 'stressIndex') ||
                 ({} as HealthTrend)
             )}
             tooltipTitle="Stress — Commute, Sleep, Work"
+            tooltipContent={getStressExplanation()}
           />
         </TouchableOpacity>
       </Card>
 
-      {/* Health Alerts */}
-      {showAlerts && alerts.length > 0 && (
-        <Card style={styles.alertsCard}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('alerts')}
+      <View style={styles.recommendationsContainer}>
+        {/* Health Recommendations */}
+        {showRecommendations && recommendations.length > 0 && (
+          <CollapsibleCard
+            title="Recommendations"
+            count={recommendations.length}
+            defaultExpanded={!compact}
           >
-            <Text style={styles.sectionTitle}>
-              Health Alerts ({alerts.length})
-            </Text>
-            <Text style={styles.expandIcon}>
-              {expandedSection === 'alerts' ? '▼' : '▶'}
-            </Text>
-          </TouchableOpacity>
-
-          {(expandedSection === 'alerts' || !compact) && (
-            <View style={styles.alertsList}>
-              {alerts.slice(0, compact ? 3 : alerts.length).map(alert => (
-                <View key={alert.id} style={styles.alertItem}>
-                  <View style={styles.alertHeader}>
-                    <Text style={styles.alertIcon}>{getAlertIcon(alert)}</Text>
-                    <Text
-                      style={[
-                        styles.alertMessage,
-                        {
-                          color:
-                            alert.type === 'critical'
-                              ? colors.red[600]
-                              : alert.type === 'warning'
-                                ? colors.yellow[600]
-                                : colors.neutral[600],
-                        },
-                      ]}
-                    >
-                      {alert.message}
-                    </Text>
-                  </View>
-
-                  {alert.recommendation && (
-                    <Text style={styles.alertRecommendation}>
-                      💡 {alert.recommendation}
-                    </Text>
-                  )}
-
-                  <View style={styles.alertActions}>
-                    <Badge
-                      variant={
-                        alert.severity >= 8
-                          ? 'default'
-                          : alert.severity >= 6
-                            ? 'secondary'
-                            : 'outline'
-                      }
-                      size="sm"
-                    >
-                      Severity: {alert.severity}/10
-                    </Badge>
-                    <TouchableOpacity
-                      style={styles.dismissButton}
-                      onPress={() => handleAlertDismiss(alert)}
-                    >
-                      <Text style={styles.dismissButtonText}>Dismiss</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </Card>
-      )}
-
-      {/* Health Recommendations */}
-      {showRecommendations && recommendations.length > 0 && (
-        <Card style={styles.recommendationsCard}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('recommendations')}
-          >
-            <Text style={styles.sectionTitle}>
-              Recommendations ({recommendations.length})
-            </Text>
-            <Text style={styles.expandIcon}>
-              {expandedSection === 'recommendations' ? '▼' : '▶'}
-            </Text>
-          </TouchableOpacity>
-
-          {(expandedSection === 'recommendations' || !compact) && (
             <View style={styles.recommendationsList}>
               {recommendations
                 .slice(0, compact ? 3 : recommendations.length)
                 .map((recommendation, index) => (
                   <View key={index} style={styles.recommendationItem}>
                     <Text style={styles.recommendationText}>
-                      • {recommendation}
+                      {recommendation}
                     </Text>
                   </View>
                 ))}
             </View>
-          )}
-        </Card>
-      )}
+          </CollapsibleCard>
+        )}
 
-      {/* Health Trends */}
-      {showTrends && trends.length > 0 && !compact && (
-        <Card style={styles.trendsCard}>
-          <TouchableOpacity
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('trends')}
+        {/* Health Trends */}
+        {showTrends && trends.length > 0 && !compact && (
+          <CollapsibleCard
+            title="Weekly Trends"
+            count={trends.length}
+            defaultExpanded={false}
           >
-            <Text style={styles.sectionTitle}>Weekly Trends</Text>
-            <Text style={styles.expandIcon}>
-              {expandedSection === 'trends' ? '▼' : '▶'}
-            </Text>
-          </TouchableOpacity>
-
-          {expandedSection === 'trends' && (
             <View style={styles.trendsList}>
               {trends.map(trend => (
                 <View key={trend.metric} style={styles.trendItem}>
@@ -429,7 +372,7 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
                               : 'Energy Level'}
                   </Text>
                   <View style={styles.trendValues}>
-                    <Text style={styles.trendIcon}>{getTrendIcon(trend)}</Text>
+                    {getTrendIcon(trend)}
                     <Text style={styles.trendChange}>
                       {trend.change > 0 ? '+' : ''}
                       {trend.change.toFixed(1)}%
@@ -438,9 +381,9 @@ const EnhancedHealthSummary: React.FC<EnhancedHealthSummaryProps> = ({
                 </View>
               ))}
             </View>
-          )}
-        </Card>
-      )}
+          </CollapsibleCard>
+        )}
+      </View>
     </ScrollView>
   );
 };
@@ -591,6 +534,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.neutral[700],
     fontWeight: '500',
+  },
+  recommendationsContainer: {
+    flexDirection: 'column',
+    gap: spacing.xs,
   },
   recommendationsCard: {
     marginBottom: spacing.md,

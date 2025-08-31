@@ -1,12 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  Easing,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
 import { Info } from 'lucide-react-native';
 import Tooltip from './Tooltip';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
@@ -22,7 +15,8 @@ interface ProgressRowProps {
   // Optional visual enhancements
   color?: string; // override fill color
   showTrend?: boolean;
-  trendIcon?: string; // e.g., ↗️ ↘️ →
+  trendIcon?: React.ReactNode; // lucide icon or any node
+  icon?: React.ReactNode; // optional leading icon
 }
 
 const ProgressRow: React.FC<ProgressRowProps> = ({
@@ -33,6 +27,7 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
   color,
   showTrend,
   trendIcon,
+  icon,
 }) => {
   const animated = useRef(new Animated.Value(0)).current;
   const [showTooltip, setShowTooltip] = useState(false);
@@ -53,11 +48,16 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
     outputRange: ['0%', '100%'],
   });
 
+  const handleOpenTooltip = () => {
+    if (tooltipContent != null) setShowTooltip(true);
+  };
+
   return (
     <>
-      <View style={styles.container}>
+      <TouchableOpacity style={styles.container} activeOpacity={0.9} onPress={handleOpenTooltip}>
         <View style={styles.rowHeader}>
           <View style={styles.labelContainer}>
+            {icon && <View style={styles.iconContainer}>{icon}</View>}
             <Text style={styles.label}>{label}</Text>
             {tooltipContent != null && (
               <TouchableOpacity
@@ -72,11 +72,7 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
             )}
           </View>
           <View style={styles.rightHeader}>
-            {showTrend && !!trendIcon && (
-              <Text style={styles.trendIcon} accessibilityLabel="trend">
-                {trendIcon}
-              </Text>
-            )}
+            {showTrend && !!trendIcon && trendIcon}
             <Text style={styles.percent}>{clamped}%</Text>
           </View>
         </View>
@@ -94,7 +90,7 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
             />
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
 
       {tooltipContent != null && (
         <Tooltip
@@ -141,6 +137,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  iconContainer: {
+    marginRight: spacing.xs,
+  },
   label: {
     fontSize: fontSize.base,
     color: colors.neutral[800],
@@ -159,9 +158,7 @@ const styles = StyleSheet.create({
     minWidth: 50,
     textAlign: 'right',
   },
-  trendIcon: {
-    fontSize: fontSize.base,
-  },
+  trendIcon: {},
   progressContainer: {
     marginTop: spacing.xs,
   },
