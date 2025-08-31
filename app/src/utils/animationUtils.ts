@@ -2,8 +2,6 @@
  * Animation utility functions for automatic animation selection based on AQI levels
  */
 
-import { getAQIInfo } from './aqiUtils';
-
 export interface AnimationRecommendation {
   animation: string | null;
   reason: string;
@@ -97,4 +95,3 @@ export function getAnimationCycleForAQI(
   // For unhealthy air quality, cycle between cough and breathing
   return ['M_Standing_Expressions_007', 'breathing'];
 }
-

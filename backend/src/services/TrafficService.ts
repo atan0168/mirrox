@@ -169,14 +169,12 @@ class TrafficService {
         } else if (error.response?.status === 400) {
           throw new Error('Invalid coordinates provided for traffic data.');
         } else if (error.response && error.response.status >= 500) {
-          throw new Error('Traffic service is temporarily unavailable.');
+          throw new Error('Traffic data is currently unavailable');
         }
       }
 
       // Network or other errors
-      throw new Error(
-        'Unable to connect to traffic services. Please check your internet connection.'
-      );
+      throw new Error('Traffic data is currently unavailable');
     }
   }
 
@@ -227,4 +225,3 @@ class TrafficService {
 }
 
 export const trafficService = new TrafficService();
-

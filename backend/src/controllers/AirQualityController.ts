@@ -116,10 +116,7 @@ export class AirQualityController {
             breakdown: {
               aqicn: aqicnKeys.length,
               openaq: openaqKeys.length,
-              other:
-                cacheStats.size -
-                aqicnKeys.length -
-                openaqKeys.length,
+              other: cacheStats.size - aqicnKeys.length - openaqKeys.length,
             },
           },
           rateLimit: openaqStatus.rateLimit,

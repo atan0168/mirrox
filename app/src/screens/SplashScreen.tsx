@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Heart, RefreshCw } from 'lucide-react-native';
 import { RootStackParamList } from '../../App';
-import { LocalStorageService } from '../services/LocalStorageService';
+import { localStorageService } from '../services/LocalStorageService';
 import { assetPreloader, PreloadProgress } from '../services/AssetPreloader';
 import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
 
@@ -63,7 +63,7 @@ export default function SplashScreen() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        const localStorage = new LocalStorageService();
+        const localStorage = localStorageService;
 
         // Check if authentication is required first
         const authRequired = await localStorage.isAuthenticationRequired();
@@ -130,7 +130,7 @@ export default function SplashScreen() {
       setAuthenticationFailed(false);
       setLoadingText('Retrying authentication...');
 
-      const localStorage = new LocalStorageService();
+      const localStorage = localStorageService;
       const authSuccess = await localStorage.authenticateUser();
 
       if (authSuccess) {

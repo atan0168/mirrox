@@ -51,17 +51,17 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
       schemaVersion: 1,
     };
 
-  // Persist the updated profile BEFORE navigating so GeneratingTwin uses fresh data
-  await localStorageService.saveUserProfile(profile);
+    // Persist the updated profile BEFORE navigating so GeneratingTwin uses fresh data
+    await localStorageService.saveUserProfile(profile);
 
-  // Optimistically update / replace cached query data so next screen has latest immediately
-  queryClient.setQueryData(['userProfile'], profile);
+    // Optimistically update / replace cached query data so next screen has latest immediately
+    queryClient.setQueryData(['userProfile'], profile);
 
-  // Invalidate to force a refetch later (keeps data fresh if storage changes elsewhere)
-  queryClient.invalidateQueries({ queryKey: ['userProfile'], exact: true });
+    // Invalidate to force a refetch later (keeps data fresh if storage changes elsewhere)
+    queryClient.invalidateQueries({ queryKey: ['userProfile'], exact: true });
 
-  // Navigate only after profile is stored & cache updated
-  navigation.navigate('GeneratingTwin');
+    // Navigate only after profile is stored & cache updated
+    navigation.navigate('GeneratingTwin');
   };
 
   return (

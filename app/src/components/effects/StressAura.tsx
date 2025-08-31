@@ -48,7 +48,10 @@ export function StressAura({
         phases[i] = Math.random() * Math.PI * 2;
       }
 
-      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(positions, 3)
+      );
       geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
       geometry.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
       geometry.setAttribute('phase', new THREE.BufferAttribute(phases, 1));
@@ -162,7 +165,7 @@ export function StressAura({
       particleSystem.forEach(points => {
         const material = points.material as THREE.ShaderMaterial;
         material.uniforms.time.value = state.clock.elapsedTime;
-        
+
         // Gentle rotation
         points.rotation.y += 0.002;
         points.rotation.x += 0.001;
@@ -182,4 +185,3 @@ export function StressAura({
     </group>
   );
 }
-

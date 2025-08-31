@@ -380,6 +380,37 @@ export class LocalStorageService {
     }
   }
 
+  public async updatePreferences(preferences: {
+    enableStressVisuals?: boolean;
+  }): Promise<void> {
+    try {
+      const profile = await this.getUserProfile();
+      if (profile) {
+        profile.preferences = {
+          ...profile.preferences,
+          // If a new value is provided, use it; otherwise keep existing, defaulting to true when undefined
+          enableStressVisuals:
+            preferences.enableStressVisuals ??
+            profile.preferences?.enableStressVisuals ??
+            true,
+        };
+        await this.saveUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Failed to update preferences:', error);
+    }
+  }
+
+  public async getStressVisualsEnabled(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.preferences?.enableStressVisuals ?? true; // Default to enabled
+    } catch (error) {
+      console.error('Failed to get stress visuals preference:', error);
+      return true; // Default to enabled on error
+    }
+  }
+
   /**
    * Complete reset - clears all data including encryption keys
    * This will make all previously stored data unrecoverable
@@ -514,8 +545,8 @@ export class LocalStorageService {
       // Get file info for size
       const fileInfo = await FileSystem.getInfoAsync(localPath);
       const fileSize =
-        fileInfo.exists && !fileInfo.isDirectory
-          ? (fileInfo as any).size || 0
+        fileInfo.exists && !fileInfo.isDirectory && 'size' in fileInfo
+          ? (fileInfo as { size: number }).size || 0
           : 0;
 
       // Save to cache

@@ -57,7 +57,7 @@ export const TrafficInfoCard: React.FC<TrafficInfoCardProps> = ({
       <Card variant="default">
         <Text style={styles.title}>Traffic Conditions</Text>
         <Text style={styles.error}>Unable to load traffic data</Text>
-        <Text style={styles.errorDetail}>{error}</Text>
+        <Text style={styles.errorDetail}>{error.message}</Text>
       </Card>
     );
   }
@@ -316,6 +316,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.neutral[700],
     textAlign: 'center',
+    marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   errorDetail: {

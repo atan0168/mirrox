@@ -37,4 +37,3 @@ export interface CongestionThresholds {
   moderate: { min: number; max: number };
   high: { min: number };
 }
-

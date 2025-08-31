@@ -49,7 +49,7 @@ class TrafficService {
         `${this.baseUrl}/congestion`,
         {
           params: { lat: latitude, lng: longitude },
-          timeout: 10000,
+          timeout: 5000, // Reduced timeout to 5 seconds for faster failure detection
         }
       );
 
@@ -67,28 +67,41 @@ class TrafficService {
     } catch (error) {
       console.error('Traffic service error:', error);
 
-      // Return default values on error (no stress)
-      return {
-        latitude,
-        longitude,
-        congestionFactor: 1.0,
-        currentSpeed: 0,
-        freeFlowSpeed: 0,
-        currentTravelTime: 0,
-        freeFlowTravelTime: 0,
-        stressLevel: 'none',
-        confidence: 0,
-        roadClosure: false,
-        timestamp: new Date().toISOString(),
-        cached: false,
-      };
+      // Check if this is a specific traffic API error
+      if (axios.isAxiosError(error)) {
+        if (
+          error.code === 'ECONNREFUSED' ||
+          error.code === 'ENOTFOUND' ||
+          error.response?.status === 503 ||
+          error.response?.status === 502 ||
+          error.response?.status === 504
+        ) {
+          // TomTom API is unresponsive/unavailable
+          throw new Error('Traffic data is currently unavailable');
+        }
+        if (error.response?.status === 500) {
+          throw new Error('Traffic data is currently unavailable');
+        }
+      }
+
+      // For other network errors or timeouts
+      if (
+        error instanceof Error &&
+        (error.message.includes('timeout') ||
+          error.message.includes('Network Error'))
+      ) {
+        throw new Error('Traffic data is currently unavailable');
+      }
+
+      // For any other traffic service specific errors
+      throw new Error('Traffic data is currently unavailable');
     }
   }
 
   /**
    * Get service status
    */
-  async getStatus(): Promise<any> {
+  async getStatus(): Promise<unknown> {
     try {
       const response = await axios.get(`${this.baseUrl}/status`);
       return response.data;
@@ -100,4 +113,3 @@ class TrafficService {
 }
 
 export const trafficService = new TrafficService();
-

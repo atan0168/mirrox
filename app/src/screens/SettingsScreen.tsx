@@ -9,21 +9,23 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { Shield, Lock, Smartphone } from 'lucide-react-native';
-import { LocalStorageService } from '../services/LocalStorageService';
+import { Shield, Lock, Smartphone, Eye } from 'lucide-react-native';
+import { localStorageService } from '../services/LocalStorageService';
+import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 
-type SettingsScreenNavigationProp = StackNavigationProp<any, 'Settings'>;
-
 export default function SettingsScreen() {
-  const navigation = useNavigation<SettingsScreenNavigationProp>();
   const [requireAuth, setRequireAuth] = useState(false);
   const [authMethod, setAuthMethod] = useState<'pin' | 'biometric' | 'both'>(
     'biometric'
   );
   const [loading, setLoading] = useState(true);
+
+  // Use the stress visuals preference hook
+  const {
+    stressVisualsEnabled: enableStressVisuals,
+    updateStressVisualsPreference,
+  } = useStressVisualsPreference();
 
   useEffect(() => {
     loadSecuritySettings();
@@ -31,15 +33,17 @@ export default function SettingsScreen() {
 
   const loadSecuritySettings = async () => {
     try {
-      const localStorage = new LocalStorageService();
+      const localStorage = localStorageService;
       const profile = await localStorage.getUserProfile();
 
       if (profile?.security) {
         setRequireAuth(profile.security.requireAuthentication);
         setAuthMethod(profile.security.authMethod || 'biometric');
       }
+
+      // Note: Stress visuals preference is now handled by the hook
     } catch (error) {
-      console.error('Failed to load security settings:', error);
+      console.error('Failed to load settings:', error);
     } finally {
       setLoading(false);
     }
@@ -51,7 +55,7 @@ export default function SettingsScreen() {
   ) => {
     try {
       setLoading(true);
-      const localStorage = new LocalStorageService();
+      const localStorage = localStorageService;
 
       await localStorage.updateSecuritySettings({
         requireAuthentication: newRequireAuth,
@@ -108,6 +112,37 @@ export default function SettingsScreen() {
           },
         ]
       );
+    }
+  };
+
+  const handleStressVisualsToggle = async (value: boolean) => {
+    try {
+      setLoading(true);
+
+      const success = await updateStressVisualsPreference(value);
+
+      if (success) {
+        const message = value
+          ? 'Stress visuals have been enabled. Your digital twin will now show stress animations and breathing effects when traffic or air quality conditions are detected.'
+          : 'Stress visuals have been disabled. Your digital twin will remain in a calm state with only idle animations, regardless of traffic or air quality conditions.';
+
+        Alert.alert('Stress Visuals Updated', message, [{ text: 'OK' }]);
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to update stress visuals setting. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to update stress visuals setting:', error);
+      Alert.alert(
+        'Error',
+        'Failed to update stress visuals setting. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -168,6 +203,33 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Eye size={24} color={colors.neutral[700]} />
+            <Text style={styles.sectionTitle}>Display Preferences</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Stress Visuals</Text>
+              <Text style={styles.settingDescription}>
+                Show stress animations, breathing effects, and visual indicators
+                when traffic or air quality conditions affect your digital twin
+              </Text>
+            </View>
+            <Switch
+              value={enableStressVisuals}
+              onValueChange={handleStressVisualsToggle}
+              disabled={loading}
+              trackColor={{
+                false: colors.neutral[300],
+                true: colors.black,
+              }}
+              thumbColor={colors.white}
+            />
+          </View>
+        </View>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Shield size={24} color={colors.neutral[700]} />

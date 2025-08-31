@@ -20,5 +20,5 @@ export const USER_PROFILE_KEY = 'user_profile';
 export const AVATAR_URL_KEY = 'avatar_url';
 export const AVATAR_CACHE_KEY = 'avatar_cache';
 export const API_BASE_URL = __DEV__
-  ? 'http://10.10.0.111:3000/api'
+  ? 'http://10.10.0.113:3000/api'
   : 'https://your-production-api.com/api';

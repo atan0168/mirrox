@@ -18,4 +18,8 @@ export interface UserProfile {
     authMethod?: 'pin' | 'biometric' | 'both'; // Authentication method preference
     lastAuthenticatedAt?: string; // ISO 8601 date string
   };
+  // Display preferences
+  preferences?: {
+    enableStressVisuals: boolean; // Whether to show stress animations and effects
+  };
 }

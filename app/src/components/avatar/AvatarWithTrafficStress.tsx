@@ -13,6 +13,7 @@ import { SkinToneControls } from '../controls/SkinToneControls';
 import { LoadingState, ErrorState } from '../ui/StateComponents';
 import AvatarLoadingIndicator from '../ui/AvatarLoadingIndicator';
 import { useTrafficData } from '../../hooks/useTrafficData';
+import { useStressVisualsPreference } from '../../hooks/useStressVisualsPreference';
 import { localStorageService } from '../../services/LocalStorageService';
 import { assetPreloader } from '../../services/AssetPreloader';
 import {
@@ -94,9 +95,12 @@ function AvatarWithTrafficStress({
     refreshInterval: trafficRefreshInterval,
   });
 
+  // Get stress visuals preference
+  const { stressVisualsEnabled } = useStressVisualsPreference();
+
   // Calculate stress effects from traffic data
   const stressEffects = useMemo(() => {
-    if (!trafficData || !enableTrafficStress) {
+    if (!trafficData || !enableTrafficStress || !stressVisualsEnabled) {
       return {
         stressLevel: 'none' as const,
         intensity: 0,
@@ -178,8 +182,22 @@ function AvatarWithTrafficStress({
   // Get AQI-based animation recommendation
   const aqiAnimationRecommendation = useMemo(() => {
     const aqi = airQualityData?.aqi;
-    return getAnimationForAQI(aqi);
-  }, [airQualityData?.aqi]);
+    const recommendation = getAnimationForAQI(aqi);
+
+    // If stress visuals are disabled, filter out breathing animations
+    if (!stressVisualsEnabled && recommendation.animation === 'breathing') {
+      console.log(
+        `🚫 Stress visuals disabled - blocking breathing animation for AQI: ${aqi}`
+      );
+      return {
+        animation: null, // Use idle animations instead
+        reason: `Stress visuals disabled - using idle animations instead of breathing (AQI: ${aqi})`,
+        isAutomatic: true,
+      };
+    }
+
+    return recommendation;
+  }, [airQualityData?.aqi, stressVisualsEnabled]);
 
   // Automatic animation control based on AQI and traffic stress
   useEffect(() => {
@@ -193,8 +211,8 @@ function AvatarWithTrafficStress({
 
     // Only apply automatic animations if not manually set
     if (!isManualAnimation) {
-      // Traffic stress animations take priority over AQI animations
-      if (stressEffects.stressLevel === 'high') {
+      // Traffic stress animations take priority over AQI animations, but only if stress visuals are enabled
+      if (stressEffects.stressLevel === 'high' && stressVisualsEnabled) {
         console.log(
           '🚨 High traffic stress detected - triggering stress animation'
         );
@@ -214,7 +232,18 @@ function AvatarWithTrafficStress({
 
           // For unhealthy air quality, set up animation cycling
           if (aqi && aqi >= 101) {
-            const cycleAnimations = getAnimationCycleForAQI(aqi);
+            let cycleAnimations = getAnimationCycleForAQI(aqi);
+
+            // If stress visuals are disabled, filter out breathing animations from cycling
+            if (!stressVisualsEnabled) {
+              cycleAnimations = cycleAnimations.filter(
+                animation => animation !== 'breathing'
+              );
+              console.log(
+                '🚫 Stress visuals disabled - filtered out breathing from animation cycle'
+              );
+            }
+
             if (cycleAnimations.length > 1) {
               let currentIndex = 0;
               animationCycleRef.current = setInterval(() => {
@@ -225,6 +254,17 @@ function AvatarWithTrafficStress({
                 );
                 setActiveAnimation(nextAnimation);
               }, 8000);
+            } else if (cycleAnimations.length === 1) {
+              // If only one animation left after filtering, just use it without cycling
+              console.log(
+                `🔄 Single animation remaining: ${cycleAnimations[0]} (unhealthy AQI: ${aqi})`
+              );
+            } else {
+              // If no animations left after filtering, use idle animations
+              console.log(
+                '🔄 No animations remaining after filtering - using idle animations'
+              );
+              setActiveAnimation(null);
             }
           }
         }
@@ -244,6 +284,7 @@ function AvatarWithTrafficStress({
     aqiAnimationRecommendation,
     activeAnimation,
     stressEffects.stressLevel,
+    stressVisualsEnabled,
   ]);
 
   // Load avatar
@@ -274,6 +315,24 @@ function AvatarWithTrafficStress({
 
     loadAvatar();
   }, []);
+
+  // Handle stress visuals toggle - stop breathing animations immediately
+  useEffect(() => {
+    if (
+      !stressVisualsEnabled &&
+      activeAnimation === 'breathing' &&
+      !isManualAnimation
+    ) {
+      console.log('🚫 Stress visuals disabled - stopping breathing animation');
+      setActiveAnimation(null); // Switch to idle animations
+
+      // Clear any animation cycling that might include breathing
+      if (animationCycleRef.current) {
+        clearInterval(animationCycleRef.current);
+        animationCycleRef.current = null;
+      }
+    }
+  }, [stressVisualsEnabled, activeAnimation, isManualAnimation]);
 
   // Cleanup animation cycle timer on unmount
   useEffect(() => {
@@ -374,8 +433,8 @@ function AvatarWithTrafficStress({
           color={new THREE.Color(0x888888)}
         />
 
-        {/* Traffic Stress Effects */}
-        {enableTrafficStress && trafficData && (
+        {/* Traffic Stress Effects - only show if stress visuals are enabled */}
+        {enableTrafficStress && trafficData && stressVisualsEnabled && (
           <>
             <StressAura
               intensity={stressEffects.intensity}
@@ -437,9 +496,10 @@ function AvatarWithTrafficStress({
         progress={loadingProgress}
       />
 
-      {/* Traffic Status Indicator */}
+      {/* Traffic Status Indicator - only show if stress visuals are enabled */}
       {enableTrafficStress &&
         trafficData &&
+        stressVisualsEnabled &&
         stressEffects.stressLevel !== 'none' && (
           <View style={styles.trafficStatus}>
             <View

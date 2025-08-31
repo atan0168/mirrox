@@ -25,4 +25,3 @@ router.get('/status', trafficController.getStatus);
 router.post('/cache/clear', trafficController.clearCache);
 
 export default router;
-
