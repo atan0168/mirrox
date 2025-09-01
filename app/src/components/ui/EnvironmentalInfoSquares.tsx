@@ -104,7 +104,7 @@ export const EnvironmentalInfoSquares: React.FC<
     if (!trafficData) return colors.neutral[400];
     switch (trafficData.stressLevel) {
       case 'none':
-        return '#4CAF50';
+        return colors.green[400];
       case 'mild':
         return '#FFC107';
       case 'moderate':

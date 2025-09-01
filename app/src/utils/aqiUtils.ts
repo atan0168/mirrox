@@ -2,6 +2,8 @@
  * Utility functions for working with Air Quality Index (AQI) data
  */
 
+import { colors } from '../theme';
+
 export interface AQIInfo {
   classification: string;
   colorCode: string;
@@ -18,7 +20,7 @@ export function getAQIInfo(aqi: number): AQIInfo {
   if (aqi <= 50) {
     return {
       classification: 'Good',
-      colorCode: '#00E400',
+      colorCode: colors.green[400],
       healthAdvice:
         'Air quality is considered satisfactory, and air pollution poses little or no risk.',
       level: 1,
