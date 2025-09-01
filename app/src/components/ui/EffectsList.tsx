@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { EffectsModal, EffectData } from './EffectsModal';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
+import { ChevronRight } from 'lucide-react-native';
 
 interface EffectsListProps {
   effects: EffectData[];
@@ -101,14 +102,10 @@ export const EffectsList: React.FC<EffectsListProps> = ({
               </Text>
             </View>
             <View style={styles.moreIndicator}>
-              <Text
-                style={[
-                  styles.moreText,
-                  { color: getSeverityColor(effect.severity) },
-                ]}
-              >
-                ›
-              </Text>
+              <ChevronRight
+                size={16}
+                color={getSeverityColor(effect.severity)}
+              />
             </View>
           </TouchableOpacity>
         ))}
@@ -195,5 +192,6 @@ const styles = StyleSheet.create({
   moreText: {
     fontSize: fontSize.lg,
     fontWeight: '600',
+    verticalAlign: 'middle',
   },
 });
