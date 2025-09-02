@@ -31,7 +31,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/digital-twin-backend
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha
+            type=sha,format=long,prefix=
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -43,10 +43,12 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
 
   deploy:
     name: Deploy to VPS
     needs: build-and-push
+    environment: production
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -83,30 +85,35 @@ jobs:
           script: |
             mkdir -p ~/digital-twin/backend
 
-      - name: Upload compose file
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
-          source: 'docker-compose.prod.yml'
-          target: '~/digital-twin'
+      - name: Set up SSH 🔑
+        run: |
+          set -e
+          mkdir -p -m 700 "$HOME/.ssh"
+          PORT="${{ secrets.VPS_PORT }}"
+          if [ -z "$PORT" ]; then PORT=22; fi
+          ssh-keyscan -H -p "$PORT" "${{ secrets.VPS_HOST }}" >> "$HOME/.ssh/known_hosts"
+          # preserve newlines and strip any CRs that break PEM parsing
+          echo "${{ secrets.VPS_SSH_KEY }}" | tr -d '\r' > "$HOME/.ssh/id_rsa"
+          chmod 400 "$HOME/.ssh/id_rsa"
 
-      - name: Upload backend env file
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
-          source: '.deploy/backend.env'
-          target: '~/digital-twin'
+      - name: Upload compose file
+        run: |
+          PORT="${{ secrets.VPS_PORT }}"
+          if [ -z "$PORT" ]; then PORT=22; fi
+          scp -P "$PORT" -o StrictHostKeyChecking=yes \
+            docker-compose.prod.yml \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:~/digital-twin/"
+
+      - name: Upload backend env file (direct)
+        run: |
+          PORT="${{ secrets.VPS_PORT }}"
+          if [ -z "$PORT" ]; then PORT=22; fi
+          scp -P "$PORT" -o StrictHostKeyChecking=yes \
+            .deploy/backend.env \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:~/digital-twin/backend/.env"
 
       - name: Deploy (pull and up)
         uses: appleboy/ssh-action@v1.0.3
-        env:
-          IMAGE: ${{ steps.prep.outputs.image }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -123,11 +130,16 @@ jobs:
             # Login to GHCR using a PAT with read:packages scope
             echo "Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ github.repository_owner }}" --password-stdin
-            echo "Pulling $IMAGE ..."
-            docker pull "$IMAGE"
-            # Expect a server-side env file at ./backend/.env
-            mkdir -p backend
-            mv -f backend.env backend/.env
+
+            IMAGE_TO_PULL="${{ steps.prep.outputs.image }}"
+            echo "IMAGE=${{ steps.prep.outputs.image }}" > .env
+
+            echo "Pulling $IMAGE_TO_PULL ..."
+            docker pull "$IMAGE_TO_PULL"
+            if [ ! -f "backend/.env" ]; then
+              echo "Required env file backend/.env is missing. Did the upload step run?" >&2
+              exit 1
+            fi
             # Launch/refresh via compose (IMAGE env var is used by compose file)
-            IMAGE="$IMAGE" docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            IMAGE="$IMAGE_TO_PULL" docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f
