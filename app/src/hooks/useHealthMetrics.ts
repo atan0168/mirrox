@@ -132,7 +132,7 @@ export const useHealthMetrics = ({
         userInputs,
       });
 
-      const metrics = healthMetricsService.calculateCurrentHealth(input);
+      const metrics = await healthMetricsService.calculateCurrentHealth(input);
       const trends = healthMetricsService.getHealthTrends('week');
       const alerts = healthMetricsService.getActiveAlerts();
       const recommendations =

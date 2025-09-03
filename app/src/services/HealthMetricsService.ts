@@ -17,6 +17,8 @@ import {
 import { AirQualityData } from '../models/AirQuality';
 import { UserProfile } from '../models/User';
 import { CongestionData } from './TrafficService';
+import { localStorageService } from './LocalStorageService';
+import { HEALTH_ALERTS_KEY, HEALTH_HISTORY_KEY } from '../constants';
 
 export interface HealthMetricsInput {
   userProfile?: UserProfile;
@@ -56,11 +58,68 @@ class HealthMetricsService {
   private healthHistory: Array<{ timestamp: Date; metrics: HealthMetrics }> =
     [];
   private activeAlerts: HealthAlert[] = [];
+  private initialized = false;
+
+  private async ensureInitialized() {
+    if (this.initialized) return;
+    try {
+      // Load persisted history
+      const parsedHistory =
+        await localStorageService.getJson<
+          Array<{ timestamp: string | Date; metrics: HealthMetrics }>
+        >(HEALTH_HISTORY_KEY);
+      if (parsedHistory) {
+        this.healthHistory = parsedHistory.map(entry => ({
+          timestamp: new Date(entry.timestamp),
+          metrics: entry.metrics,
+        }));
+      }
+
+      // Load persisted alerts
+      const parsedAlerts =
+        await localStorageService.getJson<HealthAlert[]>(HEALTH_ALERTS_KEY);
+      if (parsedAlerts) {
+        // Convert timestamps back to Date
+        this.activeAlerts = parsedAlerts.map(a => ({
+          ...a,
+          timestamp: new Date(a.timestamp as any),
+        }));
+      }
+    } catch (e) {
+      // Fallback to in-memory only if parsing fails
+      // Intentionally swallow to avoid breaking runtime
+    } finally {
+      this.initialized = true;
+    }
+  }
+
+  private async persistHistory() {
+    try {
+      const serializable = this.healthHistory.map(h => ({
+        timestamp: h.timestamp.toISOString(),
+        metrics: h.metrics,
+      }));
+      await localStorageService.setJson(HEALTH_HISTORY_KEY, serializable);
+    } catch {}
+  }
+
+  private async persistAlerts() {
+    try {
+      const serializable = this.activeAlerts.map(a => ({
+        ...a,
+        timestamp: a.timestamp.toISOString(),
+      }));
+      await localStorageService.setJson(HEALTH_ALERTS_KEY, serializable);
+    } catch {}
+  }
 
   /**
    * Calculate current health metrics from all available data sources
    */
-  calculateCurrentHealth(input: HealthMetricsInput): HealthMetrics {
+  async calculateCurrentHealth(
+    input: HealthMetricsInput
+  ): Promise<HealthMetrics> {
+    await this.ensureInitialized();
     const environmental = this.extractEnvironmentalFactors(input);
     const lifestyle = this.extractLifestyleFactors(input);
 
@@ -81,6 +140,10 @@ class HealthMetricsService {
 
     // Generate alerts based on current metrics
     this.generateHealthAlerts(metrics, environmental, lifestyle);
+
+    // Persist history and alerts (fire-and-forget)
+    this.persistHistory();
+    this.persistAlerts();
 
     return metrics;
   }
@@ -149,7 +212,7 @@ class HealthMetricsService {
     metrics: HealthMetrics,
     environmental: EnvironmentalFactors,
     lifestyle: LifestyleFactors
-  ): void {
+  ) {
     const newAlerts: HealthAlert[] = [];
 
     // Critical air quality alert
@@ -234,12 +297,13 @@ class HealthMetricsService {
     // Add new alerts and remove duplicates
     this.activeAlerts = [...this.activeAlerts, ...newAlerts];
     this.deduplicateAlerts();
+    this.persistAlerts();
   }
 
   /**
    * Remove duplicate alerts and old alerts
    */
-  private deduplicateAlerts(): void {
+  private deduplicateAlerts() {
     const oneHourAgo = new Date();
     oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
@@ -334,11 +398,12 @@ class HealthMetricsService {
   /**
    * Dismiss a health alert
    */
-  dismissAlert(alertId: string): void {
+  dismissAlert(alertId: string) {
     const alert = this.activeAlerts.find(a => a.id === alertId);
     if (alert) {
       alert.dismissed = true;
     }
+    this.persistAlerts();
   }
 
   /**
@@ -402,9 +467,11 @@ class HealthMetricsService {
   /**
    * Clear all health history (for testing or reset)
    */
-  clearHistory(): void {
+  clearHistory() {
     this.healthHistory = [];
     this.activeAlerts = [];
+    this.persistHistory();
+    this.persistAlerts();
   }
 }
 
