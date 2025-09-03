@@ -3,6 +3,10 @@ name: Backend CI/CD
 on:
   push:
     branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci-cd.yml'
+      - 'docker-compose.prod.yml'
   workflow_dispatch:
 
 permissions:
