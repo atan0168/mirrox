@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Easing,
+  TouchableOpacity,
+} from 'react-native';
 import { Info } from 'lucide-react-native';
 import Tooltip from './Tooltip';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
@@ -54,7 +61,11 @@ const ProgressRow: React.FC<ProgressRowProps> = ({
 
   return (
     <>
-      <TouchableOpacity style={styles.container} activeOpacity={0.9} onPress={handleOpenTooltip}>
+      <TouchableOpacity
+        style={styles.container}
+        activeOpacity={0.9}
+        onPress={handleOpenTooltip}
+      >
         <View style={styles.rowHeader}>
           <View style={styles.labelContainer}>
             {icon && <View style={styles.iconContainer}>{icon}</View>}

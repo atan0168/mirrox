@@ -196,7 +196,7 @@ class HealthMetricsService {
       });
     };
 
-    if (environmental.pm25 && environmental.pm25 > 55) {
+    if (environmental.pm25 && environmental.pm25 > 75) {
       const alertKey = 'air-quality-critical';
 
       if (await shouldPersistedCreate(alertKey, environmental.pm25)) {
@@ -431,11 +431,13 @@ class HealthMetricsService {
     }
 
     const current = this.lastHistoryEntry;
-    const previousFromDb = await encryptedDatabaseService.getEntryAtOrBefore(
-      compareDate
-    );
+    const previousFromDb =
+      await encryptedDatabaseService.getEntryAtOrBefore(compareDate);
     const previous = previousFromDb
-      ? { timestamp: new Date(previousFromDb.timestamp), metrics: previousFromDb.metrics }
+      ? {
+          timestamp: new Date(previousFromDb.timestamp),
+          metrics: previousFromDb.metrics,
+        }
       : current; // Fallback if no historical snapshot
 
     const metrics: (keyof HealthMetrics)[] = [
@@ -453,7 +455,8 @@ class HealthMetricsService {
       const change = currentValue - previousValue;
       let trend: 'improving' | 'declining' | 'stable' = 'stable';
       if (Math.abs(change) > 2) {
-        if (metric === 'stressIndex') trend = change < 0 ? 'improving' : 'declining';
+        if (metric === 'stressIndex')
+          trend = change < 0 ? 'improving' : 'declining';
         else trend = change > 0 ? 'improving' : 'declining';
       }
       return {

@@ -219,14 +219,16 @@ export const useHealthMetrics = ({
     // Optimistically remove the alert from all cached healthMetrics queries
     queryClient.setQueriesData(
       { queryKey: ['healthMetrics'] },
-      (prev:
-        | {
-            metrics: HealthMetrics;
-            trends: HealthTrend[];
-            alerts: HealthAlert[];
-            recommendations: string[];
-          }
-        | undefined) => {
+      (
+        prev:
+          | {
+              metrics: HealthMetrics;
+              trends: HealthTrend[];
+              alerts: HealthAlert[];
+              recommendations: string[];
+            }
+          | undefined
+      ) => {
         if (!prev) return prev;
         return {
           ...prev,
@@ -236,11 +238,9 @@ export const useHealthMetrics = ({
     );
 
     // Persist dismissal and then invalidate to ensure consistency with DB/service
-    healthMetricsService
-      .dismissAlert(alertId)
-      .finally(() => {
-        queryClient.invalidateQueries({ queryKey: ['healthMetrics'] });
-      });
+    healthMetricsService.dismissAlert(alertId).finally(() => {
+      queryClient.invalidateQueries({ queryKey: ['healthMetrics'] });
+    });
   };
 
   // Log health metrics changes

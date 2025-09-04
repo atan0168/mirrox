@@ -106,7 +106,9 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
   for (let i = 0; i < routeCount; i++) {
     if (translateXOutputRange[i] === 0 && !visibleRouteIndices.includes(i)) {
       // find previous visible or fallback to first visible
-      const prevVisible = [...visibleRouteIndices].filter(idx => idx <= i).pop();
+      const prevVisible = [...visibleRouteIndices]
+        .filter(idx => idx <= i)
+        .pop();
       const fallbackIndex = prevVisible ?? visibleRouteIndices[0] ?? 0;
       translateXOutputRange[i] = translateXOutputRange[fallbackIndex];
       pillWidthsFull[i] = pillWidthsFull[fallbackIndex];

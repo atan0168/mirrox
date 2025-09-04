@@ -25,7 +25,9 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onPress }) => {
         <Bell size={22} color={colors.neutral[900]} />
         {count > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{count > 9 ? '9+' : String(count)}</Text>
+            <Text style={styles.badgeText}>
+              {count > 9 ? '9+' : String(count)}
+            </Text>
           </View>
         )}
       </View>
@@ -69,4 +71,3 @@ const styles = StyleSheet.create({
 });
 
 export default NotificationBell;
-

@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+} from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 
@@ -20,8 +26,12 @@ export const Accordion: React.FC<AccordionProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const rotate = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
-  const contentOpacity = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
-  const contentScale = useRef(new Animated.Value(defaultExpanded ? 1 : 0.98)).current;
+  const contentOpacity = useRef(
+    new Animated.Value(defaultExpanded ? 1 : 0)
+  ).current;
+  const contentScale = useRef(
+    new Animated.Value(defaultExpanded ? 1 : 0.98)
+  ).current;
 
   useEffect(() => {
     Animated.timing(rotate, {
@@ -50,7 +60,10 @@ export const Accordion: React.FC<AccordionProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <TouchableOpacity style={styles.header} onPress={() => setExpanded(prev => !prev)}>
+      <TouchableOpacity
+        style={styles.header}
+        onPress={() => setExpanded(prev => !prev)}
+      >
         <Text style={styles.title}>
           {title}
           {typeof count === 'number' ? ` (${count})` : ''}
@@ -91,4 +104,3 @@ const styles = StyleSheet.create({
 });
 
 export default Accordion;
-

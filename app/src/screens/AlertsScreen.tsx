@@ -7,12 +7,7 @@ import {
   RefreshControl,
   Pressable,
 } from 'react-native';
-import {
-  AlertOctagon,
-  AlertTriangle,
-  Info,
-  X,
-} from 'lucide-react-native';
+import { AlertOctagon, AlertTriangle, Info, X } from 'lucide-react-native';
 import { useHealthMetrics } from '../hooks/useHealthMetrics';
 import { HealthAlert } from '../models/HealthAlert';
 import { colors, spacing, borderRadius, fontSize } from '../theme';
@@ -36,7 +31,10 @@ const AlertItem = ({
   }, [alert.type]);
 
   const timeAgo = useMemo(() => {
-    const t = alert.timestamp instanceof Date ? alert.timestamp.getTime() : new Date(alert.timestamp as any).getTime();
+    const t =
+      alert.timestamp instanceof Date
+        ? alert.timestamp.getTime()
+        : new Date(alert.timestamp as any).getTime();
     const delta = Math.max(0, Date.now() - t);
     const mins = Math.floor(delta / 60000);
     if (mins < 1) return 'just now';
@@ -55,7 +53,10 @@ const AlertItem = ({
         <Pressable
           onPress={() => onDismiss(alert.id)}
           hitSlop={8}
-          style={({ pressed }) => [styles.dismissBtn, pressed && { opacity: 0.6 }]}
+          style={({ pressed }) => [
+            styles.dismissBtn,
+            pressed && { opacity: 0.6 },
+          ]}
           accessibilityLabel="Dismiss alert"
         >
           <X size={16} color={colors.neutral[500]} />
@@ -88,7 +89,9 @@ const AlertsScreen: React.FC = () => {
       <FlatList
         data={alerts}
         keyExtractor={(item: HealthAlert) => item.id}
-        contentContainerStyle={alerts.length === 0 ? styles.listEmpty : styles.list}
+        contentContainerStyle={
+          alerts.length === 0 ? styles.listEmpty : styles.list
+        }
         renderItem={({ item }: { item: HealthAlert }) => (
           <AlertItem alert={item} onDismiss={onDismiss} />
         )}
