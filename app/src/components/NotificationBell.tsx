@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet } from 'react-native';
 import { Bell } from 'lucide-react-native';
-import { useHealthMetrics } from '../hooks/useHealthMetrics';
 import { colors } from '../theme';
 
 interface NotificationBellProps {
@@ -9,9 +8,6 @@ interface NotificationBellProps {
 }
 
 const NotificationBell: React.FC<NotificationBellProps> = ({ onPress }) => {
-  const { alerts } = useHealthMetrics();
-  const count = alerts?.length ?? 0;
-
   return (
     <Pressable
       onPress={onPress}
@@ -23,13 +19,6 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onPress }) => {
     >
       <View style={styles.iconWrapper}>
         <Bell size={22} color={colors.neutral[900]} />
-        {count > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {count > 9 ? '9+' : String(count)}
-            </Text>
-          </View>
-        )}
       </View>
     </Pressable>
   );

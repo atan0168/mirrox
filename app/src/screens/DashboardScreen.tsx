@@ -10,11 +10,7 @@ import {
   Easing,
 } from 'react-native';
 import AvatarWithTrafficStress from '../components/avatar/AvatarWithTrafficStress';
-import {
-  EnhancedHealthSummary,
-  EffectsList,
-  EffectData,
-} from '../components/ui';
+import { EffectsList, EffectData } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -275,14 +271,6 @@ const DashboardScreen: React.FC = () => {
 
           {/* Traffic Information */}
           <EffectsList effects={activeEffects} />
-
-          {/* Health Summary */}
-          <EnhancedHealthSummary
-            showTrends={true}
-            showAlerts={true}
-            showRecommendations={true}
-            compact={false}
-          />
         </View>
       </ScrollView>
     </SafeAreaView>

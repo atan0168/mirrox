@@ -194,21 +194,6 @@ export class LocalStorageService {
     await this.setItem(AVATAR_CACHE_KEY, JSON.stringify(data));
   }
 
-  // Generic JSON helpers (public) for other services
-  public async setJson<T>(key: string, value: T): Promise<void> {
-    await this.setItem(key, JSON.stringify(value));
-  }
-
-  public async getJson<T>(key: string): Promise<T | null> {
-    const raw = await this.getItem(key);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as T;
-    } catch {
-      return null;
-    }
-  }
-
   public async saveUserProfile(profile: UserProfile): Promise<void> {
     try {
       const withVersion = {
