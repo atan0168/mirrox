@@ -295,84 +295,84 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Shield size={24} color={colors.neutral[700]} />
-            <Text style={styles.sectionTitle}>Security & Privacy</Text>
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Require Authentication</Text>
-              <Text style={styles.settingDescription}>
-                Protect your digital twin data with biometric authentication or
-                device passcode
-              </Text>
-            </View>
-            <Switch
-              value={requireAuth}
-              onValueChange={handleAuthToggle}
-              disabled={loading}
-              trackColor={{
-                false: colors.neutral[300],
-                true: colors.black,
-              }}
-              thumbColor={colors.white}
-            />
-          </View>
-
-          {requireAuth && (
-            <View style={styles.authMethodSection}>
-              <Text style={styles.authMethodSectionTitle}>
-                Authentication Method
-              </Text>
-
-              <AuthMethodOption
-                method="biometric"
-                title="Biometric Authentication"
-                description="Use Face ID, Touch ID, or fingerprint"
-                icon={
-                  <Smartphone
-                    size={20}
-                    color={
-                      authMethod === 'biometric'
-                        ? colors.white
-                        : colors.neutral[600]
-                    }
-                  />
-                }
-              />
-
-              <AuthMethodOption
-                method="pin"
-                title="Device Passcode"
-                description="Use your device PIN or password"
-                icon={
-                  <Lock
-                    size={20}
-                    color={
-                      authMethod === 'pin' ? colors.white : colors.neutral[600]
-                    }
-                  />
-                }
-              />
-
-              <AuthMethodOption
-                method="both"
-                title="Both Methods"
-                description="Allow either biometric or passcode"
-                icon={
-                  <Shield
-                    size={20}
-                    color={
-                      authMethod === 'both' ? colors.white : colors.neutral[600]
-                    }
-                  />
-                }
-              />
-            </View>
-          )}
-        </View>
+        {/* <View style={styles.section}> */}
+        {/*   <View style={styles.sectionHeader}> */}
+        {/*     <Shield size={24} color={colors.neutral[700]} /> */}
+        {/*     <Text style={styles.sectionTitle}>Security & Privacy</Text> */}
+        {/*   </View> */}
+        {/**/}
+        {/*   <View style={styles.settingRow}> */}
+        {/*     <View style={styles.settingInfo}> */}
+        {/*       <Text style={styles.settingTitle}>Require Authentication</Text> */}
+        {/*       <Text style={styles.settingDescription}> */}
+        {/*         Protect your digital twin data with biometric authentication or */}
+        {/*         device passcode */}
+        {/*       </Text> */}
+        {/*     </View> */}
+        {/*     <Switch */}
+        {/*       value={requireAuth} */}
+        {/*       onValueChange={handleAuthToggle} */}
+        {/*       disabled={loading} */}
+        {/*       trackColor={{ */}
+        {/*         false: colors.neutral[300], */}
+        {/*         true: colors.black, */}
+        {/*       }} */}
+        {/*       thumbColor={colors.white} */}
+        {/*     /> */}
+        {/*   </View> */}
+        {/**/}
+        {/*   {requireAuth && ( */}
+        {/*     <View style={styles.authMethodSection}> */}
+        {/*       <Text style={styles.authMethodSectionTitle}> */}
+        {/*         Authentication Method */}
+        {/*       </Text> */}
+        {/**/}
+        {/*       <AuthMethodOption */}
+        {/*         method="biometric" */}
+        {/*         title="Biometric Authentication" */}
+        {/*         description="Use Face ID, Touch ID, or fingerprint" */}
+        {/*         icon={ */}
+        {/*           <Smartphone */}
+        {/*             size={20} */}
+        {/*             color={ */}
+        {/*               authMethod === 'biometric' */}
+        {/*                 ? colors.white */}
+        {/*                 : colors.neutral[600] */}
+        {/*             } */}
+        {/*           /> */}
+        {/*         } */}
+        {/*       /> */}
+        {/**/}
+        {/*       <AuthMethodOption */}
+        {/*         method="pin" */}
+        {/*         title="Device Passcode" */}
+        {/*         description="Use your device PIN or password" */}
+        {/*         icon={ */}
+        {/*           <Lock */}
+        {/*             size={20} */}
+        {/*             color={ */}
+        {/*               authMethod === 'pin' ? colors.white : colors.neutral[600] */}
+        {/*             } */}
+        {/*           /> */}
+        {/*         } */}
+        {/*       /> */}
+        {/**/}
+        {/*       <AuthMethodOption */}
+        {/*         method="both" */}
+        {/*         title="Both Methods" */}
+        {/*         description="Allow either biometric or passcode" */}
+        {/*         icon={ */}
+        {/*           <Shield */}
+        {/*             size={20} */}
+        {/*             color={ */}
+        {/*               authMethod === 'both' ? colors.white : colors.neutral[600] */}
+        {/*             } */}
+        {/*           /> */}
+        {/*         } */}
+        {/*       /> */}
+        {/*     </View> */}
+        {/*   )} */}
+        {/* </View> */}
 
         <View style={styles.infoSection}>
           <Text style={styles.infoText}>

@@ -102,14 +102,14 @@ const StatsScreen: React.FC = () => {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Weekly Trends</Text>
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>
-              Historical charts and trends coming soon
-            </Text>
-          </View>
-        </View>
+        {/* <View style={styles.section}> */}
+        {/*   <Text style={styles.sectionTitle}>Weekly Trends</Text> */}
+        {/*   <View style={styles.placeholder}> */}
+        {/*     <Text style={styles.placeholderText}> */}
+        {/*       Historical charts and trends coming soon */}
+        {/*     </Text> */}
+        {/*   </View> */}
+        {/* </View> */}
       </ScrollView>
     </SafeAreaView>
   );
