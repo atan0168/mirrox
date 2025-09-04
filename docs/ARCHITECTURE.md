@@ -25,18 +25,20 @@ graph TB
         A[User Interface] --> B[Local Storage Service]
         A --> C[API Service]
         B --> D[MMKV Storage]
-        C --> E[Backend API Client]
+        B --> E[SQLite]
+        C --> I[Backend API Client]
 
         subgraph "Local Data"
             D --> F[User Profile]
-            D --> G[Health Metrics]
-            D --> H[Avatar Preferences]
-            D --> I[App Settings]
+            D --> G[Avatar Preferences]
+            D --> H[App Settings]
+            E --> P[Health Metrics]
+            E --> Q[Alerts]
         end
     end
 
     subgraph "Backend Services (Node.js)"
-        E --> J[Express API Gateway]
+        I --> J[Express API Gateway]
         J --> K[Air Quality Controller]
 
         K --> N[In-Memory Cache Service]
@@ -64,6 +66,8 @@ sequenceDiagram
     participant Local as Local Storage (MMKV)
     participant Backend as Node.js API
     participant Cache as In-Memory Cache
+    participant DB as SQLite Database
+    participant Alerts as Alert Rules Engine
     participant External as External APIs
 
     Note over User,External: Initial Setup & Data Collection
@@ -79,13 +83,27 @@ sequenceDiagram
         Backend->>Cache: Cache processed data
     end
 
-    Backend-->>User: Return air quality data
-    User->>Local: Combine with personal data
-    User->>User: Generate avatar & display health status
+    %% Persist metrics in SQLite
+    Backend->>DB: Upsert health metrics (AQI, PM2.5, PM10, NO2, etc. + timestamps, location)
+
+    %% Generate alerts from data in the database
+    Backend->>Alerts: Evaluate alert rules (reads latest metrics from DB)
+    Alerts->>DB: Insert/Update alerts (threshold breaches, trends, personal risk)
+
+    %% Respond to app
+    Backend-->>User: Return air quality data (+latest relevant alerts)
+    User->>Local: Combine with personal data (profile from MMKV)
+    User->>User: Generate avatar & display health status + alerts
 
     Note over User,External: Ongoing Usage
-    User->>Backend: Periodic air quality updates
-    Backend->>Cache: Update cache as needed
+    User->>Backend: Periodic air quality updates (background/foreground)
+    Backend->>Cache: Update/refresh cache as needed
+    Backend->>External: Fetch fresh data when cache is stale
+    External-->>Backend: Return updated metrics
+    Backend->>DB: Append/upsert new metrics rows
+    Backend->>Alerts: Re-evaluate rules on stored metrics
+    Alerts->>DB: Persist new/updated alerts (ack status, next review)
+    Backend-->>User: Send incremental updates (metrics + alerts)
 ```
 
 ## Component Architecture
@@ -105,6 +123,7 @@ graph LR
     C --> G[Health Analytics Service]
 
     D --> H[MMKV Storage]
+    D --> P[Sqlite]
     E --> I[Backend API Client]
     F --> J[Avatar Renderer]
     G --> K[Health Calculator]
@@ -114,12 +133,14 @@ graph LR
         M[Health Metrics]
         N[Avatar Config]
         O[App Preferences]
+        Q[Alerts]
     end
 
     H --> L
-    H --> M
     H --> N
     H --> O
+    P --> M
+    P --> Q
 ```
 
 #### Screen Flow
@@ -129,10 +150,18 @@ graph TD
     A[Splash Screen] --> B[Welcome Screen]
     B --> C[Questionnaire Screen]
     C --> D[Generating Twin Screen]
-    D --> E[Avatar Creation Screen]
-    E --> F[Dashboard Screen]
 
-    F --> G[Settings Screen]
+    subgraph "TabNavigator"
+        E[Dashboard Screen]
+        F[Stats Screen]
+        G[Settings Screen]
+    end
+
+    D --> E
+
+    E --> H[Alert Screen]
+    F --> H
+    G --> H
 ```
 
 ### Backend Services (Node.js)
@@ -260,7 +289,7 @@ interface APIResponse<T> {
 graph TB
     subgraph "Mobile App Security"
         A[Biometric Authentication] --> B[Local Data Encryption]
-        B --> C["Secure Storage (MMKV)"]
+        B --> C["Secure Storage (MMKV) & SqlCipher"]
         C --> D[Certificate Pinning]
     end
 

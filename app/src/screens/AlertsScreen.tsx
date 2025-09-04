@@ -14,7 +14,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useHealthMetrics } from '../hooks/useHealthMetrics';
-import { HealthAlert } from '../services/HealthMetricsService';
+import { HealthAlert } from '../models/HealthAlert';
 import { colors, spacing, borderRadius, fontSize } from '../theme';
 
 const AlertItem = ({

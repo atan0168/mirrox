@@ -22,5 +22,5 @@ export const AVATAR_CACHE_KEY = 'avatar_cache';
 export const HEALTH_HISTORY_KEY = 'health_history';
 export const HEALTH_ALERTS_KEY = 'health_alerts';
 export const API_BASE_URL = __DEV__
-  ? 'http://10.10.0.113:3000/api'
+  ? 'http://10.10.0.142:8080/api'
   : 'https://mirrox.iceon.top/api';

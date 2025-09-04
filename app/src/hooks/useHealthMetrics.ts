@@ -14,8 +14,8 @@ import {
   healthMetricsService,
   HealthMetricsInput,
   HealthTrend,
-  HealthAlert,
 } from '../services/HealthMetricsService';
+import { HealthAlert } from '../models/HealthAlert';
 import { HealthMetrics } from '../utils/healthMetrics';
 import { useAirQuality } from './useAirQuality';
 import { useTrafficData } from './useTrafficData';
@@ -216,7 +216,8 @@ export const useHealthMetrics = ({
   // Dismiss alert function
   const dismissAlert = (alertId: string) => {
     healthMetricsService.dismissAlert(alertId);
-    healthMetricsQuery.refetch(); // Refresh to update alerts
+    // Don't immediately refetch - let the natural refresh cycle handle it
+    // This prevents recreating the same alert immediately after dismissal
   };
 
   // Log health metrics changes

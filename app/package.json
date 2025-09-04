@@ -40,7 +40,8 @@
     "react-native-svg": "15.11.2",
     "react-native-svg-transformer": "^1.5.1",
     "react-native-webview": "^13.15.0",
-    "three": "^0.179.1"
+    "three": "^0.179.1",
+    "expo-sqlite": "~15.2.14"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
