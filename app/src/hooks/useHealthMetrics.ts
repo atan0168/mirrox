@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   healthMetricsService,
   HealthMetricsInput,
@@ -72,6 +72,7 @@ export const useHealthMetrics = ({
 }: UseHealthMetricsProps = {}): UseHealthMetricsReturn => {
   const [userInputs, setUserInputs] = useState(initialUserInputs);
   const [lastCalculation, setLastCalculation] = useState<Date | null>(null);
+  const queryClient = useQueryClient();
 
   // Get user profile
   const { data: userProfile } = useUserProfile();
@@ -133,7 +134,7 @@ export const useHealthMetrics = ({
       });
 
       const metrics = await healthMetricsService.calculateCurrentHealth(input);
-      const trends = healthMetricsService.getHealthTrends('week');
+      const trends = await healthMetricsService.getHealthTrendsAsync('week');
       const alerts = healthMetricsService.getActiveAlerts();
       const recommendations =
         healthMetricsService.getHealthRecommendations(input);
@@ -213,11 +214,33 @@ export const useHealthMetrics = ({
     setUserInputs(prev => ({ ...prev, ...newInputs }));
   };
 
-  // Dismiss alert function
+  // Dismiss alert function (optimistic update + invalidate to refresh)
   const dismissAlert = (alertId: string) => {
-    healthMetricsService.dismissAlert(alertId);
-    // Don't immediately refetch - let the natural refresh cycle handle it
-    // This prevents recreating the same alert immediately after dismissal
+    // Optimistically remove the alert from all cached healthMetrics queries
+    queryClient.setQueriesData(
+      { queryKey: ['healthMetrics'] },
+      (prev:
+        | {
+            metrics: HealthMetrics;
+            trends: HealthTrend[];
+            alerts: HealthAlert[];
+            recommendations: string[];
+          }
+        | undefined) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          alerts: (prev.alerts || []).filter(a => a.id !== alertId),
+        };
+      }
+    );
+
+    // Persist dismissal and then invalidate to ensure consistency with DB/service
+    healthMetricsService
+      .dismissAlert(alertId)
+      .finally(() => {
+        queryClient.invalidateQueries({ queryKey: ['healthMetrics'] });
+      });
   };
 
   // Log health metrics changes

@@ -45,7 +45,8 @@ export interface HealthTrend {
 
 class HealthMetricsService {
   private activeAlerts: HealthAlert[] = [];
-  private lastHistoryEntry: { timestamp: Date; metrics: HealthMetrics } | null = null;
+  private lastHistoryEntry: { timestamp: Date; metrics: HealthMetrics } | null =
+    null;
   private initialized = false;
 
   private async ensureInitialized() {
@@ -53,7 +54,10 @@ class HealthMetricsService {
     try {
       const latest = await encryptedDatabaseService.getLatestEntry();
       if (latest) {
-        this.lastHistoryEntry = { timestamp: new Date(latest.timestamp), metrics: latest.metrics };
+        this.lastHistoryEntry = {
+          timestamp: new Date(latest.timestamp),
+          metrics: latest.metrics,
+        };
       }
       // Load active alerts from DB on cold start
       const dbAlerts = await encryptedDatabaseService.getActiveAlerts();
@@ -61,14 +65,6 @@ class HealthMetricsService {
     } finally {
       this.initialized = true;
     }
-  }
-
-  private async persistHistory() {
-    // No-op: history is appended directly when deciding to store
-  }
-
-  private async persistAlerts() {
-    // No-op: alerts are written individually on create/dismiss
   }
 
   /**
@@ -183,7 +179,11 @@ class HealthMetricsService {
       const st = await encryptedDatabaseService.getAlertState(alertKey);
       const nowMs = Date.now();
       if (st?.dismissedUntil && nowMs < st.dismissedUntil) return false;
-      if (st?.lastConditionValue != null && Math.abs(currentValue - st.lastConditionValue) < 5) return false;
+      if (
+        st?.lastConditionValue != null &&
+        Math.abs(currentValue - st.lastConditionValue) < 5
+      )
+        return false;
       return true;
     };
 
@@ -198,7 +198,6 @@ class HealthMetricsService {
 
     if (environmental.pm25 && environmental.pm25 > 55) {
       const alertKey = 'air-quality-critical';
-      const conditionKey = `pm25-${Math.floor(environmental.pm25 / 10) * 10}`; // Group by 10s
 
       if (await shouldPersistedCreate(alertKey, environmental.pm25)) {
         const a: HealthAlert = {
@@ -216,7 +215,6 @@ class HealthMetricsService {
       }
     } else if (environmental.pm25 && environmental.pm25 > 35) {
       const alertKey = 'air-quality-warning';
-      const conditionKey = `pm25-${Math.floor(environmental.pm25 / 5) * 5}`; // Group by 5s
 
       if (await shouldPersistedCreate(alertKey, environmental.pm25)) {
         const a: HealthAlert = {
@@ -236,7 +234,6 @@ class HealthMetricsService {
     // High UV alert
     if (environmental.uvIndex && environmental.uvIndex > 7) {
       const alertKey = 'uv-warning';
-      const conditionKey = `uv-${Math.floor(environmental.uvIndex)}`;
 
       if (await shouldPersistedCreate(alertKey, environmental.uvIndex)) {
         const a: HealthAlert = {
@@ -257,7 +254,6 @@ class HealthMetricsService {
     // Sleep deprivation alert
     if (lifestyle.sleepHours && lifestyle.sleepHours < 6) {
       const alertKey = 'sleep-warning';
-      const conditionKey = `sleep-${Math.floor(lifestyle.sleepHours)}`;
 
       if (await shouldPersistedCreate(alertKey, lifestyle.sleepHours)) {
         const a: HealthAlert = {
@@ -273,13 +269,11 @@ class HealthMetricsService {
         newAlerts.push(a);
         await persistAlert(a, lifestyle.sleepHours);
       }
-      }
     }
 
     // High stress alert
     if (metrics.stressIndex > 70) {
       const alertKey = 'stress-warning';
-      const conditionKey = `stress-${Math.floor(metrics.stressIndex / 10) * 10}`;
 
       if (await shouldPersistedCreate(alertKey, metrics.stressIndex)) {
         const a: HealthAlert = {
@@ -300,7 +294,6 @@ class HealthMetricsService {
     // Low overall health alert
     if (metrics.overallHealth < 40) {
       const alertKey = 'overall-critical';
-      const conditionKey = `overall-${Math.floor(metrics.overallHealth / 10) * 10}`;
 
       if (await shouldPersistedCreate(alertKey, metrics.overallHealth)) {
         const a: HealthAlert = {
@@ -321,7 +314,6 @@ class HealthMetricsService {
     // Add new alerts and remove duplicates
     this.activeAlerts = [...this.activeAlerts, ...newAlerts];
     this.deduplicateAlerts();
-    this.persistAlerts();
   }
 
   /**
@@ -399,13 +391,80 @@ class HealthMetricsService {
       const change = currentValue - previousValue;
       let trend: 'improving' | 'declining' | 'stable' = 'stable';
       if (Math.abs(change) > 2) {
-        if (metric === 'stressIndex') trend = change < 0 ? 'improving' : 'declining';
+        if (metric === 'stressIndex')
+          trend = change < 0 ? 'improving' : 'declining';
         else trend = change > 0 ? 'improving' : 'declining';
       }
-      return { metric, current: currentValue, previous: previousValue, change, trend, timeframe };
+      return {
+        metric,
+        current: currentValue,
+        previous: previousValue,
+        change,
+        trend,
+        timeframe,
+      };
     });
 
     return trends;
+  }
+
+  /**
+   * Get health trends over time (DB-backed, accurate to timeframe)
+   */
+  async getHealthTrendsAsync(
+    timeframe: 'day' | 'week' | 'month' = 'week'
+  ): Promise<HealthTrend[]> {
+    await this.ensureInitialized();
+    if (!this.lastHistoryEntry) return [];
+
+    const compareDate = new Date(this.lastHistoryEntry.timestamp);
+    switch (timeframe) {
+      case 'day':
+        compareDate.setDate(compareDate.getDate() - 1);
+        break;
+      case 'week':
+        compareDate.setDate(compareDate.getDate() - 7);
+        break;
+      case 'month':
+        compareDate.setDate(compareDate.getDate() - 30);
+        break;
+    }
+
+    const current = this.lastHistoryEntry;
+    const previousFromDb = await encryptedDatabaseService.getEntryAtOrBefore(
+      compareDate
+    );
+    const previous = previousFromDb
+      ? { timestamp: new Date(previousFromDb.timestamp), metrics: previousFromDb.metrics }
+      : current; // Fallback if no historical snapshot
+
+    const metrics: (keyof HealthMetrics)[] = [
+      'energy',
+      'lungHealth',
+      'skinHealth',
+      'cognitiveFunction',
+      'stressIndex',
+      'overallHealth',
+    ];
+
+    return metrics.map(metric => {
+      const currentValue = current.metrics[metric];
+      const previousValue = previous.metrics[metric];
+      const change = currentValue - previousValue;
+      let trend: 'improving' | 'declining' | 'stable' = 'stable';
+      if (Math.abs(change) > 2) {
+        if (metric === 'stressIndex') trend = change < 0 ? 'improving' : 'declining';
+        else trend = change > 0 ? 'improving' : 'declining';
+      }
+      return {
+        metric,
+        current: currentValue,
+        previous: previousValue,
+        change,
+        trend,
+        timeframe,
+      };
+    });
   }
 
   /**
@@ -428,8 +487,9 @@ class HealthMetricsService {
       await encryptedDatabaseService.dismissAlert(alertId, dismissUntil);
     }
     // Remove from in-memory active list for immediate UI reflection
-    this.activeAlerts = this.activeAlerts.filter(a => !a.id || a.id !== alertId || !a.dismissed);
-
+    this.activeAlerts = this.activeAlerts.filter(
+      a => !a.id || a.id !== alertId || !a.dismissed
+    );
   }
 
   /**
@@ -442,7 +502,7 @@ class HealthMetricsService {
   ): boolean {
     if (!this.lastHistoryEntry) return true;
 
-    const lastEntry = this.lastHistoryEntry; 
+    const lastEntry = this.lastHistoryEntry;
     const timeDiff = timestamp.getTime() - lastEntry.timestamp.getTime();
     const oneHour = 60 * 60 * 1000;
 
@@ -450,26 +510,15 @@ class HealthMetricsService {
     if (timeDiff >= oneHour) return true;
 
     // Store if significant change in any metric (>5 points)
-    const significantChange = (Object.keys(metrics) as Array<keyof HealthMetrics>).some(key => {
+    const significantChange = (
+      Object.keys(metrics) as Array<keyof HealthMetrics>
+    ).some(key => {
       const current = metrics[key];
       const previous = lastEntry.metrics[key];
       return Math.abs(current - previous) > 5;
     });
 
     return significantChange;
-  }
-
-  /**
-   * Check if we should create an alert based on current conditions
-   */
-  // Deprecated: replaced by persisted alert_state. Keeping for type-compatibility during refactor.
-  private shouldCreateAlert(
-    alertKey: string,
-    conditionKey: string,
-    currentValue: number
-  ): boolean {
-    // Legacy method not in use; always return false to prefer persisted flow
-    return false;
   }
 
   /**
@@ -534,12 +583,14 @@ class HealthMetricsService {
    * Clear all health history (for testing or reset)
    */
   clearHistory() {
-    this.healthHistory = [];
-    this.activeAlerts = [];
-    this.dismissedAlerts.clear();
-    this.lastConditions.clear();
-    this.persistHistory();
-    this.persistAlerts();
+    // Clear persisted history and alerts, and reset in-memory caches
+    encryptedDatabaseService
+      .clearAll()
+      .catch(() => {})
+      .finally(() => {
+        this.activeAlerts = [];
+        this.lastHistoryEntry = null;
+      });
   }
 }
 

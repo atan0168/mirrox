@@ -3,21 +3,13 @@ import * as Crypto from 'expo-crypto';
 import * as Keychain from 'react-native-keychain';
 import { HealthMetrics } from '../utils/healthMetrics';
 import { HealthAlert } from '../models/HealthAlert';
+import { nowMillis, toMillis } from '../utils/timeUtils';
 
 const DB_NAME = 'mirrox_secure.db';
 const DB_KEYCHAIN_SERVICE = 'MirroxDB';
 const DB_KEYCHAIN_ACCOUNT = 'sqlcipher_key';
 
 export type TimestampMillis = number; // ms since epoch
-
-// Utilities
-function toMillis(d: Date | number): number {
-  return d instanceof Date ? d.getTime() : d;
-}
-
-function nowMillis(): number {
-  return Date.now();
-}
 
 /**
  * EncryptedDatabaseService
@@ -111,7 +103,9 @@ export class EncryptedDatabaseService {
     } catch {}
 
     const bytes = await Crypto.getRandomBytesAsync(32);
-    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(
+      ''
+    );
 
     try {
       await Keychain.setInternetCredentials(
@@ -123,31 +117,48 @@ export class EncryptedDatabaseService {
         }
       );
     } catch (e) {
-      await Keychain.setInternetCredentials(DB_KEYCHAIN_SERVICE, DB_KEYCHAIN_ACCOUNT, hex, {
-        securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE,
-      });
+      await Keychain.setInternetCredentials(
+        DB_KEYCHAIN_SERVICE,
+        DB_KEYCHAIN_ACCOUNT,
+        hex,
+        {
+          securityLevel: Keychain.SECURITY_LEVEL.SECURE_SOFTWARE,
+        }
+      );
     }
 
     return hex;
   }
 
   // History APIs
-  async addHistoryEntry(timestamp: Date, metrics: HealthMetrics): Promise<void> {
+  async addHistoryEntry(
+    timestamp: Date,
+    metrics: HealthMetrics
+  ): Promise<void> {
     await this.initialize();
     const ts = toMillis(timestamp);
-    await this.db!.runAsync('INSERT INTO health_history (timestamp, metrics) VALUES (?, ?)', [
-      ts,
-      JSON.stringify(metrics),
-    ]);
+    await this.db!.runAsync(
+      'INSERT INTO health_history (timestamp, metrics) VALUES (?, ?)',
+      [ts, JSON.stringify(metrics)]
+    );
   }
 
-  async getLatestEntry(): Promise<{ timestamp: number; metrics: HealthMetrics } | null> {
+  async getLatestEntry(): Promise<{
+    timestamp: number;
+    metrics: HealthMetrics;
+  } | null> {
     await this.initialize();
-    const row = await this.db!.getFirstAsync<{ timestamp: number; metrics: string }>(
+    const row = await this.db!.getFirstAsync<{
+      timestamp: number;
+      metrics: string;
+    }>(
       'SELECT timestamp, metrics FROM health_history ORDER BY timestamp DESC LIMIT 1'
     );
     if (!row) return null;
-    return { timestamp: row.timestamp, metrics: JSON.parse(row.metrics) as HealthMetrics };
+    return {
+      timestamp: row.timestamp,
+      metrics: JSON.parse(row.metrics) as HealthMetrics,
+    };
   }
 
   async getEntryAtOrBefore(
@@ -155,26 +166,44 @@ export class EncryptedDatabaseService {
   ): Promise<{ timestamp: number; metrics: HealthMetrics } | null> {
     await this.initialize();
     const ts = toMillis(timestamp);
-    const row = await this.db!.getFirstAsync<{ timestamp: number; metrics: string }>(
+    const row = await this.db!.getFirstAsync<{
+      timestamp: number;
+      metrics: string;
+    }>(
       'SELECT timestamp, metrics FROM health_history WHERE timestamp <= ? ORDER BY timestamp DESC LIMIT 1',
       [ts]
     );
     if (!row) return null;
-    return { timestamp: row.timestamp, metrics: JSON.parse(row.metrics) as HealthMetrics };
+    return {
+      timestamp: row.timestamp,
+      metrics: JSON.parse(row.metrics) as HealthMetrics,
+    };
   }
 
-  async getLatestNEntries(n: number): Promise<Array<{ timestamp: number; metrics: HealthMetrics }>> {
+  async getLatestNEntries(
+    n: number
+  ): Promise<Array<{ timestamp: number; metrics: HealthMetrics }>> {
     await this.initialize();
-    const rows = await this.db!.getAllAsync<{ timestamp: number; metrics: string }>(
-      'SELECT timestamp, metrics FROM health_history ORDER BY timestamp DESC LIMIT ?',[n]
+    const rows = await this.db!.getAllAsync<{
+      timestamp: number;
+      metrics: string;
+    }>(
+      'SELECT timestamp, metrics FROM health_history ORDER BY timestamp DESC LIMIT ?',
+      [n]
     );
-    return rows.map(r => ({ timestamp: r.timestamp, metrics: JSON.parse(r.metrics) as HealthMetrics }));
+    return rows.map(r => ({
+      timestamp: r.timestamp,
+      metrics: JSON.parse(r.metrics) as HealthMetrics,
+    }));
   }
 
   async pruneHistory(before: Date | number): Promise<number> {
     await this.initialize();
     const ts = toMillis(before);
-    const result = await this.db!.runAsync('DELETE FROM health_history WHERE timestamp < ?', [ts]);
+    const result = await this.db!.runAsync(
+      'DELETE FROM health_history WHERE timestamp < ?',
+      [ts]
+    );
     // runAsync returns { insertId?, rowsAffected? } depending on platform
     // @ts-ignore
     return result?.rowsAffected ?? 0;
@@ -235,7 +264,10 @@ export class EncryptedDatabaseService {
   async dismissAlert(id: string, dismissUntilMillis: number): Promise<void> {
     await this.initialize();
     const now = nowMillis();
-    await this.db!.runAsync('UPDATE alerts SET dismissed = 1, timestamp = ? WHERE id = ?', [now, id]);
+    await this.db!.runAsync(
+      'UPDATE alerts SET dismissed = 1, timestamp = ? WHERE id = ?',
+      [now, id]
+    );
     await this.db!.runAsync(
       `INSERT INTO alert_state (alertKey, lastShownAt, dismissedUntil, lastConditionValue)
        VALUES (?, ?, ?, COALESCE((SELECT lastConditionValue FROM alert_state WHERE alertKey = ?), NULL))
@@ -244,9 +276,17 @@ export class EncryptedDatabaseService {
     );
   }
 
-  async getAlertState(alertKey: string): Promise<{ lastShownAt?: number; dismissedUntil?: number; lastConditionValue?: number } | null> {
+  async getAlertState(alertKey: string): Promise<{
+    lastShownAt?: number;
+    dismissedUntil?: number;
+    lastConditionValue?: number;
+  } | null> {
     await this.initialize();
-    const row = await this.db!.getFirstAsync<{ lastShownAt: number | null; dismissedUntil: number | null; lastConditionValue: number | null }>(
+    const row = await this.db!.getFirstAsync<{
+      lastShownAt: number | null;
+      dismissedUntil: number | null;
+      lastConditionValue: number | null;
+    }>(
       'SELECT lastShownAt, dismissedUntil, lastConditionValue FROM alert_state WHERE alertKey = ?',
       [alertKey]
     );
@@ -258,7 +298,14 @@ export class EncryptedDatabaseService {
     };
   }
 
-  async setAlertState(alertKey: string, state: { lastShownAt?: number; dismissedUntil?: number; lastConditionValue?: number }): Promise<void> {
+  async setAlertState(
+    alertKey: string,
+    state: {
+      lastShownAt?: number;
+      dismissedUntil?: number;
+      lastConditionValue?: number;
+    }
+  ): Promise<void> {
     await this.initialize();
     await this.db!.runAsync(
       `INSERT INTO alert_state (alertKey, lastShownAt, dismissedUntil, lastConditionValue)
@@ -278,7 +325,9 @@ export class EncryptedDatabaseService {
 
   async clearAll(): Promise<void> {
     await this.initialize();
-    await this.db!.execAsync('DELETE FROM health_history; DELETE FROM alerts; DELETE FROM alert_state;');
+    await this.db!.execAsync(
+      'DELETE FROM health_history; DELETE FROM alerts; DELETE FROM alert_state;'
+    );
   }
 }
 
