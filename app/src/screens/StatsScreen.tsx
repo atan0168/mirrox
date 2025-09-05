@@ -4,6 +4,7 @@ import { TrendingUp, Clock, Wind } from 'lucide-react-native';
 import {
   EnvironmentalInfoSquares,
   EnvironmentalInfoSquaresSkeleton,
+  HealthInfoSquares,
 } from '../components/ui';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
@@ -36,7 +37,7 @@ const StatsScreen: React.FC = () => {
   });
 
   // Health data (steps, sleep)
-  const { data: health, loading: isHealthLoading } = useHealthData({
+  const { data: health, loading: isHealthLoading, error: healthError } = useHealthData({
     autoSync: true,
   });
 
@@ -82,6 +83,14 @@ const StatsScreen: React.FC = () => {
           />
         )}
 
+        {/* Health Info Squares */}
+        <HealthInfoSquares
+          health={health}
+          isLoading={isHealthLoading}
+          isError={!!healthError}
+          errorMessage={healthError || undefined}
+        />
+
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <View style={styles.statIcon}>
@@ -99,27 +108,7 @@ const StatsScreen: React.FC = () => {
             <Text style={styles.statLabel}>Air Quality</Text>
           </View>
 
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}>
-              <TrendingUp size={24} color="#10B981" />
-            </View>
-            <Text style={styles.statValue}>
-              {isHealthLoading ? '...' : (health?.steps ?? 0)}
-            </Text>
-            <Text style={styles.statLabel}>Steps Today</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}>
-              <Clock size={24} color="#7C3AED" />
-            </View>
-            <Text style={styles.statValue}>
-              {isHealthLoading
-                ? '...'
-                : `${((health?.sleepMinutes ?? 0) / 60).toFixed(1)}h`}
-            </Text>
-            <Text style={styles.statLabel}>Avg Sleep</Text>
-          </View>
+          {/* Health metrics are shown above in HealthInfoSquares */}
         </View>
 
         {/* <View style={styles.section}> */}

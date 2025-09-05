@@ -9,14 +9,25 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { Shield, Lock, Smartphone, Eye, Code } from 'lucide-react-native';
+import {
+  Shield,
+  Lock,
+  Smartphone,
+  Eye,
+  Code,
+  RefreshCw,
+} from 'lucide-react-native';
 import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useHealthData } from '../hooks/useHealthData';
+import { useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import type { RootStackParamList } from '../../App';
 
 export default function SettingsScreen() {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [requireAuth, setRequireAuth] = useState(false);
   const [authMethod, setAuthMethod] = useState<'pin' | 'biometric' | 'both'>(
     'biometric'
@@ -61,6 +72,57 @@ export default function SettingsScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResetProfile = () => {
+    Alert.alert(
+      'Reset Profile',
+      'This will erase your profile and avatar from this device and restart onboarding. This action cannot be undone. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              // First clear avatar cache files on disk
+              try {
+                await localStorageService.clearAvatarCache();
+              } catch (e) {
+                console.warn('Failed to clear avatar cache during reset:', e);
+              }
+
+              // Perform a complete local reset (encrypted storage + keys)
+              await localStorageService.completeReset();
+
+              // Navigate back to onboarding (Welcome)
+              const parent = navigation.getParent();
+              // Reset the root stack to avoid back navigation into tabs
+              // Casts are used to appease TS without deep typing here
+              // @ts-ignore
+              parent?.reset?.({
+                index: 0,
+                routes: [{ name: 'Welcome' }],
+              } as never);
+              if (!parent) {
+                // Fallback: navigate if reset isn't available
+                // @ts-ignore
+                navigation.navigate('Welcome' as never);
+              }
+            } catch (error) {
+              console.error('Failed to reset profile:', error);
+              Alert.alert(
+                'Error',
+                'Failed to reset profile. Please try again.'
+              );
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const updateSecuritySettings = async (
@@ -300,7 +362,7 @@ export default function SettingsScreen() {
                 const granted = await requestPermissions();
                 if (granted) {
                   await refresh();
-                  Alert.alert('Connected', 'Health data connected and synced.');
+                  Alert.alert('Sync Success', 'Health data has been synced.');
                 } else {
                   Alert.alert(
                     'Permission Needed',
@@ -314,7 +376,7 @@ export default function SettingsScreen() {
               }}
             >
               <Text style={{ color: colors.black, fontWeight: '600' }}>
-                {healthLoading ? 'Syncing...' : 'Connect'}
+                {healthLoading ? 'Syncing...' : 'Sync'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -347,84 +409,111 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* <View style={styles.section}> */}
-        {/*   <View style={styles.sectionHeader}> */}
-        {/*     <Shield size={24} color={colors.neutral[700]} /> */}
-        {/*     <Text style={styles.sectionTitle}>Security & Privacy</Text> */}
-        {/*   </View> */}
-        {/**/}
-        {/*   <View style={styles.settingRow}> */}
-        {/*     <View style={styles.settingInfo}> */}
-        {/*       <Text style={styles.settingTitle}>Require Authentication</Text> */}
-        {/*       <Text style={styles.settingDescription}> */}
-        {/*         Protect your digital twin data with biometric authentication or */}
-        {/*         device passcode */}
-        {/*       </Text> */}
-        {/*     </View> */}
-        {/*     <Switch */}
-        {/*       value={requireAuth} */}
-        {/*       onValueChange={handleAuthToggle} */}
-        {/*       disabled={loading} */}
-        {/*       trackColor={{ */}
-        {/*         false: colors.neutral[300], */}
-        {/*         true: colors.black, */}
-        {/*       }} */}
-        {/*       thumbColor={colors.white} */}
-        {/*     /> */}
-        {/*   </View> */}
-        {/**/}
-        {/*   {requireAuth && ( */}
-        {/*     <View style={styles.authMethodSection}> */}
-        {/*       <Text style={styles.authMethodSectionTitle}> */}
-        {/*         Authentication Method */}
-        {/*       </Text> */}
-        {/**/}
-        {/*       <AuthMethodOption */}
-        {/*         method="biometric" */}
-        {/*         title="Biometric Authentication" */}
-        {/*         description="Use Face ID, Touch ID, or fingerprint" */}
-        {/*         icon={ */}
-        {/*           <Smartphone */}
-        {/*             size={20} */}
-        {/*             color={ */}
-        {/*               authMethod === 'biometric' */}
-        {/*                 ? colors.white */}
-        {/*                 : colors.neutral[600] */}
-        {/*             } */}
-        {/*           /> */}
-        {/*         } */}
-        {/*       /> */}
-        {/**/}
-        {/*       <AuthMethodOption */}
-        {/*         method="pin" */}
-        {/*         title="Device Passcode" */}
-        {/*         description="Use your device PIN or password" */}
-        {/*         icon={ */}
-        {/*           <Lock */}
-        {/*             size={20} */}
-        {/*             color={ */}
-        {/*               authMethod === 'pin' ? colors.white : colors.neutral[600] */}
-        {/*             } */}
-        {/*           /> */}
-        {/*         } */}
-        {/*       /> */}
-        {/**/}
-        {/*       <AuthMethodOption */}
-        {/*         method="both" */}
-        {/*         title="Both Methods" */}
-        {/*         description="Allow either biometric or passcode" */}
-        {/*         icon={ */}
-        {/*           <Shield */}
-        {/*             size={20} */}
-        {/*             color={ */}
-        {/*               authMethod === 'both' ? colors.white : colors.neutral[600] */}
-        {/*             } */}
-        {/*           /> */}
-        {/*         } */}
-        {/*       /> */}
-        {/*     </View> */}
-        {/*   )} */}
-        {/* </View> */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Shield size={24} color={colors.neutral[700]} />
+            <Text style={styles.sectionTitle}>Security & Privacy</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Require Authentication</Text>
+              <Text style={styles.settingDescription}>
+                Protect your digital twin data with biometric authentication or
+                device passcode
+              </Text>
+            </View>
+            <Switch
+              value={requireAuth}
+              onValueChange={handleAuthToggle}
+              disabled={loading}
+              trackColor={{
+                false: colors.neutral[300],
+                true: colors.black,
+              }}
+              thumbColor={colors.white}
+            />
+          </View>
+
+          {requireAuth && (
+            <View style={styles.authMethodSection}>
+              <Text style={styles.authMethodSectionTitle}>
+                Authentication Method
+              </Text>
+
+              <AuthMethodOption
+                method="biometric"
+                title="Biometric Authentication"
+                description="Use Face ID, Touch ID, or fingerprint"
+                icon={
+                  <Smartphone
+                    size={20}
+                    color={
+                      authMethod === 'biometric'
+                        ? colors.white
+                        : colors.neutral[600]
+                    }
+                  />
+                }
+              />
+
+              <AuthMethodOption
+                method="pin"
+                title="Device Passcode"
+                description="Use your device PIN or password"
+                icon={
+                  <Lock
+                    size={20}
+                    color={
+                      authMethod === 'pin' ? colors.white : colors.neutral[600]
+                    }
+                  />
+                }
+              />
+
+              <AuthMethodOption
+                method="both"
+                title="Both Methods"
+                description="Allow either biometric or passcode"
+                icon={
+                  <Shield
+                    size={20}
+                    color={
+                      authMethod === 'both' ? colors.white : colors.neutral[600]
+                    }
+                  />
+                }
+              />
+            </View>
+          )}
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <RefreshCw size={24} color={colors.neutral[700]} />
+          <Text style={styles.sectionTitle}>Reset</Text>
+        </View>
+
+        <View style={styles.settingRow}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingTitle}>
+              Reset Profile & Restart Onboarding
+            </Text>
+            <Text style={styles.settingDescription}>
+              Clears your local profile and avatar, then returns to the Welcome
+              screen.
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleResetProfile}
+            disabled={loading}
+            style={{
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.sm,
+            }}
+          >
+            <Text style={{ color: '#DC2626', fontWeight: '700' }}>Reset</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.infoSection}>
           <Text style={styles.infoText}>
