@@ -34,6 +34,7 @@ import { useHealthData } from '../../hooks/useHealthData';
 import { computeEnergy } from '../../utils/healthUtils';
 import HealthBubble from '../effects/HealthBubble';
 import { SceneEnvironment } from '../scene/SceneEnvironment';
+import { SceneFloor } from '../scene/SceneFloor';
 import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
 
 // Initialize Three.js configuration
@@ -461,6 +462,9 @@ function AvatarExperience({
           shadow-mapSize-height={1024}
         />
         <pointLight position={[-5, 5, 5]} intensity={1} />
+
+        {/* Ground plane with repeating texture */}
+        <SceneFloor textureKey={"sandy_gravel"} size={[40, 40]} repeat={[10, 10]} position={[0, -1.7, 0]} rotation={[-Math.PI / 2, 0, 0]} />
 
         {/* Environment objects and textures (data-driven) */}
         <SceneEnvironment config={environmentConfig} />
