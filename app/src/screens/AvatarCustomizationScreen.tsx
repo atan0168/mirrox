@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Text, SafeAreaView } from 'react-native';
-import ThreeAvatar from '../components/ThreeAvatar';
 import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
 
 export default function AvatarCustomizationScreen() {
@@ -16,16 +15,7 @@ export default function AvatarCustomizationScreen() {
       <View style={styles.content}>
         <Text style={styles.title}>Avatar Customization</Text>
 
-        <View style={styles.avatarContainer}>
-          <ThreeAvatar
-            width={300}
-            height={400}
-            showSkinToneControls={true}
-            skinToneAdjustment={skinToneAdjustment}
-            onSkinToneChange={handleSkinToneChange}
-            facialExpression="neutral"
-          />
-        </View>
+        <View style={styles.avatarContainer}>{/* avatar here */}</View>
 
         <View style={styles.infoContainer}>
           <Text style={styles.infoTitle}>Instructions:</Text>

@@ -9,7 +9,7 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import AvatarWithTrafficStress from '../components/avatar/AvatarWithTrafficStress';
+import AvatarExperience from '../components/avatar/AvatarExperience';
 import { EffectsList, EffectData } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
@@ -238,7 +238,7 @@ const DashboardScreen: React.FC = () => {
       <ScrollView style={styles.container}>
         <View style={styles.content}>
           <View style={styles.avatarContainer}>
-            <AvatarWithTrafficStress
+            <AvatarExperience
               showAnimationButton={developerControlsEnabled}
               facialExpression="neutral"
               skinToneAdjustment={skinEffects.totalAdjustment}
@@ -326,16 +326,13 @@ const styles = StyleSheet.create({
     color: '#2D3748',
   },
   avatarContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    // Full-bleed inside a padded ScrollView: cancel horizontal padding
+    marginHorizontal: -spacing.lg,
+    marginTop: -spacing.lg,
+    // Let child fill width
+    alignItems: 'stretch',
+    // Optional spacing below the canvas
+    marginBottom: 16,
   },
   controlsContainer: {
     marginBottom: 30,

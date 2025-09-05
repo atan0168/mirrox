@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { Canvas } from '@react-three/fiber/native';
 import { OrbitControls } from '@react-three/drei/native';
 import * as THREE from 'three';
@@ -33,16 +33,19 @@ import { StressInfoModal } from '../ui/StressInfoModal';
 import { useHealthData } from '../../hooks/useHealthData';
 import { computeEnergy } from '../../utils/healthUtils';
 import HealthBubble from '../effects/HealthBubble';
+import { SceneEnvironment } from '../scene/SceneEnvironment';
+import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
 configureMobileCompatibility();
 configureTextureLoader();
 
-interface AvatarWithTrafficStressProps {
+interface AvatarExperienceProps {
   showAnimationButton?: boolean;
   width?: number;
   height?: number;
+  heightRatio?: number; // If height not provided, use width * heightRatio
   facialExpression?: string;
   skinToneAdjustment?: number;
   // Location for traffic data
@@ -57,12 +60,15 @@ interface AvatarWithTrafficStressProps {
   // Traffic stress configuration
   enableTrafficStress?: boolean;
   trafficRefreshInterval?: number;
+  // Optional environment context
+  weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | null;
 }
 
-function AvatarWithTrafficStress({
+function AvatarExperience({
   showAnimationButton = false,
-  width = 300,
-  height = 500,
+  width,
+  height,
+  heightRatio = 1.6,
   facialExpression: externalFacialExpression = 'neutral',
   skinToneAdjustment = 0,
   latitude,
@@ -70,7 +76,11 @@ function AvatarWithTrafficStress({
   airQualityData = null,
   enableTrafficStress = true,
   trafficRefreshInterval = 300000, // 5 minutes
-}: AvatarWithTrafficStressProps) {
+  weather = null,
+}: AvatarExperienceProps) {
+  const screenWidth = Dimensions.get('window').width;
+  const effectiveWidth = width ?? screenWidth;
+  const effectiveHeight = height ?? Math.round(effectiveWidth * heightRatio);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
@@ -106,6 +116,15 @@ function AvatarWithTrafficStress({
     if (!health) return null;
     return computeEnergy(health.steps, health.sleepMinutes);
   }, [health]);
+
+  // Build environment config from context (AQI, sleep, weather)
+  const environmentConfig = useMemo(() => {
+    return buildEnvironmentForContext({
+      aqi: airQualityData?.aqi ?? null,
+      sleepMinutes: health?.sleepMinutes ?? null,
+      weather: weather ?? null,
+    });
+  }, [airQualityData?.aqi, health?.sleepMinutes, weather]);
 
   // Calculate stress effects from traffic data
   const stressEffects = useMemo(() => {
@@ -392,15 +411,23 @@ function AvatarWithTrafficStress({
   };
 
   if (!avatarUrl) {
-    return <LoadingState width={width} height={height} />;
+    return <LoadingState width={effectiveWidth} height={effectiveHeight} />;
   }
 
   if (error) {
-    return <ErrorState error={error} width={width} height={height} />;
+    return (
+      <ErrorState
+        error={error}
+        width={effectiveWidth}
+        height={effectiveHeight}
+      />
+    );
   }
 
   return (
-    <View style={[styles.container, { width, height }]}>
+    <View
+      style={[styles.container, { width: '100%', height: effectiveHeight }]}
+    >
       <Canvas
         ref={canvasRef}
         gl={{
@@ -412,13 +439,15 @@ function AvatarWithTrafficStress({
           position: [0, 0.5, 5],
           fov: 60,
         }}
-        onCreated={({ gl }) => {
+        onCreated={({ gl, camera }) => {
           console.log('Canvas created. Configuring renderer...');
           gl.setClearColor('#f0f0f0');
           gl.outputColorSpace = THREE.SRGBColorSpace;
           gl.toneMapping = THREE.NoToneMapping;
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          // Center camera on avatar group to keep props placed relative visually consistent
+          camera.lookAt(0, -1.6, 1.0);
           console.log('Renderer configured.');
         }}
       >
@@ -432,6 +461,9 @@ function AvatarWithTrafficStress({
           shadow-mapSize-height={1024}
         />
         <pointLight position={[-5, 5, 5]} intensity={1} />
+
+        {/* Environment objects and textures (data-driven) */}
+        <SceneEnvironment config={environmentConfig} />
 
         {/* 3D Content */}
         <SmogController
@@ -553,9 +585,8 @@ const getStatusColor = (stressLevel: string): string => {
 
 const styles = StyleSheet.create({
   container: {
+    // Full-bleed container for canvas
     backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    overflow: 'hidden',
     position: 'relative',
   },
   trafficStatus: {
@@ -573,4 +604,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AvatarWithTrafficStress;
+export default AvatarExperience;
