@@ -30,6 +30,9 @@ import {
 } from '../../utils/animationUtils';
 import { useState, useEffect, useRef } from 'react';
 import { StressInfoModal } from '../ui/StressInfoModal';
+import { useHealthData } from '../../hooks/useHealthData';
+import { computeEnergy } from '../../utils/healthUtils';
+import HealthBubble from '../effects/HealthBubble';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -97,6 +100,13 @@ function AvatarWithTrafficStress({
   // Get developer controls preference
   const { developerControlsEnabled } = useDeveloperControlsPreference();
 
+  // Health data
+  const { data: health } = useHealthData({ autoSync: false });
+  const energyInfo = useMemo(() => {
+    if (!health) return null;
+    return computeEnergy(health.steps, health.sleepMinutes);
+  }, [health]);
+
   // Calculate stress effects from traffic data
   const stressEffects = useMemo(() => {
     if (!trafficData || !enableTrafficStress || !stressVisualsEnabled) {
@@ -153,6 +163,15 @@ function AvatarWithTrafficStress({
 
   // Use stress-modified facial expression
   const facialExpression = stressEffects.facialExpression;
+  // If no traffic stress override, tweak facial expression based on sleep
+  const healthDrivenFacial = useMemo(() => {
+    if (!health) return facialExpression;
+    if (stressEffects.stressLevel !== 'none') return facialExpression;
+    const sleepH = (health.sleepMinutes || 0) / 60;
+    if (sleepH < 6) return 'tired';
+    if (sleepH > 8.5) return 'calm';
+    return facialExpression;
+  }, [health, facialExpression, stressEffects.stressLevel]);
 
   // Calculate automatic smog effects based on air quality
   const autoSmogEffects = useMemo(() => {
@@ -457,8 +476,9 @@ function AvatarWithTrafficStress({
           <AvatarModel
             url={avatarUrl}
             activeAnimation={activeAnimation}
-            facialExpression={facialExpression}
+            facialExpression={healthDrivenFacial}
             skinToneAdjustment={skinToneAdjustment}
+            animationSpeedScale={energyInfo?.speedScale ?? 1}
             onLoadingChange={handleAvatarLoadingChange}
             onLoadingProgress={handleLoadingProgress}
           />
@@ -511,6 +531,9 @@ function AvatarWithTrafficStress({
         // stressLevel={stressEffects.stressLevel}
         // congestionFactor={stressEffects.congestionFactor || 1.0}
       />
+
+      {/* Health bubble with dynamic text */}
+      <HealthBubble message={energyInfo?.message ?? null} />
     </View>
   );
 }

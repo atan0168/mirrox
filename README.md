@@ -24,7 +24,7 @@ This is a monorepo containing:
 
 ### Privacy-First Design
 
-- **No PII stored on backend** - All user data stays on device using encrypted MMKV storage
+- **No PII stored on backend** - All user data stays on device using encrypted storage (SQLCipher for health history; MMKV for key‑value data)
 - **Backend as proxy** - Server only proxies external API calls and provides air quality data
 - **Local-first architecture** - User profiles, health data, and preferences stored exclusively on device
 
@@ -181,7 +181,7 @@ npx expo run:ios --device  # or npx expo run:android --device
 - **Local-First Architecture**: User profiles, health data, and preferences stored exclusively on device
 - **Transparent Data Usage**: Clear explanations of why data is needed and how it's used
 - **User Control**: Easy data export and complete deletion capabilities
-- **Encrypted Storage**: All local data encrypted using MMKV
+- **Encrypted Storage**: Health history encrypted with SQLCipher (expo-sqlite); other key‑value data encrypted with MMKV
 
 ## 📊 API Endpoints
 

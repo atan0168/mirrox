@@ -14,6 +14,7 @@ import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { useHealthData } from '../hooks/useHealthData';
 
 export default function SettingsScreen() {
   const [requireAuth, setRequireAuth] = useState(false);
@@ -21,6 +22,12 @@ export default function SettingsScreen() {
     'biometric'
   );
   const [loading, setLoading] = useState(true);
+  const {
+    requestPermissions,
+    refresh,
+    data: health,
+    loading: healthLoading,
+  } = useHealthData({ autoSync: false });
 
   // Use the stress visuals preference hook
   const {
@@ -265,6 +272,51 @@ export default function SettingsScreen() {
               }}
               thumbColor={colors.white}
             />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Smartphone size={24} color={colors.neutral[700]} />
+            <Text style={styles.sectionTitle}>Health Data</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Connect Health Sources</Text>
+              <Text style={styles.settingDescription}>
+                Read steps and sleep from your device to personalize your avatar
+              </Text>
+              {!!health && (
+                <Text style={[styles.settingDescription, { marginTop: 6 }]}>
+                  Latest: {health.steps} steps,{' '}
+                  {(health.sleepMinutes / 60).toFixed(1)}h sleep
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity
+              disabled={loading || healthLoading}
+              onPress={async () => {
+                const granted = await requestPermissions();
+                if (granted) {
+                  await refresh();
+                  Alert.alert('Connected', 'Health data connected and synced.');
+                } else {
+                  Alert.alert(
+                    'Permission Needed',
+                    'Please allow access to read steps and sleep.'
+                  );
+                }
+              }}
+              style={{
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+              }}
+            >
+              <Text style={{ color: colors.black, fontWeight: '600' }}>
+                {healthLoading ? 'Syncing...' : 'Connect'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 

@@ -183,6 +183,24 @@ export class LocalStorageService {
     this.storage.clearAll();
   }
 
+  // Remove a single key from storage
+  public async removeItem(key: string): Promise<void> {
+    await this.ready;
+    try {
+      // MMKV supports delete by key
+      // @ts-ignore - MMKV typings expose delete
+      this.storage.delete(key);
+    } catch (e) {
+      // Fallback: set empty string if delete fails
+      // This ensures old values are not read back as valid JSON
+      try {
+        this.storage.set(key, '');
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   private async getCachedAvatarsData(): Promise<Record<string, CachedAvatar>> {
     const cached = await this.getItem(AVATAR_CACHE_KEY);
     return cached ? JSON.parse(cached) : {};

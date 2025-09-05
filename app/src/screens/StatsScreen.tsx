@@ -9,6 +9,7 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useTrafficData } from '../hooks/useTrafficData';
 import { getAQIInfo, getShortClassification } from '../utils/aqiUtils';
+import { useHealthData } from '../hooks/useHealthData';
 
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();
@@ -32,6 +33,11 @@ const StatsScreen: React.FC = () => {
     longitude: userProfile?.location.longitude,
     enabled: !!userProfile?.location,
     refreshInterval: 300000, // 5 minutes
+  });
+
+  // Health data (steps, sleep)
+  const { data: health, loading: isHealthLoading } = useHealthData({
+    autoSync: true,
   });
 
   const getAirQualityStatValue = () => {
@@ -95,9 +101,23 @@ const StatsScreen: React.FC = () => {
 
           <View style={styles.statCard}>
             <View style={styles.statIcon}>
+              <TrendingUp size={24} color="#10B981" />
+            </View>
+            <Text style={styles.statValue}>
+              {isHealthLoading ? '...' : (health?.steps ?? 0)}
+            </Text>
+            <Text style={styles.statLabel}>Steps Today</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
               <Clock size={24} color="#7C3AED" />
             </View>
-            <Text style={styles.statValue}>8.2h</Text>
+            <Text style={styles.statValue}>
+              {isHealthLoading
+                ? '...'
+                : `${((health?.sleepMinutes ?? 0) / 60).toFixed(1)}h`}
+            </Text>
             <Text style={styles.statLabel}>Avg Sleep</Text>
           </View>
         </View>

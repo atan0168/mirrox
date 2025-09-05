@@ -16,12 +16,23 @@ import PrivacyScreen from './src/screens/PrivacyScreen';
 // Import tab navigator
 import MainTabNavigator from './src/navigation/MainTabNavigator';
 import AlertsScreen from './src/screens/AlertsScreen';
+import HealthPermissionScreen from './src/screens/HealthPermissionScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
   Welcome: undefined;
   Privacy: undefined;
   Permission: undefined;
+  HealthPermission:
+    | {
+        location: {
+          latitude: number;
+          longitude: number;
+          city?: string;
+          state?: string;
+        } | null;
+      }
+    | undefined;
   CitySelection: undefined;
   Questionnaire: {
     location: {
@@ -88,6 +99,11 @@ export default function App() {
           <Stack.Screen
             name="Permission"
             component={PermissionScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="HealthPermission"
+            component={HealthPermissionScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen

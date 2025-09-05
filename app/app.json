@@ -25,7 +25,10 @@
       "package": "com.zensein.mirrox",
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.WRITE_STEPS",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
       ]
     },
     "web": {
@@ -52,6 +55,14 @@
               "-DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_ENABLE_SNAPSHOT=1"
             ]
           }
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Mirrox uses your steps and sleep to personalize your avatar and wellness insights.",
+          "NSHealthUpdateUsageDescription": "Mirrox may write health data only if you enable related features.",
+          "background": true
         }
       ]
     ],

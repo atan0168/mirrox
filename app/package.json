@@ -13,6 +13,7 @@
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix"
   },
   "dependencies": {
+    "@kingstinct/react-native-healthkit": "^10.1.0",
     "@react-native-community/slider": "4.5.6",
     "@react-navigation/bottom-tabs": "^7.4.6",
     "@react-navigation/native": "^7.1.17",
@@ -28,20 +29,22 @@
     "expo-gl": "^15.1.7",
     "expo-linear-gradient": "^14.1.5",
     "expo-location": "^18.1.6",
+    "expo-sqlite": "~15.2.14",
     "expo-status-bar": "~2.2.3",
     "lucide-react-native": "^0.541.0",
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
+    "react-native-health-connect": "^3.3.3",
     "react-native-keychain": "^10.0.0",
     "react-native-mmkv": "^3.3.0",
+    "react-native-nitro-modules": "^0.29.3",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
     "react-native-svg-transformer": "^1.5.1",
     "react-native-webview": "^13.15.0",
-    "three": "^0.179.1",
-    "expo-sqlite": "~15.2.14"
+    "three": "^0.179.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

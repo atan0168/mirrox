@@ -11,6 +11,7 @@ interface AvatarModelProps {
   activeAnimation: string | null;
   facialExpression?: string;
   skinToneAdjustment?: number; // -1 to 1, where negative darkens and positive lightens
+  animationSpeedScale?: number; // 0.5..1.5 scale
   onLoadingChange?: (loading: boolean) => void;
   onLoadingProgress?: (progress: {
     loaded: number;
@@ -24,6 +25,7 @@ export function AvatarModel({
   activeAnimation,
   facialExpression = 'neutral',
   skinToneAdjustment = 0,
+  animationSpeedScale = 1,
   onLoadingChange,
   onLoadingProgress,
 }: AvatarModelProps) {
@@ -1525,7 +1527,7 @@ export function AvatarModel({
 
           action.reset();
           action.setEffectiveWeight(1);
-          action.setEffectiveTimeScale(1);
+          action.setEffectiveTimeScale(animationSpeedScale);
           action.play();
 
           // Ensure avatar stays visible and in position
@@ -1563,7 +1565,7 @@ export function AvatarModel({
     } else {
       console.log('No animation actions available');
     }
-  }, [activeAnimation, animationActionsMap, scene]);
+  }, [activeAnimation, animationActionsMap, scene, animationSpeedScale]);
 
   // Handle idle animation cycling
   useEffect(() => {
@@ -1594,7 +1596,12 @@ export function AvatarModel({
         }
       }
     }
-  }, [currentIdleIndex, activeAnimation, animationActionsMap]);
+  }, [
+    currentIdleIndex,
+    activeAnimation,
+    animationActionsMap,
+    animationSpeedScale,
+  ]);
 
   // Cleanup timer on unmount
   useEffect(() => {
