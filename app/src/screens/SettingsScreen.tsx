@@ -16,6 +16,7 @@ import {
   Eye,
   Code,
   RefreshCw,
+  Database,
 } from 'lucide-react-native';
 import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
@@ -407,6 +408,25 @@ export default function SettingsScreen() {
               thumbColor={colors.white}
             />
           </View>
+
+          {__DEV__ && (
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => {
+                const parent = navigation.getParent();
+                // @ts-ignore
+                (parent || navigation).navigate('DebugDB');
+              }}
+            >
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Database Debug</Text>
+                <Text style={styles.settingDescription}>
+                  Inspect or export the local SQLite database (dev only)
+                </Text>
+              </View>
+              <Database size={20} color={colors.neutral[700]} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>

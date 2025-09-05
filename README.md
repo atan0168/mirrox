@@ -217,6 +217,15 @@ npm run lint                 # Run ESLint
 npm run format              # Format with Prettier
 ```
 
+### Database Debugging (dev builds)
+
+- Dev builds skip SQLCipher keying so the SQLite DB remains readable for inspection tools.
+- In the app: Settings → Developer Options → Database Debug
+  - Shows the on-device DB path
+  - Share the `.db` via AirDrop/Files to open on your Mac
+- Optional override: set `extra.DB_ENCRYPTION` in `app/app.json` to `"on"` or `"off"`.
+  - Default is `off` in dev, `on` in production
+
 ## 📁 Project Structure
 
 ### Mobile App (`app/`)

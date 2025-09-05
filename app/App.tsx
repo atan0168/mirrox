@@ -17,6 +17,7 @@ import PrivacyScreen from './src/screens/PrivacyScreen';
 import MainTabNavigator from './src/navigation/MainTabNavigator';
 import AlertsScreen from './src/screens/AlertsScreen';
 import HealthPermissionScreen from './src/screens/HealthPermissionScreen';
+import DebugDatabaseScreen from './src/screens/DebugDatabaseScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -45,6 +46,7 @@ export type RootStackParamList = {
   GeneratingTwin: undefined;
   MainTabs: undefined;
   Alerts: undefined;
+  DebugDB: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -137,6 +139,14 @@ export default function App() {
             component={AlertsScreen}
             options={{
               title: 'Alerts',
+              headerBackTitle: 'Back',
+            }}
+          />
+          <Stack.Screen
+            name="DebugDB"
+            component={DebugDatabaseScreen}
+            options={{
+              title: 'Debug Database',
               headerBackTitle: 'Back',
             }}
           />

@@ -27,12 +27,14 @@ export class HealthConnectProvider implements HealthProvider {
       const { initialize, requestPermission, getGrantedPermissions } =
         HealthConnect;
 
+      console.log('[HealthConnect] initialize');
       await initialize();
       const permissions = [
         { accessType: 'read', recordType: 'Steps' },
         { accessType: 'read', recordType: 'SleepSession' },
       ] as HealthConnect.Permission[];
 
+      console.log('[HealthConnect] requestPermission');
       await requestPermission(permissions);
       const granted = await getGrantedPermissions();
       const ok = granted?.some(p => p.recordType === 'Steps');
@@ -45,7 +47,11 @@ export class HealthConnectProvider implements HealthProvider {
   async getDailySteps(start: Date, end: Date): Promise<number> {
     if (!(await this.isAvailable())) return 0;
     try {
-      const { readRecords } = HealthConnect;
+      const { initialize, readRecords } = HealthConnect;
+      // Ensure SDK is initialized before reading
+      try {
+        await initialize();
+      } catch {}
       const res = await readRecords('Steps', {
         timeRangeFilter: {
           operator: 'between',
@@ -59,6 +65,8 @@ export class HealthConnectProvider implements HealthProvider {
       );
       return total;
     } catch (e) {
+      // Surface as zero but log for debugging
+      console.warn('[HealthConnect] getDailySteps failed', e);
       return 0;
     }
   }
@@ -68,7 +76,11 @@ export class HealthConnectProvider implements HealthProvider {
   ): Promise<number> {
     if (!(await this.isAvailable())) return 0;
     try {
-      const { readRecords } = HealthConnect;
+      const { initialize, readRecords } = HealthConnect;
+      // Ensure SDK is initialized before reading
+      try {
+        await initialize();
+      } catch {}
       const { start, end } = lastNightWindow(reference);
       const res = await readRecords('SleepSession', {
         timeRangeFilter: {
@@ -84,6 +96,7 @@ export class HealthConnectProvider implements HealthProvider {
       }, 0);
       return Math.round(minutes);
     } catch (e) {
+      console.warn('[HealthConnect] getLastNightSleepMinutes failed', e);
       return 0;
     }
   }

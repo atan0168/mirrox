@@ -23,7 +23,9 @@ export class HealthKitProvider implements HealthProvider {
   async requestPermissions(): Promise<HealthPermissionStatus> {
     if (!(await this.isAvailable())) return 'denied';
     try {
-      const granted = await HealthKit.requestAuthorization(READ_TYPES, []);
+      // Signature mirrors HealthKit: requestAuthorization(typesToShare, typesToRead)
+      // We only need READ access for Steps and Sleep Analysis.
+      const granted = await HealthKit.requestAuthorization([], READ_TYPES);
       return granted ? 'granted' : 'denied';
     } catch {
       return 'denied';
