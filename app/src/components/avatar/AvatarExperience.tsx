@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Text } from 'react-native';
 import { Canvas } from '@react-three/fiber/native';
 import { OrbitControls } from '@react-three/drei/native';
 import * as THREE from 'three';
@@ -100,6 +100,7 @@ function AvatarExperience({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
+  const [sleepMode, setSleepMode] = useState<boolean>(false);
   const [isManualAnimation, setIsManualAnimation] = useState<boolean>(false);
   const [isAvatarLoading, setIsAvatarLoading] = useState<boolean>(false);
   const [loadingProgress, setLoadingProgress] = useState<{
@@ -287,9 +288,44 @@ function AvatarExperience({
     return recommendation;
   }, [airQualityData?.aqi, stressVisualsEnabled]);
 
-  // Automatic animation control based on AQI and traffic stress
+  // Sleep mode time window (00:00 - 08:00 local)
+  useEffect(() => {
+    const checkSleepWindow = () => {
+      const now = new Date();
+      const hours = now.getHours();
+      const inWindow = hours >= 0 && hours < 8; // 00:00 inclusive to 07:59
+      setSleepMode(inWindow);
+    };
+    checkSleepWindow();
+    const interval = setInterval(checkSleepWindow, 60 * 1000); // every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  // Automatic animation control based on AQI and traffic stress (suppressed during sleepMode unless user overrides)
+  // During sleep mode: if not manually overridden, enforce 'sleeping'. If user manually selects something else, allow it until that animation naturally stops or is toggled off.
+  useEffect(() => {
+    if (sleepMode && !isManualAnimation) {
+      if (activeAnimation !== 'sleeping') {
+        setActiveAnimation('sleeping');
+      }
+      return; // prevent AQI/stress competition
+    }
+    if (!sleepMode && activeAnimation === 'sleeping' && !isManualAnimation) {
+      setActiveAnimation(null);
+    }
+  }, [sleepMode, isManualAnimation, activeAnimation]);
+
   useEffect(() => {
     const aqi = airQualityData?.aqi;
+
+    // If auto-sleeping, suppress AQI/stress logic entirely
+    if (sleepMode && !isManualAnimation) {
+      if (animationCycleRef.current) {
+        clearInterval(animationCycleRef.current);
+        animationCycleRef.current = null;
+      }
+      return; // do not proceed further
+    }
 
     // Clear any existing animation cycle timer
     if (animationCycleRef.current) {
@@ -399,6 +435,7 @@ function AvatarExperience({
     stressEffects.stressLevel,
     stressVisualsEnabled,
     isSleepDeprived,
+    sleepMode,
   ]);
 
   // Load avatar
@@ -690,7 +727,9 @@ function AvatarExperience({
             <AvatarModel
               url={avatarUrl}
               activeAnimation={activeAnimation}
-              facialExpression={healthDrivenFacial}
+              facialExpression={
+                sleepMode && !isManualAnimation ? 'sleep' : healthDrivenFacial
+              }
               skinToneAdjustment={skinToneAdjustment}
               animationSpeedScale={energyInfo?.speedScale ?? 1}
               onLoadingChange={handleAvatarLoadingChange}
@@ -709,6 +748,40 @@ function AvatarExperience({
       </View>
 
       {/* UI Overlays */}
+      {sleepMode && !isManualAnimation && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 10,
+            left: 10,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}
+        >
+          {/* Simple text badge; could be replaced with 3D indicator later */}
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: '#8ab4f8',
+                marginRight: 6,
+              }}
+            />
+            <View>
+              <View>{/* Placeholder for potential icon */}</View>
+            </View>
+            <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>
+              Sleeping
+            </Text>
+          </View>
+        </View>
+      )}
       {developerControlsEnabled && (
         <AnimationControls
           availableAnimations={AVAILABLE_ANIMATIONS}

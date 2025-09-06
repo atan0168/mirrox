@@ -91,6 +91,12 @@ export function AvatarModel({
       browDownLeft: 0.4,
       browDownRight: 0.4,
     },
+    sleep: {
+      eyeBlinkLeft: 1.0,
+      eyeBlinkRight: 1.0,
+      mouthClose: 0.2,
+      jawOpen: 0.0,
+    },
     exhausted: {
       eyeBlinkLeft: 0.7,
       eyeBlinkRight: 0.7,
@@ -800,11 +806,13 @@ export function AvatarModel({
     const targetLookAt = new THREE.Vector3(0, 0, 0);
 
     if (activeAnimation === 'mixamo.com') {
-      // Position camera for left side view of coughing animation
       targetPosition.set(-3, 1.2, 4);
+    } else if (activeAnimation === 'sleeping') {
+      targetPosition.set(0, 4.5, 4.6);
+      targetLookAt.set(0, -1.2, -2.0);
     } else {
-      // Default front view position
       targetPosition.set(0, 0.5, 5);
+      targetLookAt.set(0, 0, 0);
     }
 
     // Smooth camera transition
@@ -993,6 +1001,10 @@ export function AvatarModel({
         {
           asset: require('../../../assets/animations/yawn.glb'),
           name: 'yawn',
+        },
+        {
+          asset: require('../../../assets/animations/sleeping.glb'),
+          name: 'sleeping',
         },
       ];
 

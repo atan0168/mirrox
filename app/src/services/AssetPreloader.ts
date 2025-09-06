@@ -122,6 +122,10 @@ export class AssetPreloader {
           asset: require('../../assets/animations/yawn.glb'),
           name: 'yawn',
         },
+        {
+          asset: require('../../assets/animations/sleeping.glb'),
+          name: 'sleeping',
+        },
       ];
 
       const imageAssets = [
