@@ -21,6 +21,9 @@ import {
   calculateSmogEffects,
 } from '../utils/skinEffectsUtils';
 import { SkinToneButton } from '../components/controls/SkinToneButton';
+import SceneSwitcher, {
+  SceneOption,
+} from '../components/controls/SceneSwitcher';
 import RainIntensityControls from '../components/controls/RainIntensityControls';
 
 const DashboardScreen: React.FC = () => {
@@ -28,8 +31,11 @@ const DashboardScreen: React.FC = () => {
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [scene, setScene] = useState<SceneOption>('zenpark');
   const [rainIntensity, setRainIntensity] = useState(0.7);
-  const [rainDirection, setRainDirection] = useState<'vertical' | 'angled'>('vertical');
+  const [rainDirection, setRainDirection] = useState<'vertical' | 'angled'>(
+    'vertical'
+  );
 
   // Use developer controls preference
   const { developerControlsEnabled } = useDeveloperControlsPreference();
@@ -261,6 +267,7 @@ const DashboardScreen: React.FC = () => {
                     }
                   : null
               }
+              scene={scene}
               onInteractionChange={interacting =>
                 setScrollEnabled(!interacting)
               }
@@ -271,6 +278,7 @@ const DashboardScreen: React.FC = () => {
           {developerControlsEnabled && (
             <View style={styles.controlsContainer}>
               <Text style={styles.controlsTitle}>Avatar Customization</Text>
+              <SceneSwitcher value={scene} onChange={setScene} />
               <SkinToneButton
                 skinToneAdjustment={manualSkinToneAdjustment}
                 onSkinToneChange={setManualSkinToneAdjustment}

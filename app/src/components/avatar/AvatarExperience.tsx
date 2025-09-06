@@ -36,6 +36,7 @@ import HealthBubble from '../effects/HealthBubble';
 import { SceneEnvironment } from '../scene/SceneEnvironment';
 import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
 import SceneZenPark from '../scene/SceneZenPark';
+import SceneCityStreet from '../scene/SceneCityStreet';
 import WeatherLighting, { getLightingConfig } from '../scene/WeatherLighting';
 import WeatherControls, { WeatherOption } from '../controls/WeatherControls';
 import RainParticles from '../effects/RainParticles';
@@ -71,6 +72,8 @@ interface AvatarExperienceProps {
   weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | 'night' | null;
   // Notify parent when user is interacting (e.g., to disable ScrollView)
   onInteractionChange?: (interacting: boolean) => void;
+  // Scene selection
+  scene?: 'zenpark' | 'city';
 }
 
 function AvatarExperience({
@@ -89,6 +92,7 @@ function AvatarExperience({
   trafficRefreshInterval = 300000, // 5 minutes
   weather = null,
   onInteractionChange,
+  scene = 'zenpark',
 }: AvatarExperienceProps) {
   const screenWidth = Dimensions.get('window').width;
   const effectiveWidth = width ?? screenWidth;
@@ -107,6 +111,7 @@ function AvatarExperience({
     useState<boolean>(false);
   const canvasRef = useRef<View | null>(null);
   const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
+  // Target for night spotlight in city scene
   const [overrideWeather, setOverrideWeather] = useState<WeatherOption | null>(
     null
   );
@@ -503,6 +508,17 @@ function AvatarExperience({
           {/* Lighting preset, reacts to weather (or developer override) */}
           <WeatherLighting preset={mappedLightingPreset} />
 
+          {/* Subtle distance fog for city to soften horizon */}
+          {scene === 'city' && (
+            <fog
+              attach="fog"
+              color={'#dfe7f2'}
+              near={12}
+              far={85}
+              args={[0, 0, 0]}
+            />
+          )}
+
           {/* Rain effect for rainy preset */}
           {mappedLightingPreset === 'rainy' && (
             <RainParticles
@@ -527,28 +543,73 @@ function AvatarExperience({
               opacity={0.9}
             />
           )}
-          {/* Extra gentle front fill for night to keep avatar visible */}
+          {/* Night fills: stronger and warmer for city to illuminate avatar */}
           {mappedLightingPreset === 'night' && (
-            <pointLight
-              position={[0, 0.8, 2.2]}
-              color={0xaac6ff}
-              intensity={0.6}
-              distance={10}
-              decay={2}
-            />
+            <>
+              {scene === 'city' ? (
+                <>
+                  {/* Warm key from street-lamp side */}
+                  <pointLight
+                    position={[1.2, 1.2, 2.0]}
+                    color={0xffe4b5}
+                    intensity={1.0}
+                    distance={12}
+                    decay={2}
+                  />
+                  {/* Cool fill from opposite side for balance */}
+                  <pointLight
+                    position={[-1.0, 1.4, 2.4]}
+                    color={0xaac6ff}
+                    intensity={0.6}
+                    distance={10}
+                    decay={2}
+                  />
+                  {/* Subtle spotlight aimed at avatar center */}
+                  <spotLight
+                    position={[0.6, 1.8, 2.6]}
+                    color={0xffe8c0}
+                    intensity={20}
+                    distance={13}
+                    angle={0.7}
+                    penumbra={0.55}
+                    decay={2}
+                    castShadow
+                  >
+                    {/* Attach target as a child to avoid null refs */}
+                    <object3D attach="target" position={[0, -1.1, 0]} />
+                  </spotLight>
+                </>
+              ) : (
+                <pointLight
+                  position={[0, 0.8, 2.2]}
+                  color={0xaac6ff}
+                  intensity={0.6}
+                  distance={10}
+                  decay={2}
+                />
+              )}
+            </>
           )}
           {/* Clouds on cloudy days */}
-          <SpriteClouds visible={mappedLightingPreset === 'cloudy'} />
-          <SceneZenPark />
-
-          {/* Ground plane with repeating texture */}
-          {/* <SceneFloor */}
-          {/*   textureKey={'sandy_gravel'} */}
-          {/*   size={[40, 40]} */}
-          {/*   repeat={[10, 10]} */}
-          {/*   position={[0, -1.7, 0]} */}
-          {/*   rotation={[-Math.PI / 2, 0, 0]} */}
-          {/* /> */}
+          {scene === 'city' ? (
+            // Push clouds farther back so they don't overlap buildings
+            <group position={[0, 2.5, -4]} scale={1.2}>
+              <SpriteClouds visible={mappedLightingPreset === 'cloudy'} />
+            </group>
+          ) : (
+            <SpriteClouds visible={mappedLightingPreset === 'cloudy'} />
+          )}
+          {scene === 'city' ? (
+            <SceneCityStreet
+              lampIntensity={mappedLightingPreset === 'night' ? 25.0 : 2.4}
+              lampDistance={mappedLightingPreset === 'night' ? 12 : 7}
+              lampColor={
+                mappedLightingPreset === 'night' ? '#ffd8a0' : '#ffd9a8'
+              }
+            />
+          ) : (
+            <SceneZenPark />
+          )}
 
           {/* Environment objects and textures (data-driven) */}
           <SceneEnvironment config={environmentConfig} />
