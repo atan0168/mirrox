@@ -50,7 +50,6 @@ export default function DebugDatabaseScreen() {
       }
       if (!Sharing) {
         try {
-          // @ts-ignore -- optional peer
           Sharing = require('expo-sharing');
         } catch {}
       }
@@ -77,7 +76,6 @@ export default function DebugDatabaseScreen() {
   const copyPath = async () => {
     if (!Clipboard) {
       try {
-        // @ts-ignore -- optional peer
         Clipboard = require('expo-clipboard');
       } catch {}
     }

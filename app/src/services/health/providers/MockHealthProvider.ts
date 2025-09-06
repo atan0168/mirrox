@@ -18,14 +18,21 @@ export class MockHealthProvider implements HealthProvider {
   }
   async getDailySteps(start: Date, end: Date): Promise<number> {
     // mock deterministic steps based on date
-    const day = parseInt(`${start.getFullYear()}${start.getMonth()}${start.getDate()}`, 10);
+    const day = parseInt(
+      `${start.getFullYear()}${start.getMonth()}${start.getDate()}`,
+      10
+    );
     return Math.round(4000 + seededRandom(day) * 6000);
   }
-  async getLastNightSleepMinutes(reference: Date = new Date()): Promise<number> {
-    const day = parseInt(`${reference.getFullYear()}${reference.getMonth()}${reference.getDate()}`, 10);
+  async getLastNightSleepMinutes(
+    reference: Date = new Date()
+  ): Promise<number> {
+    const day = parseInt(
+      `${reference.getFullYear()}${reference.getMonth()}${reference.getDate()}`,
+      10
+    );
     return Math.round(360 + seededRandom(day + 42) * 180); // 6h to 9h
   }
 }
 
 export default new MockHealthProvider();
-

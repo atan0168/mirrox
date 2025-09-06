@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { Canvas, useThree } from '@react-three/fiber/native';
+import { Canvas } from '@react-three/fiber/native';
 import { OrbitControls } from '@react-three/drei/native';
 import * as THREE from 'three';
 
@@ -34,9 +34,12 @@ import { useHealthData } from '../../hooks/useHealthData';
 import { computeEnergy } from '../../utils/healthUtils';
 import HealthBubble from '../effects/HealthBubble';
 import { SceneEnvironment } from '../scene/SceneEnvironment';
-import { SceneFloor } from '../scene/SceneFloor';
 import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
 import SceneZenPark from '../scene/SceneZenPark';
+import WeatherLighting, { getLightingConfig } from '../scene/WeatherLighting';
+import WeatherControls, { WeatherOption } from '../controls/WeatherControls';
+import RainParticles from '../effects/RainParticles';
+import SpriteClouds from '../scene/SpriteClouds';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -50,6 +53,8 @@ interface AvatarExperienceProps {
   heightRatio?: number; // If height not provided, use width * heightRatio
   facialExpression?: string;
   skinToneAdjustment?: number;
+  rainIntensity?: number; // 0..1 slider for developer to control rain density
+  rainDirection?: 'vertical' | 'angled';
   // Location for traffic data
   latitude?: number;
   longitude?: number;
@@ -63,7 +68,7 @@ interface AvatarExperienceProps {
   enableTrafficStress?: boolean;
   trafficRefreshInterval?: number;
   // Optional environment context
-  weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | null;
+  weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | 'night' | null;
   // Notify parent when user is interacting (e.g., to disable ScrollView)
   onInteractionChange?: (interacting: boolean) => void;
 }
@@ -75,6 +80,8 @@ function AvatarExperience({
   heightRatio = 1.6,
   facialExpression: externalFacialExpression = 'neutral',
   skinToneAdjustment = 0,
+  rainIntensity = 0.6,
+  rainDirection = 'vertical',
   latitude,
   longitude,
   airQualityData = null,
@@ -100,6 +107,9 @@ function AvatarExperience({
     useState<boolean>(false);
   const canvasRef = useRef<View | null>(null);
   const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
+  const [overrideWeather, setOverrideWeather] = useState<WeatherOption | null>(
+    null
+  );
 
   // Fetch traffic data
   const { data: trafficData, loading: trafficLoading } = useTrafficData({
@@ -127,9 +137,33 @@ function AvatarExperience({
     return buildEnvironmentForContext({
       aqi: airQualityData?.aqi ?? null,
       sleepMinutes: health?.sleepMinutes ?? null,
-      weather: weather ?? null,
+      weather: overrideWeather ?? weather ?? null,
     });
-  }, [airQualityData?.aqi, health?.sleepMinutes, weather]);
+  }, [airQualityData?.aqi, health?.sleepMinutes, weather, overrideWeather]);
+
+  // Determine lighting preset and background color based on weather
+  const weatherPreset = (overrideWeather ?? weather ?? 'sunny') as
+    | 'sunny'
+    | 'cloudy'
+    | 'rainy'
+    | 'night'
+    | 'snowy'
+    | 'windy';
+  const lightingBackground = useMemo(() => {
+    // Map unsupported presets to closest lighting preset
+    const mapped =
+      weatherPreset === 'snowy' || weatherPreset === 'windy'
+        ? 'cloudy'
+        : (weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night');
+    return getLightingConfig(mapped).background;
+  }, [weatherPreset]);
+  const mappedLightingPreset = useMemo(
+    () =>
+      weatherPreset === 'snowy' || weatherPreset === 'windy'
+        ? 'cloudy'
+        : (weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night'),
+    [weatherPreset]
+  );
 
   // Calculate stress effects from traffic data
   const stressEffects = useMemo(() => {
@@ -431,7 +465,14 @@ function AvatarExperience({
 
   return (
     <View
-      style={[styles.container, { width: '100%', height: effectiveHeight }]}
+      style={[
+        styles.container,
+        {
+          width: '100%',
+          height: effectiveHeight,
+          backgroundColor: lightingBackground,
+        },
+      ]}
     >
       {/* Canvas container */}
       <View style={{ flex: 1 }}>
@@ -448,7 +489,8 @@ function AvatarExperience({
           }}
           onCreated={({ gl, camera }) => {
             console.log('Canvas created. Configuring renderer...');
-            gl.setClearColor('#f0f0f0');
+            // Backdrop from current lighting preset
+            gl.setClearColor(lightingBackground);
             gl.outputColorSpace = THREE.SRGBColorSpace;
             gl.toneMapping = THREE.NoToneMapping;
             gl.shadowMap.enabled = true;
@@ -458,19 +500,45 @@ function AvatarExperience({
             console.log('Renderer configured.');
           }}
         >
-          {/* Lighting setup */}
-          <ambientLight intensity={1.5} />
-          <directionalLight
-            position={[5, 5, 5]}
-            intensity={2}
-            castShadow
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
-          />
-          <pointLight position={[-5, 5, 5]} intensity={1} />
+          {/* Lighting preset, reacts to weather (or developer override) */}
+          <WeatherLighting preset={mappedLightingPreset} />
 
-          {/* Zen park ground and foliage (procedural, lightweight) */}
-          <hemisphereLight args={[0xe8f5e9, 0x9ccc65, 0.6]} />
+          {/* Rain effect for rainy preset */}
+          {mappedLightingPreset === 'rainy' && (
+            <RainParticles
+              enabled
+              mode="streaks"
+              count={Math.round(1200 + rainIntensity * 1400)}
+              area={[22, 22]}
+              dropHeight={10}
+              groundY={-1.72}
+              speed={6 + rainIntensity * 4}
+              wind={
+                rainDirection === 'angled'
+                  ? [0.6 + 0.4 * rainIntensity, 0.18 + 0.12 * rainIntensity]
+                  : [0, 0]
+              }
+              lengthRange={[
+                0.08 + rainIntensity * 0.04,
+                0.16 + rainIntensity * 0.06,
+              ]}
+              slantFactor={rainDirection === 'angled' ? 1.0 : 0}
+              color={0xd0e8ff}
+              opacity={0.9}
+            />
+          )}
+          {/* Extra gentle front fill for night to keep avatar visible */}
+          {mappedLightingPreset === 'night' && (
+            <pointLight
+              position={[0, 0.8, 2.2]}
+              color={0xaac6ff}
+              intensity={0.6}
+              distance={10}
+              decay={2}
+            />
+          )}
+          {/* Clouds on cloudy days */}
+          <SpriteClouds visible={mappedLightingPreset === 'cloudy'} />
           <SceneZenPark />
 
           {/* Ground plane with repeating texture */}
@@ -555,6 +623,14 @@ function AvatarExperience({
         />
       )}
 
+      {developerControlsEnabled && (
+        <WeatherControls
+          value={overrideWeather}
+          onChange={setOverrideWeather}
+          visible={true}
+        />
+      )}
+
       {/* Loading Indicator Overlay */}
       <AvatarLoadingIndicator
         isLoading={isAvatarLoading || trafficLoading}
@@ -607,7 +683,6 @@ const getStatusColor = (stressLevel: string): string => {
 const styles = StyleSheet.create({
   container: {
     // Full-bleed container for canvas
-    backgroundColor: '#f0f0f0',
     position: 'relative',
   },
   trafficStatus: {

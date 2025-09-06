@@ -21,12 +21,15 @@ import {
   calculateSmogEffects,
 } from '../utils/skinEffectsUtils';
 import { SkinToneButton } from '../components/controls/SkinToneButton';
+import RainIntensityControls from '../components/controls/RainIntensityControls';
 
 const DashboardScreen: React.FC = () => {
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [rainIntensity, setRainIntensity] = useState(0.7);
+  const [rainDirection, setRainDirection] = useState<'vertical' | 'angled'>('vertical');
 
   // Use developer controls preference
   const { developerControlsEnabled } = useDeveloperControlsPreference();
@@ -243,6 +246,8 @@ const DashboardScreen: React.FC = () => {
               showAnimationButton={developerControlsEnabled}
               facialExpression="neutral"
               skinToneAdjustment={skinEffects.totalAdjustment}
+              rainIntensity={rainIntensity}
+              rainDirection={rainDirection}
               latitude={userProfile?.location.latitude}
               longitude={userProfile?.location.longitude}
               enableTrafficStress={true}
@@ -269,6 +274,12 @@ const DashboardScreen: React.FC = () => {
               <SkinToneButton
                 skinToneAdjustment={manualSkinToneAdjustment}
                 onSkinToneChange={setManualSkinToneAdjustment}
+              />
+              <RainIntensityControls
+                value={rainIntensity}
+                onChange={setRainIntensity}
+                direction={rainDirection}
+                onChangeDirection={setRainDirection}
               />
             </View>
           )}

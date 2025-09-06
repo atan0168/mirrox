@@ -3,20 +3,13 @@ import { SceneEnvironmentConfig, SceneAssetInstance } from './assetConfig';
 export type EnvironmentContext = {
   aqi?: number | null;
   sleepMinutes?: number | null;
-  weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | null;
+  weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | 'night' | null;
 };
 
 export function buildEnvironmentForContext(
   ctx: EnvironmentContext
 ): SceneEnvironmentConfig {
   const assets: SceneAssetInstance[] = [];
-
-  // Always place the bonsai as a friendly element
-  assets.push({
-    assetKey: 'low_poly_bonsai',
-    receiveShadow: true,
-    castShadow: true,
-  });
 
   // Place rocks set, optionally textured based on air quality or weather
   // const rock: SceneAssetInstance = { assetKey: 'low_poly_rock_set', receiveShadow: true, castShadow: true };

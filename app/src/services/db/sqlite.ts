@@ -10,7 +10,7 @@ export const DB_NAME = 'mirrox.db';
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
 export function isEncryptionEnabled(): boolean {
-  const envOverride = (Constants.expoConfig?.extra as any)?.DB_ENCRYPTION as
+  const envOverride = Constants.expoConfig?.extra?.DB_ENCRYPTION as
     | 'on'
     | 'off'
     | undefined;

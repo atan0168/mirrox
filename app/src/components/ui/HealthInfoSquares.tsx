@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
-import { Activity, Moon, AlertTriangle, CheckCircle, AlertCircle, XCircle } from 'lucide-react-native';
+import {
+  Activity,
+  Moon,
+  AlertTriangle,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+} from 'lucide-react-native';
 import { Card } from './Card';
 import { Button } from './Button';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
@@ -21,7 +28,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   errorMessage = 'Unable to load health data',
   dailyStepGoal = 10000,
 }) => {
-  const [selectedModal, setSelectedModal] = useState<'steps' | 'sleep' | null>(null);
+  const [selectedModal, setSelectedModal] = useState<'steps' | 'sleep' | null>(
+    null
+  );
 
   const steps = health?.steps ?? 0;
   const sleepMinutes = health?.sleepMinutes ?? 0;
@@ -60,7 +69,8 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const getSleepIcon = () => {
     if (isError) return <AlertTriangle size={24} color={colors.red[500]} />;
     const color = getSleepColor();
-    if (sleepHours >= 7 && sleepHours <= 9) return <CheckCircle size={24} color={color} />;
+    if (sleepHours >= 7 && sleepHours <= 9)
+      return <CheckCircle size={24} color={color} />;
     if (sleepHours >= 6) return <AlertCircle size={24} color={color} />;
     if (sleepHours > 0) return <XCircle size={24} color={color} />;
     return <Moon size={24} color={color} />;
@@ -99,30 +109,51 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Steps Today</Text>
-          <TouchableOpacity onPress={() => setSelectedModal(null)} style={styles.closeButton}>
+          <TouchableOpacity
+            onPress={() => setSelectedModal(null)}
+            style={styles.closeButton}
+          >
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.modalContent}>
           {isError ? (
-            <Card variant="outline" style={{ ...styles.detailCard, borderColor: colors.red[500] }}>
+            <Card
+              variant="outline"
+              style={{ ...styles.detailCard, borderColor: colors.red[500] }}
+            >
               <View style={styles.errorContainer}>
                 <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorTitle}>Failed to Load Health Data</Text>
+                <Text style={styles.errorTitle}>
+                  Failed to Load Health Data
+                </Text>
                 <Text style={styles.errorMessage}>{errorMessage}</Text>
-                <Text style={styles.errorSubtext}>Please check permissions and try again</Text>
+                <Text style={styles.errorSubtext}>
+                  Please check permissions and try again
+                </Text>
               </View>
             </Card>
           ) : (
             <>
-              <Card variant="outline" style={{ ...styles.detailCard, borderColor: getStepsColor() }}>
+              <Card
+                variant="outline"
+                style={{ ...styles.detailCard, borderColor: getStepsColor() }}
+              >
                 <View style={styles.aqiHeader}>
                   <Text style={styles.aqiTitle}>Steps</Text>
-                  <Text style={[styles.aqiValue, { color: getStepsColor() }]}>{steps}</Text>
+                  <Text style={[styles.aqiValue, { color: getStepsColor() }]}>
+                    {steps}
+                  </Text>
                 </View>
-                <Text style={[styles.aqiClassification, { color: getStepsColor() }]}>{stepsLabel()}</Text>
+                <Text
+                  style={[styles.aqiClassification, { color: getStepsColor() }]}
+                >
+                  {stepsLabel()}
+                </Text>
                 {health?.timestamp && (
-                  <Text style={styles.timestamp}>Updated {new Date(health.timestamp).toLocaleTimeString()}</Text>
+                  <Text style={styles.timestamp}>
+                    Updated {new Date(health.timestamp).toLocaleTimeString()}
+                  </Text>
                 )}
               </Card>
               <View style={styles.metricsSection}>
@@ -134,15 +165,22 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                   </View>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Remaining</Text>
-                    <Text style={styles.metricValue}>{Math.max(0, dailyStepGoal - steps)}</Text>
+                    <Text style={styles.metricValue}>
+                      {Math.max(0, dailyStepGoal - steps)}
+                    </Text>
                   </View>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Progress</Text>
-                    <Text style={styles.metricValue}>{Math.min(100, Math.round((steps / dailyStepGoal) * 100))}%</Text>
+                    <Text style={styles.metricValue}>
+                      {Math.min(100, Math.round((steps / dailyStepGoal) * 100))}
+                      %
+                    </Text>
                   </View>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Source</Text>
-                    <Text style={styles.metricValue}>{health?.platform?.toUpperCase() || 'UNKNOWN'}</Text>
+                    <Text style={styles.metricValue}>
+                      {health?.platform?.toUpperCase() || 'UNKNOWN'}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -150,7 +188,11 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           )}
         </View>
         <View style={styles.modalFooter}>
-          <Button variant="secondary" onPress={() => setSelectedModal(null)} fullWidth>
+          <Button
+            variant="secondary"
+            onPress={() => setSelectedModal(null)}
+            fullWidth
+          >
             Close
           </Button>
         </View>
@@ -168,30 +210,51 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Last Night's Sleep</Text>
-          <TouchableOpacity onPress={() => setSelectedModal(null)} style={styles.closeButton}>
+          <TouchableOpacity
+            onPress={() => setSelectedModal(null)}
+            style={styles.closeButton}
+          >
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.modalContent}>
           {isError ? (
-            <Card variant="outline" style={{ ...styles.detailCard, borderColor: colors.red[500] }}>
+            <Card
+              variant="outline"
+              style={{ ...styles.detailCard, borderColor: colors.red[500] }}
+            >
               <View style={styles.errorContainer}>
                 <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorTitle}>Failed to Load Health Data</Text>
+                <Text style={styles.errorTitle}>
+                  Failed to Load Health Data
+                </Text>
                 <Text style={styles.errorMessage}>{errorMessage}</Text>
-                <Text style={styles.errorSubtext}>Please check permissions and try again</Text>
+                <Text style={styles.errorSubtext}>
+                  Please check permissions and try again
+                </Text>
               </View>
             </Card>
           ) : (
             <>
-              <Card variant="outline" style={{ ...styles.detailCard, borderColor: getSleepColor() }}>
+              <Card
+                variant="outline"
+                style={{ ...styles.detailCard, borderColor: getSleepColor() }}
+              >
                 <View style={styles.aqiHeader}>
                   <Text style={styles.aqiTitle}>Sleep</Text>
-                  <Text style={[styles.aqiValue, { color: getSleepColor() }]}>{sleepHours.toFixed(1)}h</Text>
+                  <Text style={[styles.aqiValue, { color: getSleepColor() }]}>
+                    {sleepHours.toFixed(1)}h
+                  </Text>
                 </View>
-                <Text style={[styles.aqiClassification, { color: getSleepColor() }]}>{sleepLabel()}</Text>
+                <Text
+                  style={[styles.aqiClassification, { color: getSleepColor() }]}
+                >
+                  {sleepLabel()}
+                </Text>
                 {health?.timestamp && (
-                  <Text style={styles.timestamp}>Updated {new Date(health.timestamp).toLocaleTimeString()}</Text>
+                  <Text style={styles.timestamp}>
+                    Updated {new Date(health.timestamp).toLocaleTimeString()}
+                  </Text>
                 )}
               </Card>
               <View style={styles.metricsSection}>
@@ -199,7 +262,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                 <View style={styles.metricGrid}>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Duration</Text>
-                    <Text style={styles.metricValue}>{Math.round(sleepMinutes)} min</Text>
+                    <Text style={styles.metricValue}>
+                      {Math.round(sleepMinutes)} min
+                    </Text>
                   </View>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Recommended</Text>
@@ -211,7 +276,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                   </View>
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Source</Text>
-                    <Text style={styles.metricValue}>{health?.platform?.toUpperCase() || 'UNKNOWN'}</Text>
+                    <Text style={styles.metricValue}>
+                      {health?.platform?.toUpperCase() || 'UNKNOWN'}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -219,7 +286,11 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           )}
         </View>
         <View style={styles.modalFooter}>
-          <Button variant="secondary" onPress={() => setSelectedModal(null)} fullWidth>
+          <Button
+            variant="secondary"
+            onPress={() => setSelectedModal(null)}
+            fullWidth
+          >
             Close
           </Button>
         </View>
@@ -242,7 +313,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             {isError ? 'Error' : isLoading ? '...' : steps}
           </Text>
           <Text style={styles.squareLabel}>Steps</Text>
-          <Text style={[styles.squareStatus, { color: getStepsColor() }]}>{stepsLabel()}</Text>
+          <Text style={[styles.squareStatus, { color: getStepsColor() }]}>
+            {stepsLabel()}
+          </Text>
         </TouchableOpacity>
 
         {/* Sleep Square */}
@@ -253,10 +326,16 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
         >
           <View style={styles.squareIcon}>{getSleepIcon()}</View>
           <Text style={styles.squareValue}>
-            {isError ? 'Error' : isLoading ? '...' : `${sleepHours.toFixed(1)}h`}
+            {isError
+              ? 'Error'
+              : isLoading
+                ? '...'
+                : `${sleepHours.toFixed(1)}h`}
           </Text>
           <Text style={styles.squareLabel}>Sleep</Text>
-          <Text style={[styles.squareStatus, { color: getSleepColor() }]}>{sleepLabel()}</Text>
+          <Text style={[styles.squareStatus, { color: getSleepColor() }]}>
+            {sleepLabel()}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -433,4 +512,3 @@ const styles = StyleSheet.create({
     color: colors.neutral[900],
   },
 });
-

@@ -63,17 +63,22 @@ export function SceneFloor({
     };
   }, [textureKey, repeat[0], repeat[1]]);
 
-  const planeArgs = useMemo(() => [size[0], size[1], 1, 1] as const, [size[0], size[1]]);
+  const planeArgs = useMemo(
+    () => [size[0], size[1], 1, 1] as const,
+    [size[0], size[1]]
+  );
 
   return (
-    <mesh position={position as any} rotation={rotation as any} receiveShadow={receiveShadow}>
-      {/* @ts-ignore - react-three-fiber native type */}
-      <planeGeometry args={planeArgs as any} />
-      {/* @ts-ignore - react-three-fiber native type */}
-      <meshStandardMaterial map={texture || undefined} color={texture ? undefined : (color as any)} roughness={1} metalness={0} />
+    <mesh position={position} rotation={rotation} receiveShadow={receiveShadow}>
+      <planeGeometry args={planeArgs} />
+      <meshStandardMaterial
+        map={texture || undefined}
+        color={texture ? undefined : color}
+        roughness={1}
+        metalness={0}
+      />
     </mesh>
   );
 }
 
 export default SceneFloor;
-

@@ -101,14 +101,12 @@ export default function SettingsScreen() {
               const parent = navigation.getParent();
               // Reset the root stack to avoid back navigation into tabs
               // Casts are used to appease TS without deep typing here
-              // @ts-ignore
               parent?.reset?.({
                 index: 0,
                 routes: [{ name: 'Welcome' }],
               } as never);
               if (!parent) {
                 // Fallback: navigate if reset isn't available
-                // @ts-ignore
                 navigation.navigate('Welcome' as never);
               }
             } catch (error) {
@@ -383,39 +381,41 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Code size={24} color={colors.neutral[700]} />
-            <Text style={styles.sectionTitle}>Developer Options</Text>
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Developer Controls</Text>
-              <Text style={styles.settingDescription}>
-                Show developer controls like skin tone adjustments and UI
-                overlays for testing and customization
-              </Text>
+        {/* DEV only controls */}
+        {__DEV__ && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Code size={24} color={colors.neutral[700]} />
+              <Text style={styles.sectionTitle}>Developer Options</Text>
             </View>
-            <Switch
-              value={enableDeveloperControls}
-              onValueChange={handleDeveloperControlsToggle}
-              disabled={loading}
-              trackColor={{
-                false: colors.neutral[300],
-                true: colors.black,
-              }}
-              thumbColor={colors.white}
-            />
-          </View>
 
-          {__DEV__ && (
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Developer Controls</Text>
+                <Text style={styles.settingDescription}>
+                  Show developer controls like skin tone adjustments and UI
+                  overlays for testing and customization
+                </Text>
+              </View>
+              <Switch
+                value={enableDeveloperControls}
+                onValueChange={handleDeveloperControlsToggle}
+                disabled={loading}
+                trackColor={{
+                  false: colors.neutral[300],
+                  true: colors.black,
+                }}
+                thumbColor={colors.white}
+              />
+            </View>
+
             <TouchableOpacity
               style={styles.settingRow}
               onPress={() => {
                 const parent = navigation.getParent();
-                // @ts-ignore
-                (parent || navigation).navigate('DebugDB');
+                parent
+                  ? parent.navigate('DebugDB')
+                  : navigation.navigate('DebugDB');
               }}
             >
               <View style={styles.settingInfo}>
@@ -426,8 +426,8 @@ export default function SettingsScreen() {
               </View>
               <Database size={20} color={colors.neutral[700]} />
             </TouchableOpacity>
-          )}
-        </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

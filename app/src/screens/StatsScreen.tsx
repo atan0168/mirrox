@@ -37,7 +37,11 @@ const StatsScreen: React.FC = () => {
   });
 
   // Health data (steps, sleep)
-  const { data: health, loading: isHealthLoading, error: healthError } = useHealthData({
+  const {
+    data: health,
+    loading: isHealthLoading,
+    error: healthError,
+  } = useHealthData({
     autoSync: true,
   });
 

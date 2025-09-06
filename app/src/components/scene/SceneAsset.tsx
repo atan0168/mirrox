@@ -72,7 +72,7 @@ export function SceneAsset(props: SceneAssetProps) {
         if (props.materialOverrides && child.material) {
           const mat = child.material as THREE.MeshStandardMaterial;
           if (props.materialOverrides.color !== undefined)
-            mat.color = new THREE.Color(props.materialOverrides.color as any);
+            mat.color = new THREE.Color(props.materialOverrides.color);
           if (props.materialOverrides.roughness !== undefined)
             mat.roughness = props.materialOverrides.roughness;
           if (props.materialOverrides.metalness !== undefined)
@@ -150,8 +150,8 @@ export function SceneAsset(props: SceneAssetProps) {
   return (
     <group
       position={transform.position}
-      rotation={transform.rotation as any}
-      scale={transform.scale as any}
+      rotation={transform.rotation}
+      scale={transform.scale}
     >
       <primitive object={scene} />
     </group>

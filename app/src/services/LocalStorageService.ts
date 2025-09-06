@@ -188,7 +188,6 @@ export class LocalStorageService {
     await this.ready;
     try {
       // MMKV supports delete by key
-      // @ts-ignore - MMKV typings expose delete
       this.storage.delete(key);
     } catch (e) {
       // Fallback: set empty string if delete fails
@@ -215,7 +214,7 @@ export class LocalStorageService {
   public async saveUserProfile(profile: UserProfile): Promise<void> {
     try {
       const withVersion = {
-        ...(profile as any),
+        ...profile,
         schemaVersion: profile.schemaVersion || CURRENT_SCHEMA_VERSION,
       };
       await this.setItem(USER_PROFILE_KEY, JSON.stringify(withVersion));
