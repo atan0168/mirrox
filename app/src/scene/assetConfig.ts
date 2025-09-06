@@ -23,7 +23,7 @@ export const AssetRegistry: Record<
     module: require('../../assets/objects/low_poly_bonsai.glb'),
     defaults: {
       // Place slightly behind and next to the avatar (camera looks towards z decreasing)
-      position: [-1.2, 2.7, -0.3],
+      position: [-1.2, 1, -0.3],
       rotation: [0, Math.PI * 0.15, 0],
       // Increase size relative to avatar
       scale: 2.4,

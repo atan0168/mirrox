@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { Canvas } from '@react-three/fiber/native';
+import { Canvas, useThree } from '@react-three/fiber/native';
 import { OrbitControls } from '@react-three/drei/native';
 import * as THREE from 'three';
 
@@ -36,6 +36,7 @@ import HealthBubble from '../effects/HealthBubble';
 import { SceneEnvironment } from '../scene/SceneEnvironment';
 import { SceneFloor } from '../scene/SceneFloor';
 import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
+import SceneZenPark from '../scene/SceneZenPark';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -63,6 +64,8 @@ interface AvatarExperienceProps {
   trafficRefreshInterval?: number;
   // Optional environment context
   weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | null;
+  // Notify parent when user is interacting (e.g., to disable ScrollView)
+  onInteractionChange?: (interacting: boolean) => void;
 }
 
 function AvatarExperience({
@@ -78,6 +81,7 @@ function AvatarExperience({
   enableTrafficStress = true,
   trafficRefreshInterval = 300000, // 5 minutes
   weather = null,
+  onInteractionChange,
 }: AvatarExperienceProps) {
   const screenWidth = Dimensions.get('window').width;
   const effectiveWidth = width ?? screenWidth;
@@ -429,104 +433,117 @@ function AvatarExperience({
     <View
       style={[styles.container, { width: '100%', height: effectiveHeight }]}
     >
-      <Canvas
-        ref={canvasRef}
-        gl={{
-          antialias: false,
-          powerPreference: 'high-performance',
-          preserveDrawingBuffer: true,
-        }}
-        camera={{
-          position: [0, 0.5, 5],
-          fov: 60,
-        }}
-        onCreated={({ gl, camera }) => {
-          console.log('Canvas created. Configuring renderer...');
-          gl.setClearColor('#f0f0f0');
-          gl.outputColorSpace = THREE.SRGBColorSpace;
-          gl.toneMapping = THREE.NoToneMapping;
-          gl.shadowMap.enabled = true;
-          gl.shadowMap.type = THREE.PCFSoftShadowMap;
-          // Center camera on avatar group to keep props placed relative visually consistent
-          camera.lookAt(0, -1.6, 1.0);
-          console.log('Renderer configured.');
-        }}
-      >
-        {/* Lighting setup */}
-        <ambientLight intensity={1.5} />
-        <directionalLight
-          position={[5, 5, 5]}
-          intensity={2}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        <pointLight position={[-5, 5, 5]} intensity={1} />
-
-        {/* Ground plane with repeating texture */}
-        <SceneFloor textureKey={"sandy_gravel"} size={[40, 40]} repeat={[10, 10]} position={[0, -1.7, 0]} rotation={[-Math.PI / 2, 0, 0]} />
-
-        {/* Environment objects and textures (data-driven) */}
-        <SceneEnvironment config={environmentConfig} />
-
-        {/* 3D Content */}
-        <SmogController
-          enabled={effectiveHazeEnabled}
-          intensity={effectiveSmogIntensity}
-          windStrength={1.0}
-          density={effectiveSmogDensity}
-          enableTurbulence={true}
-          turbulenceStrength={[0.005, 0.005, 0.005]}
-          enableWind={true}
-          windDirection={[1, 0.2, 0]}
-          maxVelocity={[2, 2, 1]}
-          minBounds={[-10, -3, -10]}
-          maxBounds={[10, 8, 10]}
-          size={[200, 200, 200]}
-          opacity={effectiveSmogOpacity}
-          color={new THREE.Color(0x888888)}
-        />
-
-        {/* Traffic Stress Effects - only show if stress visuals are enabled */}
-        {enableTrafficStress && trafficData && stressVisualsEnabled && (
-          <>
-            <StressAura
-              intensity={stressEffects.intensity}
-              stressLevel={stressEffects.stressLevel}
-              congestionFactor={stressEffects.congestionFactor || 1.0}
-              enabled={stressEffects.stressLevel !== 'none'}
-            />
-            <FloatingStressIcon
-              stressLevel={stressEffects.stressLevel}
-              congestionFactor={stressEffects.congestionFactor || 1.0}
-              enabled={stressEffects.shouldShowIcon}
-              onPress={() => {
-                setShowStressInfoModal(true);
-              }}
-              position={[0, 2.5, 0]}
-            />
-          </>
-        )}
-
-        <group position={[0, -1.6, 1.0]} scale={1.8}>
-          <AvatarModel
-            url={avatarUrl}
-            activeAnimation={activeAnimation}
-            facialExpression={healthDrivenFacial}
-            skinToneAdjustment={skinToneAdjustment}
-            animationSpeedScale={energyInfo?.speedScale ?? 1}
-            onLoadingChange={handleAvatarLoadingChange}
-            onLoadingProgress={handleLoadingProgress}
+      {/* Canvas container */}
+      <View style={{ flex: 1 }}>
+        <Canvas
+          ref={canvasRef}
+          gl={{
+            antialias: false,
+            powerPreference: 'high-performance',
+            preserveDrawingBuffer: true,
+          }}
+          camera={{
+            position: [0, 0.5, 5],
+            fov: 60,
+          }}
+          onCreated={({ gl, camera }) => {
+            console.log('Canvas created. Configuring renderer...');
+            gl.setClearColor('#f0f0f0');
+            gl.outputColorSpace = THREE.SRGBColorSpace;
+            gl.toneMapping = THREE.NoToneMapping;
+            gl.shadowMap.enabled = true;
+            gl.shadowMap.type = THREE.PCFSoftShadowMap;
+            // Center camera on avatar group to keep props placed relative visually consistent
+            camera.lookAt(0, -1.6, 1.0);
+            console.log('Renderer configured.');
+          }}
+        >
+          {/* Lighting setup */}
+          <ambientLight intensity={1.5} />
+          <directionalLight
+            position={[5, 5, 5]}
+            intensity={2}
+            castShadow
+            shadow-mapSize-width={1024}
+            shadow-mapSize-height={1024}
           />
-        </group>
+          <pointLight position={[-5, 5, 5]} intensity={1} />
 
-        <OrbitControls
-          enablePan={false}
-          enableZoom={false}
-          enableRotate={false}
-          enabled={false}
-        />
-      </Canvas>
+          {/* Zen park ground and foliage (procedural, lightweight) */}
+          <hemisphereLight args={[0xe8f5e9, 0x9ccc65, 0.6]} />
+          <SceneZenPark />
+
+          {/* Ground plane with repeating texture */}
+          {/* <SceneFloor */}
+          {/*   textureKey={'sandy_gravel'} */}
+          {/*   size={[40, 40]} */}
+          {/*   repeat={[10, 10]} */}
+          {/*   position={[0, -1.7, 0]} */}
+          {/*   rotation={[-Math.PI / 2, 0, 0]} */}
+          {/* /> */}
+
+          {/* Environment objects and textures (data-driven) */}
+          <SceneEnvironment config={environmentConfig} />
+
+          {/* 3D Content */}
+          <SmogController
+            enabled={effectiveHazeEnabled}
+            intensity={effectiveSmogIntensity}
+            windStrength={1.0}
+            density={effectiveSmogDensity}
+            enableTurbulence={true}
+            turbulenceStrength={[0.005, 0.005, 0.005]}
+            enableWind={true}
+            windDirection={[1, 0.2, 0]}
+            maxVelocity={[2, 2, 1]}
+            minBounds={[-10, -3, -10]}
+            maxBounds={[10, 8, 10]}
+            size={[200, 200, 200]}
+            opacity={effectiveSmogOpacity}
+            color={new THREE.Color(0x888888)}
+          />
+
+          {/* Traffic Stress Effects - only show if stress visuals are enabled */}
+          {enableTrafficStress && trafficData && stressVisualsEnabled && (
+            <>
+              <StressAura
+                intensity={stressEffects.intensity}
+                stressLevel={stressEffects.stressLevel}
+                congestionFactor={stressEffects.congestionFactor || 1.0}
+                enabled={stressEffects.stressLevel !== 'none'}
+              />
+              <FloatingStressIcon
+                stressLevel={stressEffects.stressLevel}
+                congestionFactor={stressEffects.congestionFactor || 1.0}
+                enabled={stressEffects.shouldShowIcon}
+                onPress={() => {
+                  setShowStressInfoModal(true);
+                }}
+                position={[0, 2.5, 0]}
+              />
+            </>
+          )}
+
+          <group position={[0, -1.6, 0.0]} scale={1.8}>
+            <AvatarModel
+              url={avatarUrl}
+              activeAnimation={activeAnimation}
+              facialExpression={healthDrivenFacial}
+              skinToneAdjustment={skinToneAdjustment}
+              animationSpeedScale={energyInfo?.speedScale ?? 1}
+              onLoadingChange={handleAvatarLoadingChange}
+              onLoadingProgress={handleLoadingProgress}
+            />
+          </group>
+
+          <OrbitControls
+            enablePan={false}
+            enableZoom={true}
+            enableRotate={false}
+            enabled={false}
+          />
+        </Canvas>
+      </View>
 
       {/* UI Overlays */}
       {developerControlsEnabled && (

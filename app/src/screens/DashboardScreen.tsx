@@ -26,6 +26,7 @@ const DashboardScreen: React.FC = () => {
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   // Use developer controls preference
   const { developerControlsEnabled } = useDeveloperControlsPreference();
@@ -235,7 +236,7 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} scrollEnabled={scrollEnabled}>
         <View style={styles.content}>
           <View style={styles.avatarContainer}>
             <AvatarExperience
@@ -254,6 +255,9 @@ const DashboardScreen: React.FC = () => {
                       pm10: airQuality.pm10,
                     }
                   : null
+              }
+              onInteractionChange={interacting =>
+                setScrollEnabled(!interacting)
               }
             />
           </View>
