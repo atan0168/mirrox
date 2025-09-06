@@ -3,7 +3,7 @@ import { SceneEnvironmentConfig, SceneAssetInstance } from './assetConfig';
 export type EnvironmentContext = {
   aqi?: number | null;
   sleepMinutes?: number | null;
-  weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | 'night' | null;
+  weather?: 'sunny' | 'cloudy' | 'rainy' | 'windy' | 'night' | null;
 };
 
 export function buildEnvironmentForContext(

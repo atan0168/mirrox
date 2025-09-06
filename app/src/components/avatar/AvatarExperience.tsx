@@ -38,7 +38,8 @@ import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
 import SceneZenPark from '../scene/SceneZenPark';
 import SceneCityStreet from '../scene/SceneCityStreet';
 import WeatherLighting, { getLightingConfig } from '../scene/WeatherLighting';
-import WeatherControls, { WeatherOption } from '../controls/WeatherControls';
+import WeatherControls from '../controls/WeatherControls';
+import { useAvatarStore } from '../../store/avatarStore';
 import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
 
@@ -69,7 +70,7 @@ interface AvatarExperienceProps {
   enableTrafficStress?: boolean;
   trafficRefreshInterval?: number;
   // Optional environment context
-  weather?: 'sunny' | 'cloudy' | 'rainy' | 'snowy' | 'windy' | 'night' | null;
+  weather?: 'sunny' | 'cloudy' | 'rainy' | 'windy' | 'night' | null;
   // Notify parent when user is interacting (e.g., to disable ScrollView)
   onInteractionChange?: (interacting: boolean) => void;
   // Scene selection
@@ -99,23 +100,24 @@ function AvatarExperience({
   const effectiveHeight = height ?? Math.round(effectiveWidth * heightRatio);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeAnimation, setActiveAnimation] = useState<string | null>(null);
-  const [sleepMode, setSleepMode] = useState<boolean>(false);
-  const [isManualAnimation, setIsManualAnimation] = useState<boolean>(false);
-  const [isAvatarLoading, setIsAvatarLoading] = useState<boolean>(false);
-  const [loadingProgress, setLoadingProgress] = useState<{
-    loaded: number;
-    total: number;
-    item: string;
-  }>({ loaded: 0, total: 0, item: '' });
-  const [showStressInfoModal, setShowStressInfoModal] =
-    useState<boolean>(false);
+  const activeAnimation = useAvatarStore(s => s.activeAnimation);
+  const isManualAnimation = useAvatarStore(s => s.isManualAnimation);
+  const sleepMode = useAvatarStore(s => s.sleepMode);
+  const overrideWeather = useAvatarStore(s => s.overrideWeather);
+  const isAvatarLoading = useAvatarStore(s => s.isAvatarLoading);
+  const loadingProgress = useAvatarStore(s => s.loadingProgress);
+  const showStressInfoModal = useAvatarStore(s => s.showStressInfoModal);
+
+  const setActiveAnimation = useAvatarStore(s => s.setActiveAnimation);
+  const setSleepMode = useAvatarStore(s => s.setSleepMode);
+  const setOverrideWeather = useAvatarStore(s => s.setOverrideWeather);
+  const setIsAvatarLoading = useAvatarStore(s => s.setAvatarLoading);
+  const setLoadingProgress = useAvatarStore(s => s.setLoadingProgress);
+  const setShowStressInfoModal = useAvatarStore(s => s.setShowStressInfoModal);
+
   const canvasRef = useRef<View | null>(null);
   const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
-  // Target for night spotlight in city scene
-  const [overrideWeather, setOverrideWeather] = useState<WeatherOption | null>(
-    null
-  );
+  const [autoNight, setAutoNight] = useState(false);
 
   // Fetch traffic data
   const { data: trafficData, loading: trafficLoading } = useTrafficData({
@@ -153,19 +155,18 @@ function AvatarExperience({
     | 'cloudy'
     | 'rainy'
     | 'night'
-    | 'snowy'
     | 'windy';
   const lightingBackground = useMemo(() => {
     // Map unsupported presets to closest lighting preset
     const mapped =
-      weatherPreset === 'snowy' || weatherPreset === 'windy'
+      weatherPreset === 'windy'
         ? 'cloudy'
         : (weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night');
     return getLightingConfig(mapped).background;
   }, [weatherPreset]);
   const mappedLightingPreset = useMemo(
     () =>
-      weatherPreset === 'snowy' || weatherPreset === 'windy'
+      weatherPreset === 'windy'
         ? 'cloudy'
         : (weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night'),
     [weatherPreset]
@@ -287,6 +288,27 @@ function AvatarExperience({
 
     return recommendation;
   }, [airQualityData?.aqi, stressVisualsEnabled]);
+
+  // Auto night weather window (21:00 - 06:59 local)
+  useEffect(() => {
+    const evaluateNight = () => {
+      const now = new Date();
+      const h = now.getHours();
+      const isNight = h >= 21 || h < 7; // 9pm inclusive to 6:59am
+      setAutoNight(isNight);
+      // Only set override if user hasn't manually chosen a weather via controls
+      // (i.e., overrideWeather is null and component prop 'weather' not forcing it)
+      if (isNight && !overrideWeather && !weather) {
+        setOverrideWeather('night');
+      } else if (!isNight && overrideWeather === 'night') {
+        // Release automatic night when leaving window, only if we set it
+        setOverrideWeather(null);
+      }
+    };
+    evaluateNight();
+    const timer = setInterval(evaluateNight, 60 * 1000); // re-check each minute
+    return () => clearInterval(timer);
+  }, [overrideWeather, weather, setOverrideWeather]);
 
   // Sleep mode time window (00:00 - 08:00 local)
   useEffect(() => {
@@ -503,12 +525,10 @@ function AvatarExperience({
 
     if (activeAnimation === animationName) {
       console.log(`Stopping animation: ${animationName}`);
-      setActiveAnimation(null);
-      setIsManualAnimation(false);
+      setActiveAnimation(null, { manual: false });
     } else {
       console.log(`Starting animation: ${animationName}`);
-      setActiveAnimation(animationName);
-      setIsManualAnimation(true);
+      setActiveAnimation(animationName, { manual: true });
     }
   };
 
