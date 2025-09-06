@@ -5,6 +5,7 @@ export const AVAILABLE_ANIMATIONS = [
   { name: 'shock', label: 'Shock' },
   { name: 'swat_bugs', label: 'Swat Bugs' },
   { name: 'breathing', label: 'Breathing' },
+  { name: 'yawn', label: 'Yawn' },
 ];
 
 export const IDLE_ANIMATIONS = [

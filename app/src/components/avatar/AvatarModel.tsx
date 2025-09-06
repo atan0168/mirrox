@@ -18,6 +18,7 @@ interface AvatarModelProps {
     total: number;
     item: string;
   }) => void;
+  additionalIdleAnimations?: string[]; // Extra idle animations based on context (e.g., yawn when sleep-deprived)
 }
 
 export function AvatarModel({
@@ -28,6 +29,7 @@ export function AvatarModel({
   animationSpeedScale = 1,
   onLoadingChange,
   onLoadingProgress,
+  additionalIdleAnimations = [],
 }: AvatarModelProps) {
   const { scene, animations } = useGLTF(url);
   const { camera } = useThree();
@@ -201,7 +203,11 @@ export function AvatarModel({
 
   // Helper function to get available idle animations
   const getAvailableIdleAnimations = () => {
-    return IDLE_ANIMATIONS.filter(name => animationActionsMap.has(name));
+    const base = IDLE_ANIMATIONS;
+    const extended = additionalIdleAnimations
+      ? Array.from(new Set([...base, ...additionalIdleAnimations]))
+      : base;
+    return extended.filter(name => animationActionsMap.has(name));
   };
 
   // Helper function to get current idle animation
@@ -983,6 +989,10 @@ export function AvatarModel({
         {
           asset: require('../../../assets/animations/swat_bugs.glb'),
           name: 'swat_bugs',
+        },
+        {
+          asset: require('../../../assets/animations/yawn.glb'),
+          name: 'yawn',
         },
       ];
 

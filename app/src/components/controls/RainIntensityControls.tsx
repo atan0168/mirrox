@@ -9,7 +9,12 @@ type Props = {
   onChangeDirection: (d: 'vertical' | 'angled') => void;
 };
 
-export default function RainIntensityControls({ value, onChange, direction, onChangeDirection }: Props) {
+export default function RainIntensityControls({
+  value,
+  onChange,
+  direction,
+  onChangeDirection,
+}: Props) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Rain Intensity</Text>

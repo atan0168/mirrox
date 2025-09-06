@@ -118,6 +118,10 @@ export class AssetPreloader {
           asset: require('../../assets/animations/swat_bugs.glb'),
           name: 'swat_bugs',
         },
+        {
+          asset: require('../../assets/animations/yawn.glb'),
+          name: 'yawn',
+        },
       ];
 
       const imageAssets = [

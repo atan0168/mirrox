@@ -236,6 +236,13 @@ function AvatarExperience({
     return facialExpression;
   }, [health, facialExpression, stressEffects.stressLevel]);
 
+  // Determine if user is sleep-deprived (less than 6h but greater than 0)
+  const isSleepDeprived = useMemo(() => {
+    if (!health) return false;
+    const sleepH = (health.sleepMinutes || 0) / 60;
+    return sleepH > 0 && sleepH < 6;
+  }, [health]);
+
   // Calculate automatic smog effects based on air quality
   const autoSmogEffects = useMemo(() => {
     if (!airQualityData) {
@@ -311,6 +318,26 @@ function AvatarExperience({
           );
           setActiveAnimation(aqiAnimationRecommendation.animation);
 
+          // For moderate air quality (breathing) + sleep deprivation, cycle with yawn
+          if (
+            aqi &&
+            aqi > 50 &&
+            aqi <= 100 &&
+            isSleepDeprived &&
+            aqiAnimationRecommendation.animation === 'breathing'
+          ) {
+            const cycleAnimations = ['breathing', 'yawn'];
+            let currentIndex = 0;
+            animationCycleRef.current = setInterval(() => {
+              currentIndex = (currentIndex + 1) % cycleAnimations.length;
+              const nextAnimation = cycleAnimations[currentIndex];
+              console.log(
+                `🔄 Cycling to animation: ${nextAnimation} (moderate AQI + sleep deprivation)`
+              );
+              setActiveAnimation(nextAnimation);
+            }, 10000);
+          }
+
           // For unhealthy air quality, set up animation cycling
           if (aqi && aqi >= 101) {
             let cycleAnimations = getAnimationCycleForAQI(aqi);
@@ -325,13 +352,18 @@ function AvatarExperience({
               );
             }
 
+            // Add yawn to cycle if sleep deprived
+            if (isSleepDeprived && !cycleAnimations.includes('yawn')) {
+              cycleAnimations.push('yawn');
+            }
+
             if (cycleAnimations.length > 1) {
               let currentIndex = 0;
               animationCycleRef.current = setInterval(() => {
                 currentIndex = (currentIndex + 1) % cycleAnimations.length;
                 const nextAnimation = cycleAnimations[currentIndex];
                 console.log(
-                  `🔄 Cycling to animation: ${nextAnimation} (unhealthy AQI: ${aqi})`
+                  `🔄 Cycling to animation: ${nextAnimation} (unhealthy AQI: ${aqi}${isSleepDeprived ? ' + sleep deprivation' : ''})`
                 );
                 setActiveAnimation(nextAnimation);
               }, 8000);
@@ -366,6 +398,7 @@ function AvatarExperience({
     activeAnimation,
     stressEffects.stressLevel,
     stressVisualsEnabled,
+    isSleepDeprived,
   ]);
 
   // Load avatar
@@ -662,6 +695,7 @@ function AvatarExperience({
               animationSpeedScale={energyInfo?.speedScale ?? 1}
               onLoadingChange={handleAvatarLoadingChange}
               onLoadingProgress={handleLoadingProgress}
+              additionalIdleAnimations={isSleepDeprived ? ['yawn'] : []}
             />
           </group>
 

@@ -11,7 +11,8 @@ interface SceneSwitcherProps {
 export default function SceneSwitcher({ value, onChange }: SceneSwitcherProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  const labelFor = (v: SceneOption) => (v === 'city' ? 'City Street' : 'Zen Park');
+  const labelFor = (v: SceneOption) =>
+    v === 'city' ? 'City Street' : 'Zen Park';
   const emojiFor = (v: SceneOption) => (v === 'city' ? '🌆' : '🌳');
 
   return (
@@ -58,7 +59,9 @@ export default function SceneSwitcher({ value, onChange }: SceneSwitcherProps) {
                 >
                   <Text style={styles.optionEmoji}>{emojiFor(option)}</Text>
                   <Text style={styles.optionLabel}>{labelFor(option)}</Text>
-                  <Text style={styles.optionCheck}>{value === option ? '✓' : ''}</Text>
+                  <Text style={styles.optionCheck}>
+                    {value === option ? '✓' : ''}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -187,4 +190,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
