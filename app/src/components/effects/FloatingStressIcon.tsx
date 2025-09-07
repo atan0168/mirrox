@@ -1,5 +1,5 @@
 import { useRef, useMemo } from 'react';
-import { useFrame } from '@react-three/fiber/native';
+import { useFrame, useThree } from '@react-three/fiber/native';
 import * as THREE from 'three';
 
 interface FloatingStressIconProps {
@@ -17,8 +17,12 @@ export function FloatingStressIcon({
   position = [0, 2.5, 0], // Above avatar's head
   onPress,
 }: FloatingStressIconProps) {
+  // Outer billboard group (faces camera)
+  const billboardRef = useRef<THREE.Group>(null);
+  // Inner animated content group
   const groupRef = useRef<THREE.Group>(null);
-  const iconRef = useRef<THREE.Mesh>(null);
+  const iconRef = useRef<THREE.Object3D>(null);
+  const { camera } = useThree();
 
   // Get visual style based on stress level
   const { color, shouldShow, intensity } = useMemo(() => {
@@ -50,14 +54,29 @@ export function FloatingStressIcon({
     }
   }, [stressLevel]);
 
-  // Animate the floating icon
+  // Animate the floating icon and keep it facing the camera (billboard)
   useFrame(state => {
+    // Keep the outer container oriented toward the camera to prevent ellipse distortion
+    if (billboardRef.current) {
+      billboardRef.current.quaternion.copy(camera.quaternion);
+      // Ensure it renders last to avoid being occluded by scene geometry
+      billboardRef.current.renderOrder = 100000;
+    }
+
+    // Ensure the center symbol renders last among icon parts
+    if (iconRef.current) {
+      iconRef.current.renderOrder = 100010;
+      iconRef.current.traverse(obj => {
+        obj.renderOrder = 100010;
+      });
+    }
+
     if (groupRef.current && shouldShow && enabled) {
       const time = state.clock.elapsedTime;
 
       // Floating animation
       const floatY = Math.sin(time * 2) * 0.1;
-      groupRef.current.position.y = position[1] + floatY;
+      groupRef.current.position.y = floatY;
 
       // Gentle rotation for high stress
       if (stressLevel === 'high') {
@@ -75,10 +94,20 @@ export function FloatingStressIcon({
   }
 
   // Create custom geometry for symbols
-  const createExclamationMark = (color: number | string = 0xff6600) => {
+  // High-stress: use white mark for strong contrast
+  const createExclamationMark = (color: number | string = '#FFFFFF') => {
     const group = new THREE.Group();
+    group.renderOrder = 100000;
+    group.frustumCulled = false;
 
-    const material = new THREE.MeshBasicMaterial({ color });
+    const material = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 1,
+      depthTest: false,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
 
     // Exclamation line
     const lineGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.25, 8);
@@ -97,6 +126,8 @@ export function FloatingStressIcon({
 
   const createWarningTriangle = () => {
     const group = new THREE.Group();
+    group.renderOrder = 100000;
+    group.frustumCulled = false;
 
     // Triangle outline
     const triangleShape = new THREE.Shape();
@@ -113,6 +144,9 @@ export function FloatingStressIcon({
         color: '#FFFFFF',
         transparent: true,
         opacity: 0.9,
+        depthTest: false,
+        depthWrite: false,
+        side: THREE.DoubleSide,
       })
     );
     group.add(triangleMesh);
@@ -131,10 +165,19 @@ export function FloatingStressIcon({
         // Mild stress - simple dot
         return () => {
           const group = new THREE.Group();
+          group.renderOrder = 100000;
+          group.frustumCulled = false;
           const dotGeometry = new THREE.SphereGeometry(0.08, 16, 16);
           const dotMesh = new THREE.Mesh(
             dotGeometry,
-            new THREE.MeshBasicMaterial({ color: '#FFFFFF' })
+            new THREE.MeshBasicMaterial({
+              color: '#FFFFFF',
+              transparent: true,
+              opacity: 1,
+              depthTest: false,
+              depthWrite: false,
+              side: THREE.DoubleSide,
+            })
           );
           group.add(dotMesh);
           return group;
@@ -151,67 +194,83 @@ export function FloatingStressIcon({
   }, [intensity]);
 
   return (
-    <group ref={groupRef} position={position}>
-      {/* Invisible clickable area (larger than visual for easier tapping) */}
-      <mesh position={[0, 0, 0.1]} onClick={onPress} onPointerDown={onPress}>
-        <circleGeometry args={[0.4, 32]} />
-        <meshBasicMaterial transparent opacity={0} side={THREE.DoubleSide} />
-      </mesh>
+    <group ref={billboardRef} position={position}>
+      <group ref={groupRef}>
+        {/* Invisible clickable area (larger than visual for easier tapping) */}
+        <mesh position={[0, 0, 0.1]} onClick={onPress} onPointerDown={onPress}>
+          <circleGeometry args={[0.4, 32]} />
+          <meshBasicMaterial
+            transparent
+            opacity={0}
+            side={THREE.DoubleSide}
+            depthTest={false}
+            depthWrite={false}
+          />
+        </mesh>
 
-      {/* Main circular badge background */}
-      <mesh position={[0, 0, -0.02]}>
-        <circleGeometry args={[0.25, 32]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.9}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* White border ring */}
-      <mesh position={[0, 0, -0.01]}>
-        <ringGeometry args={[0.22, 0.25, 32]} />
-        <meshBasicMaterial
-          color="#FFFFFF"
-          transparent
-          opacity={0.8}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-
-      {/* Symbol in the center */}
-      <primitive
-        ref={iconRef}
-        object={createStressSymbol()}
-        position={[0, 0, 0]}
-      />
-
-      {/* Subtle glow effect for higher stress levels */}
-      {intensity >= 2 && (
-        <mesh position={[0, 0, -0.05]}>
+        {/* Main circular badge background */}
+        <mesh position={[0, 0, -0.02]}>
           <circleGeometry args={[0.25, 32]} />
           <meshBasicMaterial
             color={color}
             transparent
-            opacity={0.2}
+            opacity={0.9}
             side={THREE.DoubleSide}
+            depthTest={false}
+            depthWrite={false}
           />
         </mesh>
-      )}
 
-      {/* Additional pulsing ring for high stress */}
-      {intensity === 3 && (
-        <mesh position={[0, 0, -0.03]}>
-          <ringGeometry args={[0.3, 0.4, 32]} />
+        {/* White border ring */}
+        <mesh position={[0, 0, -0.01]}>
+          <ringGeometry args={[0.22, 0.25, 32]} />
           <meshBasicMaterial
-            color={color}
+            color="#FFFFFF"
             transparent
-            opacity={0.3}
+            opacity={0.8}
             side={THREE.DoubleSide}
+            depthTest={false}
+            depthWrite={false}
           />
         </mesh>
-      )}
+
+        {/* Subtle glow effect for higher stress levels */}
+        {intensity >= 2 && (
+          <mesh position={[0, 0, -0.05]}>
+            <circleGeometry args={[0.25, 32]} />
+            <meshBasicMaterial
+              color={color}
+              transparent
+              opacity={0.2}
+              side={THREE.DoubleSide}
+              depthTest={false}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
+
+        {/* Additional pulsing ring for high stress */}
+        {intensity === 3 && (
+          <mesh position={[0, 0, -0.03]}>
+            <ringGeometry args={[0.3, 0.4, 32]} />
+            <meshBasicMaterial
+              color={color}
+              transparent
+              opacity={0.3}
+              side={THREE.DoubleSide}
+              depthTest={false}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
+
+        {/* Symbol in the center (rendered last for top layering) */}
+        <primitive
+          ref={iconRef}
+          object={createStressSymbol()}
+          position={[0, 0, 0]}
+        />
+      </group>
     </group>
   );
 }

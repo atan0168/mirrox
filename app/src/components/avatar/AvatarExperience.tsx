@@ -319,15 +319,49 @@ function AvatarExperience({
   }, [scene, derivedPhase, setHomeTime]);
 
   // Automatic animation control based on AQI and traffic stress (suppressed during sleepMode unless user overrides)
-  // During sleep mode: if not manually overridden, enforce 'sleeping'. If user manually selects something else, allow it until that animation naturally stops or is toggled off.
+  // During sleep mode: if not manually overridden, cycle between sleep animations.
+  const sleepCycleRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (sleepMode && !isManualAnimation) {
-      if (activeAnimation !== 'sleeping') {
+      // Clear any non-sleep animation cycles
+      if (animationCycleRef.current) {
+        clearInterval(animationCycleRef.current);
+        animationCycleRef.current = null;
+      }
+      // Start or maintain a simple cycle between 'sleeping' and 'sleeping_idle'
+      const sleepAnimations = ['sleeping', 'sleeping_idle'] as const;
+
+      // Ensure we start on 'sleeping' to set up camera framing
+      if (
+        activeAnimation !== 'sleeping' &&
+        activeAnimation !== 'sleeping_idle'
+      ) {
         setActiveAnimation('sleeping');
       }
-      return; // prevent AQI/stress competition
+
+      // If no cycle running, create one
+      if (!sleepCycleRef.current) {
+        let idx = 0;
+        sleepCycleRef.current = setInterval(() => {
+          idx = (idx + 1) % sleepAnimations.length;
+          setActiveAnimation(sleepAnimations[idx]);
+        }, 10000);
+      }
+
+      return; // prevent AQI/stress competition while in sleep mode
     }
-    if (!sleepMode && activeAnimation === 'sleeping' && !isManualAnimation) {
+
+    // Leaving sleep mode: clear sleep cycle and reset to idle if not manually overridden
+    if (sleepCycleRef.current) {
+      clearInterval(sleepCycleRef.current);
+      sleepCycleRef.current = null;
+    }
+
+    if (
+      !sleepMode &&
+      (activeAnimation === 'sleeping' || activeAnimation === 'sleeping_idle') &&
+      !isManualAnimation
+    ) {
       setActiveAnimation(null);
     }
   }, [sleepMode, isManualAnimation, activeAnimation]);
@@ -509,6 +543,10 @@ function AvatarExperience({
         clearInterval(animationCycleRef.current);
         animationCycleRef.current = null;
       }
+      if (sleepCycleRef.current) {
+        clearInterval(sleepCycleRef.current);
+        sleepCycleRef.current = null;
+      }
     };
   }, []);
 
@@ -516,6 +554,10 @@ function AvatarExperience({
     if (animationCycleRef.current) {
       clearInterval(animationCycleRef.current);
       animationCycleRef.current = null;
+    }
+    if (sleepCycleRef.current) {
+      clearInterval(sleepCycleRef.current);
+      sleepCycleRef.current = null;
     }
 
     if (activeAnimation === animationName) {
@@ -741,7 +783,8 @@ function AvatarExperience({
                 onPress={() => {
                   setShowStressInfoModal(true);
                 }}
-                position={[0, 2.5, 0]}
+                // Nudge forward in Z while sleeping to avoid occlusion from interior geometry
+                position={[0, 2.5, sleepMode && !isManualAnimation ? 1.2 : 0]}
               />
             </>
           )}

@@ -663,8 +663,11 @@ export function AvatarModel({
     const targetPosition = new THREE.Vector3();
     const targetLookAt = new THREE.Vector3();
 
-    const wasSleeping = prevActiveAnimationRef.current === 'sleeping';
-    const isSleeping = activeAnimation === 'sleeping';
+    const wasSleeping =
+      prevActiveAnimationRef.current === 'sleeping' ||
+      prevActiveAnimationRef.current === 'sleeping_idle';
+    const isSleeping =
+      activeAnimation === 'sleeping' || activeAnimation === 'sleeping_idle';
 
     // If leaving sleeping, restore the last non-sleep camera state
     if (wasSleeping && !isSleeping) {
@@ -897,6 +900,10 @@ export function AvatarModel({
         {
           asset: require('../../../assets/animations/sleeping.glb'),
           name: 'sleeping',
+        },
+        {
+          asset: require('../../../assets/animations/sleeping_idle.glb'),
+          name: 'sleeping_idle',
         },
       ];
 
@@ -1337,7 +1344,13 @@ export function AvatarModel({
   });
 
   return (
-    <group position={activeAnimation === 'sleeping' ? [0, 0, 1.0] : [0, 0, 0]}>
+    <group
+      position={
+        activeAnimation === 'sleeping' || activeAnimation === 'sleeping_idle'
+          ? [0, 0, 1.0]
+          : [0, 0, 0]
+      }
+    >
       <primitive object={scene} />
     </group>
   );
