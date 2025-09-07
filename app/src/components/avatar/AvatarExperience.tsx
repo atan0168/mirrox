@@ -46,6 +46,7 @@ import HomeSceneControls from '../controls/HomeSceneControls'; // legacy control
 import { useAvatarStore } from '../../store/avatarStore';
 import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
+import Mattress from '../scene/Mattress';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -743,6 +744,16 @@ function AvatarExperience({
                 position={[0, 2.5, 0]}
               />
             </>
+          )}
+
+          {/* Mattress for sleeping state */}
+          {sleepMode && !isManualAnimation && (
+            // Align with AvatarModel's sleeping offset (z +1.0) and groundY (~-1.7)
+            <Mattress
+              position={[0, -1.6, 1.0]}
+              size={[1.5, 0.22, 4.5]}
+              rotation={[0, -(1 / 2) * Math.PI, 0]}
+            />
           )}
 
           <group position={[0, -1.6, 0.0]} scale={1.8}>
