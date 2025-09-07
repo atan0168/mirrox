@@ -243,7 +243,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                 <View style={styles.aqiHeader}>
                   <Text style={styles.aqiTitle}>Sleep</Text>
                   <Text style={[styles.aqiValue, { color: getSleepColor() }]}>
-                    {sleepHours.toFixed(1)}h
+                    {sleepMinutes > 0 ? `${sleepHours.toFixed(1)}h` : 'N/A'}
                   </Text>
                 </View>
                 <Text
@@ -263,7 +263,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                   <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Duration</Text>
                     <Text style={styles.metricValue}>
-                      {Math.round(sleepMinutes)} min
+                      {sleepMinutes > 0 ? `${Math.round(sleepMinutes)} min` : 'N/A'}
                     </Text>
                   </View>
                   <View style={styles.metricItem}>
@@ -330,7 +330,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
               ? 'Error'
               : isLoading
                 ? '...'
-                : `${sleepHours.toFixed(1)}h`}
+                : sleepMinutes > 0
+                  ? `${sleepHours.toFixed(1)}h`
+                  : 'N/A'}
           </Text>
           <Text style={styles.squareLabel}>Sleep</Text>
           <Text style={[styles.squareStatus, { color: getSleepColor() }]}>

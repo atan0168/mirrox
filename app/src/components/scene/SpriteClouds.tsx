@@ -16,12 +16,14 @@ function CloudSprite({
   bounds = 12,
   aspect = 2.0,
   opacity = 0.85,
+  zOverride,
 }: {
   texture: THREE.Texture;
   config: CloudConfig;
   bounds?: number;
   aspect?: number;
   opacity?: number;
+  zOverride?: number;
 }) {
   const ref = useRef<THREE.Sprite>(null!);
 
@@ -33,10 +35,11 @@ function CloudSprite({
     if (s.position.x < -bounds) s.position.x = bounds;
   });
 
+  const [px, py, pz] = config.position;
   return (
     <sprite
       ref={ref}
-      position={config.position}
+      position={[px, py, zOverride ?? pz]}
       scale={[config.scale * aspect, config.scale, 1]}
     >
       <spriteMaterial
@@ -52,8 +55,11 @@ function CloudSprite({
 
 export default function SpriteClouds({
   visible = true,
+  flattenZ,
 }: {
   visible?: boolean;
+  // If provided, forces all cloud sprites to render at this local Z
+  flattenZ?: number;
 }) {
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
 
@@ -115,6 +121,7 @@ export default function SpriteClouds({
           bounds={12}
           aspect={aspect}
           opacity={0.82}
+          zOverride={flattenZ}
         />
       ))}
     </group>

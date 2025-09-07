@@ -238,7 +238,8 @@ function AvatarExperience({
     if (!health) return facialExpression;
     if (stressEffects.stressLevel !== 'none') return facialExpression;
     const sleepH = (health.sleepMinutes || 0) / 60;
-    if (sleepH < 6) return 'tired';
+    // Only mark tired if we have sleep data and it's under 6h
+    if (sleepH > 0 && sleepH < 6) return 'tired';
     if (sleepH > 8.5) return 'calm';
     return facialExpression;
   }, [health, facialExpression, stressEffects.stressLevel]);

@@ -26,7 +26,9 @@ export function computeEnergy(steps: number, sleepMinutes: number) {
 
   let message: string | null = null;
   if (state === 'low') {
-    if (sleepHours < 6) message = 'Low sleep — take it easy today.';
+    // Only flag low sleep if we actually have sleep data (> 0 minutes)
+    if (sleepMinutes > 0 && sleepHours < 6)
+      message = 'Low sleep — take it easy today.';
     else message = 'Warming up — a short walk helps.';
   } else if (state === 'high') {
     message = 'Great energy today!';

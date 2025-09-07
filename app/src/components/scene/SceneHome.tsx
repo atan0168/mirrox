@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber/native';
 import SceneFloor from './SceneFloor';
 import { useHomeSceneStore } from '../../store/homeSceneStore';
+import SpriteClouds from './SpriteClouds';
 
 /**
  * Home Scene (Prototype)
@@ -420,27 +421,27 @@ export default function SceneHome({
       <group position={[0, yWindowCenter, -6.5]} renderOrder={1}>
         {/* Sky gradient (two layered planes) */}
         <mesh position={[0, 0, -0.25]}>
-          <planeGeometry args={[6.5, 3.6]} />
+          <planeGeometry args={[6.5, 8.6]} />
           <meshBasicMaterial color={skyTop} />
         </mesh>
         <mesh position={[0, 0, -0.24]}>
-          <planeGeometry args={[6.5, 3.6]} />
+          <planeGeometry args={[6.5, 5.8]} />
           <meshBasicMaterial color={skyBottom} transparent opacity={0.85} />
         </mesh>
 
         {/* Sun / Moon */}
-        {timeOfDay !== 'night' && (
-          <mesh position={[1.3, 0.7, -0.26]}>
-            <circleGeometry args={[0.28, 24]} />
-            <meshBasicMaterial color={'#ffe9b5'} transparent opacity={0.9} />
-          </mesh>
-        )}
-        {timeOfDay === 'night' && (
-          <mesh position={[-0.9, 0.5, -0.26]}>
-            <circleGeometry args={[0.22, 24]} />
-            <meshBasicMaterial color={'#e2ecf7'} transparent opacity={0.8} />
-          </mesh>
-        )}
+        {/* {timeOfDay !== 'night' && ( */}
+        {/*   <mesh position={[1.3, 0.7, -0.26]}> */}
+        {/*     <circleGeometry args={[0.28, 24]} /> */}
+        {/*     <meshBasicMaterial color={'#ffe9b5'} transparent opacity={0.9} /> */}
+        {/*   </mesh> */}
+        {/* )} */}
+        {/* {timeOfDay === 'night' && ( */}
+        {/*   <mesh position={[-0.9, 0.5, -0.26]}> */}
+        {/*     <circleGeometry args={[0.22, 24]} /> */}
+        {/*     <meshBasicMaterial color={'#e2ecf7'} transparent opacity={0.8} /> */}
+        {/*   </mesh> */}
+        {/* )} */}
 
         {/* Silhouette strip */}
         <group position={[0, -0.2, -0.23]}>
@@ -458,6 +459,11 @@ export default function SceneHome({
               </mesh>
             );
           })}
+        </group>
+
+        {/* Clouds (placed between sky and rain layers) */}
+        <group position={[0, 0.2, 0]} scale={0.24}>
+          <SpriteClouds visible flattenZ={-0.15} />
         </group>
 
         {/* Localized exterior rain (only when rainy) */}
