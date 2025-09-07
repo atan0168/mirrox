@@ -36,6 +36,13 @@ export interface HealthSnapshot {
   platform: HealthPlatform;
   steps: number; // total steps for date
   sleepMinutes: number; // last-night sleep minutes
+  // Additional wellness metrics (nullable if unavailable)
+  hrvMs?: number | null; // Heart Rate Variability (ms)
+  restingHeartRateBpm?: number | null; // Resting Heart Rate (bpm)
+  activeEnergyKcal?: number | null; // Active energy burned (kcal)
+  mindfulMinutes?: number | null; // Total minutes of mindful sessions today
+  respiratoryRateBrpm?: number | null; // Respiratory rate (breaths/min)
+  workoutsCount?: number | null; // Number of workouts today
 }
 
 export interface HealthHistory {

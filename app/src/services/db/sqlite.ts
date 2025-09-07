@@ -75,10 +75,34 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           timestamp TEXT NOT NULL,
           platform TEXT NOT NULL,
           steps INTEGER NOT NULL,
-          sleepMinutes INTEGER NOT NULL
+          sleepMinutes INTEGER NOT NULL,
+          hrvMs REAL NULL,
+          restingHeartRateBpm REAL NULL,
+          activeEnergyKcal REAL NULL,
+          mindfulMinutes REAL NULL,
+          respiratoryRateBrpm REAL NULL,
+          workoutsCount INTEGER NULL
         );
         CREATE INDEX IF NOT EXISTS idx_health_snapshots_date ON health_snapshots(date);
       `);
+
+      // Backfill columns in case table already existed without new fields
+      // Each ALTER is attempted individually and ignored if the column exists
+      const alterStatements = [
+        "ALTER TABLE health_snapshots ADD COLUMN hrvMs REAL NULL;",
+        "ALTER TABLE health_snapshots ADD COLUMN restingHeartRateBpm REAL NULL;",
+        "ALTER TABLE health_snapshots ADD COLUMN activeEnergyKcal REAL NULL;",
+        "ALTER TABLE health_snapshots ADD COLUMN mindfulMinutes REAL NULL;",
+        "ALTER TABLE health_snapshots ADD COLUMN respiratoryRateBrpm REAL NULL;",
+        "ALTER TABLE health_snapshots ADD COLUMN workoutsCount INTEGER NULL;",
+      ];
+      for (const stmt of alterStatements) {
+        try {
+          await db.execAsync(stmt);
+        } catch {
+          // ignore if column exists or operation unsupported
+        }
+      }
 
       return db;
     })();

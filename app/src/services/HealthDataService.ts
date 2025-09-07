@@ -37,6 +37,22 @@ export class HealthDataService {
     const dayStart = startOfDay(now);
     const steps = await healthProvider.getDailySteps(dayStart, now);
     const sleepMinutes = await healthProvider.getLastNightSleepMinutes(now);
+    // Additional wellness metrics (best-effort; may return null if unavailable)
+    const [
+      hrvMs,
+      restingHeartRateBpm,
+      activeEnergyKcal,
+      mindfulMinutes,
+      respiratoryRateBrpm,
+      workoutsCount,
+    ] = await Promise.all([
+      healthProvider.getDailyHRVMs(dayStart, now),
+      healthProvider.getDailyRestingHeartRateBpm(dayStart, now),
+      healthProvider.getDailyActiveEnergyKcal(dayStart, now),
+      healthProvider.getDailyMindfulMinutes(dayStart, now),
+      healthProvider.getDailyRespiratoryRateBrpm(dayStart, now),
+      healthProvider.getDailyWorkoutsCount(dayStart, now),
+    ]);
 
     const snapshot: HealthSnapshot = {
       date: yyyymmddLocal(now),
@@ -44,6 +60,12 @@ export class HealthDataService {
       platform,
       steps,
       sleepMinutes,
+      hrvMs: hrvMs ?? null,
+      restingHeartRateBpm: restingHeartRateBpm ?? null,
+      activeEnergyKcal: activeEnergyKcal ?? null,
+      mindfulMinutes: mindfulMinutes ?? null,
+      respiratoryRateBrpm: respiratoryRateBrpm ?? null,
+      workoutsCount: workoutsCount ?? null,
     };
 
     // Store latest

@@ -8,6 +8,13 @@ import { lastNightWindow } from '../../../utils/datetimeUtils';
 const READ_TYPES = [
   'HKQuantityTypeIdentifierStepCount' as const,
   'HKCategoryTypeIdentifierSleepAnalysis' as const,
+  'HKQuantityTypeIdentifierHeartRateVariabilitySDNN' as const,
+  'HKQuantityTypeIdentifierRestingHeartRate' as const,
+  'HKQuantityTypeIdentifierActiveEnergyBurned' as const,
+  'HKCategoryTypeIdentifierMindfulSession' as const,
+  'HKQuantityTypeIdentifierRespiratoryRate' as const,
+  // Workouts are handled via workout queries and do not require explicit read type here,
+  // but some HealthKit versions need HKWorkoutType authorization implicitly.
 ];
 
 export class HealthKitProvider implements HealthProvider {
@@ -88,6 +95,121 @@ export class HealthKitProvider implements HealthProvider {
       return Math.round(minutes);
     } catch {}
     return 0;
+  }
+
+  async getDailyHRVMs(start: Date, end: Date): Promise<number | null> {
+    if (!(await this.isAvailable())) return null;
+    try {
+      const samples = await HealthKit.queryQuantitySamples(
+        'HKQuantityTypeIdentifierHeartRateVariabilitySDNN',
+        {
+          ascending: false,
+          filter: { startDate: start, endDate: end },
+          unit: 'ms',
+        }
+      );
+      if (!samples?.length) return null;
+      const avg = samples.reduce((s: number, x: any) => s + (x?.quantity || 0), 0) / samples.length;
+      return Math.round(avg * 10) / 10;
+    } catch {}
+    return null;
+  }
+
+  async getDailyRestingHeartRateBpm(
+    start: Date,
+    end: Date
+  ): Promise<number | null> {
+    if (!(await this.isAvailable())) return null;
+    try {
+      const samples = await HealthKit.queryQuantitySamples(
+        'HKQuantityTypeIdentifierRestingHeartRate',
+        {
+          ascending: false,
+          filter: { startDate: start, endDate: end },
+          unit: 'count/min',
+        }
+      );
+      if (!samples?.length) return null;
+      const avg = samples.reduce((s: number, x: any) => s + (x?.quantity || 0), 0) / samples.length;
+      return Math.round(avg);
+    } catch {}
+    return null;
+  }
+
+  async getDailyActiveEnergyKcal(start: Date, end: Date): Promise<number | null> {
+    if (!(await this.isAvailable())) return null;
+    try {
+      const samples = await HealthKit.queryQuantitySamples(
+        'HKQuantityTypeIdentifierActiveEnergyBurned',
+        {
+          ascending: false,
+          filter: { startDate: start, endDate: end },
+          unit: 'kcal',
+        }
+      );
+      if (!samples?.length) return 0;
+      const total = samples.reduce((s: number, x: any) => s + (x?.quantity || 0), 0);
+      return Math.round(total);
+    } catch {}
+    return null;
+  }
+
+  async getDailyMindfulMinutes(start: Date, end: Date): Promise<number | null> {
+    if (!(await this.isAvailable())) return null;
+    try {
+      const res = await HealthKit.queryCategorySamples(
+        'HKCategoryTypeIdentifierMindfulSession',
+        { filter: { startDate: start, endDate: end } }
+      );
+      if (!res?.length) return 0;
+      const minutes = res.reduce((sum: number, s: any) => {
+        const st = s?.startDate ? new Date(s.startDate).getTime() : 0;
+        const et = s?.endDate ? new Date(s.endDate).getTime() : 0;
+        return sum + Math.max(0, et - st) / 60000;
+      }, 0);
+      return Math.round(minutes);
+    } catch {}
+    return null;
+  }
+
+  async getDailyRespiratoryRateBrpm(
+    start: Date,
+    end: Date
+  ): Promise<number | null> {
+    if (!(await this.isAvailable())) return null;
+    try {
+      const samples = await HealthKit.queryQuantitySamples(
+        'HKQuantityTypeIdentifierRespiratoryRate',
+        {
+          ascending: false,
+          filter: { startDate: start, endDate: end },
+          unit: 'count/min',
+        }
+      );
+      if (!samples?.length) return null;
+      const avg = samples.reduce((s: number, x: any) => s + (x?.quantity || 0), 0) / samples.length;
+      return Math.round(avg * 10) / 10;
+    } catch {}
+    return null;
+  }
+
+  async getDailyWorkoutsCount(start: Date, end: Date): Promise<number | null> {
+    if (!(await this.isAvailable())) return null;
+    try {
+      // Some versions of the library expose a dedicated workouts query
+      const maybeQueryWorkouts: any = (HealthKit as any).queryWorkouts;
+      if (typeof maybeQueryWorkouts === 'function') {
+        const workouts = await maybeQueryWorkouts({ filter: { startDate: start, endDate: end } });
+        return (workouts || []).length;
+      }
+      // Fallback: try to query as samples if supported by the library version
+      const maybeQueryCategorySamples: any = (HealthKit as any).queryCategorySamples;
+      if (typeof maybeQueryCategorySamples === 'function') {
+        const workouts = await maybeQueryCategorySamples('HKWorkoutType', { filter: { startDate: start, endDate: end } });
+        return (workouts || []).length;
+      }
+    } catch {}
+    return null;
   }
 }
 
