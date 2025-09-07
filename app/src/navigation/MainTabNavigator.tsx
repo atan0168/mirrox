@@ -22,6 +22,8 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const MainTabNavigator: React.FC = () => {
   return (
     <Tab.Navigator
+      detachInactiveScreens={false}
+      backBehavior="initialRoute"
       tabBar={props => <CustomTabBar {...props} />}
       screenOptions={({ navigation }) => ({
         headerShown: true,

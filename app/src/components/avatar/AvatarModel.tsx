@@ -5,7 +5,8 @@ import { useGLTF } from '@react-three/drei/native';
 import * as THREE from 'three';
 import { GLBAnimationLoader } from '../../utils/GLBAnimationLoader';
 import { assetPreloader } from '../../services/AssetPreloader';
-import { IDLE_ANIMATIONS } from '../../constants';
+import { IDLE_ANIMATIONS, AVATAR_DEBUG } from '../../constants';
+import { buildBoneRemapper } from '../../utils/ThreeUtils';
 
 interface AvatarModelProps {
   url: string;
@@ -229,9 +230,11 @@ export function AvatarModel({
     const availableIdles = getAvailableIdleAnimations();
     if (availableIdles.length > 1) {
       setCurrentIdleIndex(prev => (prev + 1) % availableIdles.length);
-      console.log(
-        `Cycling to next idle animation. New index: ${(currentIdleIndex + 1) % availableIdles.length}`
-      );
+      if (AVATAR_DEBUG) {
+        console.log(
+          `Cycling to next idle animation. New index: ${(currentIdleIndex + 1) % availableIdles.length}`
+        );
+      }
     }
   };
 
@@ -241,12 +244,14 @@ export function AvatarModel({
     transitionDuration: number = 0.5
   ) => {
     if (!headMesh || !headMesh.morphTargetInfluences) {
-      console.log('❌ No morph targets available for facial expressions');
-      console.log('Head mesh:', headMesh ? 'found' : 'not found');
-      console.log(
-        'Morph target influences:',
-        headMesh?.morphTargetInfluences ? 'found' : 'not found'
-      );
+      if (AVATAR_DEBUG) {
+        console.log('❌ No morph targets available for facial expressions');
+        console.log('Head mesh:', headMesh ? 'found' : 'not found');
+        console.log(
+          'Morph target influences:',
+          headMesh?.morphTargetInfluences ? 'found' : 'not found'
+        );
+      }
       return;
     }
 
@@ -256,11 +261,13 @@ export function AvatarModel({
       return;
     }
 
-    console.log(`🎭 Applying facial expression: ${expression}`);
-    console.log(
-      `📊 Available morph targets (${Object.keys(morphTargetDictionary).length}):`,
-      Object.keys(morphTargetDictionary)
-    );
+    if (AVATAR_DEBUG) {
+      console.log(`🎭 Applying facial expression: ${expression}`);
+      console.log(
+        `📊 Available morph targets (${Object.keys(morphTargetDictionary).length}):`,
+        Object.keys(morphTargetDictionary)
+      );
+    }
 
     // Store current morph target values for smooth transition
     const currentValues = [...headMesh.morphTargetInfluences];
@@ -273,7 +280,9 @@ export function AvatarModel({
       return;
     }
 
-    console.log(`🎯 Expression data for "${expression}":`, expressionData);
+    if (AVATAR_DEBUG) {
+      console.log(`🎯 Expression data for "${expression}":`, expressionData);
+    }
 
     // Check which morph targets from the expression are actually available
     const availableMorphs: string[] = [];
@@ -287,9 +296,14 @@ export function AvatarModel({
       }
     });
 
-    console.log(`✅ Available morph targets for expression:`, availableMorphs);
-    if (missingMorphs.length > 0) {
-      console.log(`❌ Missing morph targets:`, missingMorphs);
+    if (AVATAR_DEBUG) {
+      console.log(
+        `✅ Available morph targets for expression:`,
+        availableMorphs
+      );
+      if (missingMorphs.length > 0) {
+        console.log(`❌ Missing morph targets:`, missingMorphs);
+      }
     }
 
     if (availableMorphs.length === 0) {
@@ -303,50 +317,40 @@ export function AvatarModel({
     const startTime = Date.now();
     const duration = transitionDuration * 1000; // Convert to milliseconds
 
+    // Optimized single-pass transition: compute target array once then lerp all indices
+    const targetValues = new Array(headMesh.morphTargetInfluences.length).fill(
+      0
+    );
+    let appliedMorphCount = 0;
+    Object.entries(expressionData).forEach(([morphTarget, targetValue]) => {
+      const idx = morphTargetDictionary[morphTarget];
+      if (idx !== undefined) {
+        targetValues[idx] = targetValue;
+        appliedMorphCount++;
+      }
+    });
+
     const animateTransition = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-
-      // Use easeInOutCubic for smooth transition
       const easeProgress =
         progress < 0.5
           ? 4 * progress * progress * progress
           : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
-      // Reset all morph targets and interpolate to new values
       for (let i = 0; i < headMesh.morphTargetInfluences!.length; i++) {
         const currentValue = currentValues[i] || 0;
-        headMesh.morphTargetInfluences![i] = currentValue * (1 - easeProgress);
+        const targetValue = targetValues[i];
+        headMesh.morphTargetInfluences![i] =
+          currentValue + (targetValue - currentValue) * easeProgress;
       }
 
-      // Apply the selected expression with interpolation
-      let appliedCount = 0;
-      Object.entries(expressionData).forEach(([morphTarget, targetValue]) => {
-        const index = morphTargetDictionary[morphTarget];
-        if (index !== undefined && headMesh.morphTargetInfluences) {
-          const currentValue = currentValues[index] || 0;
-          const interpolatedValue =
-            currentValue + (targetValue - currentValue) * easeProgress;
-          headMesh.morphTargetInfluences[index] = interpolatedValue;
-          appliedCount++;
-
-          if (progress === 1) {
-            console.log(
-              `🔧 Applied ${morphTarget}: ${interpolatedValue.toFixed(3)} (target: ${targetValue})`
-            );
-          }
-        }
-      });
-
-      // Continue animation if not complete
       if (progress < 1) {
         requestAnimationFrame(animateTransition);
-      } else {
+      } else if (AVATAR_DEBUG) {
         console.log(
-          `✅ Applied facial expression: ${expression} (${appliedCount}/${Object.keys(expressionData).length} morph targets)`
+          `✅ Applied facial expression: ${expression} (${appliedMorphCount}/${Object.keys(expressionData).length} morph targets)`
         );
-
-        // Log current state of all morph targets for debugging
         console.log('🔍 Current morph target state:');
         Object.entries(morphTargetDictionary).forEach(([name, index]) => {
           const value = headMesh.morphTargetInfluences![index];
@@ -364,10 +368,9 @@ export function AvatarModel({
   // Function to find head mesh with morph targets
   const findHeadMesh = (scene: THREE.Group) => {
     let foundHeadMesh: THREE.SkinnedMesh | null = null;
-
-    console.log('🔍 Searching for head mesh with morph targets...');
-
-    // First, let's log ALL meshes in the scene for debugging
+    let fallbackMesh: THREE.SkinnedMesh | null =
+      null as THREE.SkinnedMesh | null;
+    let maxMorphTargets = 0;
     const allMeshes: Array<{
       name: string;
       type: string;
@@ -375,427 +378,277 @@ export function AvatarModel({
       material?: string;
     }> = [];
 
+    if (AVATAR_DEBUG)
+      console.log('🔍 Single-pass search for head mesh + diagnostics');
+
     scene.traverse(child => {
-      if (child instanceof THREE.SkinnedMesh) {
-        const morphTargetCount = child.morphTargetInfluences?.length || 0;
-        const materialName =
-          child.material?.name ||
-          (Array.isArray(child.material)
-            ? child.material.map(m => m.name).join(', ')
-            : 'unknown');
+      const isSkinned = child instanceof THREE.SkinnedMesh;
+      const isMesh = child instanceof THREE.Mesh;
+      if (!isSkinned && !isMesh) return;
+
+      const morphCount = child.morphTargetInfluences?.length || 0;
+      if (morphCount > 0) {
+        const materialName = isSkinned
+          ? (() => {
+              const mat = (child as THREE.SkinnedMesh).material;
+              if (Array.isArray(mat)) {
+                return mat
+                  .map((m: THREE.Material) => m.name || 'mat')
+                  .join(', ');
+              }
+              return mat?.name || 'unknown';
+            })()
+          : (child as THREE.Mesh).material &&
+              !Array.isArray((child as THREE.Mesh).material)
+            ? ((child as THREE.Mesh).material as THREE.Material).name
+            : 'unknown';
 
         allMeshes.push({
           name: child.name,
-          type: 'SkinnedMesh',
-          morphTargets: morphTargetCount,
+          type: isSkinned ? 'SkinnedMesh' : 'Mesh',
+          morphTargets: morphCount,
           material: materialName,
         });
 
-        console.log(
-          `📦 SkinnedMesh: "${child.name}" | Material: "${materialName}" | Morph Targets: ${morphTargetCount}`
-        );
-
-        if (morphTargetCount > 0) {
+        if (AVATAR_DEBUG) {
           console.log(
-            `  🎯 Morph target dictionary:`,
-            Object.keys(child.morphTargetDictionary || {})
+            `📦 ${isSkinned ? 'SkinnedMesh' : 'Mesh'}: "${child.name}" | Morph Targets: ${morphCount}`
           );
         }
-      } else if (child instanceof THREE.Mesh) {
-        const morphTargetCount = child.morphTargetInfluences?.length || 0;
-        if (morphTargetCount > 0) {
-          allMeshes.push({
-            name: child.name,
-            type: 'Mesh',
-            morphTargets: morphTargetCount,
-            material: child.material?.name || 'unknown',
-          });
-          console.log(
-            `📦 Mesh: "${child.name}" | Material: "${child.material?.name}" | Morph Targets: ${morphTargetCount}`
-          );
+
+        if (isSkinned && morphCount > maxMorphTargets) {
+          fallbackMesh = child as THREE.SkinnedMesh;
+          maxMorphTargets = morphCount;
         }
-      }
-    });
 
-    console.log(`📊 Total meshes found: ${allMeshes.length}`);
-    console.log(
-      `📊 Meshes with morph targets: ${allMeshes.filter(m => m.morphTargets > 0).length}`
-    );
-
-    scene.traverse(child => {
-      if (child instanceof THREE.SkinnedMesh) {
-        // Look for head-related meshes that have morph targets
-        if (
-          child.morphTargetInfluences &&
-          child.morphTargetInfluences.length > 0 &&
-          (child.name.toLowerCase().includes('head') ||
-            child.name.toLowerCase().includes('face') ||
-            child.name.toLowerCase().includes('wolf3d_head') ||
-            child.material?.name?.toLowerCase().includes('head'))
-        ) {
-          foundHeadMesh = child;
-          console.log(
-            `🎭 Found head mesh: ${child.name} with ${child.morphTargetInfluences.length} morph targets`
-          );
-
-          // Log available morph targets for debugging
-          if (child.morphTargetDictionary) {
-            const availableMorphs = Object.keys(child.morphTargetDictionary);
-            console.log('📋 Available morph targets:', availableMorphs);
-            console.log(
-              `📊 Total morph targets found: ${availableMorphs.length}`
-            );
-
-            // Check for ARKit compatibility
-            const arkitMorphs = [
-              'eyeBlinkLeft',
-              'eyeLookDownLeft',
-              'eyeLookInLeft',
-              'eyeLookOutLeft',
-              'eyeLookUpLeft',
-              'eyeSquintLeft',
-              'eyeWideLeft',
-              'eyeBlinkRight',
-              'eyeLookDownRight',
-              'eyeLookInRight',
-              'eyeLookOutRight',
-              'eyeLookUpRight',
-              'eyeSquintRight',
-              'eyeWideRight',
-              'jawForward',
-              'jawLeft',
-              'jawRight',
-              'jawOpen',
-              'mouthClose',
-              'mouthFunnel',
-              'mouthPucker',
-              'mouthLeft',
-              'mouthRight',
-              'mouthSmileLeft',
-              'mouthSmileRight',
-              'mouthFrownLeft',
-              'mouthFrownRight',
-              'mouthDimpleLeft',
-              'mouthDimpleRight',
-              'mouthStretchLeft',
-              'mouthStretchRight',
-              'mouthRollLower',
-              'mouthRollUpper',
-              'mouthShrugLower',
-              'mouthShrugUpper',
-              'mouthPressLeft',
-              'mouthPressRight',
-              'mouthLowerDownLeft',
-              'mouthLowerDownRight',
-              'mouthUpperUpLeft',
-              'mouthUpperUpRight',
-              'browDownLeft',
-              'browDownRight',
-              'browInnerUp',
-              'browOuterUpLeft',
-              'browOuterUpRight',
-              'cheekPuff',
-              'cheekSquintLeft',
-              'cheekSquintRight',
-              'noseSneerLeft',
-              'noseSneerRight',
-              'tongueOut',
-            ];
-
-            const presentARKitMorphs = arkitMorphs.filter(morph =>
-              availableMorphs.includes(morph)
-            );
-            const missingARKitMorphs = arkitMorphs.filter(
-              morph => !availableMorphs.includes(morph)
-            );
-            const extraMorphs = availableMorphs.filter(
-              morph => !arkitMorphs.includes(morph)
-            );
-
-            console.log(
-              `🎯 ARKit morph targets present (${presentARKitMorphs.length}/52):`,
-              presentARKitMorphs
-            );
-            console.log(
-              `❌ ARKit morph targets missing (${missingARKitMorphs.length}/52):`,
-              missingARKitMorphs
-            );
-            if (extraMorphs.length > 0) {
-              console.log(
-                `➕ Additional (non-ARKit) morph targets (${extraMorphs.length}):`,
-                extraMorphs
-              );
-            }
-
-            // Check for additional common morph targets
-            const commonExtraMorphs = [
-              'mouthOpen',
-              'mouthSmile',
-              'eyesClosed',
-              'eyesLookUp',
-              'eyesLookDown',
-            ];
-            const presentExtraMorphs = commonExtraMorphs.filter(morph =>
-              availableMorphs.includes(morph)
-            );
-            if (presentExtraMorphs.length > 0) {
-              console.log(
-                `🔧 Common additional morph targets present:`,
-                presentExtraMorphs
-              );
-            }
-
-            // Dynamically update facial expressions based on available morph targets
-            console.log(
-              '🔄 Updating facial expressions based on available morph targets...'
-            );
-
-            // Update happy expression based on available morphs
-            const happyExpression: { [key: string]: number } = {};
-            if (availableMorphs.includes('mouthSmileLeft'))
-              happyExpression.mouthSmileLeft = 0.8;
-            if (availableMorphs.includes('mouthSmileRight'))
-              happyExpression.mouthSmileRight = 0.8;
-            if (availableMorphs.includes('mouthSmile'))
-              happyExpression.mouthSmile = 0.7;
-            if (availableMorphs.includes('jawOpen'))
-              happyExpression.jawOpen = 0.1;
-            if (availableMorphs.includes('cheekSquintLeft'))
-              happyExpression.cheekSquintLeft = 0.3;
-            if (availableMorphs.includes('cheekSquintRight'))
-              happyExpression.cheekSquintRight = 0.3;
-            if (Object.keys(happyExpression).length > 0) {
-              FACIAL_EXPRESSIONS.happy = happyExpression;
-              console.log('✅ Updated happy expression:', happyExpression);
-            }
-
-            // Update sad expression
-            const sadExpression: { [key: string]: number } = {};
-            if (availableMorphs.includes('mouthFrownLeft'))
-              sadExpression.mouthFrownLeft = 0.7;
-            if (availableMorphs.includes('mouthFrownRight'))
-              sadExpression.mouthFrownRight = 0.7;
-            if (availableMorphs.includes('browDownLeft'))
-              sadExpression.browDownLeft = 0.5;
-            if (availableMorphs.includes('browDownRight'))
-              sadExpression.browDownRight = 0.5;
-            if (availableMorphs.includes('mouthLowerDownLeft'))
-              sadExpression.mouthLowerDownLeft = 0.3;
-            if (availableMorphs.includes('mouthLowerDownRight'))
-              sadExpression.mouthLowerDownRight = 0.3;
-            // Fallback for basic sad expression
-            if (
-              Object.keys(sadExpression).length === 0 &&
-              availableMorphs.includes('mouthSmile')
-            ) {
-              sadExpression.mouthSmile = -0.3;
-            }
-            if (Object.keys(sadExpression).length > 0) {
-              FACIAL_EXPRESSIONS.sad = sadExpression;
-              console.log('✅ Updated sad expression:', sadExpression);
-            }
-
-            // Update surprised expression
-            const surprisedExpression: { [key: string]: number } = {};
-            if (availableMorphs.includes('eyeWideLeft'))
-              surprisedExpression.eyeWideLeft = 0.9;
-            if (availableMorphs.includes('eyeWideRight'))
-              surprisedExpression.eyeWideRight = 0.9;
-            if (availableMorphs.includes('jawOpen'))
-              surprisedExpression.jawOpen = 0.7;
-            if (availableMorphs.includes('mouthFunnel'))
-              surprisedExpression.mouthFunnel = 0.4;
-            if (availableMorphs.includes('browInnerUp'))
-              surprisedExpression.browInnerUp = 0.6;
-            if (availableMorphs.includes('browOuterUpLeft'))
-              surprisedExpression.browOuterUpLeft = 0.5;
-            if (availableMorphs.includes('browOuterUpRight'))
-              surprisedExpression.browOuterUpRight = 0.5;
-            // Fallback
-            if (Object.keys(surprisedExpression).length === 0) {
-              if (availableMorphs.includes('mouthOpen'))
-                surprisedExpression.mouthOpen = 0.6;
-              if (availableMorphs.includes('mouthSmile'))
-                surprisedExpression.mouthSmile = 0.2;
-            }
-            if (Object.keys(surprisedExpression).length > 0) {
-              FACIAL_EXPRESSIONS.surprised = surprisedExpression;
-              console.log(
-                '✅ Updated surprised expression:',
-                surprisedExpression
-              );
-            }
-
-            // Update coughing expression
-            const coughingExpression: { [key: string]: number } = {};
-            if (availableMorphs.includes('jawOpen'))
-              coughingExpression.jawOpen = 0.5;
-            if (availableMorphs.includes('mouthOpen'))
-              coughingExpression.mouthOpen = 0.6;
-            if (availableMorphs.includes('eyeSquintLeft'))
-              coughingExpression.eyeSquintLeft = 0.4;
-            if (availableMorphs.includes('eyeSquintRight'))
-              coughingExpression.eyeSquintRight = 0.4;
-            if (availableMorphs.includes('browDownLeft'))
-              coughingExpression.browDownLeft = 0.3;
-            if (availableMorphs.includes('browDownRight'))
-              coughingExpression.browDownRight = 0.3;
-            // Fallback
-            if (Object.keys(coughingExpression).length === 0) {
-              if (availableMorphs.includes('mouthOpen'))
-                coughingExpression.mouthOpen = 0.7;
-              if (availableMorphs.includes('mouthSmile'))
-                coughingExpression.mouthSmile = -0.1;
-            }
-            if (Object.keys(coughingExpression).length > 0) {
-              FACIAL_EXPRESSIONS.coughing = coughingExpression;
-              console.log(
-                '✅ Updated coughing expression:',
-                coughingExpression
-              );
-            }
-
-            console.log(
-              '🎭 Final facial expressions configuration:',
-              FACIAL_EXPRESSIONS
-            );
-
-            // Update the test expression with the first available morph target
-            if (availableMorphs.length > 0) {
-              const testMorph = availableMorphs[0];
-              FACIAL_EXPRESSIONS.test = { [testMorph]: 0.8 };
-              console.log(`🧪 Test expression will use: ${testMorph} = 0.8`);
-            }
-
-            // Check which expression morph targets are available
-            const allExpressionMorphs = new Set<string>();
-
-            Object.values(FACIAL_EXPRESSIONS).forEach(expression => {
-              Object.keys(expression).forEach(morph =>
-                allExpressionMorphs.add(morph)
-              );
-            });
-
-            const missingMorphs = Array.from(allExpressionMorphs).filter(
-              morph => !availableMorphs.includes(morph)
-            );
-
-            const presentMorphs = Array.from(allExpressionMorphs).filter(
-              morph => availableMorphs.includes(morph)
-            );
-
-            if (presentMorphs.length > 0) {
-              console.log(
-                '✅ Present expression morph targets:',
-                presentMorphs
-              );
-            }
-
-            if (missingMorphs.length > 0) {
-              console.log(
-                '❌ Missing morph targets for expressions:',
-                missingMorphs
-              );
-            }
-
-            console.log(
-              '📊 Expression system compatibility:',
-              Math.round(
-                ((allExpressionMorphs.size - missingMorphs.length) /
-                  allExpressionMorphs.size) *
-                  100
-              ) + '%'
-            );
-
-            // Look for common patterns in morph target names
-            const patterns = {
-              mouth: availableMorphs.filter(m =>
-                m.toLowerCase().includes('mouth')
-              ),
-              eye: availableMorphs.filter(m => m.toLowerCase().includes('eye')),
-              brow: availableMorphs.filter(m =>
-                m.toLowerCase().includes('brow')
-              ),
-              jaw: availableMorphs.filter(m => m.toLowerCase().includes('jaw')),
-              smile: availableMorphs.filter(m =>
-                m.toLowerCase().includes('smile')
-              ),
-              frown: availableMorphs.filter(m =>
-                m.toLowerCase().includes('frown')
-              ),
-            };
-
-            console.log('🔍 Morph target patterns found:');
-            Object.entries(patterns).forEach(([pattern, morphs]) => {
-              if (morphs.length > 0) {
-                console.log(`  ${pattern}:`, morphs);
-              }
-            });
+        if (!foundHeadMesh && isSkinned) {
+          const nameLower = child.name.toLowerCase();
+          let matNameLower = '';
+          const matRef = (child as THREE.SkinnedMesh).material as
+            | THREE.Material
+            | THREE.Material[]
+            | undefined;
+          if (Array.isArray(matRef)) {
+            if (matRef[0]) matNameLower = matRef[0].name.toLowerCase();
+          } else if (matRef) {
+            matNameLower = matRef.name.toLowerCase();
+          }
+          if (
+            nameLower.includes('head') ||
+            nameLower.includes('face') ||
+            nameLower.includes('wolf3d_head') ||
+            matNameLower.includes('head')
+          ) {
+            foundHeadMesh = child as THREE.SkinnedMesh;
           }
         }
       }
     });
 
-    // If no head mesh found, try a more aggressive search
-    if (!foundHeadMesh) {
-      console.log(
-        '⚠️ No head-specific mesh found, searching ALL meshes with morph targets...'
-      );
-
-      let bestMesh: THREE.SkinnedMesh | null = null;
-      let maxMorphTargets = 0;
-
-      scene.traverse(child => {
-        if (
-          child instanceof THREE.SkinnedMesh &&
-          child.morphTargetInfluences &&
-          child.morphTargetInfluences.length > 0
-        ) {
-          console.log(
-            `🔍 Alternative mesh: "${child.name}" with ${child.morphTargetInfluences.length} morph targets`
-          );
-
-          if (child.morphTargetInfluences.length > maxMorphTargets) {
-            bestMesh = child;
-            maxMorphTargets = child.morphTargetInfluences.length;
-          }
-        }
-      });
-
-      if (bestMesh) {
+    if (!foundHeadMesh && fallbackMesh) {
+      foundHeadMesh = fallbackMesh;
+      if (AVATAR_DEBUG)
         console.log(
-          `🎯 Using mesh with most morph targets: "${(bestMesh as THREE.SkinnedMesh).name}" (${maxMorphTargets} targets)`
+          `🎯 Using fallback mesh with most morph targets: ${(fallbackMesh && fallbackMesh.name) || 'unknown'}`
         );
-        foundHeadMesh = bestMesh as THREE.SkinnedMesh;
-
-        // Log the morph targets for this mesh
-        const mesh = bestMesh as THREE.SkinnedMesh;
-        if (mesh.morphTargetDictionary) {
-          console.log(
-            '📋 Morph targets in selected mesh:',
-            Object.keys(mesh.morphTargetDictionary)
-          );
-        }
-      }
     }
 
-    // Add avatar URL diagnostics
-    console.log('🔗 Avatar URL analysis:');
-    console.log(`  URL: ${url}`);
-    console.log(`  File extension: ${url.split('.').pop()}`);
-    console.log(
-      `  Is Ready Player Me URL: ${url.includes('readyplayerme') || url.includes('rpm')}`
-    );
+    if (AVATAR_DEBUG) {
+      console.log(`📊 Total meshes traversed: ${allMeshes.length}`);
+      const withMorphs = allMeshes.filter(m => m.morphTargets > 0).length;
+      console.log(`📊 Meshes with morph targets: ${withMorphs}`);
+    }
+
+    if (foundHeadMesh && foundHeadMesh.morphTargetDictionary) {
+      const availableMorphs = Object.keys(foundHeadMesh.morphTargetDictionary);
+      console.log('📋 Available morph targets:', availableMorphs);
+
+      // Precompute set for O(1) lookups
+      const morphSet = new Set(availableMorphs);
+
+      // ARKit reference list
+      const arkitMorphs = [
+        'eyeBlinkLeft',
+        'eyeLookDownLeft',
+        'eyeLookInLeft',
+        'eyeLookOutLeft',
+        'eyeLookUpLeft',
+        'eyeSquintLeft',
+        'eyeWideLeft',
+        'eyeBlinkRight',
+        'eyeLookDownRight',
+        'eyeLookInRight',
+        'eyeLookOutRight',
+        'eyeLookUpRight',
+        'eyeSquintRight',
+        'eyeWideRight',
+        'jawForward',
+        'jawLeft',
+        'jawRight',
+        'jawOpen',
+        'mouthClose',
+        'mouthFunnel',
+        'mouthPucker',
+        'mouthLeft',
+        'mouthRight',
+        'mouthSmileLeft',
+        'mouthSmileRight',
+        'mouthFrownLeft',
+        'mouthFrownRight',
+        'mouthDimpleLeft',
+        'mouthDimpleRight',
+        'mouthStretchLeft',
+        'mouthStretchRight',
+        'mouthRollLower',
+        'mouthRollUpper',
+        'mouthShrugLower',
+        'mouthShrugUpper',
+        'mouthPressLeft',
+        'mouthPressRight',
+        'mouthLowerDownLeft',
+        'mouthLowerDownRight',
+        'mouthUpperUpLeft',
+        'mouthUpperUpRight',
+        'browDownLeft',
+        'browDownRight',
+        'browInnerUp',
+        'browOuterUpLeft',
+        'browOuterUpRight',
+        'cheekPuff',
+        'cheekSquintLeft',
+        'cheekSquintRight',
+        'noseSneerLeft',
+        'noseSneerRight',
+        'tongueOut',
+      ];
+
+      const presentARKitMorphs: string[] = [];
+      const missingARKitMorphs: string[] = [];
+      for (const m of arkitMorphs)
+        (morphSet.has(m) ? presentARKitMorphs : missingARKitMorphs).push(m);
+      const extraMorphs = availableMorphs.filter(m => !arkitMorphs.includes(m));
+
+      console.log(
+        `🎯 ARKit morph targets present (${presentARKitMorphs.length}/52)`
+      );
+      console.log(
+        `❌ ARKit morph targets missing (${missingARKitMorphs.length}/52)`
+      );
+      if (extraMorphs.length)
+        console.log(
+          `➕ Additional (non-ARKit) morph targets (${extraMorphs.length})`
+        );
+
+      // Build / adjust dynamic expressions with single pass categorization
+      const dynamicExpressions: { [key: string]: { [key: string]: number } } = {
+        happy: {},
+        sad: {},
+        surprised: {},
+        coughing: {},
+      };
+      for (const m of morphSet) {
+        if (m === 'mouthSmileLeft')
+          dynamicExpressions.happy.mouthSmileLeft = 0.8;
+        else if (m === 'mouthSmileRight')
+          dynamicExpressions.happy.mouthSmileRight = 0.8;
+        else if (m === 'mouthSmile') dynamicExpressions.happy.mouthSmile = 0.7;
+        else if (m === 'jawOpen') {
+          dynamicExpressions.happy.jawOpen = 0.1;
+          dynamicExpressions.surprised.jawOpen = 0.7;
+          dynamicExpressions.coughing.jawOpen = 0.5;
+        } else if (m === 'cheekSquintLeft')
+          dynamicExpressions.happy.cheekSquintLeft = 0.3;
+        else if (m === 'cheekSquintRight')
+          dynamicExpressions.happy.cheekSquintRight = 0.3;
+        else if (m === 'mouthFrownLeft') {
+          dynamicExpressions.sad.mouthFrownLeft = 0.7;
+        } else if (m === 'mouthFrownRight') {
+          dynamicExpressions.sad.mouthFrownRight = 0.7;
+        } else if (m === 'browDownLeft') {
+          dynamicExpressions.sad.browDownLeft = 0.5;
+          dynamicExpressions.coughing.browDownLeft = 0.3;
+        } else if (m === 'browDownRight') {
+          dynamicExpressions.sad.browDownRight = 0.5;
+          dynamicExpressions.coughing.browDownRight = 0.3;
+        } else if (m === 'mouthLowerDownLeft')
+          dynamicExpressions.sad.mouthLowerDownLeft = 0.3;
+        else if (m === 'mouthLowerDownRight')
+          dynamicExpressions.sad.mouthLowerDownRight = 0.3;
+        else if (m === 'eyeWideLeft')
+          dynamicExpressions.surprised.eyeWideLeft = 0.9;
+        else if (m === 'eyeWideRight')
+          dynamicExpressions.surprised.eyeWideRight = 0.9;
+        else if (m === 'mouthFunnel')
+          dynamicExpressions.surprised.mouthFunnel = 0.4;
+        else if (m === 'browInnerUp')
+          dynamicExpressions.surprised.browInnerUp = 0.6;
+        else if (m === 'browOuterUpLeft')
+          dynamicExpressions.surprised.browOuterUpLeft = 0.5;
+        else if (m === 'browOuterUpRight')
+          dynamicExpressions.surprised.browOuterUpRight = 0.5;
+        else if (m === 'mouthOpen') {
+          dynamicExpressions.coughing.mouthOpen = 0.6;
+          if (!dynamicExpressions.surprised.jawOpen)
+            dynamicExpressions.surprised.mouthOpen = 0.6;
+        } else if (m === 'eyeSquintLeft')
+          dynamicExpressions.coughing.eyeSquintLeft = 0.4;
+        else if (m === 'eyeSquintRight')
+          dynamicExpressions.coughing.eyeSquintRight = 0.4;
+        else if (m === 'mouthSmile') {
+          if (
+            !dynamicExpressions.sad.mouthFrownLeft &&
+            !dynamicExpressions.sad.mouthFrownRight
+          )
+            dynamicExpressions.sad.mouthSmile = -0.3;
+        }
+      }
+
+      // Apply generated expressions if non-empty
+      for (const key of Object.keys(dynamicExpressions)) {
+        if (Object.keys(dynamicExpressions[key]).length > 0) {
+          FACIAL_EXPRESSIONS[key] = dynamicExpressions[key];
+          console.log(`✅ Updated ${key} expression:`, dynamicExpressions[key]);
+        }
+      }
+
+      // Test expression
+      if (availableMorphs.length)
+        FACIAL_EXPRESSIONS.test = { [availableMorphs[0]]: 0.8 };
+
+      // Coverage stats
+      const allExpressionMorphs = new Set<string>();
+      Object.values(FACIAL_EXPRESSIONS).forEach(expr =>
+        Object.keys(expr).forEach(m => allExpressionMorphs.add(m))
+      );
+      let presentCount = 0;
+      for (const m of allExpressionMorphs) if (morphSet.has(m)) presentCount++;
+      console.log(
+        `📊 Expression system compatibility: ${Math.round((presentCount / allExpressionMorphs.size) * 100)}%`
+      );
+
+      // Simple pattern grouping single pass
+      const patterns = {
+        mouth: [] as string[],
+        eye: [] as string[],
+        brow: [] as string[],
+        jaw: [] as string[],
+        smile: [] as string[],
+        frown: [] as string[],
+      };
+      for (const m of morphSet) {
+        const low = m.toLowerCase();
+        if (low.includes('mouth')) patterns.mouth.push(m);
+        if (low.includes('eye')) patterns.eye.push(m);
+        if (low.includes('brow')) patterns.brow.push(m);
+        if (low.includes('jaw')) patterns.jaw.push(m);
+        if (low.includes('smile')) patterns.smile.push(m);
+        if (low.includes('frown')) patterns.frown.push(m);
+      }
+      console.log('🔍 Morph target patterns found:', patterns);
+    }
 
     if (!foundHeadMesh) {
-      console.error('❌ No mesh with morph targets found in the entire scene!');
-      console.log('💡 This could mean:');
-      console.log("  - The avatar wasn't exported with facial blend shapes");
-      console.log("  - The file format doesn't support morph targets");
-      console.log('  - The avatar is an older version without ARKit support');
-      console.log(
-        '  - The morph targets are on a different mesh than expected'
-      );
+      console.error('❌ No mesh with morph targets found');
     }
 
     return foundHeadMesh;
@@ -1083,306 +936,71 @@ export function AvatarModel({
 
       if (avatarSkeleton && avatarSkinnedMesh) {
         const skeleton = avatarSkeleton as THREE.Skeleton;
-        console.log(
-          'Avatar skeleton bones:',
-          skeleton.bones.map((bone: THREE.Bone) => bone.name)
-        );
+        const remapper = buildBoneRemapper(skeleton);
 
-        glbAnimations.forEach((clip: THREE.AnimationClip, index: number) => {
+        for (const [index, clip] of glbAnimations.entries()) {
           try {
             console.log(`Setting up GLB animation ${index}: ${clip.name}`);
 
-            const filteredTracks = clip.tracks.filter(track => {
-              const trackParts = track.name.split('.');
-              if (trackParts.length >= 2) {
-                const boneName = trackParts[0];
+            const clipNameLower = clip.name.toLowerCase();
+            const keptTracks: THREE.KeyframeTrack[] = [];
 
-                const findMatchingBone = (animationBoneName: string) => {
-                  let matchedBone = skeleton.bones.find(
-                    (bone: THREE.Bone) => bone.name === animationBoneName
-                  );
+            for (const track of clip.tracks) {
+              // fast reject: must be "bone.property"
+              const dot = track.name.indexOf('.');
+              if (dot <= 0) continue;
 
-                  if (matchedBone) return matchedBone;
+              const boneName = track.name.slice(0, dot);
+              const property = track.name.slice(dot + 1);
 
-                  // Common animation bone name to ReadyPlayerMe mappings
-                  const boneMapping: { [key: string]: string } = {
-                    // Core body bones
-                    mixamorigHips: 'Hips',
-                    mixamorigSpine: 'Spine',
-                    mixamorigSpine1: 'Spine1',
-                    mixamorigSpine2: 'Spine2',
-                    mixamorigNeck: 'Neck',
-                    mixamorigHead: 'Head',
-                    mixamorigHeadTop_End: 'HeadTop_End',
+              // 1) drop position/scale early
+              if (remapper.propDeny.has(property)) continue;
 
-                    // Left arm bones
-                    mixamorigLeftShoulder: 'LeftShoulder',
-                    mixamorigLeftArm: 'LeftUpperArm',
-                    mixamorigLeftForeArm: 'LeftLowerArm',
-                    mixamorigLeftHand: 'LeftHand',
+              // 2) drop toes early
+              if (remapper.toeRegex.test(boneName)) continue;
 
-                    // Left hand finger bones
-                    mixamorigLeftHandThumb1: 'LeftHandThumb1',
-                    mixamorigLeftHandThumb2: 'LeftHandThumb2',
-                    mixamorigLeftHandThumb3: 'LeftHandThumb3',
-                    mixamorigLeftHandThumb4: 'LeftHandThumb4',
-                    mixamorigLeftHandIndex1: 'LeftHandIndex1',
-                    mixamorigLeftHandIndex2: 'LeftHandIndex2',
-                    mixamorigLeftHandIndex3: 'LeftHandIndex3',
-                    mixamorigLeftHandIndex4: 'LeftHandIndex4',
-                    mixamorigLeftHandMiddle1: 'LeftHandMiddle1',
-                    mixamorigLeftHandMiddle2: 'LeftHandMiddle2',
-                    mixamorigLeftHandMiddle3: 'LeftHandMiddle3',
-                    mixamorigLeftHandMiddle4: 'LeftHandMiddle4',
-                    mixamorigLeftHandRing1: 'LeftHandRing1',
-                    mixamorigLeftHandRing2: 'LeftHandRing2',
-                    mixamorigLeftHandRing3: 'LeftHandRing3',
-                    mixamorigLeftHandRing4: 'LeftHandRing4',
-                    mixamorigLeftHandPinky1: 'LeftHandPinky1',
-                    mixamorigLeftHandPinky2: 'LeftHandPinky2',
-                    mixamorigLeftHandPinky3: 'LeftHandPinky3',
-                    mixamorigLeftHandPinky4: 'LeftHandPinky4',
+              // 3) find/resolve bone and remap once
+              const matched = remapper.remap(boneName);
+              if (!matched) continue;
 
-                    // Right arm bones
-                    mixamorigRightShoulder: 'RightShoulder',
-                    mixamorigRightArm: 'RightUpperArm',
-                    mixamorigRightForeArm: 'RightLowerArm',
-                    mixamorigRightHand: 'RightHand',
-
-                    // Right hand finger bones
-                    mixamorigRightHandThumb1: 'RightHandThumb1',
-                    mixamorigRightHandThumb2: 'RightHandThumb2',
-                    mixamorigRightHandThumb3: 'RightHandThumb3',
-                    mixamorigRightHandThumb4: 'RightHandThumb4',
-                    mixamorigRightHandIndex1: 'RightHandIndex1',
-                    mixamorigRightHandIndex2: 'RightHandIndex2',
-                    mixamorigRightHandIndex3: 'RightHandIndex3',
-                    mixamorigRightHandIndex4: 'RightHandIndex4',
-                    mixamorigRightHandMiddle1: 'RightHandMiddle1',
-                    mixamorigRightHandMiddle2: 'RightHandMiddle2',
-                    mixamorigRightHandMiddle3: 'RightHandMiddle3',
-                    mixamorigRightHandMiddle4: 'RightHandMiddle4',
-                    mixamorigRightHandRing1: 'RightHandRing1',
-                    mixamorigRightHandRing2: 'RightHandRing2',
-                    mixamorigRightHandRing3: 'RightHandRing3',
-                    mixamorigRightHandRing4: 'RightHandRing4',
-                    mixamorigRightHandPinky1: 'RightHandPinky1',
-                    mixamorigRightHandPinky2: 'RightHandPinky2',
-                    mixamorigRightHandPinky3: 'RightHandPinky3',
-                    mixamorigRightHandPinky4: 'RightHandPinky4',
-
-                    // Left leg bones
-                    mixamorigLeftUpLeg: 'LeftUpperLeg',
-                    mixamorigLeftLeg: 'LeftLowerLeg',
-                    mixamorigLeftFoot: 'LeftFoot',
-                    mixamorigLeftToeBase: 'LeftToeBase',
-                    mixamorigLeftToe_End: 'LeftToe_End',
-                    // Additional Mixamo toe bone variations
-                    mixamorigLeftToeBase_End: 'LeftToe_End',
-                    'mixamorig:LeftToeBase': 'LeftToeBase',
-                    'mixamorig:LeftToe_End': 'LeftToe_End',
-
-                    // Right leg bones
-                    mixamorigRightUpLeg: 'RightUpperLeg',
-                    mixamorigRightLeg: 'RightLowerLeg',
-                    mixamorigRightFoot: 'RightFoot',
-                    mixamorigRightToeBase: 'RightToeBase',
-                    mixamorigRightToe_End: 'RightToe_End',
-                    // Additional Mixamo toe bone variations
-                    mixamorigRightToeBase_End: 'RightToe_End',
-                    'mixamorig:RightToeBase': 'RightToeBase',
-                    'mixamorig:RightToe_End': 'RightToe_End',
-
-                    // Direct mappings for animations that already use ReadyPlayerMe naming
-                    Hips: 'Hips',
-                    Spine: 'Spine',
-                    Spine1: 'Spine1',
-                    Spine2: 'Spine2',
-                    Neck: 'Neck',
-                    Head: 'Head',
-                    HeadTop_End: 'HeadTop_End',
-                    LeftShoulder: 'LeftShoulder',
-                    LeftArm: 'LeftArm',
-                    LeftForeArm: 'LeftForeArm',
-                    LeftHand: 'LeftHand',
-                    LeftHandThumb1: 'LeftHandThumb1',
-                    LeftHandThumb2: 'LeftHandThumb2',
-                    LeftHandThumb3: 'LeftHandThumb3',
-                    LeftHandThumb4: 'LeftHandThumb4',
-                    LeftHandIndex1: 'LeftHandIndex1',
-                    LeftHandIndex2: 'LeftHandIndex2',
-                    LeftHandIndex3: 'LeftHandIndex3',
-                    LeftHandIndex4: 'LeftHandIndex4',
-                    LeftHandMiddle1: 'LeftHandMiddle1',
-                    LeftHandMiddle2: 'LeftHandMiddle2',
-                    LeftHandMiddle3: 'LeftHandMiddle3',
-                    LeftHandMiddle4: 'LeftHandMiddle4',
-                    LeftHandRing1: 'LeftHandRing1',
-                    LeftHandRing2: 'LeftHandRing2',
-                    LeftHandRing3: 'LeftHandRing3',
-                    LeftHandRing4: 'LeftHandRing4',
-                    LeftHandPinky1: 'LeftHandPinky1',
-                    LeftHandPinky2: 'LeftHandPinky2',
-                    LeftHandPinky3: 'LeftHandPinky3',
-                    LeftHandPinky4: 'LeftHandPinky4',
-                    RightShoulder: 'RightShoulder',
-                    RightArm: 'RightArm',
-                    RightForeArm: 'RightForeArm',
-                    RightHand: 'RightHand',
-                    RightHandThumb1: 'RightHandThumb1',
-                    RightHandThumb2: 'RightHandThumb2',
-                    RightHandThumb3: 'RightHandThumb3',
-                    RightHandThumb4: 'RightHandThumb4',
-                    RightHandIndex1: 'RightHandIndex1',
-                    RightHandIndex2: 'RightHandIndex2',
-                    RightHandIndex3: 'RightHandIndex3',
-                    RightHandIndex4: 'RightHandIndex4',
-                    RightHandMiddle1: 'RightHandMiddle1',
-                    RightHandMiddle2: 'RightHandMiddle2',
-                    RightHandMiddle3: 'RightHandMiddle3',
-                    RightHandMiddle4: 'RightHandMiddle4',
-                    RightHandRing1: 'RightHandRing1',
-                    RightHandRing2: 'RightHandRing2',
-                    RightHandRing3: 'RightHandRing3',
-                    RightHandRing4: 'RightHandRing4',
-                    RightHandPinky1: 'RightHandPinky1',
-                    RightHandPinky2: 'RightHandPinky2',
-                    RightHandPinky3: 'RightHandPinky3',
-                    RightHandPinky4: 'RightHandPinky4',
-                    // Fixed leg bone mappings to be consistent with Mixamo mappings
-                    LeftUpLeg: 'LeftUpperLeg',
-                    LeftLeg: 'LeftLowerLeg',
-                    LeftFoot: 'LeftFoot',
-                    LeftToeBase: 'LeftToeBase',
-                    LeftToe_End: 'LeftToe_End',
-                    RightUpLeg: 'RightUpperLeg',
-                    RightLeg: 'RightLowerLeg',
-                    RightFoot: 'RightFoot',
-                    RightToeBase: 'RightToeBase',
-                    RightToe_End: 'RightToe_End',
-
-                    // Alternative ReadyPlayerMe toe bone names
-                    LeftToes: 'LeftToeBase',
-                    RightToes: 'RightToeBase',
-                  };
-
-                  const mappedName = boneMapping[animationBoneName];
-                  if (mappedName) {
-                    matchedBone = skeleton.bones.find(
-                      (bone: THREE.Bone) => bone.name === mappedName
-                    );
-                  }
-
-                  if (matchedBone) return matchedBone;
-
-                  // Fallback: substring matching
-                  matchedBone = skeleton.bones.find(
-                    (bone: THREE.Bone) =>
-                      bone.name
-                        .toLowerCase()
-                        .includes(animationBoneName.toLowerCase()) ||
-                      animationBoneName
-                        .toLowerCase()
-                        .includes(bone.name.toLowerCase())
-                  );
-
-                  return matchedBone;
-                };
-
-                // FIX: Skip all toe-related bones to prevent hawk leg deformation
-                const isToeRelatedBone = boneName.toLowerCase().includes('toe');
-
-                if (isToeRelatedBone) {
-                  console.log(
-                    `FIX: Skipping toe-related bone ${boneName} to prevent toe deformation`
-                  );
-                  return false;
-                }
-
-                const matchedBone = findMatchingBone(boneName);
-                if (!matchedBone) {
-                  console.log(
-                    `Skipping track for non-existent bone: ${boneName}`
-                  );
-                  return false;
-                }
-
-                if (matchedBone.name !== boneName) {
-                  const property = trackParts[1];
-                  track.name = `${matchedBone.name}.${property}`;
-                  console.log(
-                    `Remapped bone: ${boneName} -> ${matchedBone.name}`
-                  );
-                }
-
-                return true;
-              }
-              return false;
-            });
-
-            if (filteredTracks.length > 0) {
-              console.log(
-                `Keeping ${filteredTracks.length}/${clip.tracks.length} tracks`
-              );
-
-              // Remove position and scale tracks to prevent avatar displacement
-              // Also filter out problematic toe tracks that can cause deformation
-              const safeTracks = filteredTracks.filter(track => {
-                if (
-                  track.name.includes('.position') ||
-                  track.name.includes('.scale')
-                ) {
-                  console.log(
-                    `Removing ${track.name} track to prevent avatar displacement/scaling`
-                  );
-                  return false;
-                }
-
-                // FIX: Remove ALL toe-related tracks to prevent hawk leg deformation
-                const trackName = track.name.toLowerCase();
-                const toeRelatedPatterns = ['toe', 'toebase', 'toe_end'];
-
-                const isToeRelatedTrack = toeRelatedPatterns.some(pattern =>
-                  trackName.includes(pattern.toLowerCase())
-                );
-
-                if (isToeRelatedTrack) {
-                  console.log(
-                    `FIX: Removing toe-related track ${track.name} to prevent toe deformation`
-                  );
-                  return false;
-                }
-
-                return true;
-              });
-
-              const filteredClip = new THREE.AnimationClip(
-                clip.name + '_filtered',
-                clip.duration,
-                safeTracks
-              );
-
-              const action = mixer.clipAction(filteredClip);
-              action.setLoop(THREE.LoopRepeat, Infinity);
-              action.clampWhenFinished = true;
-              action.setEffectiveWeight(1.0);
-
-              if (
-                clip.name.toLowerCase().includes('mixamo') ||
-                clip.name.toLowerCase().includes('cough')
-              ) {
-                action.setEffectiveTimeScale(1.0);
-                console.log('Applied Mixamo-specific settings to animation');
+              if (matched.name !== boneName) {
+                track.name = `${matched.name}.${property}`;
+                if (AVATAR_DEBUG)
+                  console.log(`Remapped bone: ${boneName} -> ${matched.name}`);
               }
 
-              actionsMap.set(clip.name, action);
-            } else {
-              console.warn(`No valid tracks found for animation: ${clip.name}`);
+              keptTracks.push(track);
             }
+
+            if (keptTracks.length === 0) {
+              console.warn(
+                `No valid tracks after single-pass filter: ${clip.name}`
+              );
+              continue;
+            }
+
+            const filteredClip = new THREE.AnimationClip(
+              `${clip.name}_filtered`,
+              clip.duration,
+              keptTracks
+            );
+            const action = mixer.clipAction(filteredClip);
+            action.setLoop(THREE.LoopRepeat, Infinity);
+            action.clampWhenFinished = true;
+            action.setEffectiveWeight(1.0);
+
+            if (
+              clipNameLower.includes('mixamo') ||
+              clipNameLower.includes('cough')
+            ) {
+              action.setEffectiveTimeScale(1.0);
+            }
+
+            actionsMap.set(clip.name, action);
           } catch (error) {
-            console.error(`Error setting up FBX animation ${index}:`, error);
+            console.error(`Error setting up GLB animation ${index}:`, error);
           }
-        });
+        }
 
         if (actionsMap.size > 0) {
           console.log(

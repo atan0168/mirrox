@@ -1,6 +1,7 @@
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system';
 import { GLBAnimationLoader } from '../utils/GLBAnimationLoader';
+import { useGLTF } from '@react-three/drei/native';
 import { localStorageService } from './LocalStorageService';
 
 export interface PreloadProgress {
@@ -165,6 +166,16 @@ export class AssetPreloader {
           '✅ Avatar preloaded:',
           avatarUrl ? 'cached locally' : 'not found'
         );
+        if (avatarUrl) {
+          try {
+            // Warm the GLTF cache so first render is instant
+            // @ts-ignore - preload available as static helper
+            useGLTF.preload(avatarUrl);
+            console.log('🗂️ Avatar GLB preload requested');
+          } catch (e) {
+            console.warn('⚠️ Avatar GLB preload failed (non-fatal):', e);
+          }
+        }
       } catch (error) {
         console.warn('⚠️ Avatar preload failed:', error);
       }
