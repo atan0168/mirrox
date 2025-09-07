@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions, Text } from 'react-native';
+import { View, StyleSheet, Dimensions, Text, Platform } from 'react-native';
 import { Canvas } from '@react-three/fiber/native';
 import { OrbitControls } from '@react-three/drei/native';
 import * as THREE from 'three';
@@ -581,7 +581,8 @@ function AvatarExperience({
             gl.setClearColor(lightingBackground);
             gl.outputColorSpace = THREE.SRGBColorSpace;
             gl.toneMapping = THREE.NoToneMapping;
-            gl.shadowMap.enabled = true;
+            // Disable expensive shadow maps on Android for performance/visual artifacts
+            gl.shadowMap.enabled = Platform.OS !== 'android';
             gl.shadowMap.type = THREE.PCFSoftShadowMap;
             // Center camera on avatar group to keep props placed relative visually consistent
             camera.lookAt(0, -1.6, 1.0);
@@ -603,7 +604,7 @@ function AvatarExperience({
           )}
 
           {/* Rain effect for rainy preset */}
-          {mappedLightingPreset === 'rainy' && (
+          {mappedLightingPreset === 'rainy' && scene !== 'home' && (
             <RainParticles
               enabled
               mode="streaks"
@@ -626,6 +627,7 @@ function AvatarExperience({
               opacity={0.9}
             />
           )}
+          {/* Home scene rain now handled inside SceneHome for proper layering */}
           {/* Night fills: stronger and warmer for city to illuminate avatar */}
           {mappedLightingPreset === 'night' && (
             <>
@@ -692,7 +694,13 @@ function AvatarExperience({
             />
           )}
           {scene === 'zenpark' && <SceneZenPark />}
-          {scene === 'home' && <SceneHome />}
+          {scene === 'home' && (
+            <SceneHome
+              rainy={mappedLightingPreset === 'rainy'}
+              rainIntensity={rainIntensity}
+              rainDirection={rainDirection}
+            />
+          )}
 
           {/* Environment objects and textures (data-driven) */}
           <SceneEnvironment config={environmentConfig} />

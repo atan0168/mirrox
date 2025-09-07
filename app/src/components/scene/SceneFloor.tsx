@@ -48,6 +48,7 @@ export function SceneFloor({
             t.minFilter = THREE.LinearFilter;
             t.magFilter = THREE.LinearFilter;
             t.repeat.set(repeat[0], repeat[1]);
+            t.needsUpdate = true;
             setTexture(t);
           },
           undefined,
@@ -72,6 +73,7 @@ export function SceneFloor({
     <mesh position={position} rotation={rotation} receiveShadow={receiveShadow}>
       <planeGeometry args={planeArgs} />
       <meshStandardMaterial
+        key={texture ? texture.id : 'no-texture'}
         map={texture || undefined}
         color={texture ? undefined : color}
         roughness={1}

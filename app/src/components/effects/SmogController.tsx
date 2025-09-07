@@ -2,6 +2,7 @@ import { useRef, useEffect, useMemo, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber/native';
 import * as THREE from 'three';
 import { assetPreloader } from '../../services/AssetPreloader';
+import { Asset } from 'expo-asset';
 import {
   getDefaultParticleGeometryGenerator,
   getDefaultParticleMaterialGenerator,
@@ -49,19 +50,27 @@ export function SmogController({
   useEffect(() => {
     const loadTexture = async () => {
       try {
-        // Try to get preloaded image first
+        // Try to get preloaded image first (string URI when preloaded)
         let imageUri = assetPreloader.getPreloadedImageUri('smoke-default');
 
         if (!imageUri) {
-          // Fallback to require if not preloaded
-          console.warn('Smoke texture not preloaded, using fallback');
-          imageUri = require('../../../assets/smoke-default.png');
+          console.warn('Smoke texture not preloaded, using fallback require()');
+          const moduleId = require('../../../assets/smoke-default.png');
+          const assetObj = Asset.fromModule(moduleId);
+          if (!assetObj.localUri) {
+            await assetObj.downloadAsync();
+          }
+          imageUri = assetObj.localUri || assetObj.uri;
+        }
+
+        if (typeof imageUri !== 'string') {
+          throw new Error('Smoke texture URI could not be resolved to string');
         }
 
         const loader = new THREE.TextureLoader();
         const texture = await new Promise<THREE.Texture>((resolve, reject) => {
           loader.load(
-            imageUri!,
+            imageUri,
             texture => resolve(texture),
             undefined,
             error => reject(error)
@@ -71,7 +80,7 @@ export function SmogController({
         setSmokeTexture(texture);
         console.log(
           '✅ Smoke texture loaded:',
-          imageUri!.startsWith('file://') ? 'from cache' : 'from bundle'
+          imageUri.startsWith('file://') ? 'from cache' : 'from bundle'
         );
       } catch (error) {
         console.error('❌ Failed to load smoke texture:', error);

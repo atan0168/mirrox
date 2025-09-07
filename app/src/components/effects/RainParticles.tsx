@@ -90,7 +90,8 @@ export function RainParticles({
     if (!enabled) return;
     const g = geomRef.current;
     if (!g) return;
-    const pos = g.getAttribute('position') as THREE.BufferAttribute;
+    const pos = g.getAttribute('position') as THREE.BufferAttribute | undefined;
+    if (!pos) return;
     const v = velocities.current!;
     if (mode === 'streaks') {
       for (let i = 0; i < count; i++) {

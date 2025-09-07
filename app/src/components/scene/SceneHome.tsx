@@ -1,4 +1,5 @@
 import React, { useMemo, useRef } from 'react';
+import RainParticles from '../effects/RainParticles';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber/native';
 import SceneFloor from './SceneFloor';
@@ -14,22 +15,20 @@ import { useHomeSceneStore } from '../../store/homeSceneStore';
  *  - Lamp that toggles emissive bulb + area glow shell
  *  - Kettle steam placeholder when active
  *
- * Interactivity props (lifted to parent for now):
+ * Interactivity (from store):
  *  - timeOfDay: 'morning' | 'evening' | 'day' | 'night'
- *  - windowOpen: boolean (future: add outside ambient audio bleed)
- *  - lampOn: boolean
- *  - kettleActive: boolean
- *  - applianceActivity: 0..1 (future blending of subtle motions / particles)
+ *  - windowOpen: boolean (affects glass opacity / reflection strength)
+ *  - lampOn: boolean (boosts reflection)
+ *  - kettleActive: boolean (steam)
+ *  - rainy: exterior localized rain through window
  */
 export type HomeTimeOfDay = 'morning' | 'evening' | 'day' | 'night';
 
 export interface SceneHomeProps {
-  timeOfDay?: HomeTimeOfDay;
-  windowOpen?: boolean;
-  lampOn?: boolean;
-  kettleActive?: boolean;
-  applianceActivity?: number; // reserved for future fine-grained ambient motion
   groundY?: number;
+  rainy?: boolean;
+  rainIntensity?: number; // slider 0..1
+  rainDirection?: 'vertical' | 'angled';
 }
 
 // Derived light colors per time-of-day for window glow
@@ -69,9 +68,21 @@ const DIGIT_SEGMENTS: Record<number, string[]> = {
   9: ['a', 'b', 'c', 'd', 'f', 'g'],
 };
 
+// Window + wall layout constants
+const WINDOW_WIDTH = 3.2;
+const WINDOW_HEIGHT = 1.8;
+const WINDOW_GROUP_Y_OFFSET = 3.4; // world Y = groundY + this
+const BACK_WALL_Z = -3.4;
+const FRAME_Z = -3.32;
+const GLASS_Z = -3.38; // behind frame, in front of exterior
+const PANEL_DEPTH = 0.18;
+const TOTAL_WALL_WIDTH = 10; // spans between side walls at +/-5 x
+
 export default function SceneHome({
-  applianceActivity = 0,
   groundY = -1.72,
+  rainy = false,
+  rainIntensity = 0.6,
+  rainDirection = 'vertical',
 }: SceneHomeProps) {
   const timeOfDay = useHomeSceneStore(s => s.timeOfDay);
   const windowOpen = useHomeSceneStore(s => s.windowOpen);
@@ -117,8 +128,8 @@ export default function SceneHome({
       });
     }
     // Clock minute pulse (scale bounce each new minute)
-    const now = new Date();
-    const seconds = now.getSeconds();
+    const nowTime = new Date();
+    const seconds = nowTime.getSeconds();
     if (clockRef.current) {
       const sPhase = (seconds % 60) / 60; // 0..1
       const scale = 1 + Math.sin(sPhase * Math.PI) * 0.1;
@@ -140,8 +151,50 @@ export default function SceneHome({
   const windowColor = WINDOW_LIGHT[timeOfDay];
   const ambient = AMBIENT_INTENSITY[timeOfDay];
   const { top: skyTop, bottom: skyBottom } = SKY_COLORS[timeOfDay];
+  const isNight = timeOfDay === 'night';
 
-  // Seven segment digit group factory
+  // Glass & reflection dynamics
+  const baseGlassOpacity = windowOpen ? 0.05 : isNight ? 0.14 : 0.1;
+  const glassOpacity = rainy ? baseGlassOpacity * 1.15 : baseGlassOpacity;
+  const reflectionStrength =
+    ((lampOn ? 0.2 : 0.12) + (isNight ? 0.05 : 0)) *
+    (rainy ? 0.25 : 1) *
+    (windowOpen ? 0.6 : 1);
+
+  // Rain intensity mapping (home localized rain)
+  const rI = Math.min(1, Math.max(0, rainIntensity));
+  const streakCount = Math.round(200 + rI * 1800);
+  const streakSpeed = 6 + rI * 4;
+  const windVec: [number, number] =
+    rainDirection === 'angled' ? [0.18 + 0.25 * rI, 0.03 + 0.04 * rI] : [0, 0];
+  const slantFactor = rainDirection === 'angled' ? 0.6 + 0.4 * rI : 0;
+  const lengthRange: [number, number] = [0.07 + rI * 0.05, 0.14 + rI * 0.08];
+  const dropHeight = 1.6 + rI * 0.9;
+  const groundRainY = -0.95; // relative inside rain group space
+  const contrastOpacityBase = isNight ? 0.22 : 0.15;
+  const contrastOpacity = contrastOpacityBase * (0.8 + 0.5 * rI);
+
+  // Geometry helpers
+  const leftPanelWidth = (TOTAL_WALL_WIDTH - WINDOW_WIDTH) / 2; // 3.4
+  const rightPanelWidth = leftPanelWidth;
+  const yWindowCenter = groundY + WINDOW_GROUP_Y_OFFSET;
+  const yWindowBottom = yWindowCenter - WINDOW_HEIGHT / 2; // groundY + 2.5
+  const yWindowTop = yWindowCenter + WINDOW_HEIGHT / 2; // groundY + 4.3
+  const wallHeight = 7.8; // ensures wall reaches window top
+  const wallCenterY = groundY + wallHeight / 2;
+  const sillHeight = 5.5;
+  const headerHeight = 5.5;
+
+  // Derive current time digits (evaluated per render once; minute pulse handled in frame)
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const h1 = Math.floor(hours / 10);
+  const h2 = hours % 10;
+  const m1 = Math.floor(minutes / 10);
+  const m2 = minutes % 10;
+
+  // Seven segment digit
   const Digit = ({
     value,
     position = [0, 0, 0] as [number, number, number],
@@ -153,7 +206,6 @@ export default function SceneHome({
     const segColor = '#6ee7b7';
     const offOpacity = 0.08;
     const onOpacity = 0.9;
-    // segment size base
     const w = 0.04; // segment thickness
     const l = 0.1; // segment length
     const z = 0.21; // slight in front of body
@@ -194,15 +246,6 @@ export default function SceneHome({
     );
   };
 
-  // Derive current time digits
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const h1 = Math.floor(hours / 10);
-  const h2 = hours % 10;
-  const m1 = Math.floor(minutes / 10);
-  const m2 = minutes % 10;
-
   return (
     <group>
       {/* Ambient fill responsive to time-of-day */}
@@ -210,63 +253,107 @@ export default function SceneHome({
 
       <SceneFloor textureKey="laminated_wood" />
 
-      {/* Back wall */}
-      <mesh position={[0, groundY + 1.2, -3.2]} receiveShadow castShadow>
-        <boxGeometry args={[10, 10, 0.2]} />
-        <meshStandardMaterial color={'#acc2d9'} roughness={1} metalness={0} />
-      </mesh>
-
-      {/* Side walls (subtle) */}
-      {[-1, 1].map(sign => (
-        <mesh key={sign} position={[sign * 5, groundY + 1.2, -0.4]}>
-          <boxGeometry args={[0.2, 4, 6]} />
-          <meshStandardMaterial
-            color={'#f7f9fc'}
-            roughness={1}
-            metalness={0}
-            opacity={0.95}
-            transparent
-          />
+      {/* Back wall composite panels (Option B) */}
+      <group>
+        {/* Left side panel */}
+        <mesh
+          position={[
+            -(WINDOW_WIDTH / 2 + leftPanelWidth / 2),
+            wallCenterY,
+            BACK_WALL_Z,
+          ]}
+          receiveShadow
+          castShadow
+        >
+          <boxGeometry args={[leftPanelWidth, wallHeight, PANEL_DEPTH]} />
+          <meshStandardMaterial color={'#eef2f5'} roughness={1} metalness={0} />
         </mesh>
-      ))}
-
-      {/* Window frame & glass */}
-      <group position={[0.0, groundY + 3.4, -3.11]}>
-        <mesh>
-          <boxGeometry args={[3.6, 2.2, 0.12]} />
-          <meshStandardMaterial
-            color={'#d9dde3'}
-            roughness={0.8}
-            metalness={0.1}
-          />
+        {/* Right side panel */}
+        <mesh
+          position={[
+            WINDOW_WIDTH / 2 + rightPanelWidth / 2,
+            wallCenterY,
+            BACK_WALL_Z,
+          ]}
+          receiveShadow
+          castShadow
+        >
+          <boxGeometry args={[rightPanelWidth, wallHeight, PANEL_DEPTH]} />
+          <meshStandardMaterial color={'#eef2f5'} roughness={1} metalness={0} />
         </mesh>
-        <mesh position={[0, 0, 0.08]}>
-          <planeGeometry args={[3.2, 1.8]} />
+        {/* Bottom sill panel */}
+        <mesh
+          position={[0, yWindowBottom - sillHeight / 2, BACK_WALL_Z]}
+          receiveShadow
+          castShadow
+        >
+          <boxGeometry args={[WINDOW_WIDTH, sillHeight, PANEL_DEPTH]} />
+          <meshStandardMaterial color={'#eef2f5'} roughness={1} metalness={0} />
+        </mesh>
+        {/* Top header panel */}
+        <mesh
+          position={[0, yWindowTop + headerHeight / 2, BACK_WALL_Z]}
+          receiveShadow
+          castShadow
+        >
+          <boxGeometry args={[WINDOW_WIDTH, headerHeight, PANEL_DEPTH]} />
+          <meshStandardMaterial color={'#e7ecf1'} roughness={1} metalness={0} />
+        </mesh>
+      </group>
+
+      {/* Window frame bars */}
+      <group position={[0, yWindowCenter, FRAME_Z]}>
+        {/* Top */}
+        <mesh position={[0, WINDOW_HEIGHT / 2 + 0.06, 0]}>
+          <boxGeometry args={[WINDOW_WIDTH + 0.2, 0.12, 0.12]} />
+          <meshStandardMaterial color={'#d4d9e0'} />
+        </mesh>
+        {/* Bottom */}
+        <mesh position={[0, -(WINDOW_HEIGHT / 2 + 0.06), 0]}>
+          <boxGeometry args={[WINDOW_WIDTH + 0.2, 0.12, 0.12]} />
+          <meshStandardMaterial color={'#d4d9e0'} />
+        </mesh>
+        {/* Left */}
+        <mesh position={[-(WINDOW_WIDTH / 2 + 0.06), 0, 0]}>
+          <boxGeometry args={[0.12, WINDOW_HEIGHT + 0.24, 0.12]} />
+          <meshStandardMaterial color={'#d4d9e0'} />
+        </mesh>
+        {/* Right */}
+        <mesh position={[WINDOW_WIDTH / 2 + 0.06, 0, 0]}>
+          <boxGeometry args={[0.12, WINDOW_HEIGHT + 0.24, 0.12]} />
+          <meshStandardMaterial color={'#d4d9e0'} />
+        </mesh>
+      </group>
+
+      {/* Glass */}
+      <group>
+        <mesh position={[0, yWindowCenter, GLASS_Z]} renderOrder={5}>
+          <planeGeometry args={[WINDOW_WIDTH, WINDOW_HEIGHT]} />
           <meshStandardMaterial
             color={windowColor}
-            emissive={windowColor}
-            emissiveIntensity={timeOfDay === 'night' ? 0.12 : 0.5}
-            roughness={0.85}
-            metalness={0}
             transparent
-            opacity={windowOpen ? 0.35 : 0.8}
+            opacity={glassOpacity}
+            roughness={0}
+            metalness={0}
+            depthWrite={false}
+            blending={THREE.NormalBlending}
           />
         </mesh>
-        {/* Faint reflection overlay intensifies when lamp on and window closed */}
-        <mesh position={[0, 0, 0.085]}>
-          <planeGeometry args={[3.2, 1.8]} />
+        {/* Reflection overlay (subtle, additive) */}
+        <mesh position={[0, yWindowCenter, GLASS_Z + 0.001]} renderOrder={6}>
+          <planeGeometry args={[WINDOW_WIDTH, WINDOW_HEIGHT]} />
           <meshBasicMaterial
             color={'#ffffff'}
             transparent
-            opacity={lampOn && !windowOpen ? 0.05 : 0.015}
-            blending={THREE.AdditiveBlending}
+            opacity={reflectionStrength}
             depthWrite={false}
+            blending={THREE.AdditiveBlending}
           />
         </mesh>
       </group>
 
       {/* Outside hybrid scene */}
-      <group position={[0, groundY + 3.4, -6.5]}>
+      <group position={[0, yWindowCenter, -6.5]} renderOrder={1}>
         {/* Sky gradient (two layered planes) */}
         <mesh position={[0, 0, -0.25]}>
           <planeGeometry args={[6.5, 3.6]} />
@@ -308,6 +395,37 @@ export default function SceneHome({
             );
           })}
         </group>
+
+        {/* Localized exterior rain (only when rainy) */}
+        {rainy && rI > 0 && (
+          <group position={[0, 0.05, -0.05]} renderOrder={3}>
+            {/* Contrast gradient plane behind rain */}
+            <mesh position={[0, 0.0, -0.05]} renderOrder={1}>
+              <planeGeometry args={[5.4, 2.6]} />
+              <meshBasicMaterial
+                color={timeOfDay === 'night' ? '#0f1824' : '#6a879d'}
+                transparent
+                opacity={contrastOpacity}
+                depthWrite={false}
+              />
+            </mesh>
+            {/* Primary streak layer */}
+            <RainParticles
+              enabled
+              mode="streaks"
+              count={streakCount}
+              area={[5.2, 1.2]}
+              dropHeight={dropHeight}
+              groundY={groundRainY}
+              speed={streakSpeed}
+              wind={windVec}
+              lengthRange={lengthRange}
+              slantFactor={slantFactor}
+              color={0xaacfe6}
+              opacity={0.95}
+            />
+          </group>
+        )}
       </group>
 
       {/* Plant (simple stalk + leaves) */}
@@ -433,7 +551,7 @@ export default function SceneHome({
         </group>
       </group>
 
-      {/* (Removed old ground-level digital clock; now on table) */}
+      {/* (Old ground-level clock removed; now on table) */}
     </group>
   );
 }

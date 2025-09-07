@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 import { useFrame, useThree } from '@react-three/fiber/native';
 import { useGLTF } from '@react-three/drei/native';
 import * as THREE from 'three';
@@ -905,8 +906,10 @@ export function AvatarModel({
             child.material = compatibleMaterial;
           }
 
-          child.castShadow = true;
-          child.receiveShadow = true;
+          if (Platform.OS !== 'android') {
+            child.castShadow = true;
+            child.receiveShadow = true;
+          }
         }
       });
 
