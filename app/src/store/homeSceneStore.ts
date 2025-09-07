@@ -26,7 +26,7 @@ const initialState: Pick<
   timeOfDay: 'morning',
   windowOpen: true,
   lampOn: false,
-  kettleActive: false,
+  kettleActive: true,
 };
 
 export const useHomeSceneStore = create<HomeSceneState>((set, get) => ({

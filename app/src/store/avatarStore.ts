@@ -4,9 +4,13 @@ import { create } from 'zustand';
 // shared across multiple screens or controls. Keep ONLY client-side
 // ephemeral or UI-interaction state here (no server cached data).
 
-export type WeatherOption = 'sunny' | 'cloudy' | 'rainy' | 'night';
+export type WeatherOption = 'sunny' | 'cloudy' | 'rainy';
+export type GlobalTimeOfDay = 'morning' | 'day' | 'evening' | 'night';
 
 interface AvatarState {
+  // Unified time-of-day override (independent of weather). Null = auto mapping.
+  // When null we derive morning/day/evening/night from local clock.
+  timeOfDayOverride: GlobalTimeOfDay | null;
   // Animation
   activeAnimation: string | null;
   isManualAnimation: boolean; // User explicitly selected an animation
@@ -38,6 +42,7 @@ interface AvatarState {
   }) => void;
   setShowStressInfoModal: (v: boolean) => void;
   resetAnimations: () => void;
+  setTimeOfDayOverride: (v: GlobalTimeOfDay | null) => void;
 }
 
 export const useAvatarStore = create<AvatarState>((set, get) => ({
@@ -48,6 +53,7 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   isAvatarLoading: false,
   loadingProgress: { loaded: 0, total: 0, item: '' },
   showStressInfoModal: false,
+  timeOfDayOverride: null,
 
   setActiveAnimation: (anim, opts) =>
     set({
@@ -64,4 +70,5 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   setShowStressInfoModal: v => set({ showStressInfoModal: v }),
   resetAnimations: () =>
     set({ activeAnimation: null, isManualAnimation: false }),
+  setTimeOfDayOverride: v => set({ timeOfDayOverride: v }),
 }));

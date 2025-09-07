@@ -39,9 +39,10 @@ import SceneZenPark from '../scene/SceneZenPark';
 import SceneCityStreet from '../scene/SceneCityStreet';
 import WeatherLighting, { getLightingConfig } from '../scene/WeatherLighting';
 import WeatherControls from '../controls/WeatherControls';
+import TimeOfDayControls from '../controls/TimeOfDayControls';
 import SceneHome from '../scene/SceneHome';
 import { useHomeSceneStore } from '../../store/homeSceneStore';
-import HomeSceneControls from '../controls/HomeSceneControls';
+import HomeSceneControls from '../controls/HomeSceneControls'; // legacy controls (timeOfDay portion will be ignored)
 import { useAvatarStore } from '../../store/avatarStore';
 import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
@@ -73,9 +74,9 @@ interface AvatarExperienceProps {
   enableTrafficStress?: boolean;
   trafficRefreshInterval?: number;
   // Optional environment context
-  weather?: 'sunny' | 'cloudy' | 'rainy' | 'windy' | 'night' | null;
+  weather?: 'sunny' | 'cloudy' | 'rainy' | null;
   // Notify parent when user is interacting (e.g., to disable ScrollView)
-  onInteractionChange?: (interacting: boolean) => void;
+  // onInteractionChange removed (unused)
   // Scene selection
   scene?: 'zenpark' | 'city' | 'home';
 }
@@ -95,8 +96,8 @@ function AvatarExperience({
   enableTrafficStress = true,
   trafficRefreshInterval = 300000, // 5 minutes
   weather = null,
-  onInteractionChange,
-  scene = 'home',
+  // onInteractionChange removed,
+  scene = 'zenpark',
 }: AvatarExperienceProps) {
   const screenWidth = Dimensions.get('window').width;
   const effectiveWidth = width ?? screenWidth;
@@ -107,6 +108,8 @@ function AvatarExperience({
   const isManualAnimation = useAvatarStore(s => s.isManualAnimation);
   const sleepMode = useAvatarStore(s => s.sleepMode);
   const overrideWeather = useAvatarStore(s => s.overrideWeather);
+  const timeOfDayOverride = useAvatarStore(s => s.timeOfDayOverride);
+  // const setTimeOfDayOverride = useAvatarStore(s => s.setTimeOfDayOverride);
   const isAvatarLoading = useAvatarStore(s => s.isAvatarLoading);
   const loadingProgress = useAvatarStore(s => s.loadingProgress);
   const showStressInfoModal = useAvatarStore(s => s.showStressInfoModal);
@@ -153,25 +156,28 @@ function AvatarExperience({
   }, [airQualityData?.aqi, health?.sleepMinutes, weather, overrideWeather]);
 
   // Determine lighting preset and background color based on weather
-  const weatherPreset = (overrideWeather ?? weather ?? 'sunny') as
+  const baseWeatherPreset = (overrideWeather ?? weather ?? 'sunny') as
     | 'sunny'
     | 'cloudy'
-    | 'rainy'
-    | 'night'
-    | 'windy';
+    | 'rainy';
+  // Derive global time-of-day phase (morning/day/evening/night) from override or clock
+  const derivedPhase = useMemo(() => {
+    if (timeOfDayOverride) return timeOfDayOverride;
+    const h = new Date().getHours();
+    if (h >= 6 && h < 11) return 'morning';
+    if (h >= 11 && h < 17) return 'day';
+    if (h >= 17 && h < 21) return 'evening';
+    return 'night';
+  }, [timeOfDayOverride, autoNight]);
+  const isNight = derivedPhase === 'night';
+  const weatherPreset = isNight ? 'night' : baseWeatherPreset;
   const lightingBackground = useMemo(() => {
-    // Map unsupported presets to closest lighting preset
-    const mapped =
-      weatherPreset === 'windy'
-        ? 'cloudy'
-        : (weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night');
-    return getLightingConfig(mapped).background;
+    return getLightingConfig(
+      weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night'
+    ).background;
   }, [weatherPreset]);
   const mappedLightingPreset = useMemo(
-    () =>
-      weatherPreset === 'windy'
-        ? 'cloudy'
-        : (weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night'),
+    () => weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night',
     [weatherPreset]
   );
 
@@ -292,26 +298,18 @@ function AvatarExperience({
     return recommendation;
   }, [airQualityData?.aqi, stressVisualsEnabled]);
 
-  // Auto night weather window (21:00 - 06:59 local)
+  // Auto night window detection (21:00 - 06:59 local) sets a flag only.
   useEffect(() => {
     const evaluateNight = () => {
       const now = new Date();
       const h = now.getHours();
-      const isNight = h >= 21 || h < 7; // 9pm inclusive to 6:59am
-      setAutoNight(isNight);
-      // Only set override if user hasn't manually chosen a weather via controls
-      // (i.e., overrideWeather is null and component prop 'weather' not forcing it)
-      if (isNight && !overrideWeather && !weather) {
-        setOverrideWeather('night');
-      } else if (!isNight && overrideWeather === 'night') {
-        // Release automatic night when leaving window, only if we set it
-        setOverrideWeather(null);
-      }
+      const night = h >= 21 || h < 7; // 9pm inclusive to 6:59am
+      setAutoNight(night);
     };
     evaluateNight();
-    const timer = setInterval(evaluateNight, 60 * 1000); // re-check each minute
+    const timer = setInterval(evaluateNight, 60 * 1000);
     return () => clearInterval(timer);
-  }, [overrideWeather, weather, setOverrideWeather]);
+  }, []);
 
   // Sleep mode time window (00:00 - 08:00 local)
   useEffect(() => {
@@ -325,6 +323,15 @@ function AvatarExperience({
     const interval = setInterval(checkSleepWindow, 60 * 1000); // every minute
     return () => clearInterval(interval);
   }, []);
+
+  // Sync derived global phase into home scene store when active
+  const setHomeTime = useHomeSceneStore?.(s => s.setTimeOfDay);
+  useEffect(() => {
+    if (scene === 'home' && setHomeTime) {
+      // Map derivedPhase directly (phases align names)
+      setHomeTime(derivedPhase as any);
+    }
+  }, [scene, derivedPhase, setHomeTime]);
 
   // Automatic animation control based on AQI and traffic stress (suppressed during sleepMode unless user overrides)
   // During sleep mode: if not manually overridden, enforce 'sleeping'. If user manually selects something else, allow it until that animation naturally stops or is toggled off.
@@ -702,22 +709,7 @@ function AvatarExperience({
             />
           )}
           {scene === 'zenpark' && <SceneZenPark />}
-          {scene === 'home' &&
-            (() => {
-              // Consume home scene store state when in home scene
-              const homeTime = useHomeSceneStore(s => s.timeOfDay);
-              const windowOpen = useHomeSceneStore(s => s.windowOpen);
-              const lampOn = useHomeSceneStore(s => s.lampOn);
-              const kettleActive = useHomeSceneStore(s => s.kettleActive);
-              return (
-                <SceneHome
-                  timeOfDay={homeTime}
-                  windowOpen={windowOpen}
-                  lampOn={lampOn}
-                  kettleActive={kettleActive}
-                />
-              );
-            })()}
+          {scene === 'home' && <SceneHome />}
 
           {/* Environment objects and textures (data-driven) */}
           <SceneEnvironment config={environmentConfig} />
@@ -830,11 +822,14 @@ function AvatarExperience({
       )}
 
       {developerControlsEnabled && (
-        <WeatherControls
-          value={overrideWeather}
-          onChange={setOverrideWeather}
-          visible={true}
-        />
+        <>
+          <TimeOfDayControls visible />
+          <WeatherControls
+            value={overrideWeather}
+            onChange={setOverrideWeather}
+            visible={true}
+          />
+        </>
       )}
 
       {developerControlsEnabled && scene === 'home' && (

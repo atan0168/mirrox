@@ -808,7 +808,7 @@ export function AvatarModel({
     if (activeAnimation === 'mixamo.com') {
       targetPosition.set(-3, 1.2, 4);
     } else if (activeAnimation === 'sleeping') {
-      targetPosition.set(0, 4.5, 4.6);
+      targetPosition.set(0.5, 4.8, 4.8);
       targetLookAt.set(0, -1.2, -2.0);
     } else {
       targetPosition.set(0, 0.5, 5);
@@ -1562,14 +1562,6 @@ export function AvatarModel({
                   child.scale.copy(original.scale);
                   child.visible = true;
                 }
-
-                // console.log(
-                //   `Avatar mesh position: x:${child.position.x.toFixed(2)}, y:${child.position.y.toFixed(2)}, z:${child.position.z.toFixed(2)}`,
-                // );
-                // console.log(
-                //   `Avatar mesh scale: x:${child.scale.x.toFixed(2)}, y:${child.scale.y.toFixed(2)}, z:${child.scale.z.toFixed(2)}`,
-                // );
-                // console.log(`Avatar mesh visible: ${child.visible}`);
               }
             });
           }
@@ -1635,18 +1627,13 @@ export function AvatarModel({
   }, []);
 
   // Update animation mixer each frame
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (mixerRef.current) {
       try {
         mixerRef.current.update(delta);
 
         // Continuously check and fix avatar visibility during animations
         if (scene) {
-          // Check if any animation is currently running
-          // const hasRunningAnimation = Array.from(
-          //   animationActionsMap.values()
-          // ).some(action => action.isRunning());
-
           scene.traverse(child => {
             if (child instanceof THREE.SkinnedMesh) {
               if (!child.visible) {
@@ -1686,34 +1673,15 @@ export function AvatarModel({
             }
           });
         }
-
-        // Debug logging occasionally
-        // if (
-        //   animationActionsMap.size > 0 &&
-        //   Math.floor(state.clock.elapsedTime * 60) % 60 === 0
-        // ) {
-        //   const runningActions = Array.from(
-        //     animationActionsMap.values(),
-        //   ).filter((action) => action.isRunning());
-        //   console.log(
-        //     `Mixer update - Active actions: ${runningActions.length}, Time: ${state.clock.elapsedTime.toFixed(1)}s`,
-        //   );
-
-        // if (scene) {
-        //   scene.traverse((child) => {
-        //     if (child instanceof THREE.SkinnedMesh) {
-        //       console.log(
-        //         `Avatar status - Visible: ${child.visible}, Scale: ${child.scale.x.toFixed(2)}, Position: ${child.position.x.toFixed(2)}, ${child.position.y.toFixed(2)}, ${child.position.z.toFixed(2)}`,
-        //       );
-        //     }
-        //   });
-        // }
-        // }
       } catch (error) {
         console.error('Animation mixer update error:', error);
       }
     }
   });
 
-  return <primitive object={scene} />;
+  return (
+    <group position={activeAnimation === 'sleeping' ? [0, 0, 1.0] : [0, 0, 0]}>
+      <primitive object={scene} />
+    </group>
+  );
 }

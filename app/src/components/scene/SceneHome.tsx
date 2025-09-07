@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber/native';
 import SceneFloor from './SceneFloor';
+import { useHomeSceneStore } from '../../store/homeSceneStore';
 
 /**
  * Home Scene (Prototype)
@@ -9,7 +10,6 @@ import SceneFloor from './SceneFloor';
  * Visual goals (initial pass):
  *  - Interior floor + walls suggestion (minimal geometry)
  *  - Window with animated outside light color (time-of-day)
- *  - Simple plant sway (comfort / life)
  *  - Digital clock block updating minute indicator (no text geometry for perf)
  *  - Lamp that toggles emissive bulb + area glow shell
  *  - Kettle steam placeholder when active
@@ -47,19 +47,42 @@ const AMBIENT_INTENSITY: Record<HomeTimeOfDay, number> = {
   night: 0.25,
 };
 
+// Sky gradient colors per time-of-day (top & bottom)
+const SKY_COLORS: Record<HomeTimeOfDay, { top: string; bottom: string }> = {
+  morning: { top: '#fdd9a1', bottom: '#fff6e6' },
+  day: { top: '#6fb3ff', bottom: '#cfe7ff' },
+  evening: { top: '#ff9c5b', bottom: '#ffe2c4' },
+  night: { top: '#0d182b', bottom: '#1e3250' },
+};
+
+// Seven-segment digit mapping (segments a-g)
+const DIGIT_SEGMENTS: Record<number, string[]> = {
+  0: ['a', 'b', 'c', 'd', 'e', 'f'],
+  1: ['b', 'c'],
+  2: ['a', 'b', 'g', 'e', 'd'],
+  3: ['a', 'b', 'g', 'c', 'd'],
+  4: ['f', 'g', 'b', 'c'],
+  5: ['a', 'f', 'g', 'c', 'd'],
+  6: ['a', 'f', 'g', 'e', 'c', 'd'],
+  7: ['a', 'b', 'c'],
+  8: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+  9: ['a', 'b', 'c', 'd', 'f', 'g'],
+};
+
 export default function SceneHome({
-  timeOfDay = 'morning',
-  windowOpen = false,
-  lampOn = true,
-  kettleActive = false,
   applianceActivity = 0,
   groundY = -1.72,
 }: SceneHomeProps) {
-  // Plant sway (simple harmonic motion)
-  const plantRef = useRef<THREE.Group>(null);
+  const timeOfDay = useHomeSceneStore(s => s.timeOfDay);
+  const windowOpen = useHomeSceneStore(s => s.windowOpen);
+  const lampOn = useHomeSceneStore(s => s.lampOn);
+  const kettleActive = useHomeSceneStore(s => s.kettleActive);
+
   // Steam particles simple billboards
   const steamRef = useRef<THREE.Group>(null);
   const clockRef = useRef<THREE.Mesh>(null);
+  const colonTopRef = useRef<THREE.Mesh>(null);
+  const colonBottomRef = useRef<THREE.Mesh>(null);
 
   // Precompute steam puff offsets
   const steamPuffs = useMemo(() => {
@@ -73,13 +96,7 @@ export default function SceneHome({
     }));
   }, []);
 
-  useFrame((state, delta) => {
-    // Plant sway
-    if (plantRef.current) {
-      const t = state.clock.elapsedTime;
-      const sway = Math.sin(t * 0.9) * 0.07 + Math.sin(t * 0.53) * 0.04;
-      plantRef.current.rotation.z = sway;
-    }
+  useFrame((_state, delta) => {
     // Steam rise
     if (steamRef.current && kettleActive) {
       steamRef.current.children.forEach((child, idx) => {
@@ -100,17 +117,91 @@ export default function SceneHome({
       });
     }
     // Clock minute pulse (scale bounce each new minute)
+    const now = new Date();
+    const seconds = now.getSeconds();
     if (clockRef.current) {
-      const now = new Date();
-      const seconds = now.getSeconds();
       const sPhase = (seconds % 60) / 60; // 0..1
       const scale = 1 + Math.sin(sPhase * Math.PI) * 0.1;
       clockRef.current.scale.set(scale, scale, scale);
     }
+    // Colon blink (visible on even seconds)
+    const visible = seconds % 2 === 0;
+    const setColonOpacity = (mesh?: THREE.Mesh | null) => {
+      if (!mesh) return;
+      const mat = mesh.material as THREE.Material & { opacity?: number };
+      if (typeof mat.opacity === 'number') {
+        mat.opacity = visible ? 0.85 : 0.15;
+      }
+    };
+    setColonOpacity(colonTopRef.current);
+    setColonOpacity(colonBottomRef.current);
   });
 
   const windowColor = WINDOW_LIGHT[timeOfDay];
   const ambient = AMBIENT_INTENSITY[timeOfDay];
+  const { top: skyTop, bottom: skyBottom } = SKY_COLORS[timeOfDay];
+
+  // Seven segment digit group factory
+  const Digit = ({
+    value,
+    position = [0, 0, 0] as [number, number, number],
+  }: {
+    value: number;
+    position?: [number, number, number];
+  }) => {
+    const active = DIGIT_SEGMENTS[value] || [];
+    const segColor = '#6ee7b7';
+    const offOpacity = 0.08;
+    const onOpacity = 0.9;
+    // segment size base
+    const w = 0.04; // segment thickness
+    const l = 0.1; // segment length
+    const z = 0.21; // slight in front of body
+    const segments = [
+      { id: 'a', pos: [0, l + w * 0.5, z], rot: 0, horiz: true },
+      { id: 'b', pos: [l * 0.5 + w * 0.5, l * 0.5, z], rot: 0, horiz: false },
+      { id: 'c', pos: [l * 0.5 + w * 0.5, -l * 0.5, z], rot: 0, horiz: false },
+      { id: 'd', pos: [0, -(l + w * 0.5), z], rot: 0, horiz: true },
+      {
+        id: 'e',
+        pos: [-(l * 0.5 + w * 0.5), -l * 0.5, z],
+        rot: 0,
+        horiz: false,
+      },
+      {
+        id: 'f',
+        pos: [-(l * 0.5 + w * 0.5), l * 0.5, z],
+        rot: 0,
+        horiz: false,
+      },
+      { id: 'g', pos: [0, 0, z], rot: 0, horiz: true },
+    ];
+    return (
+      <group position={position}>
+        {segments.map(s => (
+          <mesh key={s.id} position={s.pos as [number, number, number]}>
+            <boxGeometry args={s.horiz ? [l, w, 0.01] : [w, l, 0.01]} />
+            <meshBasicMaterial
+              color={segColor}
+              transparent
+              opacity={active.includes(s.id) ? onOpacity : offOpacity}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        ))}
+      </group>
+    );
+  };
+
+  // Derive current time digits
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const h1 = Math.floor(hours / 10);
+  const h2 = hours % 10;
+  const m1 = Math.floor(minutes / 10);
+  const m2 = minutes % 10;
 
   return (
     <group>
@@ -118,15 +209,6 @@ export default function SceneHome({
       <ambientLight intensity={ambient * 0.5 + (lampOn ? 0.15 : 0)} />
 
       <SceneFloor textureKey="laminated_wood" />
-      {/* Floor (simple plane) */}
-      {/* <mesh */}
-      {/*   position={[0, groundY - 0.001, 0]} */}
-      {/*   rotation={[-Math.PI / 2, 0, 0]} */}
-      {/*   receiveShadow */}
-      {/* > */}
-      {/*   <planeGeometry args={[10, 10]} /> */}
-      {/*   <meshStandardMaterial color={'#ececec'} roughness={1} metalness={0} /> */}
-      {/* </mesh> */}
 
       {/* Back wall */}
       <mesh position={[0, groundY + 1.2, -3.2]} receiveShadow castShadow>
@@ -148,8 +230,8 @@ export default function SceneHome({
         </mesh>
       ))}
 
-      {/* Window frame */}
-      <group position={[0, groundY + 3.4, -3.11]}>
+      {/* Window frame & glass */}
+      <group position={[0.0, groundY + 3.4, -3.11]}>
         <mesh>
           <boxGeometry args={[3.6, 2.2, 0.12]} />
           <meshStandardMaterial
@@ -158,31 +240,80 @@ export default function SceneHome({
             metalness={0.1}
           />
         </mesh>
-        {/* Glass inset representing outside light */}
         <mesh position={[0, 0, 0.08]}>
           <planeGeometry args={[3.2, 1.8]} />
           <meshStandardMaterial
             color={windowColor}
             emissive={windowColor}
-            emissiveIntensity={timeOfDay === 'night' ? 0.15 : 0.55}
-            roughness={0.9}
+            emissiveIntensity={timeOfDay === 'night' ? 0.12 : 0.5}
+            roughness={0.85}
             metalness={0}
             transparent
-            opacity={windowOpen ? 0.4 : 0.85}
+            opacity={windowOpen ? 0.35 : 0.8}
+          />
+        </mesh>
+        {/* Faint reflection overlay intensifies when lamp on and window closed */}
+        <mesh position={[0, 0, 0.085]}>
+          <planeGeometry args={[3.2, 1.8]} />
+          <meshBasicMaterial
+            color={'#ffffff'}
+            transparent
+            opacity={lampOn && !windowOpen ? 0.05 : 0.015}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
           />
         </mesh>
       </group>
 
-      {/* Simple outside parallax panel (changes color subtly) */}
-      <mesh position={[0, groundY + 1.4, -6.8]}>
-        <planeGeometry args={[7, 3]} />
-        <meshStandardMaterial color={windowOpen ? '#b7d5ff' : '#a9c9ef'} />
-      </mesh>
+      {/* Outside hybrid scene */}
+      <group position={[0, groundY + 3.4, -6.5]}>
+        {/* Sky gradient (two layered planes) */}
+        <mesh position={[0, 0, -0.25]}>
+          <planeGeometry args={[6.5, 3.6]} />
+          <meshBasicMaterial color={skyTop} />
+        </mesh>
+        <mesh position={[0, 0, -0.24]}>
+          <planeGeometry args={[6.5, 3.6]} />
+          <meshBasicMaterial color={skyBottom} transparent opacity={0.85} />
+        </mesh>
+
+        {/* Sun / Moon */}
+        {timeOfDay !== 'night' && (
+          <mesh position={[1.3, 0.7, -0.26]}>
+            <circleGeometry args={[0.28, 24]} />
+            <meshBasicMaterial color={'#ffe9b5'} transparent opacity={0.9} />
+          </mesh>
+        )}
+        {timeOfDay === 'night' && (
+          <mesh position={[-0.9, 0.5, -0.26]}>
+            <circleGeometry args={[0.22, 24]} />
+            <meshBasicMaterial color={'#e2ecf7'} transparent opacity={0.8} />
+          </mesh>
+        )}
+
+        {/* Silhouette strip */}
+        <group position={[0, -0.2, -0.23]}>
+          {Array.from({ length: 9 }).map((_, i) => {
+            const w2 = 0.5 + (i % 3) * 0.15;
+            const h2 = 0.4 + ((i * 37) % 5) * 0.12;
+            const x = -3 + i * 0.75;
+            return (
+              <mesh key={i} position={[x, h2 * 0.5 - 0.6, 0]}>
+                <boxGeometry args={[w2, h2, 0.05]} />
+                <meshStandardMaterial
+                  color={timeOfDay === 'night' ? '#1d2433' : '#3a4a5c'}
+                  roughness={1}
+                />
+              </mesh>
+            );
+          })}
+        </group>
+      </group>
 
       {/* Plant (simple stalk + leaves) */}
-      <group position={[-1.8, groundY, -0.8]} ref={plantRef}>
+      <group position={[-2.2, groundY, -2.0]} scale={2.5}>
         <mesh position={[0, 0.6, 0]} castShadow>
-          <cylinderGeometry args={[0.05, 0.07, 1.2, 8]} />
+          <cylinderGeometry args={[0.05, 0.06, 1.1, 8]} />
           <meshStandardMaterial color={'#7a5a3b'} roughness={1} />
         </mesh>
         {[0.4, 0.7, 1.0].map((h, i) => (
@@ -198,119 +329,111 @@ export default function SceneHome({
         ))}
       </group>
 
-      {/* Lamp */}
-      <group position={[1.9, groundY, 0.4]}>
-        <mesh position={[0, 0.7, 0]} castShadow>
-          <cylinderGeometry args={[0.05, 0.06, 1.4, 10]} />
+      {/* Table with lamp & clock */}
+      <group position={[0.6, groundY, -1.25]} scale={1.5}>
+        {/* Table top */}
+        <mesh position={[0, 1.1 - 0.04, 0]} castShadow receiveShadow>
+          <boxGeometry args={[1.9, 0.08, 0.9]} />
           <meshStandardMaterial
-            color={'#b8bcc2'}
-            roughness={0.7}
-            metalness={0.3}
+            color={'#d2b48c'}
+            roughness={0.9}
+            metalness={0.05}
           />
         </mesh>
-        <mesh position={[0, 1.45, 0]} castShadow>
-          <coneGeometry args={[0.38, 0.5, 16]} />
-          <meshStandardMaterial
-            color={'#e1e5ea'}
-            roughness={0.85}
-            metalness={0.1}
-          />
-        </mesh>
-        {/* Bulb */}
-        <group position={[0, 1.25, 0]}>
-          <mesh visible={lampOn}>
-            <sphereGeometry args={[0.18, 14, 14]} />
+        {/* Table legs */}
+        {[
+          [-0.9, 1.1 / 2, -0.45],
+          [0.9, 1.1 / 2, -0.45],
+          [-0.9, 1.1 / 2, 0.45],
+          [0.9, 1.1 / 2, 0.45],
+        ].map((p, i) => (
+          <mesh key={i} position={p as [number, number, number]} castShadow>
+            <boxGeometry args={[0.08, 1.1, 0.08]} />
             <meshStandardMaterial
-              color={'#fffdf8'}
-              emissive={'#ffe9b5'}
-              emissiveIntensity={lampOn ? 2.2 : 0}
-              roughness={0.3}
-              metalness={0.1}
+              color={'#b08968'}
+              roughness={0.9}
+              metalness={0.05}
             />
           </mesh>
-          {lampOn && (
-            <mesh scale={[1.5, 1.2, 1.5]} renderOrder={2}>
-              <sphereGeometry args={[0.2, 12, 12]} />
-              <meshBasicMaterial
-                color={'#ffe2a0'}
-                transparent
-                opacity={0.25}
-                blending={THREE.AdditiveBlending}
-                depthWrite={false}
-              />
-            </mesh>
-          )}
-          {lampOn && (
-            <pointLight
-              position={[0, 0.05, 0]}
-              color={'#ffd8a0'}
-              intensity={4}
-              distance={6}
-              decay={2}
+        ))}
+
+        {/* Clock body */}
+        <group position={[0.5, 1.1 + 0.1, 0.1]}>
+          <mesh ref={clockRef} castShadow>
+            <boxGeometry args={[0.7, 0.32, 0.25]} />
+            <meshStandardMaterial
+              color={'#1e293b'}
+              emissive={timeOfDay === 'night' ? '#334155' : '#1e293b'}
+              emissiveIntensity={timeOfDay === 'night' ? 0.5 : 0.25}
+              roughness={0.7}
+              metalness={0.2}
             />
-          )}
+          </mesh>
+          {/* Seven-seg digits */}
+          <group position={[-0.3, 0.04, 0]} scale={0.7}>
+            <Digit value={h1} position={[0, 0, 0]} />
+            <Digit value={h2} position={[0.22, 0, 0]} />
+            {/* Colon */}
+            <group position={[0.4, 0, 0.1]}>
+              {[-0.08, 0.08].map((y, i) => (
+                <mesh
+                  key={i}
+                  ref={i === 0 ? colonTopRef : colonBottomRef}
+                  position={[0, y, 0]}
+                >
+                  <boxGeometry args={[0.06, 0.06, 0.21]} />
+                  <meshBasicMaterial
+                    color={'#6ee7b7'}
+                    transparent
+                    opacity={0.85}
+                    blending={THREE.AdditiveBlending}
+                    depthWrite={false}
+                  />
+                </mesh>
+              ))}
+            </group>
+            <Digit value={m1} position={[0.58, 0, 0]} />
+            <Digit value={m2} position={[0.8, 0, 0]} />
+          </group>
+        </group>
+
+        {/* Kettle on side table */}
+        <group position={[-0.8, 1.1, -0.2]} scale={0.4}>
+          <mesh position={[0, 0.34, 0]} castShadow>
+            <cylinderGeometry args={[0.35, 0.4, 0.68, 8]} />
+            <meshStandardMaterial
+              color={'#dadfe4'}
+              roughness={0.8}
+              metalness={0.2}
+            />
+          </mesh>
+          <mesh position={[0.32, 0.5, 0]} castShadow>
+            <cylinderGeometry args={[0.05, 0.05, 0.3, 8]} />
+            <meshStandardMaterial color={'#a4a9af'} roughness={0.9} />
+          </mesh>
+          {/* Handle */}
+          <mesh position={[-0.32, 0.5, 0]} castShadow>
+            <torusGeometry args={[0.16, 0.04, 8, 16]} />
+            <meshStandardMaterial color={'#a4a9af'} roughness={0.9} />
+          </mesh>
+          {/* Steam group */}
+          <group ref={steamRef} position={[0, 0.78, 0]}>
+            {kettleActive &&
+              steamPuffs.map(p => (
+                <mesh key={p.seed} position={p.base.clone()}>
+                  <sphereGeometry args={[0.07, 8, 8]} />
+                  <meshBasicMaterial
+                    color={'#ffffff'}
+                    transparent
+                    opacity={0.6}
+                  />
+                </mesh>
+              ))}
+          </group>
         </group>
       </group>
 
-      {/* Kettle on side table */}
-      <group position={[1.1, groundY, -1.2]}>
-        <mesh position={[0, 0.34, 0]} castShadow>
-          <cylinderGeometry args={[0.35, 0.4, 0.68, 16]} />
-          <meshStandardMaterial
-            color={'#dadfe4'}
-            roughness={0.8}
-            metalness={0.2}
-          />
-        </mesh>
-        <mesh position={[0.32, 0.5, 0]} castShadow>
-          <cylinderGeometry args={[0.05, 0.05, 0.3, 8]} />
-          <meshStandardMaterial color={'#a4a9af'} roughness={0.9} />
-        </mesh>
-        {/* Handle */}
-        <mesh position={[-0.32, 0.5, 0]} castShadow>
-          <torusGeometry args={[0.16, 0.04, 8, 16]} />
-          <meshStandardMaterial color={'#a4a9af'} roughness={0.9} />
-        </mesh>
-        {/* Steam group */}
-        <group ref={steamRef} position={[0, 0.78, 0]}>
-          {kettleActive &&
-            steamPuffs.map(p => (
-              <mesh key={p.seed} position={p.base.clone()}>
-                <sphereGeometry args={[0.07, 8, 8]} />
-                <meshBasicMaterial
-                  color={'#ffffff'}
-                  transparent
-                  opacity={0.6}
-                />
-              </mesh>
-            ))}
-        </group>
-      </group>
-
-      {/* Digital clock: simple cube whose emissive intensity varies by time-of-day */}
-      <group position={[-1.1, groundY + 0.25, 0.9]}>
-        <mesh ref={clockRef} castShadow>
-          <boxGeometry args={[0.6, 0.25, 0.2]} />
-          <meshStandardMaterial
-            color={'#1e293b'}
-            emissive={timeOfDay === 'night' ? '#334155' : '#1e293b'}
-            emissiveIntensity={timeOfDay === 'night' ? 0.6 : 0.25}
-            roughness={0.7}
-            metalness={0.2}
-          />
-        </mesh>
-        {/* Glow element to simulate digits */}
-        <mesh position={[0, 0.01, 0.105]}>
-          <planeGeometry args={[0.5, 0.16]} />
-          <meshBasicMaterial
-            color={'#6ee7b7'}
-            transparent
-            opacity={0.9}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </mesh>
-      </group>
+      {/* (Removed old ground-level digital clock; now on table) */}
     </group>
   );
 }

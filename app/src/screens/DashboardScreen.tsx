@@ -31,7 +31,7 @@ const DashboardScreen: React.FC = () => {
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [scene, setScene] = useState<SceneOption>('zenpark');
+  const [scene, setScene] = useState<SceneOption>('home');
   const [rainIntensity, setRainIntensity] = useState(0.7);
   const [rainDirection, setRainDirection] = useState<'vertical' | 'angled'>(
     'vertical'
@@ -268,9 +268,6 @@ const DashboardScreen: React.FC = () => {
                   : null
               }
               scene={scene}
-              onInteractionChange={interacting =>
-                setScrollEnabled(!interacting)
-              }
             />
           </View>
 

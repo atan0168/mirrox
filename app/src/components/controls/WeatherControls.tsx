@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 
-export type WeatherOption = 'sunny' | 'cloudy' | 'rainy' | 'night';
+export type WeatherOption = 'sunny' | 'cloudy' | 'rainy';
 
 type WeatherControlsProps = {
   value: WeatherOption | null; // null means Auto (use prop/context)
@@ -14,7 +14,6 @@ const OPTIONS: Array<{ key: WeatherOption | null; label: string }> = [
   { key: 'sunny', label: 'Sunny' },
   { key: 'cloudy', label: 'Cloudy' },
   { key: 'rainy', label: 'Rainy' },
-  { key: 'night', label: 'Night' },
 ];
 
 export function WeatherControls({
@@ -48,19 +47,19 @@ export function WeatherControls({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 10,
+    top: 54,
     left: 10,
     flexDirection: 'row',
     backgroundColor: 'rgba(0,0,0,0.4)',
     padding: 6,
     borderRadius: 8,
+    gap: 6,
   },
   button: {
     backgroundColor: '#374151',
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 6,
-    marginRight: 6,
   },
   activeButton: {
     backgroundColor: '#2563EB',
