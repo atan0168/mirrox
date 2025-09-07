@@ -50,6 +50,10 @@ export function AvatarModel({
     total: 0,
     item: '',
   });
+  // Track and restore camera state around sleeping
+  const lastNonSleepCamPosRef = useRef<THREE.Vector3 | null>(null);
+  const lastNonSleepCamLookAtRef = useRef<THREE.Vector3 | null>(null);
+  const prevActiveAnimationRef = useRef<string | null>(null);
 
   // Update loading state
   useEffect(() => {
@@ -657,29 +661,61 @@ export function AvatarModel({
   // Adjust camera position based on active animation
   useEffect(() => {
     const targetPosition = new THREE.Vector3();
-    const targetLookAt = new THREE.Vector3(0, 0, 0);
+    const targetLookAt = new THREE.Vector3();
 
-    if (activeAnimation === 'mixamo.com') {
-      targetPosition.set(-3, 1.2, 4);
-    } else if (activeAnimation === 'sleeping') {
+    const wasSleeping = prevActiveAnimationRef.current === 'sleeping';
+    const isSleeping = activeAnimation === 'sleeping';
+
+    // If leaving sleeping, restore the last non-sleep camera state
+    if (wasSleeping && !isSleeping) {
+      const restorePos = lastNonSleepCamPosRef.current || camera.position.clone();
+      const restoreLook =
+        lastNonSleepCamLookAtRef.current || new THREE.Vector3(0, 0, 0);
+      targetPosition.copy(restorePos);
+      targetLookAt.copy(restoreLook);
+    } else if (isSleeping) {
+      // Sleeping cinematic
       targetPosition.set(0.5, 4.8, 4.8);
       targetLookAt.set(0, -1.2, -2.0);
+    } else if (activeAnimation === 'mixamo.com') {
+      // A different angle for demo animation
+      targetPosition.set(-3, 1.2, 4);
+      targetLookAt.set(0, 0, 0);
     } else {
+      // Default idle framing (classic)
       targetPosition.set(0, 0.5, 5);
       targetLookAt.set(0, 0, 0);
     }
 
-    // Smooth camera transition
+    let rafId: number | null = null;
+    let cancelled = false;
+
+    // Smooth camera transition with cancellation between animation toggles
     const animate = () => {
+      if (cancelled) return;
       camera.position.lerp(targetPosition, 0.1);
       camera.lookAt(targetLookAt);
 
       if (camera.position.distanceTo(targetPosition) > 0.01) {
-        requestAnimationFrame(animate);
+        rafId = requestAnimationFrame(animate);
       }
     };
 
-    animate();
+    rafId = requestAnimationFrame(animate);
+
+    // For any non-sleeping state, remember target for future restore
+    if (!isSleeping) {
+      lastNonSleepCamPosRef.current = targetPosition.clone();
+      lastNonSleepCamLookAtRef.current = targetLookAt.clone();
+    }
+
+    // Remember previous animation for next run
+    prevActiveAnimationRef.current = activeAnimation;
+
+    return () => {
+      cancelled = true;
+      if (rafId != null) cancelAnimationFrame(rafId);
+    };
   }, [activeAnimation, camera]);
 
   // Find head mesh and apply facial expressions
