@@ -1,10 +1,11 @@
 // Static registry for local assets and textures.
 // Expo/Metro requires static requires, so add new assets here.
 
-export type TextureKey = 'sandy_gravel';
+export type TextureKey = 'sandy_gravel' | 'laminated_wood';
 
 export const TextureRegistry: Record<TextureKey, any> = {
   sandy_gravel: require('../../assets/textures/sandy_gravel.jpg'),
+  laminated_wood: require('../../assets/textures/laminated_wood.jpg'),
 };
 
 export type AssetKey = 'low_poly_bonsai' | 'low_poly_rock_set';

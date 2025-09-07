@@ -39,6 +39,9 @@ import SceneZenPark from '../scene/SceneZenPark';
 import SceneCityStreet from '../scene/SceneCityStreet';
 import WeatherLighting, { getLightingConfig } from '../scene/WeatherLighting';
 import WeatherControls from '../controls/WeatherControls';
+import SceneHome from '../scene/SceneHome';
+import { useHomeSceneStore } from '../../store/homeSceneStore';
+import HomeSceneControls from '../controls/HomeSceneControls';
 import { useAvatarStore } from '../../store/avatarStore';
 import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
@@ -74,7 +77,7 @@ interface AvatarExperienceProps {
   // Notify parent when user is interacting (e.g., to disable ScrollView)
   onInteractionChange?: (interacting: boolean) => void;
   // Scene selection
-  scene?: 'zenpark' | 'city';
+  scene?: 'zenpark' | 'city' | 'home';
 }
 
 function AvatarExperience({
@@ -93,7 +96,7 @@ function AvatarExperience({
   trafficRefreshInterval = 300000, // 5 minutes
   weather = null,
   onInteractionChange,
-  scene = 'zenpark',
+  scene = 'home',
 }: AvatarExperienceProps) {
   const screenWidth = Dimensions.get('window').width;
   const effectiveWidth = width ?? screenWidth;
@@ -689,7 +692,7 @@ function AvatarExperience({
           ) : (
             <SpriteClouds visible={mappedLightingPreset === 'cloudy'} />
           )}
-          {scene === 'city' ? (
+          {scene === 'city' && (
             <SceneCityStreet
               lampIntensity={mappedLightingPreset === 'night' ? 25.0 : 2.4}
               lampDistance={mappedLightingPreset === 'night' ? 12 : 7}
@@ -697,9 +700,24 @@ function AvatarExperience({
                 mappedLightingPreset === 'night' ? '#ffd8a0' : '#ffd9a8'
               }
             />
-          ) : (
-            <SceneZenPark />
           )}
+          {scene === 'zenpark' && <SceneZenPark />}
+          {scene === 'home' &&
+            (() => {
+              // Consume home scene store state when in home scene
+              const homeTime = useHomeSceneStore(s => s.timeOfDay);
+              const windowOpen = useHomeSceneStore(s => s.windowOpen);
+              const lampOn = useHomeSceneStore(s => s.lampOn);
+              const kettleActive = useHomeSceneStore(s => s.kettleActive);
+              return (
+                <SceneHome
+                  timeOfDay={homeTime}
+                  windowOpen={windowOpen}
+                  lampOn={lampOn}
+                  kettleActive={kettleActive}
+                />
+              );
+            })()}
 
           {/* Environment objects and textures (data-driven) */}
           <SceneEnvironment config={environmentConfig} />
@@ -817,6 +835,10 @@ function AvatarExperience({
           onChange={setOverrideWeather}
           visible={true}
         />
+      )}
+
+      {developerControlsEnabled && scene === 'home' && (
+        <HomeSceneControls visible />
       )}
 
       {/* Loading Indicator Overlay */}

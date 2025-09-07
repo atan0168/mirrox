@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 
-export type SceneOption = 'zenpark' | 'city';
+export type SceneOption = 'zenpark' | 'city' | 'home';
 
 interface SceneSwitcherProps {
   value: SceneOption;
@@ -12,8 +12,9 @@ export default function SceneSwitcher({ value, onChange }: SceneSwitcherProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const labelFor = (v: SceneOption) =>
-    v === 'city' ? 'City Street' : 'Zen Park';
-  const emojiFor = (v: SceneOption) => (v === 'city' ? '🌆' : '🌳');
+    v === 'city' ? 'City Street' : v === 'home' ? 'Home' : 'Zen Park';
+  const emojiFor = (v: SceneOption) =>
+    v === 'city' ? '🌆' : v === 'home' ? '🏠' : '🌳';
 
   return (
     <>
@@ -48,7 +49,7 @@ export default function SceneSwitcher({ value, onChange }: SceneSwitcherProps) {
             </View>
 
             <View style={styles.optionsContainer}>
-              {(['zenpark', 'city'] as SceneOption[]).map(option => (
+              {(['zenpark', 'city', 'home'] as SceneOption[]).map(option => (
                 <TouchableOpacity
                   key={option}
                   style={[

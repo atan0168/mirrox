@@ -15,7 +15,7 @@ type SceneFloorProps = {
 
 export function SceneFloor({
   textureKey,
-  size = [30, 30],
+  size = [10, 10],
   repeat = [6, 6],
   position = [0, -1.7, 0],
   rotation = [-Math.PI / 2, 0, 0],
