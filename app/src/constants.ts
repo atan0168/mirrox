@@ -8,6 +8,7 @@ export const AVAILABLE_ANIMATIONS = [
   { name: 'yawn', label: 'Yawn' },
   { name: 'sleeping', label: 'Sleeping' },
   { name: 'sleeping_idle', label: 'Idle Sleeping' },
+  { name: 'slump', label: 'Slump' },
 ];
 
 export const IDLE_ANIMATIONS = [

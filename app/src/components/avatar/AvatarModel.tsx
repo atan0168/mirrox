@@ -671,7 +671,8 @@ export function AvatarModel({
 
     // If leaving sleeping, restore the last non-sleep camera state
     if (wasSleeping && !isSleeping) {
-      const restorePos = lastNonSleepCamPosRef.current || camera.position.clone();
+      const restorePos =
+        lastNonSleepCamPosRef.current || camera.position.clone();
       const restoreLook =
         lastNonSleepCamLookAtRef.current || new THREE.Vector3(0, 0, 0);
       targetPosition.copy(restorePos);
@@ -904,6 +905,10 @@ export function AvatarModel({
         {
           asset: require('../../../assets/animations/sleeping_idle.glb'),
           name: 'sleeping_idle',
+        },
+        {
+          asset: require('../../../assets/animations/slump.glb'),
+          name: 'slump',
         },
       ];
 
