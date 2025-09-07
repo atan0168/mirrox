@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import RainParticles from '../effects/RainParticles';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber/native';
@@ -94,6 +94,13 @@ export default function SceneHome({
   const colonTopRef = useRef<THREE.Mesh>(null);
   const colonBottomRef = useRef<THREE.Mesh>(null);
 
+  // Keep local device time in state to update digits
+  const [now, setNow] = useState<Date>(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   // Precompute steam puff offsets
   const steamPuffs = useMemo(() => {
     return Array.from({ length: 14 }).map((_, i) => ({
@@ -180,8 +187,7 @@ export default function SceneHome({
   const sillHeight = 5.5;
   const headerHeight = 5.5;
 
-  // Derive current time digits (evaluated per render once; minute pulse handled in frame)
-  const now = new Date();
+  // Derive current time digits from device local time (state-driven)
   const hours = now.getHours();
   const minutes = now.getMinutes();
   const h1 = Math.floor(hours / 10);
