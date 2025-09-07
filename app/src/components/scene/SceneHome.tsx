@@ -17,7 +17,6 @@ import { useHomeSceneStore } from '../../store/homeSceneStore';
  *
  * Interactivity (from store):
  *  - timeOfDay: 'morning' | 'evening' | 'day' | 'night'
- *  - windowOpen: boolean (affects glass opacity / reflection strength)
  *  - lampOn: boolean (boosts reflection)
  *  - kettleActive: boolean (steam)
  *  - rainy: exterior localized rain through window
@@ -85,9 +84,9 @@ export default function SceneHome({
   rainDirection = 'vertical',
 }: SceneHomeProps) {
   const timeOfDay = useHomeSceneStore(s => s.timeOfDay);
-  const windowOpen = useHomeSceneStore(s => s.windowOpen);
   const lampOn = useHomeSceneStore(s => s.lampOn);
   const kettleActive = useHomeSceneStore(s => s.kettleActive);
+  const toggleLamp = useHomeSceneStore(s => s.toggleLamp);
 
   // Steam particles simple billboards
   const steamRef = useRef<THREE.Group>(null);
@@ -154,16 +153,14 @@ export default function SceneHome({
   const isNight = timeOfDay === 'night';
 
   // Glass & reflection dynamics
-  const baseGlassOpacity = windowOpen ? 0.05 : isNight ? 0.14 : 0.1;
+  const baseGlassOpacity = isNight ? 0.14 : 0.1;
   const glassOpacity = rainy ? baseGlassOpacity * 1.15 : baseGlassOpacity;
   const reflectionStrength =
-    ((lampOn ? 0.2 : 0.12) + (isNight ? 0.05 : 0)) *
-    (rainy ? 0.25 : 1) *
-    (windowOpen ? 0.6 : 1);
+    ((lampOn ? 0.2 : 0.12) + (isNight ? 0.05 : 0)) * (rainy ? 0.25 : 1);
 
   // Rain intensity mapping (home localized rain)
   const rI = Math.min(1, Math.max(0, rainIntensity));
-  const streakCount = Math.round(200 + rI * 1800);
+  const streakCount = Math.round(200 + rI * 400);
   const streakSpeed = 6 + rI * 4;
   const windVec: [number, number] =
     rainDirection === 'angled' ? [0.18 + 0.25 * rI, 0.03 + 0.04 * rI] : [0, 0];
@@ -171,8 +168,6 @@ export default function SceneHome({
   const lengthRange: [number, number] = [0.07 + rI * 0.05, 0.14 + rI * 0.08];
   const dropHeight = 1.6 + rI * 0.9;
   const groundRainY = -0.95; // relative inside rain group space
-  const contrastOpacityBase = isNight ? 0.22 : 0.15;
-  const contrastOpacity = contrastOpacityBase * (0.8 + 0.5 * rI);
 
   // Geometry helpers
   const leftPanelWidth = (TOTAL_WALL_WIDTH - WINDOW_WIDTH) / 2; // 3.4
@@ -246,10 +241,56 @@ export default function SceneHome({
     );
   };
 
+  // Simple wall light switch component
+  const LightSwitch = ({
+    position = [0, 0, 0] as [number, number, number],
+  }) => {
+    // Visuals
+    const plateColor = '#e6ebf1';
+    const switchColor = lampOn ? '#34d399' : '#94a3b8';
+    const leverY = lampOn ? 0.035 : -0.035; // up/down
+
+    return (
+      <group position={position}>
+        {/* Invisible, slightly larger hit area for easier tapping */}
+        <mesh
+          onClick={toggleLamp}
+          onPointerDown={toggleLamp}
+          position={[0, 0, 0.03]}
+        >
+          <boxGeometry args={[0.22, 0.34, 0.08]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+
+        {/* Switch plate */}
+        <mesh position={[0, 0, 0.01]} castShadow>
+          <boxGeometry args={[0.18, 0.3, 0.02]} />
+          <meshStandardMaterial
+            color={plateColor}
+            roughness={1}
+            metalness={0}
+          />
+        </mesh>
+
+        {/* Toggle lever */}
+        <mesh position={[0, leverY, 0.025]} castShadow>
+          <boxGeometry args={[0.06, 0.12, 0.02]} />
+          <meshStandardMaterial
+            color={switchColor}
+            roughness={0.6}
+            metalness={0.1}
+          />
+        </mesh>
+      </group>
+    );
+  };
+
   return (
     <group>
       {/* Ambient fill responsive to time-of-day */}
-      <ambientLight intensity={ambient * 0.5 + (lampOn ? 0.15 : 0)} />
+      <ambientLight
+        intensity={ambient * 0.5 + (lampOn ? (isNight ? 2.7 : 0.15) : 0)}
+      />
 
       <SceneFloor textureKey="laminated_wood" />
 
@@ -269,18 +310,35 @@ export default function SceneHome({
           <meshStandardMaterial color={'#eef2f5'} roughness={1} metalness={0} />
         </mesh>
         {/* Right side panel */}
-        <mesh
-          position={[
-            WINDOW_WIDTH / 2 + rightPanelWidth / 2,
-            wallCenterY,
-            BACK_WALL_Z,
-          ]}
-          receiveShadow
-          castShadow
-        >
-          <boxGeometry args={[rightPanelWidth, wallHeight, PANEL_DEPTH]} />
-          <meshStandardMaterial color={'#eef2f5'} roughness={1} metalness={0} />
-        </mesh>
+        <group>
+          {/* Panel geometry */}
+          <mesh
+            position={[
+              WINDOW_WIDTH / 2 + rightPanelWidth / 2,
+              wallCenterY,
+              BACK_WALL_Z,
+            ]}
+            receiveShadow
+            castShadow
+          >
+            <boxGeometry args={[rightPanelWidth, wallHeight, PANEL_DEPTH]} />
+            <meshStandardMaterial
+              color={'#eef2f5'}
+              roughness={1}
+              metalness={0}
+            />
+          </mesh>
+
+          {/* Light switch mounted on right panel (approx. chest height) */}
+          <LightSwitch
+            position={[
+              // Slightly inset from the inner edge of the right panel
+              WINDOW_WIDTH / 2 + rightPanelWidth / 2 - 1.0,
+              Math.max(groundY + 3.2, yWindowBottom - 0.3),
+              BACK_WALL_Z + PANEL_DEPTH / 2 + 0.02,
+            ]}
+          />
+        </group>
         {/* Bottom sill panel */}
         <mesh
           position={[0, yWindowBottom - sillHeight / 2, BACK_WALL_Z]}
@@ -399,16 +457,6 @@ export default function SceneHome({
         {/* Localized exterior rain (only when rainy) */}
         {rainy && rI > 0 && (
           <group position={[0, 0.05, -0.05]} renderOrder={3}>
-            {/* Contrast gradient plane behind rain */}
-            <mesh position={[0, 0.0, -0.05]} renderOrder={1}>
-              <planeGeometry args={[5.4, 2.6]} />
-              <meshBasicMaterial
-                color={timeOfDay === 'night' ? '#0f1824' : '#6a879d'}
-                transparent
-                opacity={contrastOpacity}
-                depthWrite={false}
-              />
-            </mesh>
             {/* Primary streak layer */}
             <RainParticles
               enabled

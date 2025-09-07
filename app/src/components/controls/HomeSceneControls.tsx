@@ -6,8 +6,6 @@ import { useHomeSceneStore } from '../../store/homeSceneStore';
 // Mirrors the lightweight style of WeatherControls.
 
 export function HomeSceneControls({ visible = true }: { visible?: boolean }) {
-  const windowOpen = useHomeSceneStore(s => s.windowOpen);
-  const toggleWindow = useHomeSceneStore(s => s.toggleWindow);
   const lampOn = useHomeSceneStore(s => s.lampOn);
   const toggleLamp = useHomeSceneStore(s => s.toggleLamp);
   const kettleActive = useHomeSceneStore(s => s.kettleActive);
@@ -17,21 +15,7 @@ export function HomeSceneControls({ visible = true }: { visible?: boolean }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.phaseLabel}>Interior Controls</Text>
       <View style={styles.row}>
-        <TouchableOpacity
-          style={[styles.smallButton, windowOpen && styles.smallButtonActive]}
-          onPress={toggleWindow}
-        >
-          <Text
-            style={[
-              styles.smallButtonText,
-              windowOpen && styles.smallButtonTextActive,
-            ]}
-          >
-            Window {windowOpen ? 'Open' : 'Closed'}
-          </Text>
-        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.smallButton, lampOn && styles.smallButtonActive]}
           onPress={toggleLamp}
@@ -113,13 +97,6 @@ const styles = StyleSheet.create({
   },
   smallButtonTextActive: {
     color: 'white',
-  },
-  phaseLabel: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: '700',
-    marginBottom: 6,
-    opacity: 0.85,
   },
 });
 
