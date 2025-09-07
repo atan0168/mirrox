@@ -11,6 +11,8 @@ interface AvatarState {
   // Unified time-of-day override (independent of weather). Null = auto mapping.
   // When null we derive morning/day/evening/night from local clock.
   timeOfDayOverride: GlobalTimeOfDay | null;
+  // Scheduler-computed current phase (always reflects real clock unless override is applied elsewhere)
+  currentPhase: GlobalTimeOfDay; // updated by scheduler hook
   // Animation
   activeAnimation: string | null;
   isManualAnimation: boolean; // User explicitly selected an animation
@@ -43,6 +45,7 @@ interface AvatarState {
   setShowStressInfoModal: (v: boolean) => void;
   resetAnimations: () => void;
   setTimeOfDayOverride: (v: GlobalTimeOfDay | null) => void;
+  setCurrentPhase: (p: GlobalTimeOfDay) => void;
 }
 
 export const useAvatarStore = create<AvatarState>((set, get) => ({
@@ -54,6 +57,7 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   loadingProgress: { loaded: 0, total: 0, item: '' },
   showStressInfoModal: false,
   timeOfDayOverride: null,
+  currentPhase: 'morning',
 
   setActiveAnimation: (anim, opts) =>
     set({
@@ -71,4 +75,5 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   resetAnimations: () =>
     set({ activeAnimation: null, isManualAnimation: false }),
   setTimeOfDayOverride: v => set({ timeOfDayOverride: v }),
+  setCurrentPhase: p => set({ currentPhase: p }),
 }));

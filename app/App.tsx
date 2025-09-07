@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useTimeOfDayScheduler } from './src/hooks/useTimeOfDayScheduler';
 
 // Import screens
 import SplashScreen from './src/screens/SplashScreen';
@@ -62,6 +63,8 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  // Mount global time-of-day scheduler once
+  useTimeOfDayScheduler();
   return (
     <QueryClientProvider client={queryClient}>
       <NavigationContainer>

@@ -109,6 +109,7 @@ function AvatarExperience({
   const sleepMode = useAvatarStore(s => s.sleepMode);
   const overrideWeather = useAvatarStore(s => s.overrideWeather);
   const timeOfDayOverride = useAvatarStore(s => s.timeOfDayOverride);
+  const currentPhase = useAvatarStore(s => s.currentPhase);
   // const setTimeOfDayOverride = useAvatarStore(s => s.setTimeOfDayOverride);
   const isAvatarLoading = useAvatarStore(s => s.isAvatarLoading);
   const loadingProgress = useAvatarStore(s => s.loadingProgress);
@@ -123,7 +124,6 @@ function AvatarExperience({
 
   const canvasRef = useRef<View | null>(null);
   const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
-  const [autoNight, setAutoNight] = useState(false);
 
   // Fetch traffic data
   const { data: trafficData, loading: trafficLoading } = useTrafficData({
@@ -163,12 +163,8 @@ function AvatarExperience({
   // Derive global time-of-day phase (morning/day/evening/night) from override or clock
   const derivedPhase = useMemo(() => {
     if (timeOfDayOverride) return timeOfDayOverride;
-    const h = new Date().getHours();
-    if (h >= 6 && h < 11) return 'morning';
-    if (h >= 11 && h < 17) return 'day';
-    if (h >= 17 && h < 21) return 'evening';
-    return 'night';
-  }, [timeOfDayOverride, autoNight]);
+    return currentPhase; // Provided by scheduler hook
+  }, [timeOfDayOverride, currentPhase]);
   const isNight = derivedPhase === 'night';
   const weatherPreset = isNight ? 'night' : baseWeatherPreset;
   const lightingBackground = useMemo(() => {
@@ -297,19 +293,6 @@ function AvatarExperience({
 
     return recommendation;
   }, [airQualityData?.aqi, stressVisualsEnabled]);
-
-  // Auto night window detection (21:00 - 06:59 local) sets a flag only.
-  useEffect(() => {
-    const evaluateNight = () => {
-      const now = new Date();
-      const h = now.getHours();
-      const night = h >= 21 || h < 7; // 9pm inclusive to 6:59am
-      setAutoNight(night);
-    };
-    evaluateNight();
-    const timer = setInterval(evaluateNight, 60 * 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Sleep mode time window (00:00 - 08:00 local)
   useEffect(() => {

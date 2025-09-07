@@ -17,6 +17,7 @@ export function HomeSceneControls({ visible = true }: { visible?: boolean }) {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.phaseLabel}>Interior Controls</Text>
       <View style={styles.row}>
         <TouchableOpacity
           style={[styles.smallButton, windowOpen && styles.smallButtonActive]}
@@ -112,6 +113,13 @@ const styles = StyleSheet.create({
   },
   smallButtonTextActive: {
     color: 'white',
+  },
+  phaseLabel: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 6,
+    opacity: 0.85,
   },
 });
 
