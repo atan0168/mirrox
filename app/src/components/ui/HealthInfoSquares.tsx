@@ -41,10 +41,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   errorMessage = 'Unable to load health data',
   dailyStepGoal = 10000,
 }) => {
-  const [
-    selectedModal,
-    setSelectedModal,
-  ] = useState<
+  const [selectedModal, setSelectedModal] = useState<
     | 'steps'
     | 'sleep'
     | 'hrv'
@@ -320,7 +317,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             >
               <View style={styles.errorContainer}>
                 <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorTitle}>Failed to Load Health Data</Text>
+                <Text style={styles.errorTitle}>
+                  Failed to Load Health Data
+                </Text>
                 <Text style={styles.errorMessage}>{errorMessage}</Text>
                 <Text style={styles.errorSubtext}>
                   Please check permissions and try again
@@ -339,7 +338,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                     {options.valueText}
                   </Text>
                 </View>
-                <Text style={[styles.aqiClassification, { color: options.color }]}>
+                <Text
+                  style={[styles.aqiClassification, { color: options.color }]}
+                >
                   {options.statusText}
                 </Text>
                 {health?.timestamp && (
@@ -365,7 +366,11 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           )}
         </View>
         <View style={styles.modalFooter}>
-          <Button variant="secondary" onPress={() => setSelectedModal(null)} fullWidth>
+          <Button
+            variant="secondary"
+            onPress={() => setSelectedModal(null)}
+            fullWidth
+          >
             Close
           </Button>
         </View>
@@ -386,7 +391,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           label: 'Progress',
           value: `${Math.min(100, Math.round((steps / dailyStepGoal) * 100))}%`,
         },
-        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+        {
+          label: 'Source',
+          value: health?.platform?.toUpperCase() || 'UNKNOWN',
+        },
       ],
     });
 
@@ -410,7 +418,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
         },
         { label: 'Recommended', value: '7–9 hours' },
         { label: 'Quality', value: sleepLabel() },
-        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+        {
+          label: 'Source',
+          value: health?.platform?.toUpperCase() || 'UNKNOWN',
+        },
       ],
     });
 
@@ -431,7 +442,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       summary: [
         { label: 'Status', value: hrvLabel() },
         { label: 'Typical Range', value: '20–60 ms' },
-        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+        {
+          label: 'Source',
+          value: health?.platform?.toUpperCase() || 'UNKNOWN',
+        },
       ],
     });
 
@@ -451,7 +465,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       summary: [
         { label: 'Status', value: rhrLabel() },
         { label: 'Typical Range', value: '60–80 bpm' },
-        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+        {
+          label: 'Source',
+          value: health?.platform?.toUpperCase() || 'UNKNOWN',
+        },
       ],
     });
 
@@ -470,7 +487,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       statusText: energyLabel(),
       summary: [
         { label: 'Status', value: energyLabel() },
-        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+        {
+          label: 'Source',
+          value: health?.platform?.toUpperCase() || 'UNKNOWN',
+        },
       ],
     });
 
@@ -490,7 +510,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       summary: [
         { label: 'Status', value: rrLabel() },
         { label: 'Normal Range', value: '12–20 brpm' },
-        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+        {
+          label: 'Source',
+          value: health?.platform?.toUpperCase() || 'UNKNOWN',
+        },
       ],
     });
 
@@ -509,8 +532,14 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       statusText: workoutsLabelText(),
       summary: [
         { label: 'Status', value: workoutsLabelText() },
-        { label: 'Sessions', value: workoutsCount != null ? `${workoutsCount}` : 'N/A' },
-        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+        {
+          label: 'Sessions',
+          value: workoutsCount != null ? `${workoutsCount}` : 'N/A',
+        },
+        {
+          label: 'Source',
+          value: health?.platform?.toUpperCase() || 'UNKNOWN',
+        },
       ],
     });
 
@@ -533,7 +562,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           label: 'Minutes',
           value: mindfulMinutes != null ? `${mindfulMinutes} min` : 'N/A',
         },
-        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+        {
+          label: 'Source',
+          value: health?.platform?.toUpperCase() || 'UNKNOWN',
+        },
       ],
     });
 

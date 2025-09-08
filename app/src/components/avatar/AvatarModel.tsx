@@ -88,14 +88,22 @@ export function AvatarModel({
       browInnerUp: 0.2,
     },
     tired: {
-      eyeSquintLeft: 0.6,
-      eyeSquintRight: 0.6,
-      eyeBlinkLeft: 0.3,
-      eyeBlinkRight: 0.3,
-      mouthFrownLeft: 0.2,
-      mouthFrownRight: 0.2,
-      browDownLeft: 0.4,
-      browDownRight: 0.4,
+      // Heavier eyelids and downward gaze to read as sleepy
+      eyeBlinkLeft: 0.6,
+      eyeBlinkRight: 0.6,
+      eyeSquintLeft: 0.2,
+      eyeSquintRight: 0.2,
+      eyeLookDownLeft: 0.25,
+      eyeLookDownRight: 0.25,
+      // Softer brows (avoid angry look) with slight droop
+      browDownLeft: 0.25,
+      browDownRight: 0.25,
+      // Corners of mouth sag a bit
+      mouthFrownLeft: 0.15,
+      mouthFrownRight: 0.15,
+      mouthShrugLower: 0.25,
+      // Keep mouth mostly closed
+      mouthClose: 0.3,
     },
     sleep: {
       eyeBlinkLeft: 1.0,
@@ -104,14 +112,22 @@ export function AvatarModel({
       jawOpen: 0.0,
     },
     exhausted: {
-      eyeBlinkLeft: 0.7,
-      eyeBlinkRight: 0.7,
-      mouthOpen: 0.2,
-      mouthFrownLeft: 0.4,
-      mouthFrownRight: 0.4,
-      browDownLeft: 0.6,
-      browDownRight: 0.6,
-      jawOpen: 0.1,
+      // Very heavy lids with downward gaze
+      eyeBlinkLeft: 0.85,
+      eyeBlinkRight: 0.85,
+      eyeSquintLeft: 0.15,
+      eyeSquintRight: 0.15,
+      eyeLookDownLeft: 0.35,
+      eyeLookDownRight: 0.35,
+      // Stronger mouth droop and slight opening
+      mouthFrownLeft: 0.5,
+      mouthFrownRight: 0.5,
+      mouthShrugLower: 0.4,
+      mouthOpen: 0.25,
+      jawOpen: 0.15,
+      // Brows droop but not too angry
+      browDownLeft: 0.5,
+      browDownRight: 0.5,
     },
     concerned: {
       browDownLeft: 0.8,

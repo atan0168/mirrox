@@ -89,12 +89,12 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       // Backfill columns in case table already existed without new fields
       // Each ALTER is attempted individually and ignored if the column exists
       const alterStatements = [
-        "ALTER TABLE health_snapshots ADD COLUMN hrvMs REAL NULL;",
-        "ALTER TABLE health_snapshots ADD COLUMN restingHeartRateBpm REAL NULL;",
-        "ALTER TABLE health_snapshots ADD COLUMN activeEnergyKcal REAL NULL;",
-        "ALTER TABLE health_snapshots ADD COLUMN mindfulMinutes REAL NULL;",
-        "ALTER TABLE health_snapshots ADD COLUMN respiratoryRateBrpm REAL NULL;",
-        "ALTER TABLE health_snapshots ADD COLUMN workoutsCount INTEGER NULL;",
+        'ALTER TABLE health_snapshots ADD COLUMN hrvMs REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN restingHeartRateBpm REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN activeEnergyKcal REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN mindfulMinutes REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN respiratoryRateBrpm REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN workoutsCount INTEGER NULL;',
       ];
       for (const stmt of alterStatements) {
         try {

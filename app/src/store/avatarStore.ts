@@ -28,6 +28,10 @@ interface AvatarState {
   // UI Modals
   showStressInfoModal: boolean;
 
+  // Manual facial expression override
+  manualFacialExpression: string | null;
+  isManualFacialExpression: boolean;
+
   // Actions
   setActiveAnimation: (
     anim: string | null,
@@ -46,6 +50,10 @@ interface AvatarState {
   resetAnimations: () => void;
   setTimeOfDayOverride: (v: GlobalTimeOfDay | null) => void;
   setCurrentPhase: (p: GlobalTimeOfDay) => void;
+
+  // Facial expression override actions
+  setManualFacialExpression: (expr: string | null) => void;
+  clearManualFacialExpression: () => void;
 }
 
 export const useAvatarStore = create<AvatarState>((set, get) => ({
@@ -58,6 +66,8 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   showStressInfoModal: false,
   timeOfDayOverride: null,
   currentPhase: 'morning',
+  manualFacialExpression: null,
+  isManualFacialExpression: false,
 
   setActiveAnimation: (anim, opts) =>
     set({
@@ -76,4 +86,12 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
     set({ activeAnimation: null, isManualAnimation: false }),
   setTimeOfDayOverride: v => set({ timeOfDayOverride: v }),
   setCurrentPhase: p => set({ currentPhase: p }),
+
+  setManualFacialExpression: expr =>
+    set({
+      manualFacialExpression: expr,
+      isManualFacialExpression: expr !== null,
+    }),
+  clearManualFacialExpression: () =>
+    set({ manualFacialExpression: null, isManualFacialExpression: false }),
 }));

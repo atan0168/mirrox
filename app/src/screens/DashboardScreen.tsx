@@ -25,6 +25,8 @@ import SceneSwitcher, {
   SceneOption,
 } from '../components/controls/SceneSwitcher';
 import RainIntensityControls from '../components/controls/RainIntensityControls';
+import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
+import { useAvatarStore } from '../store/avatarStore';
 
 const DashboardScreen: React.FC = () => {
   const { data: userProfile, isLoading, error } = useUserProfile();
@@ -32,6 +34,11 @@ const DashboardScreen: React.FC = () => {
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [scene, setScene] = useState<SceneOption>('home');
+  const manualExpression = useAvatarStore(s => s.manualFacialExpression);
+  const setManualExpression = useAvatarStore(s => s.setManualFacialExpression);
+  const clearManualExpression = useAvatarStore(
+    s => s.clearManualFacialExpression
+  );
   const [rainIntensity, setRainIntensity] = useState(0.7);
   const [rainDirection, setRainDirection] = useState<'vertical' | 'angled'>(
     'vertical'
@@ -250,7 +257,7 @@ const DashboardScreen: React.FC = () => {
           <View style={styles.avatarContainer}>
             <AvatarExperience
               showAnimationButton={developerControlsEnabled}
-              facialExpression="neutral"
+              facialExpression={manualExpression || 'neutral'}
               skinToneAdjustment={skinEffects.totalAdjustment}
               rainIntensity={rainIntensity}
               rainDirection={rainDirection}
@@ -287,6 +294,15 @@ const DashboardScreen: React.FC = () => {
                 onChangeDirection={setRainDirection}
               />
             </View>
+          )}
+
+          {/* Facial Expressions */}
+          {developerControlsEnabled && (
+            <FacialExpressionControls
+              currentExpression={manualExpression}
+              onExpressionChange={setManualExpression}
+              onReset={clearManualExpression}
+            />
           )}
 
           {/* Traffic Information */}

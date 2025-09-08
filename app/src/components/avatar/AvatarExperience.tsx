@@ -116,6 +116,10 @@ function AvatarExperience({
   const isAvatarLoading = useAvatarStore(s => s.isAvatarLoading);
   const loadingProgress = useAvatarStore(s => s.loadingProgress);
   const showStressInfoModal = useAvatarStore(s => s.showStressInfoModal);
+  const manualFacialExpression = useAvatarStore(s => s.manualFacialExpression);
+  const isManualFacialExpression = useAvatarStore(
+    s => s.isManualFacialExpression
+  );
 
   const setActiveAnimation = useAvatarStore(s => s.setActiveAnimation);
   const setSleepMode = useAvatarStore(s => s.setSleepMode);
@@ -233,7 +237,7 @@ function AvatarExperience({
     };
   }, [trafficData, enableTrafficStress, externalFacialExpression]);
 
-  // Use stress-modified facial expression
+  // Use stress-modified facial expression unless manually overridden via controls
   const facialExpression = stressEffects.facialExpression;
   // If no traffic stress override, tweak facial expression based on sleep
   const healthDrivenFacial = useMemo(() => {
@@ -245,6 +249,14 @@ function AvatarExperience({
     if (sleepH > 8.5) return 'calm';
     return facialExpression;
   }, [health, facialExpression, stressEffects.stressLevel]);
+
+  // Final expression with full manual override (bypasses sleep/stress/health)
+  const finalFacialExpression = useMemo(() => {
+    if (isManualFacialExpression && manualFacialExpression) {
+      return manualFacialExpression;
+    }
+    return healthDrivenFacial;
+  }, [isManualFacialExpression, manualFacialExpression, healthDrivenFacial]);
 
   // Determine if user is sleep-deprived (less than 6h but greater than 0)
   // Also drive slump animation when user had <6h sleep (only when not in sleep mode and no manual animation)
@@ -835,7 +847,11 @@ function AvatarExperience({
               url={avatarUrl}
               activeAnimation={activeAnimation}
               facialExpression={
-                sleepMode && !isManualAnimation ? 'sleep' : healthDrivenFacial
+                isManualFacialExpression && manualFacialExpression
+                  ? manualFacialExpression
+                  : sleepMode && !isManualAnimation
+                    ? 'sleep'
+                    : finalFacialExpression
               }
               skinToneAdjustment={skinToneAdjustment}
               animationSpeedScale={energyInfo?.speedScale ?? 1}
