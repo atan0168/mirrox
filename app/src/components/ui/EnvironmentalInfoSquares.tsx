@@ -464,11 +464,12 @@ const styles = StyleSheet.create({
   },
   squaresGrid: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.md,
+    flexWrap: 'wrap',
+    marginHorizontal: spacing.md,
     gap: spacing.md,
   },
   square: {
-    flex: 1,
+    width: '47%',
     backgroundColor: colors.neutral[50],
     borderRadius: borderRadius.lg,
     borderWidth: 2,

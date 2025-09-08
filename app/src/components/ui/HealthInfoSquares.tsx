@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  Platform,
+} from 'react-native';
 import {
   Activity,
   Moon,
@@ -7,6 +14,12 @@ import {
   CheckCircle,
   AlertCircle,
   XCircle,
+  HeartPulse,
+  Heart,
+  Flame,
+  Wind,
+  Dumbbell,
+  Brain,
 } from 'lucide-react-native';
 import { Card } from './Card';
 import { Button } from './Button';
@@ -28,13 +41,31 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   errorMessage = 'Unable to load health data',
   dailyStepGoal = 10000,
 }) => {
-  const [selectedModal, setSelectedModal] = useState<'steps' | 'sleep' | null>(
-    null
-  );
+  const [
+    selectedModal,
+    setSelectedModal,
+  ] = useState<
+    | 'steps'
+    | 'sleep'
+    | 'hrv'
+    | 'rhr'
+    | 'energy'
+    | 'respiratory'
+    | 'workouts'
+    | 'mindfulness'
+    | null
+  >(null);
 
   const steps = health?.steps ?? 0;
   const sleepMinutes = health?.sleepMinutes ?? 0;
   const sleepHours = sleepMinutes / 60;
+  const hrvMs = health?.hrvMs ?? null;
+  const restingHeartRateBpm = health?.restingHeartRateBpm ?? null;
+  const activeEnergyKcal = health?.activeEnergyKcal ?? null;
+  const mindfulMinutes = health?.mindfulMinutes ?? null;
+  const respiratoryRateBrpm = health?.respiratoryRateBrpm ?? null;
+  const workoutsCount = health?.workoutsCount ?? null;
+  const isAndroid = Platform.OS === 'android';
 
   const getStepsColor = () => {
     if (isError) return colors.red[500];
@@ -99,16 +130,181 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     return 'No data';
   };
 
-  const renderStepsModal = () => (
+  // HRV helpers
+  const getHRVColor = () => {
+    if (isError) return colors.red[500];
+    if (hrvMs == null) return colors.neutral[400];
+    if (hrvMs >= 60) return colors.green[500];
+    if (hrvMs >= 40) return colors.green[400];
+    if (hrvMs >= 20) return colors.orange[600];
+    if (hrvMs > 0) return colors.red[500];
+    return colors.neutral[400];
+  };
+  const getHRVIcon = () => {
+    if (isError) return <AlertTriangle size={24} color={colors.red[500]} />;
+    return <HeartPulse size={24} color={getHRVColor()} />;
+  };
+  const hrvLabel = () => {
+    if (isError) return 'Error';
+    if (isLoading) return '...';
+    if (hrvMs == null) return 'N/A';
+    if (hrvMs >= 60) return 'Excellent';
+    if (hrvMs >= 40) return 'Good';
+    if (hrvMs >= 20) return 'Low';
+    if (hrvMs > 0) return 'Very low';
+    return 'N/A';
+  };
+
+  // Resting HR helpers
+  const getRHRColor = () => {
+    if (isError) return colors.red[500];
+    if (restingHeartRateBpm == null) return colors.neutral[400];
+    if (restingHeartRateBpm < 60) return colors.green[500];
+    if (restingHeartRateBpm < 70) return colors.green[400];
+    if (restingHeartRateBpm < 80) return colors.orange[600];
+    return colors.red[500];
+  };
+  const getRHRIcon = () => {
+    if (isError) return <AlertTriangle size={24} color={colors.red[500]} />;
+    return <Heart size={24} color={getRHRColor()} />;
+  };
+  const rhrLabel = () => {
+    if (isError) return 'Error';
+    if (isLoading) return '...';
+    if (restingHeartRateBpm == null) return 'N/A';
+    if (restingHeartRateBpm < 60) return 'Great';
+    if (restingHeartRateBpm < 70) return 'Good';
+    if (restingHeartRateBpm < 80) return 'High';
+    return 'Very high';
+  };
+
+  // Active Energy helpers
+  const getEnergyColor = () => {
+    if (isError) return colors.red[500];
+    if (activeEnergyKcal == null) return colors.neutral[400];
+    if (activeEnergyKcal >= 500) return colors.green[500];
+    if (activeEnergyKcal >= 300) return colors.green[400];
+    if (activeEnergyKcal >= 100) return colors.orange[600];
+    if (activeEnergyKcal > 0) return colors.neutral[500];
+    return colors.neutral[400];
+  };
+  const getEnergyIcon = () => {
+    if (isError) return <AlertTriangle size={24} color={colors.red[500]} />;
+    return <Flame size={24} color={getEnergyColor()} />;
+  };
+  const energyLabel = () => {
+    if (isError) return 'Error';
+    if (isLoading) return '...';
+    if (activeEnergyKcal == null) return 'N/A';
+    if (activeEnergyKcal >= 500) return 'Very active';
+    if (activeEnergyKcal >= 300) return 'Active';
+    if (activeEnergyKcal >= 100) return 'Lightly active';
+    if (activeEnergyKcal > 0) return 'Minimal';
+    return 'No activity';
+  };
+
+  // Respiratory Rate helpers
+  const getRRColor = () => {
+    if (isError) return colors.red[500];
+    if (respiratoryRateBrpm == null) return colors.neutral[400];
+    if (respiratoryRateBrpm >= 12 && respiratoryRateBrpm <= 20)
+      return colors.green[500];
+    if (
+      (respiratoryRateBrpm > 20 && respiratoryRateBrpm <= 22) ||
+      (respiratoryRateBrpm >= 10 && respiratoryRateBrpm < 12)
+    )
+      return colors.orange[600];
+    return colors.red[500];
+  };
+  const getRRIcon = () => {
+    if (isError) return <AlertTriangle size={24} color={colors.red[500]} />;
+    return <Wind size={24} color={getRRColor()} />;
+  };
+  const rrLabel = () => {
+    if (isError) return 'Error';
+    if (isLoading) return '...';
+    if (respiratoryRateBrpm == null) return 'N/A';
+    if (respiratoryRateBrpm >= 12 && respiratoryRateBrpm <= 20) return 'Normal';
+    if (
+      (respiratoryRateBrpm > 20 && respiratoryRateBrpm <= 22) ||
+      (respiratoryRateBrpm >= 10 && respiratoryRateBrpm < 12)
+    )
+      return 'Slightly off';
+    return 'Out of range';
+  };
+
+  // Workouts helpers
+  const getWorkoutsColor = () => {
+    if (isError) return colors.red[500];
+    if (workoutsCount == null) return colors.neutral[400];
+    if (workoutsCount >= 2) return colors.green[500];
+    if (workoutsCount >= 1) return colors.green[400];
+    return colors.neutral[400];
+  };
+  const getWorkoutsIcon = () => {
+    if (isError) return <AlertTriangle size={24} color={colors.red[500]} />;
+    return <Dumbbell size={24} color={getWorkoutsColor()} />;
+  };
+  const workoutsLabelText = () => {
+    if (isError) return 'Error';
+    if (isLoading) return '...';
+    if (workoutsCount == null) return 'N/A';
+    if (workoutsCount >= 2) return 'Active';
+    if (workoutsCount === 1) return '1 session';
+    return 'None';
+  };
+
+  // Mindfulness helpers (iOS only display)
+  const getMindfulColor = () => {
+    if (isError) return colors.red[500];
+    if (mindfulMinutes == null) return colors.neutral[400];
+    if (mindfulMinutes >= 10) return colors.green[500];
+    if (mindfulMinutes >= 5) return colors.green[400];
+    if (mindfulMinutes > 0) return colors.orange[600];
+    return colors.neutral[400];
+  };
+  const getMindfulIcon = () => {
+    if (isError) return <AlertTriangle size={24} color={colors.red[500]} />;
+    return <Brain size={24} color={getMindfulColor()} />;
+  };
+  const mindfulLabelText = () => {
+    if (isError) return 'Error';
+    if (isLoading) return '...';
+    if (mindfulMinutes == null) return 'N/A';
+    if (mindfulMinutes >= 10) return 'Great';
+    if (mindfulMinutes >= 5) return 'Good';
+    if (mindfulMinutes > 0) return 'A little';
+    return 'None';
+  };
+
+  // Shared modal renderer for maintainability
+  const renderMetricModal = (
+    key:
+      | 'steps'
+      | 'sleep'
+      | 'hrv'
+      | 'rhr'
+      | 'energy'
+      | 'respiratory'
+      | 'workouts'
+      | 'mindfulness',
+    options: {
+      title: string;
+      valueText: string;
+      color: string;
+      statusText: string;
+      summary: Array<{ label: string; value: string }>;
+    }
+  ) => (
     <Modal
-      visible={selectedModal === 'steps'}
+      visible={selectedModal === key}
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={() => setSelectedModal(null)}
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Steps Today</Text>
+          <Text style={styles.modalTitle}>{options.title}</Text>
           <TouchableOpacity
             onPress={() => setSelectedModal(null)}
             style={styles.closeButton}
@@ -124,9 +320,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             >
               <View style={styles.errorContainer}>
                 <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorTitle}>
-                  Failed to Load Health Data
-                </Text>
+                <Text style={styles.errorTitle}>Failed to Load Health Data</Text>
                 <Text style={styles.errorMessage}>{errorMessage}</Text>
                 <Text style={styles.errorSubtext}>
                   Please check permissions and try again
@@ -137,18 +331,16 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             <>
               <Card
                 variant="outline"
-                style={{ ...styles.detailCard, borderColor: getStepsColor() }}
+                style={{ ...styles.detailCard, borderColor: options.color }}
               >
                 <View style={styles.aqiHeader}>
-                  <Text style={styles.aqiTitle}>Steps</Text>
-                  <Text style={[styles.aqiValue, { color: getStepsColor() }]}>
-                    {steps}
+                  <Text style={styles.aqiTitle}>{options.title}</Text>
+                  <Text style={[styles.aqiValue, { color: options.color }]}>
+                    {options.valueText}
                   </Text>
                 </View>
-                <Text
-                  style={[styles.aqiClassification, { color: getStepsColor() }]}
-                >
-                  {stepsLabel()}
+                <Text style={[styles.aqiClassification, { color: options.color }]}>
+                  {options.statusText}
                 </Text>
                 {health?.timestamp && (
                   <Text style={styles.timestamp}>
@@ -156,43 +348,24 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                   </Text>
                 )}
               </Card>
-              <View style={styles.metricsSection}>
-                <Text style={styles.sectionTitle}>Summary</Text>
-                <View style={styles.metricGrid}>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Daily Goal</Text>
-                    <Text style={styles.metricValue}>{dailyStepGoal}</Text>
-                  </View>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Remaining</Text>
-                    <Text style={styles.metricValue}>
-                      {Math.max(0, dailyStepGoal - steps)}
-                    </Text>
-                  </View>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Progress</Text>
-                    <Text style={styles.metricValue}>
-                      {Math.min(100, Math.round((steps / dailyStepGoal) * 100))}
-                      %
-                    </Text>
-                  </View>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Source</Text>
-                    <Text style={styles.metricValue}>
-                      {health?.platform?.toUpperCase() || 'UNKNOWN'}
-                    </Text>
+              {options.summary.length > 0 && (
+                <View style={styles.metricsSection}>
+                  <Text style={styles.sectionTitle}>Summary</Text>
+                  <View style={styles.metricGrid}>
+                    {options.summary.map((m, idx) => (
+                      <View key={idx} style={styles.metricItem}>
+                        <Text style={styles.metricLabel}>{m.label}</Text>
+                        <Text style={styles.metricValue}>{m.value}</Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
-              </View>
+              )}
             </>
           )}
         </View>
         <View style={styles.modalFooter}>
-          <Button
-            variant="secondary"
-            onPress={() => setSelectedModal(null)}
-            fullWidth
-          >
+          <Button variant="secondary" onPress={() => setSelectedModal(null)} fullWidth>
             Close
           </Button>
         </View>
@@ -200,103 +373,169 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     </Modal>
   );
 
-  const renderSleepModal = () => (
-    <Modal
-      visible={selectedModal === 'sleep'}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={() => setSelectedModal(null)}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Last Night's Sleep</Text>
-          <TouchableOpacity
-            onPress={() => setSelectedModal(null)}
-            style={styles.closeButton}
-          >
-            <Text style={styles.closeButtonText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.modalContent}>
-          {isError ? (
-            <Card
-              variant="outline"
-              style={{ ...styles.detailCard, borderColor: colors.red[500] }}
-            >
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorTitle}>
-                  Failed to Load Health Data
-                </Text>
-                <Text style={styles.errorMessage}>{errorMessage}</Text>
-                <Text style={styles.errorSubtext}>
-                  Please check permissions and try again
-                </Text>
-              </View>
-            </Card>
-          ) : (
-            <>
-              <Card
-                variant="outline"
-                style={{ ...styles.detailCard, borderColor: getSleepColor() }}
-              >
-                <View style={styles.aqiHeader}>
-                  <Text style={styles.aqiTitle}>Sleep</Text>
-                  <Text style={[styles.aqiValue, { color: getSleepColor() }]}>
-                    {sleepMinutes > 0 ? `${sleepHours.toFixed(1)}h` : 'N/A'}
-                  </Text>
-                </View>
-                <Text
-                  style={[styles.aqiClassification, { color: getSleepColor() }]}
-                >
-                  {sleepLabel()}
-                </Text>
-                {health?.timestamp && (
-                  <Text style={styles.timestamp}>
-                    Updated {new Date(health.timestamp).toLocaleTimeString()}
-                  </Text>
-                )}
-              </Card>
-              <View style={styles.metricsSection}>
-                <Text style={styles.sectionTitle}>Summary</Text>
-                <View style={styles.metricGrid}>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Duration</Text>
-                    <Text style={styles.metricValue}>
-                      {sleepMinutes > 0 ? `${Math.round(sleepMinutes)} min` : 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Recommended</Text>
-                    <Text style={styles.metricValue}>7–9 hours</Text>
-                  </View>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Quality</Text>
-                    <Text style={styles.metricValue}>{sleepLabel()}</Text>
-                  </View>
-                  <View style={styles.metricItem}>
-                    <Text style={styles.metricLabel}>Source</Text>
-                    <Text style={styles.metricValue}>
-                      {health?.platform?.toUpperCase() || 'UNKNOWN'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            </>
-          )}
-        </View>
-        <View style={styles.modalFooter}>
-          <Button
-            variant="secondary"
-            onPress={() => setSelectedModal(null)}
-            fullWidth
-          >
-            Close
-          </Button>
-        </View>
-      </View>
-    </Modal>
-  );
+  const renderStepsModal = () =>
+    renderMetricModal('steps', {
+      title: 'Steps Today',
+      valueText: isError ? 'Error' : isLoading ? '...' : `${steps}`,
+      color: getStepsColor(),
+      statusText: stepsLabel(),
+      summary: [
+        { label: 'Daily Goal', value: `${dailyStepGoal}` },
+        { label: 'Remaining', value: `${Math.max(0, dailyStepGoal - steps)}` },
+        {
+          label: 'Progress',
+          value: `${Math.min(100, Math.round((steps / dailyStepGoal) * 100))}%`,
+        },
+        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+      ],
+    });
+
+  const renderSleepModal = () =>
+    renderMetricModal('sleep', {
+      title: "Last Night's Sleep",
+      valueText:
+        isError || isLoading
+          ? isError
+            ? 'Error'
+            : '...'
+          : sleepMinutes > 0
+            ? `${sleepHours.toFixed(1)}h`
+            : 'N/A',
+      color: getSleepColor(),
+      statusText: sleepLabel(),
+      summary: [
+        {
+          label: 'Duration',
+          value: sleepMinutes > 0 ? `${Math.round(sleepMinutes)} min` : 'N/A',
+        },
+        { label: 'Recommended', value: '7–9 hours' },
+        { label: 'Quality', value: sleepLabel() },
+        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+      ],
+    });
+
+  // Newly added modals using the shared renderer
+  const renderHRVModal = () =>
+    renderMetricModal('hrv', {
+      title: 'Heart Rate Variability',
+      valueText:
+        isError || isLoading
+          ? isError
+            ? 'Error'
+            : '...'
+          : hrvMs != null
+            ? `${hrvMs} ms`
+            : 'N/A',
+      color: getHRVColor(),
+      statusText: hrvLabel(),
+      summary: [
+        { label: 'Status', value: hrvLabel() },
+        { label: 'Typical Range', value: '20–60 ms' },
+        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+      ],
+    });
+
+  const renderRHRModal = () =>
+    renderMetricModal('rhr', {
+      title: 'Resting Heart Rate',
+      valueText:
+        isError || isLoading
+          ? isError
+            ? 'Error'
+            : '...'
+          : restingHeartRateBpm != null
+            ? `${restingHeartRateBpm} bpm`
+            : 'N/A',
+      color: getRHRColor(),
+      statusText: rhrLabel(),
+      summary: [
+        { label: 'Status', value: rhrLabel() },
+        { label: 'Typical Range', value: '60–80 bpm' },
+        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+      ],
+    });
+
+  const renderEnergyModal = () =>
+    renderMetricModal('energy', {
+      title: 'Active Energy',
+      valueText:
+        isError || isLoading
+          ? isError
+            ? 'Error'
+            : '...'
+          : activeEnergyKcal != null
+            ? `${activeEnergyKcal} kcal`
+            : 'N/A',
+      color: getEnergyColor(),
+      statusText: energyLabel(),
+      summary: [
+        { label: 'Status', value: energyLabel() },
+        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+      ],
+    });
+
+  const renderRespiratoryModal = () =>
+    renderMetricModal('respiratory', {
+      title: 'Respiratory Rate',
+      valueText:
+        isError || isLoading
+          ? isError
+            ? 'Error'
+            : '...'
+          : respiratoryRateBrpm != null
+            ? `${respiratoryRateBrpm} brpm`
+            : 'N/A',
+      color: getRRColor(),
+      statusText: rrLabel(),
+      summary: [
+        { label: 'Status', value: rrLabel() },
+        { label: 'Normal Range', value: '12–20 brpm' },
+        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+      ],
+    });
+
+  const renderWorkoutsModal = () =>
+    renderMetricModal('workouts', {
+      title: 'Workouts',
+      valueText:
+        isError || isLoading
+          ? isError
+            ? 'Error'
+            : '...'
+          : workoutsCount != null
+            ? `${workoutsCount}`
+            : 'N/A',
+      color: getWorkoutsColor(),
+      statusText: workoutsLabelText(),
+      summary: [
+        { label: 'Status', value: workoutsLabelText() },
+        { label: 'Sessions', value: workoutsCount != null ? `${workoutsCount}` : 'N/A' },
+        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+      ],
+    });
+
+  const renderMindfulnessModal = () =>
+    renderMetricModal('mindfulness', {
+      title: 'Mindful Minutes',
+      valueText:
+        isError || isLoading
+          ? isError
+            ? 'Error'
+            : '...'
+          : mindfulMinutes != null
+            ? `${mindfulMinutes} min`
+            : 'N/A',
+      color: getMindfulColor(),
+      statusText: mindfulLabelText(),
+      summary: [
+        { label: 'Status', value: mindfulLabelText() },
+        {
+          label: 'Minutes',
+          value: mindfulMinutes != null ? `${mindfulMinutes} min` : 'N/A',
+        },
+        { label: 'Source', value: health?.platform?.toUpperCase() || 'UNKNOWN' },
+      ],
+    });
 
   return (
     <View style={styles.container}>
@@ -339,10 +578,150 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             {sleepLabel()}
           </Text>
         </TouchableOpacity>
+
+        {/* HRV Square */}
+        <TouchableOpacity
+          style={[styles.square, { borderColor: getHRVColor() }]}
+          onPress={() => setSelectedModal('hrv')}
+          disabled={isLoading || isError}
+        >
+          <View style={styles.squareIcon}>{getHRVIcon()}</View>
+          <Text style={styles.squareValue}>
+            {isError
+              ? 'Error'
+              : isLoading
+                ? '...'
+                : hrvMs != null
+                  ? `${hrvMs} ms`
+                  : 'N/A'}
+          </Text>
+          <Text style={styles.squareLabel}>HRV</Text>
+          <Text style={[styles.squareStatus, { color: getHRVColor() }]}>
+            {hrvLabel()}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Resting HR Square */}
+        <TouchableOpacity
+          style={[styles.square, { borderColor: getRHRColor() }]}
+          onPress={() => setSelectedModal('rhr')}
+          disabled={isLoading || isError}
+        >
+          <View style={styles.squareIcon}>{getRHRIcon()}</View>
+          <Text style={styles.squareValue}>
+            {isError
+              ? 'Error'
+              : isLoading
+                ? '...'
+                : restingHeartRateBpm != null
+                  ? `${restingHeartRateBpm} bpm`
+                  : 'N/A'}
+          </Text>
+          <Text style={styles.squareLabel}>Resting HR</Text>
+          <Text style={[styles.squareStatus, { color: getRHRColor() }]}>
+            {rhrLabel()}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Active Energy Square */}
+        <TouchableOpacity
+          style={[styles.square, { borderColor: getEnergyColor() }]}
+          onPress={() => setSelectedModal('energy')}
+          disabled={isLoading || isError}
+        >
+          <View style={styles.squareIcon}>{getEnergyIcon()}</View>
+          <Text style={styles.squareValue}>
+            {isError
+              ? 'Error'
+              : isLoading
+                ? '...'
+                : activeEnergyKcal != null
+                  ? `${activeEnergyKcal} kcal`
+                  : 'N/A'}
+          </Text>
+          <Text style={styles.squareLabel}>Active Energy</Text>
+          <Text style={[styles.squareStatus, { color: getEnergyColor() }]}>
+            {energyLabel()}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Respiratory Rate Square */}
+        <TouchableOpacity
+          style={[styles.square, { borderColor: getRRColor() }]}
+          onPress={() => setSelectedModal('respiratory')}
+          disabled={isLoading || isError}
+        >
+          <View style={styles.squareIcon}>{getRRIcon()}</View>
+          <Text style={styles.squareValue}>
+            {isError
+              ? 'Error'
+              : isLoading
+                ? '...'
+                : respiratoryRateBrpm != null
+                  ? `${respiratoryRateBrpm} brpm`
+                  : 'N/A'}
+          </Text>
+          <Text style={styles.squareLabel}>Respiratory</Text>
+          <Text style={[styles.squareStatus, { color: getRRColor() }]}>
+            {rrLabel()}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Workouts Square */}
+        <TouchableOpacity
+          style={[styles.square, { borderColor: getWorkoutsColor() }]}
+          onPress={() => setSelectedModal('workouts')}
+          disabled={isLoading || isError}
+        >
+          <View style={styles.squareIcon}>{getWorkoutsIcon()}</View>
+          <Text style={styles.squareValue}>
+            {isError
+              ? 'Error'
+              : isLoading
+                ? '...'
+                : workoutsCount != null
+                  ? `${workoutsCount}`
+                  : 'N/A'}
+          </Text>
+          <Text style={styles.squareLabel}>Workouts</Text>
+          <Text style={[styles.squareStatus, { color: getWorkoutsColor() }]}>
+            {workoutsLabelText()}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Mindful Minutes Square (hide on Android) */}
+        {!isAndroid && (
+          <TouchableOpacity
+            style={[styles.square, { borderColor: getMindfulColor() }]}
+            onPress={() => setSelectedModal('mindfulness')}
+            disabled={isLoading || isError}
+          >
+            <View style={styles.squareIcon}>{getMindfulIcon()}</View>
+            <Text style={styles.squareValue}>
+              {isError
+                ? 'Error'
+                : isLoading
+                  ? '...'
+                  : mindfulMinutes != null
+                    ? `${mindfulMinutes} min`
+                    : 'N/A'}
+            </Text>
+            <Text style={styles.squareLabel}>Mindfulness</Text>
+            <Text style={[styles.squareStatus, { color: getMindfulColor() }]}>
+              {mindfulLabelText()}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {renderStepsModal()}
       {renderSleepModal()}
+      {renderHRVModal()}
+      {renderRHRModal()}
+      {renderEnergyModal()}
+      {renderRespiratoryModal()}
+      {renderWorkoutsModal()}
+      {!isAndroid && renderMindfulnessModal()}
     </View>
   );
 };
@@ -360,11 +739,12 @@ const styles = StyleSheet.create({
   },
   squaresGrid: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.md,
+    flexWrap: 'wrap',
+    marginHorizontal: spacing.md,
     gap: spacing.md,
   },
   square: {
-    flex: 1,
+    width: '47%',
     backgroundColor: colors.neutral[50],
     borderRadius: borderRadius.lg,
     borderWidth: 2,

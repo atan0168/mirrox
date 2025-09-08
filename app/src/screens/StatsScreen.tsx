@@ -111,8 +111,6 @@ const StatsScreen: React.FC = () => {
             <Text style={styles.statValue}>{getAirQualityStatValue()}</Text>
             <Text style={styles.statLabel}>Air Quality</Text>
           </View>
-
-          {/* Health metrics are shown above in HealthInfoSquares */}
         </View>
 
         {/* <View style={styles.section}> */}
