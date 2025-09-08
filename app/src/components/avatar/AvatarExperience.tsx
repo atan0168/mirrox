@@ -47,6 +47,7 @@ import { useAvatarStore } from '../../store/avatarStore';
 import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
 import Mattress from '../scene/Mattress';
+import SleepBatteryIndicator from '../SleepBatteryIndicator';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -246,6 +247,8 @@ function AvatarExperience({
   }, [health, facialExpression, stressEffects.stressLevel]);
 
   // Determine if user is sleep-deprived (less than 6h but greater than 0)
+  // Also drive slump animation when user had <6h sleep (only when not in sleep mode and no manual animation)
+
   const isSleepDeprived = useMemo(() => {
     if (!health) return false;
     const sleepH = (health.sleepMinutes || 0) / 60;
@@ -314,7 +317,7 @@ function AvatarExperience({
   useEffect(() => {
     if (scene === 'home' && setHomeTime) {
       // Map derivedPhase directly (phases align names)
-      setHomeTime(derivedPhase as any);
+      setHomeTime(derivedPhase);
     }
   }, [scene, derivedPhase, setHomeTime]);
 
@@ -487,6 +490,34 @@ function AvatarExperience({
     stressVisualsEnabled,
     isSleepDeprived,
     sleepMode,
+  ]);
+
+  // Independent sleep deprivation posture animation (slump) if:
+  // - Not in sleep mode
+  // - Not manually overriding animation
+  // - User had <6h sleep
+  // - No high-priority stress / AQI animation currently active
+  useEffect(() => {
+    if (sleepMode || isManualAnimation) return;
+    if (!isSleepDeprived) return;
+    const lowPriorityAnimations = [
+      null,
+      'idle_breathing',
+      'breathing',
+      'M_Standing_Idle_Variations_007',
+      'M_Standing_Idle_Variations_003',
+      'yawn',
+    ];
+    if (!lowPriorityAnimations.includes(activeAnimation)) return;
+    if (activeAnimation !== 'slump') {
+      setActiveAnimation('slump');
+    }
+  }, [
+    sleepMode,
+    isManualAnimation,
+    isSleepDeprived,
+    activeAnimation,
+    setActiveAnimation,
   ]);
 
   // Load avatar
@@ -914,6 +945,8 @@ function AvatarExperience({
 
       {/* Health bubble with dynamic text */}
       <HealthBubble message={energyInfo?.message ?? null} />
+      {/* Sleep battery indicator overlay */}
+      <SleepBatteryIndicator sleepMinutes={health?.sleepMinutes} />
     </View>
   );
 }
