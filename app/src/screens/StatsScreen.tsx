@@ -1,10 +1,21 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { TrendingUp, Clock, Wind } from 'lucide-react-native';
+import React, { useMemo, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  Alert,
+  Linking,
+  RefreshControl,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { TrendingUp, Wind, HeartPulse } from 'lucide-react-native';
 import {
   EnvironmentalInfoSquares,
   EnvironmentalInfoSquaresSkeleton,
   HealthInfoSquares,
+  InlineBanner,
 } from '../components/ui';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
@@ -41,9 +52,71 @@ const StatsScreen: React.FC = () => {
     data: health,
     loading: isHealthLoading,
     error: healthError,
-  } = useHealthData({
-    autoSync: true,
-  });
+    requestPermissions,
+    refresh: refreshHealth,
+  } = useHealthData({ autoSync: true });
+
+  const [healthBannerDismissed, setHealthBannerDismissed] = useState(false);
+  const [enablingHealth, setEnablingHealth] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const shouldShowHealthBanner = useMemo(() => {
+    if (healthBannerDismissed) return false;
+    if (healthError) return true;
+    if (!health || isHealthLoading) return false;
+    const allEmpty =
+      (health.steps ?? 0) === 0 &&
+      (health.sleepMinutes ?? 0) === 0 &&
+      health.hrvMs == null &&
+      health.restingHeartRateBpm == null &&
+      health.activeEnergyKcal == null &&
+      health.mindfulMinutes == null &&
+      health.respiratoryRateBrpm == null &&
+      health.workoutsCount == null;
+    return allEmpty;
+  }, [health, isHealthLoading, healthError, healthBannerDismissed]);
+
+  const handleEnableHealth = async () => {
+    try {
+      setEnablingHealth(true);
+      const granted = await requestPermissions();
+      if (granted) {
+        await refreshHealth();
+        setHealthBannerDismissed(true);
+      } else {
+        Alert.alert(
+          'Enable Health Access',
+          'To re-enable health permissions, open your app settings and allow Health access.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+      }
+    } finally {
+      setEnablingHealth(false);
+    }
+  };
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshHealth();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshHealth]);
+
+  // When returning to this screen (e.g., from Settings), try to refresh
+  useFocusEffect(
+    useCallback(() => {
+      if (healthError || !health) {
+        refreshHealth().then(health => {
+          if (!!health) setHealthBannerDismissed(true);
+        });
+      }
+    }, [healthError, health, refreshHealth])
+  );
 
   const getAirQualityStatValue = () => {
     if (isAirQualityLoading) return '...';
@@ -59,6 +132,9 @@ const StatsScreen: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <View style={styles.header}>
           <Text style={styles.title}>Your Stats</Text>
@@ -66,6 +142,48 @@ const StatsScreen: React.FC = () => {
             Track your environmental wellness journey
           </Text>
         </View>
+
+        {shouldShowHealthBanner && (
+          <InlineBanner
+            type={healthError ? 'warning' : 'info'}
+            title={
+              healthError ? 'Health data unavailable' : 'Enable health access'
+            }
+            description={
+              healthError
+                ? 'We could not read your health data. You can re-enable permissions to show steps and sleep.'
+                : 'Turn on permissions to sync your steps, sleep, and more.'
+            }
+            icon={<HeartPulse size={20} color="#111827" />}
+            primaryAction={
+              healthError
+                ? {
+                    label: 'Open Settings',
+                    onPress: () => Linking.openSettings(),
+                    disabled: enablingHealth,
+                  }
+                : {
+                    label: enablingHealth ? 'Enabling…' : 'Enable',
+                    onPress: handleEnableHealth,
+                    disabled: enablingHealth,
+                  }
+            }
+            secondaryAction={
+              healthError
+                ? {
+                    label: 'Retry',
+                    onPress: onRefresh,
+                    disabled: enablingHealth,
+                  }
+                : {
+                    label: 'Not now',
+                    onPress: () => setHealthBannerDismissed(true),
+                  }
+            }
+            onClose={() => setHealthBannerDismissed(true)}
+            style={{ marginTop: -8 }}
+          />
+        )}
 
         {/* Environmental Info Squares */}
         {isAirQualityLoading && isTrafficLoading ? (

@@ -26,3 +26,4 @@ export type { EffectData } from './EffectsModal';
 export { EnvironmentalInfoSquares } from './EnvironmentalInfoSquares';
 export { EnvironmentalInfoSquaresSkeleton } from './EnvironmentalInfoSquaresSkeleton';
 export { HealthInfoSquares } from './HealthInfoSquares';
+export { InlineBanner } from './InlineBanner';
