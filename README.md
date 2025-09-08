@@ -214,11 +214,11 @@ The app collects the following metrics via Apple HealthKit (iOS) and Health Conn
 - Heart Rate Variability (ms, daily average)
 - Resting Heart Rate (bpm, daily average)
 - Active Energy Burned (kcal, daily total)
-- Mindful Sessions (minutes, daily total)
+- Mindful Sessions (minutes, daily total) — iOS only for now
 - Respiratory Rate (breaths/min, daily average)
 - Workouts (daily count)
 
-These are persisted in the local encrypted SQLite database (`health_snapshots` table). On Android, ensure the following health permissions are granted; the app requests them at runtime via Health Connect: `READ_STEPS`, `READ_SLEEP`, `READ_HEART_RATE_VARIABILITY`, `READ_RESTING_HEART_RATE`, `READ_ACTIVE_CALORIES_BURNED`, `READ_MINDFULNESS`, `READ_RESPIRATORY_RATE`, `READ_EXERCISE`.
+These are persisted in the local encrypted SQLite database (`health_snapshots` table). On Android, ensure the following health permissions are granted; the app requests them at runtime via Health Connect: `READ_STEPS`, `READ_SLEEP`, `READ_HEART_RATE_VARIABILITY`, `READ_RESTING_HEART_RATE`, `READ_ACTIVE_CALORIES_BURNED`, `READ_RESPIRATORY_RATE`, `READ_EXERCISE`. Mindfulness is currently omitted on Android due to API level requirements.
 
 If upgrading from an older schema, the app will attempt to add missing columns on startup.
 

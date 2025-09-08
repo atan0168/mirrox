@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import type { HealthPermissionStatus } from '../../../models/Health';
 import type { HealthProvider } from '../types';
-import * as HealthConnect from '@zensein/react-native-health-connect';
+import * as HealthConnect from 'react-native-health-connect';
 import { lastNightWindow } from '../../../utils/datetimeUtils';
 
 function toIso(d: Date) {
@@ -35,7 +35,6 @@ export class HealthConnectProvider implements HealthProvider {
         { accessType: 'read', recordType: 'HeartRateVariabilityRmssd' },
         { accessType: 'read', recordType: 'RestingHeartRate' },
         { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
-        { accessType: 'read', recordType: 'Mindfulness' },
         { accessType: 'read', recordType: 'RespiratoryRate' },
         { accessType: 'read', recordType: 'ExerciseSession' },
       ] as HealthConnect.Permission[];
@@ -195,31 +194,8 @@ export class HealthConnectProvider implements HealthProvider {
   }
 
   async getDailyMindfulMinutes(start: Date, end: Date): Promise<number | null> {
-    if (!(await this.isAvailable())) return null;
-    try {
-      const { initialize, readRecords } = HealthConnect;
-      try {
-        await initialize();
-      } catch {}
-      const res = await readRecords('MindfulnessSession', {
-        timeRangeFilter: {
-          operator: 'between',
-          startTime: toIso(start),
-          endTime: toIso(end),
-        },
-      });
-      const records = res?.records || [];
-      if (!records.length) return 0;
-      const minutes = records.reduce((sum: number, r) => {
-        const s = new Date(r.startTime).getTime();
-        const e = new Date(r.endTime).getTime();
-        return sum + Math.max(0, e - s) / 60000;
-      }, 0);
-      return Math.round(minutes);
-    } catch (e) {
-      console.warn('[HealthConnect] getDailyMindfulMinutes failed', e);
-      return null;
-    }
+    // Not supported until Api level 36 (Android 16)
+    return null;
   }
 
   async getDailyRespiratoryRateBrpm(
