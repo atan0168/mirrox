@@ -26,6 +26,7 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
         "android.permission.health.READ_SLEEP",
         "android.permission.health.READ_STEPS",
         "android.permission.health.READ_HEART_RATE_VARIABILITY",
@@ -77,7 +78,7 @@
           "background": true
         }
       ],
-      ["expo-health-connect"]
+      ["@zensein/expo-health-connect"]
     ],
     "extra": {
       "eas": {

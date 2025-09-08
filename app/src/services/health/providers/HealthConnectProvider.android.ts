@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import type { HealthPermissionStatus } from '../../../models/Health';
 import type { HealthProvider } from '../types';
-import * as HealthConnect from 'react-native-health-connect';
+import * as HealthConnect from '@zensein/react-native-health-connect';
 import { lastNightWindow } from '../../../utils/datetimeUtils';
 
 function toIso(d: Date) {
@@ -45,6 +45,7 @@ export class HealthConnectProvider implements HealthProvider {
       const ok = granted?.some(p => p.recordType === 'Steps');
       return ok ? 'granted' : 'denied';
     } catch (e) {
+      console.log('[HealthConnect] requestPermissions failed', e);
       return 'denied';
     }
   }
