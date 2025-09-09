@@ -68,15 +68,17 @@ export class HealthKitProvider implements HealthProvider {
   ): Promise<number> {
     if (!(await this.isAvailable())) return 0;
     const { start, end } = lastNightWindow(reference);
+    return this.getSleepMinutes(start, end);
+  }
+
+  async getSleepMinutes(start: Date, end: Date): Promise<number> {
+    if (!(await this.isAvailable())) return 0;
     try {
       // Use queryCategorySamples for sleep data
       const res = await HealthKit.queryCategorySamples(
         'HKCategoryTypeIdentifierSleepAnalysis',
         {
-          filter: {
-            startDate: start,
-            endDate: end,
-          },
+          filter: { startDate: start, endDate: end },
         }
       );
       const minutes = (res || [])

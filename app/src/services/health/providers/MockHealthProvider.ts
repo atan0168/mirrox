@@ -10,6 +10,24 @@ export class MockHealthProvider implements HealthProvider {
   getPlatform() {
     return 'mock' as const;
   }
+  async getSleepMinutes(start: Date, end: Date): Promise<number> {
+    // Mock: small chance of a daytime nap; at night returns similar to last-night calc
+    const seed = parseInt(
+      `${start.getFullYear()}${start.getMonth()}${start.getDate()}`,
+      10
+    );
+    const startHour = start.getHours();
+    const endHour = end.getHours();
+    const isDaytime = startHour >= 12 && endHour <= 22;
+    if (isDaytime) {
+      // 30% chance of a nap 10-40 minutes
+      const r = seededRandom(seed + 99);
+      const tookNap = r < 0.3;
+      return tookNap ? Math.round(10 + seededRandom(seed + 3) * 30) : 0;
+    }
+    // Nighttime-ish window: return value similar to lastNightSleepMinutes
+    return this.getLastNightSleepMinutes(end);
+  }
   async isAvailable(): Promise<boolean> {
     return true;
   }

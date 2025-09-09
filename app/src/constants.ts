@@ -18,6 +18,10 @@ export const IDLE_ANIMATIONS = [
   'idle_breathing',
 ];
 
+export const FULL_SLEEP_MINUTES = 7.0 * 60; // 100% energy when last-night sleep >= 7.0h
+export const AWAKE_DEPLETION_PER_MIN = 100 / (16 * 60); // ~16 hours awake to reach 0%
+export const TICK_MS = 30 * 1000; // update roughly every 30s
+
 export const RPM_SUBDOMAIN = 'mirrox';
 export const RPM_APPLICATION_ID = '68ab0e092240338178fb429e';
 export const USER_PROFILE_KEY = 'user_profile';

@@ -5,6 +5,8 @@ export interface HealthProvider {
   isAvailable(): Promise<boolean>;
   requestPermissions(): Promise<HealthPermissionStatus>;
   getDailySteps(start: Date, end: Date): Promise<number>;
+  // Generic sleep minutes query for any window
+  getSleepMinutes(start: Date, end: Date): Promise<number>;
   getLastNightSleepMinutes(reference?: Date): Promise<number>;
   // Additional metrics for the current day window [start, end]
   getDailyHRVMs(start: Date, end: Date): Promise<number | null>;

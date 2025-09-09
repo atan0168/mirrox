@@ -47,7 +47,7 @@ import { useAvatarStore } from '../../store/avatarStore';
 import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
 import Mattress from '../scene/Mattress';
-import SleepBatteryIndicator from '../SleepBatteryIndicator';
+import BatteryIndicator from '../BatteryIndicator';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -962,7 +962,7 @@ function AvatarExperience({
       {/* Health bubble with dynamic text */}
       <HealthBubble message={energyInfo?.message ?? null} />
       {/* Sleep battery indicator overlay */}
-      <SleepBatteryIndicator sleepMinutes={health?.sleepMinutes} />
+      <BatteryIndicator sleepMinutes={health?.sleepMinutes} />
     </View>
   );
 }

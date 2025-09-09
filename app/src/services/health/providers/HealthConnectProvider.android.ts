@@ -81,13 +81,17 @@ export class HealthConnectProvider implements HealthProvider {
     reference: Date = new Date()
   ): Promise<number> {
     if (!(await this.isAvailable())) return 0;
+    const { start, end } = lastNightWindow(reference);
+    return this.getSleepMinutes(start, end);
+  }
+
+  async getSleepMinutes(start: Date, end: Date): Promise<number> {
+    if (!(await this.isAvailable())) return 0;
     try {
       const { initialize, readRecords } = HealthConnect;
-      // Ensure SDK is initialized before reading
       try {
         await initialize();
       } catch {}
-      const { start, end } = lastNightWindow(reference);
       const res = await readRecords('SleepSession', {
         timeRangeFilter: {
           operator: 'between',
@@ -102,7 +106,7 @@ export class HealthConnectProvider implements HealthProvider {
       }, 0);
       return Math.round(minutes);
     } catch (e) {
-      console.warn('[HealthConnect] getLastNightSleepMinutes failed', e);
+      console.warn('[HealthConnect] getSleepMinutes failed', e);
       return 0;
     }
   }
