@@ -32,9 +32,11 @@ import {
   cancelAllNotifications,
   requestNotificationPermissions,
 } from '../services/notifications';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const queryClient = useQueryClient();
   const [requireAuth, setRequireAuth] = useState(false);
   const [authMethod, setAuthMethod] = useState<'pin' | 'biometric' | 'both'>(
     'biometric'
@@ -186,9 +188,7 @@ export default function SettingsScreen() {
   ) => {
     try {
       setLoading(true);
-      const localStorage = localStorageService;
-
-      await localStorage.updateSecuritySettings({
+      await updateSecurityMutation.mutateAsync({
         requireAuthentication: newRequireAuth,
         authMethod: newAuthMethod || authMethod,
       });
@@ -216,6 +216,20 @@ export default function SettingsScreen() {
       setLoading(false);
     }
   };
+
+  // React Query mutation for updating security settings, keeps userProfile fresh
+  const updateSecurityMutation = useMutation({
+    mutationFn: async (settings: {
+      requireAuthentication: boolean;
+      authMethod?: 'pin' | 'biometric' | 'both';
+    }) => {
+      await localStorageService.updateSecuritySettings(settings);
+      return settings;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+    },
+  });
 
   const handleAuthToggle = async (value: boolean) => {
     if (value) {

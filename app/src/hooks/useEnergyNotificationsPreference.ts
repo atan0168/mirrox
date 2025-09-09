@@ -1,73 +1,45 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { localStorageService } from '../services/LocalStorageService';
 
-// Global state to sync across all hook instances
-let globalEnergyNotificationsEnabled: boolean = true;
-let globalLoading: boolean = true;
-let listeners: Set<(enabled: boolean) => void> = new Set();
-
-const notifyListeners = (enabled: boolean) => {
-  globalEnergyNotificationsEnabled = enabled;
-  listeners.forEach(l => l(enabled));
-};
+const QUERY_KEY = ['prefs', 'energyNotifications'] as const;
 
 export function useEnergyNotificationsPreference() {
-  const [energyNotificationsEnabled, setEnergyNotificationsEnabled] =
-    useState<boolean>(globalEnergyNotificationsEnabled);
-  const [loading, setLoading] = useState<boolean>(globalLoading);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const listener = (enabled: boolean) =>
-      setEnergyNotificationsEnabled(enabled);
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  }, []);
+  const query = useQuery({
+    queryKey: QUERY_KEY,
+    queryFn: () => localStorageService.getEnergyNotificationsEnabled(),
+    // Defaults previously behaved as true until loaded
+    initialData: true,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
 
-  useEffect(() => {
-    if (!globalLoading) {
-      setEnergyNotificationsEnabled(globalEnergyNotificationsEnabled);
-      setLoading(false);
-      return;
-    }
-    const load = async () => {
-      try {
-        const enabled =
-          await localStorageService.getEnergyNotificationsEnabled();
-        globalEnergyNotificationsEnabled = enabled;
-        setEnergyNotificationsEnabled(enabled);
-        notifyListeners(enabled);
-      } catch (e) {
-        console.error('Failed to load energy notifications preference:', e);
-        globalEnergyNotificationsEnabled = true;
-        setEnergyNotificationsEnabled(true);
-        notifyListeners(true);
-      } finally {
-        globalLoading = false;
-        setLoading(false);
-      }
-    };
-    load();
-  }, []);
-
-  const updateEnergyNotificationsPreference = useCallback(
-    async (enabled: boolean) => {
-      try {
-        await localStorageService.updatePreferences({
-          enableEnergyNotifications: enabled,
-        });
-        notifyListeners(enabled);
-        return true;
-      } catch (e) {
-        console.error('Failed to update energy notifications preference:', e);
-        return false;
-      }
+  const mutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      await localStorageService.updatePreferences({
+        enableEnergyNotifications: enabled,
+      });
+      return enabled;
     },
-    []
-  );
+    onSuccess: enabled => {
+      queryClient.setQueryData(QUERY_KEY, enabled);
+    },
+  });
+
+  const updateEnergyNotificationsPreference = async (enabled: boolean) => {
+    try {
+      await mutation.mutateAsync(enabled);
+      return true;
+    } catch (e) {
+      console.error('Failed to update energy notifications preference:', e);
+      return false;
+    }
+  };
 
   return {
-    energyNotificationsEnabled,
-    loading,
+    energyNotificationsEnabled: query.data ?? true,
+    loading: query.isLoading || query.isFetching || mutation.isPending,
     updateEnergyNotificationsPreference,
   } as const;
 }
