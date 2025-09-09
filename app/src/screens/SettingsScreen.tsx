@@ -9,15 +9,7 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import {
-  Shield,
-  Lock,
-  Smartphone,
-  Eye,
-  Code,
-  RefreshCw,
-  Database,
-} from 'lucide-react-native';
+import { Shield, Lock, Smartphone, Eye, Code, RefreshCw, Database, Bell } from 'lucide-react-native';
 import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
@@ -26,6 +18,8 @@ import { useHealthData } from '../hooks/useHealthData';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
+import { useEnergyNotificationsPreference } from '../hooks/useEnergyNotificationsPreference';
+import { cancelAllNotifications, requestNotificationPermissions } from '../services/notifications';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -52,6 +46,12 @@ export default function SettingsScreen() {
     developerControlsEnabled: enableDeveloperControls,
     updateDeveloperControlsPreference,
   } = useDeveloperControlsPreference();
+
+  // Use the energy notifications preference hook
+  const {
+    energyNotificationsEnabled: enableEnergyNotifications,
+    updateEnergyNotificationsPreference,
+  } = useEnergyNotificationsPreference();
 
   useEffect(() => {
     loadSecuritySettings();
@@ -122,6 +122,39 @@ export default function SettingsScreen() {
         },
       ]
     );
+  };
+
+  const handleEnergyNotificationsToggle = async (value: boolean) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const success = await updateEnergyNotificationsPreference(value);
+      if (success) {
+        if (value) {
+          const granted = await requestNotificationPermissions();
+          if (!granted) {
+            Alert.alert(
+              'Permission Needed',
+              'Please allow notifications in system settings to receive alerts.'
+            );
+          }
+          Alert.alert(
+            'Notifications Enabled',
+            'You will receive an alert when your energy is predicted to drop below 30%.'
+          );
+        } else {
+          try { await cancelAllNotifications(); } catch {}
+          Alert.alert('Notifications Disabled', 'Energy alerts have been turned off.');
+        }
+      } else {
+        Alert.alert('Error', 'Failed to update notifications setting. Please try again.');
+      }
+    } catch (e) {
+      console.error('Failed to toggle energy notifications:', e);
+      Alert.alert('Error', 'Failed to update notifications setting. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const updateSecuritySettings = async (
@@ -309,6 +342,28 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Bell size={24} color={colors.neutral[700]} />
+            <Text style={styles.sectionTitle}>Notifications</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Energy Alerts</Text>
+              <Text style={styles.settingDescription}>
+                Notify when your energy is predicted to drop below 30%
+              </Text>
+            </View>
+            <Switch
+              value={!!enableEnergyNotifications}
+              onValueChange={handleEnergyNotificationsToggle}
+              disabled={loading}
+              trackColor={{ false: colors.neutral[300], true: colors.black }}
+              thumbColor={colors.white}
+            />
+          </View>
+        </View>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Eye size={24} color={colors.neutral[700]} />

@@ -400,6 +400,7 @@ export class LocalStorageService {
   public async updatePreferences(preferences: {
     enableStressVisuals?: boolean;
     enableDeveloperControls?: boolean;
+    enableEnergyNotifications?: boolean;
   }): Promise<void> {
     try {
       const profile = await this.getUserProfile();
@@ -416,6 +417,11 @@ export class LocalStorageService {
             preferences.enableDeveloperControls ??
             profile.preferences?.enableDeveloperControls ??
             false,
+          // Default to enabled for notifications
+          enableEnergyNotifications:
+            preferences.enableEnergyNotifications ??
+            profile.preferences?.enableEnergyNotifications ??
+            true,
         };
         await this.saveUserProfile(profile);
       }
@@ -441,6 +447,16 @@ export class LocalStorageService {
     } catch (error) {
       console.error('Failed to get developer controls preference:', error);
       return false; // Default to disabled on error
+    }
+  }
+
+  public async getEnergyNotificationsEnabled(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.preferences?.enableEnergyNotifications ?? true; // Default to enabled
+    } catch (error) {
+      console.error('Failed to get energy notifications preference:', error);
+      return true; // Default to enabled on error
     }
   }
 

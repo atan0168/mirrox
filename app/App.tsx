@@ -19,6 +19,9 @@ import MainTabNavigator from './src/navigation/MainTabNavigator';
 import AlertsScreen from './src/screens/AlertsScreen';
 import HealthPermissionScreen from './src/screens/HealthPermissionScreen';
 import DebugDatabaseScreen from './src/screens/DebugDatabaseScreen';
+import { useEffect } from 'react';
+import { initNotifications } from './src/services/notifications';
+import RootServices from './src/components/RootServices';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -65,10 +68,19 @@ const queryClient = new QueryClient({
 export default function App() {
   // Mount global time-of-day scheduler once
   useTimeOfDayScheduler();
+
+  // Initialize notifications and request permissions once
+  useEffect(() => {
+    (async () => {
+      await initNotifications();
+    })();
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <NavigationContainer>
         <StatusBar style="dark" />
+        {/* Always-mounted background services */}
+        <RootServices />
         <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{
