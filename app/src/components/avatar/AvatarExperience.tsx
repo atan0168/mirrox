@@ -267,6 +267,21 @@ function AvatarExperience({
     return sleepH > 0 && sleepH < 6;
   }, [health]);
 
+  // Eye-bag effect (dark circles) — auto derive from sleep when not explicitly provided
+  // Derive eye-bags automatically from health and push to store.
+  const setEyeBagsAuto = useAvatarStore(s => s.setEyeBagsAuto);
+  useEffect(() => {
+    const sleepMin = health?.sleepMinutes ?? null;
+    if (sleepMin && sleepMin > 0) {
+      const sleepH = sleepMin / 60;
+      const raw = (6 - sleepH) / 3; // Below 6h -> increase
+      const intensityAuto = Math.max(0, Math.min(1, raw * 0.8 + 0.1));
+      setEyeBagsAuto(sleepH > 0 && sleepH < 6, intensityAuto);
+    } else {
+      setEyeBagsAuto(false, 0);
+    }
+  }, [health?.sleepMinutes, setEyeBagsAuto]);
+
   // Calculate automatic smog effects based on air quality
   const autoSmogEffects = useMemo(() => {
     if (!airQualityData) {

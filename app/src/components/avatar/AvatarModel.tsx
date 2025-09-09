@@ -4,6 +4,8 @@ import { useFrame, useThree } from '@react-three/fiber/native';
 import { useGLTF } from '@react-three/drei/native';
 import * as THREE from 'three';
 import { GLBAnimationLoader } from '../../utils/GLBAnimationLoader';
+import EyeBags from './EyeBags';
+import { useAvatarStore } from '../../store/avatarStore';
 import { assetPreloader } from '../../services/AssetPreloader';
 import { IDLE_ANIMATIONS, AVATAR_DEBUG } from '../../constants';
 import { buildBoneRemapper } from '../../utils/ThreeUtils';
@@ -33,6 +35,17 @@ export function AvatarModel({
   onLoadingProgress,
   additionalIdleAnimations = [],
 }: AvatarModelProps) {
+  // Eye-bags state from store (override vs auto)
+  const eyeBagsOverrideEnabled = useAvatarStore(s => s.eyeBagsOverrideEnabled);
+  const eyeBagsAutoEnabled = useAvatarStore(s => s.eyeBagsAutoEnabled);
+  const eyeBagsAutoIntensity = useAvatarStore(s => s.eyeBagsAutoIntensity);
+  const eyeBagsIntensity = useAvatarStore(s => s.eyeBagsIntensity);
+  const eyeBagsOffsetX = useAvatarStore(s => s.eyeBagsOffsetX);
+  const eyeBagsOffsetY = useAvatarStore(s => s.eyeBagsOffsetY);
+  const eyeBagsOffsetZ = useAvatarStore(s => s.eyeBagsOffsetZ);
+  const eyeBagsWidth = useAvatarStore(s => s.eyeBagsWidth);
+  const eyeBagsHeight = useAvatarStore(s => s.eyeBagsHeight);
+  const eyeBagsAspectX = useAvatarStore(s => s.eyeBagsAspectX);
   const { scene, animations } = useGLTF(url);
   const { camera } = useThree();
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -1373,6 +1386,20 @@ export function AvatarModel({
       }
     >
       <primitive object={scene} />
+      {/* Dark circles under eyes (health indicator) */}
+      {headMesh && (eyeBagsOverrideEnabled ? true : eyeBagsAutoEnabled) && (
+        <EyeBags
+          target={(headMesh.skeleton && headMesh.skeleton.bones.find(b => /head/i.test(b.name))) || headMesh}
+          enabled={eyeBagsOverrideEnabled ? true : eyeBagsAutoEnabled}
+          intensity={eyeBagsOverrideEnabled ? eyeBagsIntensity : eyeBagsAutoIntensity}
+          offsetX={eyeBagsOverrideEnabled ? eyeBagsOffsetX : undefined}
+          offsetY={eyeBagsOverrideEnabled ? eyeBagsOffsetY : undefined}
+          offsetZ={eyeBagsOverrideEnabled ? eyeBagsOffsetZ : undefined}
+          width={eyeBagsOverrideEnabled ? eyeBagsWidth : undefined}
+          height={eyeBagsOverrideEnabled ? eyeBagsHeight : undefined}
+          aspectX={eyeBagsOverrideEnabled ? eyeBagsAspectX : undefined}
+        />
+      )}
     </group>
   );
 }

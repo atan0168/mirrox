@@ -32,6 +32,19 @@ interface AvatarState {
   manualFacialExpression: string | null;
   isManualFacialExpression: boolean;
 
+  // Eye-bags (dark circles) configuration
+  eyeBagsOverrideEnabled: boolean; // when true, use override values; otherwise use auto values
+  eyeBagsIntensity: number; // override intensity 0..1
+  eyeBagsOffsetX: number; // override offsets/size only used when override enabled
+  eyeBagsOffsetY: number;
+  eyeBagsOffsetZ: number;
+  eyeBagsWidth: number;
+  eyeBagsHeight: number;
+  eyeBagsAspectX: number;
+  // Auto-derived eye-bags state (from health, etc.)
+  eyeBagsAutoEnabled: boolean;
+  eyeBagsAutoIntensity: number;
+
   // Actions
   setActiveAnimation: (
     anim: string | null,
@@ -54,6 +67,14 @@ interface AvatarState {
   // Facial expression override actions
   setManualFacialExpression: (expr: string | null) => void;
   clearManualFacialExpression: () => void;
+
+  // Eye-bags actions
+  setEyeBagsOverrideEnabled: (v: boolean) => void;
+  setEyeBagsIntensity: (v: number) => void;
+  setEyeBagsOffsets: (x: number, y: number, z: number) => void;
+  setEyeBagsSize: (w: number, h: number) => void;
+  setEyeBagsAspectX: (ax: number) => void;
+  setEyeBagsAuto: (enabled: boolean, intensity: number) => void;
 }
 
 export const useAvatarStore = create<AvatarState>((set, get) => ({
@@ -68,6 +89,18 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   currentPhase: 'morning',
   manualFacialExpression: null,
   isManualFacialExpression: false,
+
+  // Eye-bags defaults
+  eyeBagsOverrideEnabled: false,
+  eyeBagsIntensity: 0.6,
+  eyeBagsOffsetX: -0.035,
+  eyeBagsOffsetY: 0.065,
+  eyeBagsOffsetZ: 0.11,
+  eyeBagsWidth: 0.1,
+  eyeBagsHeight: 0.065,
+  eyeBagsAspectX: 1.6,
+  eyeBagsAutoEnabled: false,
+  eyeBagsAutoIntensity: 0.0,
 
   setActiveAnimation: (anim, opts) =>
     set({
@@ -94,4 +127,18 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
     }),
   clearManualFacialExpression: () =>
     set({ manualFacialExpression: null, isManualFacialExpression: false }),
+
+  // Eye-bags actions
+  setEyeBagsOverrideEnabled: v => set({ eyeBagsOverrideEnabled: v }),
+  setEyeBagsIntensity: v =>
+    set({ eyeBagsIntensity: Math.max(0, Math.min(1, v)) }),
+  setEyeBagsOffsets: (x, y, z) =>
+    set({ eyeBagsOffsetX: x, eyeBagsOffsetY: y, eyeBagsOffsetZ: z }),
+  setEyeBagsSize: (w, h) => set({ eyeBagsWidth: w, eyeBagsHeight: h }),
+  setEyeBagsAspectX: ax => set({ eyeBagsAspectX: ax }),
+  setEyeBagsAuto: (enabled, intensity) =>
+    set({
+      eyeBagsAutoEnabled: enabled,
+      eyeBagsAutoIntensity: Math.max(0, Math.min(1, intensity)),
+    }),
 }));
