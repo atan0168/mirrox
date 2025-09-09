@@ -17,7 +17,8 @@ export function useEnergyNotificationsPreference() {
   const [loading, setLoading] = useState<boolean>(globalLoading);
 
   useEffect(() => {
-    const listener = (enabled: boolean) => setEnergyNotificationsEnabled(enabled);
+    const listener = (enabled: boolean) =>
+      setEnergyNotificationsEnabled(enabled);
     listeners.add(listener);
     return () => listeners.delete(listener);
   }, []);
@@ -30,7 +31,8 @@ export function useEnergyNotificationsPreference() {
     }
     const load = async () => {
       try {
-        const enabled = await localStorageService.getEnergyNotificationsEnabled();
+        const enabled =
+          await localStorageService.getEnergyNotificationsEnabled();
         globalEnergyNotificationsEnabled = enabled;
         setEnergyNotificationsEnabled(enabled);
         notifyListeners(enabled);
@@ -47,17 +49,25 @@ export function useEnergyNotificationsPreference() {
     load();
   }, []);
 
-  const updateEnergyNotificationsPreference = useCallback(async (enabled: boolean) => {
-    try {
-      await localStorageService.updatePreferences({ enableEnergyNotifications: enabled });
-      notifyListeners(enabled);
-      return true;
-    } catch (e) {
-      console.error('Failed to update energy notifications preference:', e);
-      return false;
-    }
-  }, []);
+  const updateEnergyNotificationsPreference = useCallback(
+    async (enabled: boolean) => {
+      try {
+        await localStorageService.updatePreferences({
+          enableEnergyNotifications: enabled,
+        });
+        notifyListeners(enabled);
+        return true;
+      } catch (e) {
+        console.error('Failed to update energy notifications preference:', e);
+        return false;
+      }
+    },
+    []
+  );
 
-  return { energyNotificationsEnabled, loading, updateEnergyNotificationsPreference } as const;
+  return {
+    energyNotificationsEnabled,
+    loading,
+    updateEnergyNotificationsPreference,
+  } as const;
 }
-

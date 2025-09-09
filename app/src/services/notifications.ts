@@ -50,11 +50,16 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   const mod = await getModule();
   if (!mod) return false;
   const settings = await mod.getPermissionsAsync();
-  if (settings.granted || settings.ios?.status === mod.IosAuthorizationStatus.AUTHORIZED) {
+  if (
+    settings.granted ||
+    settings.ios?.status === mod.IosAuthorizationStatus.AUTHORIZED
+  ) {
     return true;
   }
   const req = await mod.requestPermissionsAsync();
-  return !!(req.granted || req.ios?.status === mod.IosAuthorizationStatus.AUTHORIZED);
+  return !!(
+    req.granted || req.ios?.status === mod.IosAuthorizationStatus.AUTHORIZED
+  );
 }
 
 export async function presentEnergyLowNow(body?: string) {
@@ -63,13 +68,17 @@ export async function presentEnergyLowNow(body?: string) {
   await mod.scheduleNotificationAsync({
     content: {
       title: 'Energy getting low',
-      body: body ?? "Your energy just dropped below 30%. Consider a short rest.",
+      body:
+        body ?? 'Your energy just dropped below 30%. Consider a short rest.',
     },
     trigger: null, // show immediately
   });
 }
 
-export async function scheduleEnergyLowAt(date: Date, body?: string): Promise<string | null> {
+export async function scheduleEnergyLowAt(
+  date: Date,
+  body?: string
+): Promise<string | null> {
   const mod = await getModule();
   if (!mod) return null;
   return await mod.scheduleNotificationAsync({

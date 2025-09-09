@@ -10,7 +10,6 @@ interface EnergyState {
 export const useEnergyStore = create<EnergyState>(set => ({
   energyPct: null,
   currentDay: new Date().toDateString(),
-  setEnergyPct: (v) => set({ energyPct: v }),
-  setCurrentDay: (k) => set({ currentDay: k }),
+  setEnergyPct: v => set({ energyPct: v }),
+  setCurrentDay: k => set({ currentDay: k }),
 }));
-

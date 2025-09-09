@@ -9,7 +9,16 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import { Shield, Lock, Smartphone, Eye, Code, RefreshCw, Database, Bell } from 'lucide-react-native';
+import {
+  Shield,
+  Lock,
+  Smartphone,
+  Eye,
+  Code,
+  RefreshCw,
+  Database,
+  Bell,
+} from 'lucide-react-native';
 import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
@@ -19,7 +28,10 @@ import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
 import { useEnergyNotificationsPreference } from '../hooks/useEnergyNotificationsPreference';
-import { cancelAllNotifications, requestNotificationPermissions } from '../services/notifications';
+import {
+  cancelAllNotifications,
+  requestNotificationPermissions,
+} from '../services/notifications';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -143,15 +155,26 @@ export default function SettingsScreen() {
             'You will receive an alert when your energy is predicted to drop below 30%.'
           );
         } else {
-          try { await cancelAllNotifications(); } catch {}
-          Alert.alert('Notifications Disabled', 'Energy alerts have been turned off.');
+          try {
+            await cancelAllNotifications();
+          } catch {}
+          Alert.alert(
+            'Notifications Disabled',
+            'Energy alerts have been turned off.'
+          );
         }
       } else {
-        Alert.alert('Error', 'Failed to update notifications setting. Please try again.');
+        Alert.alert(
+          'Error',
+          'Failed to update notifications setting. Please try again.'
+        );
       }
     } catch (e) {
       console.error('Failed to toggle energy notifications:', e);
-      Alert.alert('Error', 'Failed to update notifications setting. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to update notifications setting. Please try again.'
+      );
     } finally {
       setLoading(false);
     }

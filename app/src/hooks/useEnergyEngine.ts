@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useHealthData } from './useHealthData';
 import { useEnergyStore } from '../store/energyStore';
-import { AWAKE_DEPLETION_PER_MIN, FULL_SLEEP_MINUTES, TICK_MS } from '../constants';
+import {
+  AWAKE_DEPLETION_PER_MIN,
+  FULL_SLEEP_MINUTES,
+  TICK_MS,
+} from '../constants';
 import { clamp } from '../utils/mathUtils';
 import { healthProvider } from '../services/health';
 import { lastNightWindow } from '../utils/datetimeUtils';

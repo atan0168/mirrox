@@ -767,77 +767,87 @@ export function AvatarModel({
   }, [headMesh, facialExpression]);
 
   // Configure materials for mobile compatibility and apply skin tone adjustments
+  // Important: apply skin tone relative to original base color to avoid cumulative darkening across re-renders
   useEffect(() => {
-    if (scene) {
-      console.log(
-        'Scene loaded. Configuring materials for mobile compatibility.'
-      );
+    if (!scene) return;
 
-      const compatibleMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.5,
-        metalness: 0.1,
-      });
+    console.log(
+      'Scene loaded. Configuring materials for mobile compatibility.'
+    );
 
-      scene.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-          if (
-            child.material &&
-            child.material instanceof THREE.MeshStandardMaterial
-          ) {
-            child.material.envMapIntensity = 0.5;
-            child.material.needsUpdate = true;
+    const compatibleMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.5,
+      metalness: 0.1,
+    });
 
-            // Apply skin tone adjustment to skin materials
-            if (
-              skinToneAdjustment !== 0 &&
-              (child.name.toLowerCase().includes('body') ||
-                child.name.toLowerCase().includes('head') ||
-                child.name.toLowerCase().includes('face') ||
-                child.name.toLowerCase().includes('arm') ||
-                child.name.toLowerCase().includes('leg') ||
-                child.material.name?.toLowerCase().includes('skin') ||
-                child.material.name?.toLowerCase().includes('body'))
-            ) {
-              // Create a copy of the material to avoid affecting other meshes
-              const adjustedMaterial = child.material.clone();
+    scene.traverse(child => {
+      if (!(child instanceof THREE.Mesh)) return;
 
-              // Get the current color
-              const currentColor = adjustedMaterial.color.clone();
+      // Ensure MeshStandardMaterial for proper PBR shading on mobile
+      if (
+        child.material &&
+        child.material instanceof THREE.MeshStandardMaterial
+      ) {
+        child.material.envMapIntensity = 0.5;
+        child.material.needsUpdate = true;
+      } else {
+        child.material = compatibleMaterial;
+      }
 
-              if (skinToneAdjustment > 0) {
-                // Lighten: lerp towards white
-                currentColor.lerp(new THREE.Color(1, 1, 1), skinToneAdjustment);
-              } else {
-                // Darken: lerp towards darker brown/black
-                currentColor.lerp(
-                  new THREE.Color(0.2, 0.15, 0.1),
-                  Math.abs(skinToneAdjustment)
-                );
-              }
+      // Shadows (skip on Android for perf/artefacts)
+      if (Platform.OS !== 'android') {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
 
-              adjustedMaterial.color = currentColor;
-              adjustedMaterial.needsUpdate = true;
-              child.material = adjustedMaterial;
+      // Identify likely skin meshes by name/material name
+      const isSkinMesh = (() => {
+        const n = child.name?.toLowerCase?.() || '';
+        const mn = (child.material as any)?.name?.toLowerCase?.() || '';
+        return (
+          n.includes('body') ||
+          n.includes('head') ||
+          n.includes('face') ||
+          n.includes('arm') ||
+          n.includes('leg') ||
+          mn.includes('skin') ||
+          mn.includes('body')
+        );
+      })();
 
-              console.log(
-                `Applied skin tone adjustment ${skinToneAdjustment} to mesh: ${child.name}`
-              );
-            }
-          } else {
-            child.material = compatibleMaterial;
-          }
+      if (!isSkinMesh) return;
 
-          if (Platform.OS !== 'android') {
-            child.castShadow = true;
-            child.receiveShadow = true;
-          }
-        }
-      });
+      const stdMat = child.material as THREE.MeshStandardMaterial;
 
-      sceneRef.current = scene;
-      console.log('Model materials configured for mobile.');
-    }
+      // Cache the original base color and ensure we only clone the material once
+      if (!child.userData.__baseSkinColor) {
+        // Clone the material so skin adjustments are per-mesh and not shared
+        child.material = stdMat.clone();
+        child.userData.__baseSkinColor = (
+          child.material as THREE.MeshStandardMaterial
+        ).color.clone();
+      }
+
+      const baseColor: THREE.Color = child.userData.__baseSkinColor;
+
+      // Compute adjusted color from original base color (not from last adjusted value)
+      const adjusted = baseColor.clone();
+      if (skinToneAdjustment > 0) {
+        adjusted.lerp(new THREE.Color(1, 1, 1), skinToneAdjustment);
+      } else if (skinToneAdjustment < 0) {
+        adjusted.lerp(
+          new THREE.Color(0.2, 0.15, 0.1),
+          Math.abs(skinToneAdjustment)
+        );
+      }
+
+      (child.material as THREE.MeshStandardMaterial).color.copy(adjusted);
+      (child.material as THREE.MeshStandardMaterial).needsUpdate = true;
+    });
+
+    sceneRef.current = scene;
+    console.log('Model materials configured for mobile.');
   }, [scene, skinToneAdjustment]);
 
   // Load GLB animations from preloaded assets
@@ -1389,9 +1399,15 @@ export function AvatarModel({
       {/* Dark circles under eyes (health indicator) */}
       {headMesh && (eyeBagsOverrideEnabled ? true : eyeBagsAutoEnabled) && (
         <EyeBags
-          target={(headMesh.skeleton && headMesh.skeleton.bones.find(b => /head/i.test(b.name))) || headMesh}
+          target={
+            (headMesh.skeleton &&
+              headMesh.skeleton.bones.find(b => /head/i.test(b.name))) ||
+            headMesh
+          }
           enabled={eyeBagsOverrideEnabled ? true : eyeBagsAutoEnabled}
-          intensity={eyeBagsOverrideEnabled ? eyeBagsIntensity : eyeBagsAutoIntensity}
+          intensity={
+            eyeBagsOverrideEnabled ? eyeBagsIntensity : eyeBagsAutoIntensity
+          }
           offsetX={eyeBagsOverrideEnabled ? eyeBagsOffsetX : undefined}
           offsetY={eyeBagsOverrideEnabled ? eyeBagsOffsetY : undefined}
           offsetZ={eyeBagsOverrideEnabled ? eyeBagsOffsetZ : undefined}

@@ -81,6 +81,8 @@ interface AvatarExperienceProps {
   // onInteractionChange removed (unused)
   // Scene selection
   scene?: 'zenpark' | 'city' | 'home';
+  // Whether this canvas is active/visible (used to pause rendering when not focused)
+  isActive?: boolean;
 }
 
 function AvatarExperience({
@@ -100,6 +102,7 @@ function AvatarExperience({
   weather = null,
   // onInteractionChange removed,
   scene = 'zenpark',
+  isActive = true,
 }: AvatarExperienceProps) {
   const screenWidth = Dimensions.get('window').width;
   const effectiveWidth = width ?? screenWidth;
@@ -671,8 +674,11 @@ function AvatarExperience({
           gl={{
             antialias: false,
             powerPreference: 'high-performance',
-            preserveDrawingBuffer: true,
+            // Avoid preserveDrawingBuffer for perf/memory; not needed for screenshots
+            preserveDrawingBuffer: false,
           }}
+          // Pause render loop when screen is not focused to reduce GPU/CPU load
+          frameloop={isActive ? 'always' : 'never'}
           camera={{
             position: [0, 0.5, 5],
             fov: 60,

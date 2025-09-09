@@ -29,8 +29,10 @@ import SceneSwitcher, {
 import RainIntensityControls from '../components/controls/RainIntensityControls';
 import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
 import { useAvatarStore } from '../store/avatarStore';
+import { useIsFocused } from '@react-navigation/native';
 
 const DashboardScreen: React.FC = () => {
+  const isFocused = useIsFocused();
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
@@ -273,6 +275,7 @@ const DashboardScreen: React.FC = () => {
               showAnimationButton={developerControlsEnabled}
               facialExpression={manualExpression || 'neutral'}
               skinToneAdjustment={skinEffects.totalAdjustment}
+              isActive={!!isFocused}
               eyeBagsEnabled={eyeBagsOverride ? true : undefined}
               eyeBagsIntensity={eyeBagsOverride ? eyeBagsIntensity : undefined}
               eyeBagsOffsetX={eyeBagsOverride ? eyeBagsOffsetX : undefined}
@@ -319,34 +322,91 @@ const DashboardScreen: React.FC = () => {
               <View style={styles.devCard}>
                 <View style={styles.devRow}>
                   <Text style={styles.devLabel}>Eye Bags (Override)</Text>
-                  <Switch value={eyeBagsOverride} onValueChange={setEyeBagsOverride} />
+                  <Switch
+                    value={eyeBagsOverride}
+                    onValueChange={setEyeBagsOverride}
+                  />
                 </View>
                 {eyeBagsOverride && (
                   <View style={{ marginTop: spacing.sm }}>
                     <Text style={styles.devSubtle}>
                       Intensity: {(eyeBagsIntensity * 100).toFixed(0)}%
                     </Text>
-                    <Slider value={eyeBagsIntensity} onValueChange={setEyeBagsIntensity} minimumValue={0} maximumValue={1} step={0.05} minimumTrackTintColor={colors.neutral[700]} maximumTrackTintColor={colors.neutral[300]} />
+                    <Slider
+                      value={eyeBagsIntensity}
+                      onValueChange={setEyeBagsIntensity}
+                      minimumValue={0}
+                      maximumValue={1}
+                      step={0.05}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
                     <Text style={styles.devSubtle}>
                       Offset X: {eyeBagsOffsetX.toFixed(3)}
                     </Text>
-                    <Slider value={eyeBagsOffsetX} onValueChange={v => setEyeBagsOffsets(v, eyeBagsOffsetY, eyeBagsOffsetZ)} minimumValue={-0.15} maximumValue={0.15} step={0.005} minimumTrackTintColor={colors.neutral[700]} maximumTrackTintColor={colors.neutral[300]} />
+                    <Slider
+                      value={eyeBagsOffsetX}
+                      onValueChange={v =>
+                        setEyeBagsOffsets(v, eyeBagsOffsetY, eyeBagsOffsetZ)
+                      }
+                      minimumValue={-0.15}
+                      maximumValue={0.15}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
                     <Text style={styles.devSubtle}>
                       Offset Y: {eyeBagsOffsetY.toFixed(3)}
                     </Text>
-                    <Slider value={eyeBagsOffsetY} onValueChange={v => setEyeBagsOffsets(eyeBagsOffsetX, v, eyeBagsOffsetZ)} minimumValue={-0.15} maximumValue={0.15} step={0.005} minimumTrackTintColor={colors.neutral[700]} maximumTrackTintColor={colors.neutral[300]} />
+                    <Slider
+                      value={eyeBagsOffsetY}
+                      onValueChange={v =>
+                        setEyeBagsOffsets(eyeBagsOffsetX, v, eyeBagsOffsetZ)
+                      }
+                      minimumValue={-0.15}
+                      maximumValue={0.15}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
                     <Text style={styles.devSubtle}>
                       Offset Z: {eyeBagsOffsetZ.toFixed(3)}
                     </Text>
-                    <Slider value={eyeBagsOffsetZ} onValueChange={v => setEyeBagsOffsets(eyeBagsOffsetX, eyeBagsOffsetY, v)} minimumValue={-0.2} maximumValue={0.2} step={0.005} minimumTrackTintColor={colors.neutral[700]} maximumTrackTintColor={colors.neutral[300]} />
+                    <Slider
+                      value={eyeBagsOffsetZ}
+                      onValueChange={v =>
+                        setEyeBagsOffsets(eyeBagsOffsetX, eyeBagsOffsetY, v)
+                      }
+                      minimumValue={-0.2}
+                      maximumValue={0.2}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
                     <Text style={styles.devSubtle}>
                       Width: {eyeBagsWidth.toFixed(3)}
                     </Text>
-                    <Slider value={eyeBagsWidth} onValueChange={v => setEyeBagsSize(v, eyeBagsHeight)} minimumValue={0.05} maximumValue={0.25} step={0.005} minimumTrackTintColor={colors.neutral[700]} maximumTrackTintColor={colors.neutral[300]} />
+                    <Slider
+                      value={eyeBagsWidth}
+                      onValueChange={v => setEyeBagsSize(v, eyeBagsHeight)}
+                      minimumValue={0.05}
+                      maximumValue={0.25}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
                     <Text style={styles.devSubtle}>
                       Height: {eyeBagsHeight.toFixed(3)}
                     </Text>
-                    <Slider value={eyeBagsHeight} onValueChange={v => setEyeBagsSize(eyeBagsWidth, v)} minimumValue={0.03} maximumValue={0.15} step={0.005} minimumTrackTintColor={colors.neutral[700]} maximumTrackTintColor={colors.neutral[300]} />
+                    <Slider
+                      value={eyeBagsHeight}
+                      onValueChange={v => setEyeBagsSize(eyeBagsWidth, v)}
+                      minimumValue={0.03}
+                      maximumValue={0.15}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
                     <Text style={styles.devHint}>
                       When override is off, eye bags follow sleep data.
                     </Text>

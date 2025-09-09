@@ -22,10 +22,11 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const MainTabNavigator: React.FC = () => {
   return (
     <Tab.Navigator
-      detachInactiveScreens={false}
+      detachInactiveScreens
       backBehavior="initialRoute"
       tabBar={props => <CustomTabBar {...props} />}
       screenOptions={({ navigation }) => ({
+        lazy: true,
         headerShown: true,
         headerTitle: 'Digital Twin',
         headerShadowVisible: false,

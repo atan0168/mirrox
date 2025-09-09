@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTimeOfDayScheduler } from './src/hooks/useTimeOfDayScheduler';
+import { enableScreens } from 'react-native-screens';
 
 // Import screens
 import SplashScreen from './src/screens/SplashScreen';
@@ -66,6 +67,8 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  // Optimize navigation performance/memory
+  enableScreens(true);
   // Mount global time-of-day scheduler once
   useTimeOfDayScheduler();
 

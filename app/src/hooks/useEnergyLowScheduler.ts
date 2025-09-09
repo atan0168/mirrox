@@ -16,7 +16,8 @@ function dayKey(d = new Date()): string {
 export function useEnergyLowScheduler(thresholdPct = 30) {
   const energyPct = useEnergyStore(s => s.energyPct);
   const currentDay = useEnergyStore(s => s.currentDay);
-  const { energyNotificationsEnabled, loading } = useEnergyNotificationsPreference();
+  const { energyNotificationsEnabled, loading } =
+    useEnergyNotificationsPreference();
   const prevEnergyRef = useRef<number | null>(energyPct ?? null);
   const scheduledIdRef = useRef<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -49,20 +50,31 @@ export function useEnergyLowScheduler(thresholdPct = 30) {
   // When app goes to background, schedule a notification at the predicted crossing time
   useEffect(() => {
     if (loading) return;
-    const sub = AppState.addEventListener('change', async (nextState) => {
+    const sub = AppState.addEventListener('change', async nextState => {
       const prev = appStateRef.current;
       appStateRef.current = nextState;
-      if ((nextState === 'background' || nextState === 'inactive') && prev === 'active') {
+      if (
+        (nextState === 'background' || nextState === 'inactive') &&
+        prev === 'active'
+      ) {
         if (scheduledIdRef.current) {
-          try { await cancelScheduledNotification(scheduledIdRef.current); } catch {}
+          try {
+            await cancelScheduledNotification(scheduledIdRef.current);
+          } catch {}
           scheduledIdRef.current = null;
         }
         if (energyNotificationsEnabled) {
           const when = computeCrossingTime();
           if (when) {
             try {
-              const eta = when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              const id = await scheduleEnergyLowAt(when, `Your energy is predicted to drop below 30% around ${eta}.`);
+              const eta = when.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+              const id = await scheduleEnergyLowAt(
+                when,
+                `Your energy is predicted to drop below 30% around ${eta}.`
+              );
               scheduledIdRef.current = id;
             } catch {}
           }
@@ -70,7 +82,9 @@ export function useEnergyLowScheduler(thresholdPct = 30) {
       }
       if (nextState === 'active') {
         if (scheduledIdRef.current) {
-          try { await cancelScheduledNotification(scheduledIdRef.current); } catch {}
+          try {
+            await cancelScheduledNotification(scheduledIdRef.current);
+          } catch {}
           scheduledIdRef.current = null;
         }
       }
