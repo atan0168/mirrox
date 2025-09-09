@@ -22,7 +22,7 @@ import {
   configureTextureLoader,
 } from '../../utils/ThreeUtils';
 import { calculateSmogEffects } from '../../utils/skinEffectsUtils';
-import { AVAILABLE_ANIMATIONS } from '../../constants';
+import { AVAILABLE_ANIMATIONS, FULL_SLEEP_MINUTES } from '../../constants';
 import {
   getAnimationForAQI,
   getAnimationCycleForAQI,
@@ -32,6 +32,7 @@ import { useState, useEffect, useRef } from 'react';
 import { StressInfoModal } from '../ui/StressInfoModal';
 import { useHealthData } from '../../hooks/useHealthData';
 import { computeEnergy } from '../../utils/healthUtils';
+import { healthDataService } from '../../services/HealthDataService';
 import HealthBubble from '../effects/HealthBubble';
 import { SceneEnvironment } from '../scene/SceneEnvironment';
 import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
@@ -271,18 +272,54 @@ function AvatarExperience({
   }, [health]);
 
   // Eye-bag effect (dark circles) — auto derive from sleep when not explicitly provided
-  // Derive eye-bags automatically from health and push to store.
+  // If user sleeps < 7h (FULL_SLEEP_MINUTES), apply 0.1 intensity per
+  // consecutive day of insufficient sleep, capped at 0.6. Disable when >= 7h.
   const setEyeBagsAuto = useAvatarStore(s => s.setEyeBagsAuto);
   useEffect(() => {
-    const sleepMin = health?.sleepMinutes ?? null;
-    if (sleepMin && sleepMin > 0) {
-      const sleepH = sleepMin / 60;
-      const raw = (6 - sleepH) / 3; // Below 6h -> increase
-      const intensityAuto = Math.max(0, Math.min(1, raw * 0.8 + 0.1));
-      setEyeBagsAuto(sleepH > 0 && sleepH < 6, intensityAuto);
-    } else {
-      setEyeBagsAuto(false, 0);
-    }
+    let cancelled = false;
+    const updateEyeBags = async () => {
+      const sleepMin = health?.sleepMinutes ?? null;
+      if (sleepMin == null || sleepMin <= 0) {
+        if (!cancelled) setEyeBagsAuto(false, 0);
+        return;
+      }
+
+      try {
+        const history = await healthDataService.getHistory();
+        const snapshots = history?.snapshots ?? [];
+
+        // Count consecutive days (from latest backwards) with sleep < FULL_SLEEP_MINUTES and > 0
+        let streak = 0;
+        for (let i = snapshots.length - 1; i >= 0; i--) {
+          const m = snapshots[i]?.sleepMinutes ?? 0;
+          if (m > 0 && m < FULL_SLEEP_MINUTES) streak++;
+          else break; // reset streak on sufficient or missing data
+        }
+
+        // Fallback to just last night if no history snapshots available
+        if (snapshots.length === 0) {
+          const insufficient = sleepMin > 0 && sleepMin < FULL_SLEEP_MINUTES;
+          streak = insufficient ? 1 : 0;
+        }
+
+        const enabled = streak > 0;
+        const intensity = enabled
+          ? Math.min(0.6, Math.max(0.1, streak * 0.1))
+          : 0;
+
+        if (!cancelled) setEyeBagsAuto(enabled, intensity);
+      } catch (e) {
+        // On error, degrade gracefully to last-night-only logic
+        const insufficient = sleepMin > 0 && sleepMin < FULL_SLEEP_MINUTES;
+        const intensity = insufficient ? 0.1 : 0;
+        if (!cancelled) setEyeBagsAuto(insufficient, intensity);
+      }
+    };
+
+    updateEyeBags();
+    return () => {
+      cancelled = true;
+    };
   }, [health?.sleepMinutes, setEyeBagsAuto]);
 
   // Calculate automatic smog effects based on air quality
