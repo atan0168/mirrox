@@ -1,24 +1,16 @@
 import { Platform } from 'react-native';
 import type {
   HealthHistory,
-  HealthSnapshot,
   HealthPlatform,
+  HealthSnapshot,
 } from '../models/Health';
-import { healthProvider } from './health';
+import {
+  getDeviceTimeZone,
+  startOfDayInTimeZone,
+  yyyymmddInTimeZone,
+} from '../utils/datetimeUtils';
 import { HealthHistoryRepository } from './db/HealthHistoryRepository';
-
-function yyyymmddLocal(d: Date): string {
-  const y = d.getFullYear();
-  const m = `${d.getMonth() + 1}`.padStart(2, '0');
-  const day = `${d.getDate()}`.padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function startOfDay(d: Date): Date {
-  const t = new Date(d);
-  t.setHours(0, 0, 0, 0);
-  return t;
-}
+import { healthProvider } from './health';
 
 export class HealthDataService {
   async requestPermissions(): Promise<boolean> {
@@ -34,7 +26,8 @@ export class HealthDataService {
           ? 'android'
           : 'mock';
 
-    const dayStart = startOfDay(now);
+    const timeZone = getDeviceTimeZone();
+    const dayStart = startOfDayInTimeZone(now, timeZone);
     const steps = await healthProvider.getDailySteps(dayStart, now);
     const sleepMinutes = await healthProvider.getLastNightSleepMinutes(now);
     // Additional wellness metrics (best-effort; may return null if unavailable)
@@ -55,7 +48,7 @@ export class HealthDataService {
     ]);
 
     const snapshot: HealthSnapshot = {
-      date: yyyymmddLocal(now),
+      date: yyyymmddInTimeZone(now, timeZone),
       timestamp: new Date().toISOString(),
       platform,
       steps,
@@ -90,8 +83,8 @@ export class HealthDataService {
     await HealthHistoryRepository.upsert(snapshot);
   }
 
-  async getHistory(): Promise<HealthHistory> {
-    return await HealthHistoryRepository.getHistory(30);
+  async getHistory(limit = 30): Promise<HealthHistory> {
+    return await HealthHistoryRepository.getHistory(limit);
   }
 }
 

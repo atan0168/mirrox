@@ -22,7 +22,9 @@ import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useTrafficData } from '../hooks/useTrafficData';
 import { getAQIInfo, getShortClassification } from '../utils/aqiUtils';
 import { useHealthData } from '../hooks/useHealthData';
+import { useHealthHistory } from '../hooks/useHealthHistory';
 import { ENV_REFRESH_INTERVAL_MS } from '../constants';
+import { colors } from '../theme';
 
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();
@@ -61,6 +63,10 @@ const StatsScreen: React.FC = () => {
   const [healthBannerDismissed, setHealthBannerDismissed] = useState(false);
   const [enablingHealth, setEnablingHealth] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [historyWindow, setHistoryWindow] = useState<7 | 14 | 30>(7);
+
+  // Health history for bar chart
+  const { refresh: refreshHistory } = useHealthHistory(historyWindow);
 
   const shouldShowHealthBanner = useMemo(() => {
     if (healthBannerDismissed) return false;
@@ -104,10 +110,11 @@ const StatsScreen: React.FC = () => {
     setRefreshing(true);
     try {
       await refreshHealth();
+      await refreshHistory();
     } finally {
       setRefreshing(false);
     }
-  }, [refreshHealth]);
+  }, [refreshHealth, refreshHistory]);
 
   // When returning to this screen (e.g., from Settings), try to refresh
   useFocusEffect(
@@ -216,33 +223,6 @@ const StatsScreen: React.FC = () => {
           isError={!!healthError}
           errorMessage={healthError || undefined}
         />
-
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}>
-              <TrendingUp size={24} color="#059669" />
-            </View>
-            <Text style={styles.statValue}>7 Days</Text>
-            <Text style={styles.statLabel}>Wellness Streak</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}>
-              <Wind size={24} color="#6366F1" />
-            </View>
-            <Text style={styles.statValue}>{getAirQualityStatValue()}</Text>
-            <Text style={styles.statLabel}>Air Quality</Text>
-          </View>
-        </View>
-
-        {/* <View style={styles.section}> */}
-        {/*   <Text style={styles.sectionTitle}>Weekly Trends</Text> */}
-        {/*   <View style={styles.placeholder}> */}
-        {/*     <Text style={styles.placeholderText}> */}
-        {/*       Historical charts and trends coming soon */}
-        {/*     </Text> */}
-        {/*   </View> */}
-        {/* </View> */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -343,6 +323,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
   },
+  toggle: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#FFFFFF',
+  },
+  toggleActive: {
+    borderWidth: 1,
+    borderColor: colors.green[600],
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#ECFDF5',
+  },
+  toggleText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  toggleTextActive: {
+    fontSize: 12,
+    color: colors.green[700],
+    fontWeight: '700',
+  },
   aqiCard: {
     marginBottom: 20,
     padding: 20,
@@ -372,10 +378,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 20,
     marginBottom: 12,
-  },
-  dataTimestamp: {
-    fontSize: 12,
-    color: '#9CA3AF',
   },
   pollutantsContainer: {
     marginBottom: 20,

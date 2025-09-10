@@ -804,7 +804,7 @@ export function AvatarModel({
       // Identify likely skin meshes by name/material name
       const isSkinMesh = (() => {
         const n = child.name?.toLowerCase?.() || '';
-        const mn = (child.material as any)?.name?.toLowerCase?.() || '';
+        const mn = child.material?.name?.toLowerCase?.() || '';
         return (
           n.includes('body') ||
           n.includes('head') ||

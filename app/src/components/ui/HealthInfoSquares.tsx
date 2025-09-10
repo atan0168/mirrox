@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   Modal,
   Platform,
+  SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import {
   Activity,
@@ -25,6 +27,9 @@ import { Card } from './Card';
 import { Button } from './Button';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import type { HealthSnapshot } from '../../models/Health';
+import HistoryBarChart from './HistoryBarChart';
+import { useHealthHistory } from '../../hooks/useHealthHistory';
+import { format, parseISO } from 'date-fns';
 
 interface HealthInfoSquaresProps {
   health?: HealthSnapshot | null;
@@ -63,6 +68,60 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const respiratoryRateBrpm = health?.respiratoryRateBrpm ?? null;
   const workoutsCount = health?.workoutsCount ?? null;
   const isAndroid = Platform.OS === 'android';
+
+  // Steps history state (for steps modal chart)
+  const [stepsHistoryWindow, setStepsHistoryWindow] = useState<7 | 14 | 30>(7);
+  const {
+    data: stepsHistory,
+    loading: isStepsHistoryLoading,
+    error: stepsHistoryError,
+  } = useHealthHistory(stepsHistoryWindow);
+
+  const StepsHistoryToggle: React.FC = () => (
+    <View style={{ flexDirection: 'row' }}>
+      {[7, 14, 30].map(n => {
+        const active = n === stepsHistoryWindow;
+        return (
+          <TouchableOpacity
+            key={n}
+            onPress={() => setStepsHistoryWindow(n as 7 | 14 | 30)}
+            style={active ? styles.historyToggleActive : styles.historyToggle}
+          >
+            <Text
+              style={
+                active
+                  ? styles.historyToggleTextActive
+                  : styles.historyToggleText
+              }
+            >
+              {n}d
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  const StepsHistoryChart: React.FC = () => (
+    <>
+      <HistoryBarChart
+        data={(stepsHistory?.snapshots || []).map(s => ({
+          label: format(parseISO(s.date), 'MM/dd'),
+          value: s.steps,
+        }))}
+        height={180}
+        barColor={colors.green[600]}
+        showValueOnPress
+      />
+      <Text style={styles.timestamp}>
+        {isStepsHistoryLoading
+          ? 'Loading history…'
+          : stepsHistoryError
+            ? 'Unable to load history'
+            : `Showing last ${stepsHistoryWindow} days`}
+      </Text>
+    </>
+  );
 
   const getStepsColor = () => {
     if (isError) return colors.red[500];
@@ -290,16 +349,18 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       valueText: string;
       color: string;
       statusText: string;
+      presentationStyle?: 'pageSheet' | 'formSheet' | 'fullScreen';
       summary: Array<{ label: string; value: string }>;
+      extra?: React.ReactNode;
     }
   ) => (
     <Modal
       visible={selectedModal === key}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle={options.presentationStyle || 'fullScreen'}
       onRequestClose={() => setSelectedModal(null)}
     >
-      <View style={styles.modalContainer}>
+      <SafeAreaView style={styles.modalContainer}>
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>{options.title}</Text>
           <TouchableOpacity
@@ -309,7 +370,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             <Text style={styles.closeButtonText}>✕</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.modalContent}>
+        <ScrollView style={styles.modalContent}>
           {isError ? (
             <Card
               variant="outline"
@@ -349,6 +410,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                   </Text>
                 )}
               </Card>
+              {options.extra}
               {options.summary.length > 0 && (
                 <View style={styles.metricsSection}>
                   <Text style={styles.sectionTitle}>Summary</Text>
@@ -364,7 +426,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
               )}
             </>
           )}
-        </View>
+        </ScrollView>
         <View style={styles.modalFooter}>
           <Button
             variant="secondary"
@@ -374,7 +436,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             Close
           </Button>
         </View>
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 
@@ -384,6 +446,26 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       valueText: isError ? 'Error' : isLoading ? '...' : `${steps}`,
       color: getStepsColor(),
       statusText: stepsLabel(),
+      extra: (
+        <View style={styles.metricsSection}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: spacing.sm,
+            }}
+          >
+            <Text style={styles.sectionTitle}>History</Text>
+            <StepsHistoryToggle />
+          </View>
+          <Card>
+            <View style={{ paddingVertical: spacing.sm }}>
+              <StepsHistoryChart />
+            </View>
+          </Card>
+        </View>
+      ),
       summary: [
         { label: 'Daily Goal', value: `${dailyStepGoal}` },
         { label: 'Remaining', value: `${Math.max(0, dailyStepGoal - steps)}` },
@@ -924,5 +1006,33 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: '600',
     color: colors.neutral[900],
+  },
+  historyToggle: {
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.white,
+    marginLeft: spacing.xs,
+  },
+  historyToggleActive: {
+    borderWidth: 1,
+    borderColor: colors.green[600],
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.green[50],
+    marginLeft: spacing.xs,
+  },
+  historyToggleText: {
+    fontSize: fontSize.xs,
+    color: colors.neutral[700],
+    fontWeight: '600',
+  },
+  historyToggleTextActive: {
+    fontSize: fontSize.xs,
+    color: colors.green[700],
+    fontWeight: '700',
   },
 });

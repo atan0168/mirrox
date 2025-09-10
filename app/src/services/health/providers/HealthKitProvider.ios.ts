@@ -112,7 +112,7 @@ export class HealthKitProvider implements HealthProvider {
       );
       if (!samples?.length) return null;
       const avg =
-        samples.reduce((s: number, x: any) => s + (x?.quantity || 0), 0) /
+        samples.reduce((s: number, x) => s + (x?.quantity || 0), 0) /
         samples.length;
       return Math.round(avg * 10) / 10;
     } catch {}
@@ -135,7 +135,7 @@ export class HealthKitProvider implements HealthProvider {
       );
       if (!samples?.length) return null;
       const avg =
-        samples.reduce((s: number, x: any) => s + (x?.quantity || 0), 0) /
+        samples.reduce((s: number, x) => s + (x?.quantity || 0), 0) /
         samples.length;
       return Math.round(avg);
     } catch {}
@@ -157,10 +157,7 @@ export class HealthKitProvider implements HealthProvider {
         }
       );
       if (!samples?.length) return 0;
-      const total = samples.reduce(
-        (s: number, x: any) => s + (x?.quantity || 0),
-        0
-      );
+      const total = samples.reduce((s: number, x) => s + (x?.quantity || 0), 0);
       return Math.round(total);
     } catch {}
     return null;
@@ -174,7 +171,7 @@ export class HealthKitProvider implements HealthProvider {
         { filter: { startDate: start, endDate: end } }
       );
       if (!res?.length) return 0;
-      const minutes = res.reduce((sum: number, s: any) => {
+      const minutes = res.reduce((sum: number, s) => {
         const st = s?.startDate ? new Date(s.startDate).getTime() : 0;
         const et = s?.endDate ? new Date(s.endDate).getTime() : 0;
         return sum + Math.max(0, et - st) / 60000;
@@ -200,7 +197,7 @@ export class HealthKitProvider implements HealthProvider {
       );
       if (!samples?.length) return null;
       const avg =
-        samples.reduce((s: number, x: any) => s + (x?.quantity || 0), 0) /
+        samples.reduce((s: number, x) => s + (x?.quantity || 0), 0) /
         samples.length;
       return Math.round(avg * 10) / 10;
     } catch {}
@@ -210,23 +207,11 @@ export class HealthKitProvider implements HealthProvider {
   async getDailyWorkoutsCount(start: Date, end: Date): Promise<number | null> {
     if (!(await this.isAvailable())) return null;
     try {
-      // Some versions of the library expose a dedicated workouts query
-      const maybeQueryWorkouts: any = (HealthKit as any).queryWorkouts;
-      if (typeof maybeQueryWorkouts === 'function') {
-        const workouts = await maybeQueryWorkouts({
-          filter: { startDate: start, endDate: end },
-        });
-        return (workouts || []).length;
-      }
-      // Fallback: try to query as samples if supported by the library version
-      const maybeQueryCategorySamples: any = (HealthKit as any)
-        .queryCategorySamples;
-      if (typeof maybeQueryCategorySamples === 'function') {
-        const workouts = await maybeQueryCategorySamples('HKWorkoutType', {
-          filter: { startDate: start, endDate: end },
-        });
-        return (workouts || []).length;
-      }
+      // Query workouts using queryWorkoutSamples
+      const workouts = await HealthKit.queryWorkoutSamples({
+        filter: { startDate: start, endDate: end },
+      });
+      return (workouts || []).length;
     } catch {}
     return null;
   }
