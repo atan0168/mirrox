@@ -8,7 +8,12 @@ import {
   AVATAR_URL_KEY,
   USER_PROFILE_KEY,
 } from '../constants';
-import { LAST_ENV_QUERY_KEY, REVERSE_GEOCODE_CACHE_KEY } from '../constants';
+import {
+  LAST_ENV_QUERY_KEY,
+  REVERSE_GEOCODE_CACHE_KEY,
+  MAX_REVERSE_GEOCODE_CACHE_ENTRIES,
+  REVERSE_GEOCODE_TOUCH_MIN_MS,
+} from '../constants';
 
 /**
  * LocalStorageService - Encrypted storage service using MMKV
@@ -304,17 +309,20 @@ export class LocalStorageService {
     }
   }
 
-  public async getLastEnvironmentalQuery(): Promise<
-    | { latitude: number; longitude: number; timestamp: number }
-    | null
-  > {
+  public async getLastEnvironmentalQuery(): Promise<{
+    latitude: number;
+    longitude: number;
+    timestamp: number;
+  } | null> {
     try {
       const json = await this.getItem(LAST_ENV_QUERY_KEY);
-      return json ? (JSON.parse(json) as {
-        latitude: number;
-        longitude: number;
-        timestamp: number;
-      }) : null;
+      return json
+        ? (JSON.parse(json) as {
+            latitude: number;
+            longitude: number;
+            timestamp: number;
+          })
+        : null;
     } catch (error) {
       console.error('Failed to retrieve last environmental query:', error);
       return null;
@@ -572,6 +580,7 @@ export class LocalStorageService {
         country?: string | null;
         countryCode?: string | null;
         ts?: number;
+        lastAccess?: number;
       }
     >
   > {
@@ -589,28 +598,35 @@ export class LocalStorageService {
         country?: string | null;
         countryCode?: string | null;
         ts?: number;
+        lastAccess?: number;
       }
     >
   ): Promise<void> {
     await this.setItem(REVERSE_GEOCODE_CACHE_KEY, JSON.stringify(data));
   }
 
-  public async getCachedReverseGeocode(
-    key: string
-  ): Promise<
-    | {
-        label: string;
-        city?: string | null;
-        region?: string | null;
-        country?: string | null;
-        countryCode?: string | null;
-        ts?: number;
-      }
-    | null
-  > {
+  public async getCachedReverseGeocode(key: string): Promise<{
+    label: string;
+    city?: string | null;
+    region?: string | null;
+    country?: string | null;
+    countryCode?: string | null;
+    ts?: number;
+    lastAccess?: number;
+  } | null> {
     try {
       const cache = await this.getReverseGeocodeCache();
-      return cache[key] ?? null;
+      const entry = cache[key];
+      if (!entry) return null;
+      // Update lastAccess on hit with throttle to reduce writes
+      const now = Date.now();
+      const last = entry.lastAccess ?? 0;
+      if (now - last >= REVERSE_GEOCODE_TOUCH_MIN_MS) {
+        entry.lastAccess = now;
+        cache[key] = entry;
+        await this.setReverseGeocodeCache(cache);
+      }
+      return entry;
     } catch (e) {
       return null;
     }
@@ -625,11 +641,25 @@ export class LocalStorageService {
       country?: string | null;
       countryCode?: string | null;
       ts?: number;
+      lastAccess?: number;
     }
   ): Promise<void> {
     try {
       const cache = await this.getReverseGeocodeCache();
-      cache[key] = value;
+      cache[key] = { ...value, lastAccess: Date.now() };
+      // Evict if exceeding max size (LRU by lastAccess, fallback to ts)
+      const keys = Object.keys(cache);
+      if (keys.length > MAX_REVERSE_GEOCODE_CACHE_ENTRIES) {
+        const entries = keys.map(k => ({ k, v: cache[k] }));
+        entries.sort(
+          (a, b) =>
+            (a.v.lastAccess ?? a.v.ts ?? 0) - (b.v.lastAccess ?? b.v.ts ?? 0)
+        );
+        const toRemove = entries.length - MAX_REVERSE_GEOCODE_CACHE_ENTRIES;
+        for (let i = 0; i < toRemove; i++) {
+          delete cache[entries[i].k];
+        }
+      }
       await this.setReverseGeocodeCache(cache);
     } catch (e) {
       // ignore cache write failures

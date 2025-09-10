@@ -41,3 +41,5 @@ export const REVERSE_GEOCODE_CACHE_KEY = 'reverse_geocode_cache_v1';
 export const ENV_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 // Reverse-geocode cache behavior
 export const REVERSE_GEOCODE_ROUNDING_DECIMALS = 2; // ~1.1km granularity
+export const MAX_REVERSE_GEOCODE_CACHE_ENTRIES = 500; // LRU cap
+export const REVERSE_GEOCODE_TOUCH_MIN_MS = 10 * 60 * 1000; // 10 min between lastAccess writes
