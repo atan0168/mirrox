@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import AvatarExperience from '../components/avatar/AvatarExperience';
-import { EffectsList, EffectData } from '../components/ui';
+import { EffectsList, EffectData, Button } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -30,6 +30,8 @@ import RainIntensityControls from '../components/controls/RainIntensityControls'
 import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
 import { useAvatarStore } from '../store/avatarStore';
 import { useIsFocused } from '@react-navigation/native';
+import OnboardingOverlay from '../components/ui/OnboardingOverlay';
+import { useUIStore } from '../store/uiStore';
 
 const DashboardScreen: React.FC = () => {
   const isFocused = useIsFocused();
@@ -47,6 +49,12 @@ const DashboardScreen: React.FC = () => {
   const [rainDirection, setRainDirection] = useState<'vertical' | 'angled'>(
     'vertical'
   );
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [storeHydrated, setStoreHydrated] = useState(false);
+  const dashboardOnboardingSeen = useUIStore(s => s.dashboardOnboardingSeen);
+  const markOnboardingSeen = useUIStore(s => s.markDashboardOnboardingSeen);
+  const resetOnboardingSeen = useUIStore(s => s.resetDashboardOnboarding);
   // Eye-bags controls via store (no prop drilling)
   const eyeBagsOverride = useAvatarStore(s => s.eyeBagsOverrideEnabled);
   const setEyeBagsOverride = useAvatarStore(s => s.setEyeBagsOverrideEnabled);
@@ -82,6 +90,27 @@ const DashboardScreen: React.FC = () => {
     userProfile?.location.longitude || 0,
     !!userProfile
   );
+
+  // Track hydration of persisted store to avoid flicker
+  useEffect(() => {
+    const hasHydrated = useUIStore.persist?.hasHydrated?.();
+    if (hasHydrated) setStoreHydrated(true);
+    const unsub = useUIStore.persist?.onFinishHydration?.(() => {
+      setStoreHydrated(true);
+    });
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, []);
+
+  // Show onboarding only after store hydration
+  useEffect(() => {
+    if (!storeHydrated) return;
+    if (!dashboardOnboardingSeen) {
+      setShowOnboarding(true);
+      setScrollEnabled(false);
+    }
+  }, [storeHydrated, dashboardOnboardingSeen]);
 
   // Calculate combined environmental skin effects (air quality + UV)
   const skinEffects = useMemo(() => {
@@ -276,13 +305,6 @@ const DashboardScreen: React.FC = () => {
               facialExpression={manualExpression || 'neutral'}
               skinToneAdjustment={skinEffects.totalAdjustment}
               isActive={!!isFocused}
-              eyeBagsEnabled={eyeBagsOverride ? true : undefined}
-              eyeBagsIntensity={eyeBagsOverride ? eyeBagsIntensity : undefined}
-              eyeBagsOffsetX={eyeBagsOverride ? eyeBagsOffsetX : undefined}
-              eyeBagsOffsetY={eyeBagsOverride ? eyeBagsOffsetY : undefined}
-              eyeBagsOffsetZ={eyeBagsOverride ? eyeBagsOffsetZ : undefined}
-              eyeBagsWidth={eyeBagsOverride ? eyeBagsWidth : undefined}
-              eyeBagsHeight={eyeBagsOverride ? eyeBagsHeight : undefined}
               rainIntensity={rainIntensity}
               rainDirection={rainDirection}
               latitude={userProfile?.location.latitude}
@@ -413,6 +435,19 @@ const DashboardScreen: React.FC = () => {
                   </View>
                 )}
               </View>
+              {/* Developer utility: Reset onboarding */}
+              <View style={{ marginTop: spacing.md }}>
+                <Button
+                  onPress={async () => {
+                    resetOnboardingSeen();
+                    setOnboardingStep(0);
+                    setShowOnboarding(true);
+                    setScrollEnabled(false);
+                  }}
+                >
+                  Show onboarding again
+                </Button>
+              </View>
             </View>
           )}
 
@@ -429,6 +464,25 @@ const DashboardScreen: React.FC = () => {
           <EffectsList effects={activeEffects} />
         </View>
       </ScrollView>
+
+      {/* Onboarding overlay - shown once */}
+      <OnboardingOverlay
+        visible={showOnboarding}
+        step={onboardingStep}
+        onNext={() => setOnboardingStep(s => Math.min(s + 1, 2))}
+        onSkip={async () => {
+          setShowOnboarding(false);
+          setScrollEnabled(true);
+          setOnboardingStep(0);
+          markOnboardingSeen();
+        }}
+        onDone={async () => {
+          setShowOnboarding(false);
+          setScrollEnabled(true);
+          setOnboardingStep(0);
+          markOnboardingSeen();
+        }}
+      />
     </SafeAreaView>
   );
 };

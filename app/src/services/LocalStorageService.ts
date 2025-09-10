@@ -178,6 +178,16 @@ export class LocalStorageService {
     return this.storage.getString(key);
   }
 
+  // Generic boolean flag helpers (for simple feature flags/preferences)
+  public async getFlag(key: string): Promise<boolean> {
+    const value = await this.getItem(key);
+    return value === 'true';
+  }
+
+  public async setFlag(key: string, value: boolean): Promise<void> {
+    await this.setItem(key, value ? 'true' : 'false');
+  }
+
   private async clearAll(): Promise<void> {
     await this.ready;
     this.storage.clearAll();
@@ -198,6 +208,18 @@ export class LocalStorageService {
         // ignore
       }
     }
+  }
+
+  // Public raw string helpers for external storage adapters (e.g., Zustand persist)
+  public async getString(key: string): Promise<string | null> {
+    const v = await this.getItem(key);
+    return v ?? null;
+  }
+  public async setString(key: string, value: string): Promise<void> {
+    await this.setItem(key, value);
+  }
+  public async remove(key: string): Promise<void> {
+    await this.removeItem(key);
   }
 
   private async getCachedAvatarsData(): Promise<Record<string, CachedAvatar>> {
