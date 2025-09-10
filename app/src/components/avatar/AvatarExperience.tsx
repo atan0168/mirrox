@@ -1018,7 +1018,7 @@ function AvatarExperience({
       />
 
       {/* Health bubble with dynamic text */}
-      <HealthBubble message={energyInfo?.message ?? null} />
+      {/* <HealthBubble message={energyInfo?.message ?? null} /> */}
       {/* Sleep battery indicator overlay */}
       <BatteryIndicator sleepMinutes={health?.sleepMinutes} />
     </View>

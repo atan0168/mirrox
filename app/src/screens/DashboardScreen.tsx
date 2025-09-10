@@ -31,6 +31,7 @@ import { FacialExpressionControls } from '../components/controls/FacialExpressio
 import { useAvatarStore } from '../store/avatarStore';
 import { useIsFocused } from '@react-navigation/native';
 import OnboardingOverlay from '../components/ui/OnboardingOverlay';
+import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { useUIStore } from '../store/uiStore';
 
 const DashboardScreen: React.FC = () => {
@@ -88,7 +89,8 @@ const DashboardScreen: React.FC = () => {
   const { data: airQuality, error: airQualityError } = useAQICNAirQuality(
     userProfile?.location.latitude || 0,
     userProfile?.location.longitude || 0,
-    !!userProfile
+    !!userProfile,
+    ENV_REFRESH_INTERVAL_MS
   );
 
   // Track hydration of persisted store to avoid flicker
@@ -310,7 +312,7 @@ const DashboardScreen: React.FC = () => {
               latitude={userProfile?.location.latitude}
               longitude={userProfile?.location.longitude}
               enableTrafficStress={true}
-              trafficRefreshInterval={300000} // 5 minutes
+              trafficRefreshInterval={ENV_REFRESH_INTERVAL_MS}
               airQualityData={
                 airQuality
                   ? {

@@ -22,6 +22,7 @@ import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useTrafficData } from '../hooks/useTrafficData';
 import { getAQIInfo, getShortClassification } from '../utils/aqiUtils';
 import { useHealthData } from '../hooks/useHealthData';
+import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();
@@ -32,7 +33,8 @@ const StatsScreen: React.FC = () => {
   } = useAQICNAirQuality(
     userProfile?.location.latitude || 0,
     userProfile?.location.longitude || 0,
-    !!userProfile
+    !!userProfile,
+    ENV_REFRESH_INTERVAL_MS
   );
 
   // Use traffic data hook
@@ -44,7 +46,7 @@ const StatsScreen: React.FC = () => {
     latitude: userProfile?.location.latitude,
     longitude: userProfile?.location.longitude,
     enabled: !!userProfile?.location,
-    refreshInterval: 300000, // 5 minutes
+    refreshInterval: ENV_REFRESH_INTERVAL_MS,
   });
 
   // Health data (steps, sleep)
@@ -137,7 +139,7 @@ const StatsScreen: React.FC = () => {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Your Stats</Text>
+          <Text style={styles.title}>Stats</Text>
           <Text style={styles.subtitle}>
             Track your environmental wellness journey
           </Text>
@@ -202,6 +204,8 @@ const StatsScreen: React.FC = () => {
             trafficErrorMessage={
               trafficError?.message || 'Unable to load traffic conditions'
             }
+            queryLatitude={userProfile?.location.latitude}
+            queryLongitude={userProfile?.location.longitude}
           />
         )}
 

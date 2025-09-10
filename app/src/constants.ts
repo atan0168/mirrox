@@ -33,3 +33,11 @@ export const AVATAR_DEBUG = false; // Toggle verbose avatar debug logging
 export const API_BASE_URL = __DEV__
   ? 'http://10.10.0.114:8080/api'
   : 'https://mirrox.iceon.top/api';
+// Persisted key for the last environmental query (lat/lng + timestamp)
+export const LAST_ENV_QUERY_KEY = 'last_env_query_v1';
+// Persisted key for reverse-geocode cache (keyed by rounded lat,lng)
+export const REVERSE_GEOCODE_CACHE_KEY = 'reverse_geocode_cache_v1';
+// Unified environmental refresh interval (ms)
+export const ENV_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+// Reverse-geocode cache behavior
+export const REVERSE_GEOCODE_ROUNDING_DECIMALS = 2; // ~1.1km granularity

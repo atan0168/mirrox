@@ -25,6 +25,7 @@ import {
   formatPollutantValue,
   formatTimestamp,
 } from '../../utils/aqiUtils';
+import { useReverseGeocode } from '../../hooks/useReverseGeocode';
 
 interface AirQualityData {
   aqi?: number;
@@ -38,6 +39,7 @@ interface AirQualityData {
   source?: string;
   location?: {
     name?: string;
+    coordinates?: { latitude: number; longitude: number };
   };
   primaryPollutant?: string;
 }
@@ -62,6 +64,9 @@ interface EnvironmentalInfoSquaresProps {
   isTrafficError?: boolean;
   airQualityErrorMessage?: string;
   trafficErrorMessage?: string;
+  // Optional explicit coords used for queries
+  queryLatitude?: number;
+  queryLongitude?: number;
 }
 
 export const EnvironmentalInfoSquares: React.FC<
@@ -75,9 +80,23 @@ export const EnvironmentalInfoSquares: React.FC<
   isTrafficError = false,
   airQualityErrorMessage = 'Unable to load air quality data',
   trafficErrorMessage = 'Unable to load traffic data',
+  queryLatitude,
+  queryLongitude,
 }) => {
   const [selectedModal, setSelectedModal] = useState<'air' | 'traffic' | null>(
     null
+  );
+
+  // Reverse geocode when user opens the modal (avoid background geocoding)
+  const latForLookup =
+    queryLatitude ?? airQuality?.location?.coordinates?.latitude;
+  const lngForLookup =
+    queryLongitude ?? airQuality?.location?.coordinates?.longitude;
+
+  const { data: reverseGeo } = useReverseGeocode(
+    latForLookup,
+    lngForLookup,
+    selectedModal === 'air' || selectedModal === 'traffic'
   );
 
   const getAirQualityColor = () => {
@@ -182,6 +201,13 @@ export const EnvironmentalInfoSquares: React.FC<
                   borderColor: getAirQualityColor(),
                 }}
               >
+                {/* Location line */}
+                {latForLookup != null && lngForLookup != null && (
+                  <Text style={styles.locationLine}>
+                    Location: {reverseGeo?.label || 'Fetching…'} • (
+                    {latForLookup.toFixed(4)}, {lngForLookup.toFixed(4)})
+                  </Text>
+                )}
                 <View style={styles.aqiHeader}>
                   <Text style={styles.aqiTitle}>Air Quality Index</Text>
                   <Text
@@ -313,6 +339,12 @@ export const EnvironmentalInfoSquares: React.FC<
                   borderColor: getTrafficColor(),
                 }}
               >
+                {latForLookup != null && lngForLookup != null && (
+                  <Text style={styles.locationLine}>
+                    Location: {reverseGeo?.label || 'Fetching…'} • (
+                    {latForLookup.toFixed(4)}, {lngForLookup.toFixed(4)})
+                  </Text>
+                )}
                 <View style={styles.trafficHeader}>
                   <Text style={styles.trafficTitle}>Current Conditions</Text>
                   <Text
@@ -595,6 +627,11 @@ const styles = StyleSheet.create({
   timestamp: {
     fontSize: fontSize.xs,
     color: colors.neutral[500],
+  },
+  locationLine: {
+    fontSize: fontSize.xs,
+    color: colors.neutral[600],
+    marginBottom: spacing.sm,
   },
   trafficHeader: {
     flexDirection: 'row',

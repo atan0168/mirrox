@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { trafficService, CongestionData } from '../services/TrafficService';
+import { localStorageService } from '../services/LocalStorageService';
+import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 
 interface UseTrafficDataProps {
   latitude?: number;
@@ -20,7 +22,7 @@ export const useTrafficData = ({
   latitude,
   longitude,
   enabled = true,
-  refreshInterval = 300000, // 5 minutes default
+  refreshInterval = ENV_REFRESH_INTERVAL_MS,
 }: UseTrafficDataProps): UseTrafficDataReturn => {
   const query = useQuery<CongestionData, Error>({
     queryKey: ['trafficData', latitude, longitude],
@@ -50,6 +52,17 @@ export const useTrafficData = ({
     refetchInterval: refreshInterval,
     retry: 3,
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+    onSuccess: async () => {
+      if (latitude && longitude) {
+        try {
+          await localStorageService.setLastEnvironmentalQuery({
+            latitude,
+            longitude,
+            timestamp: Date.now(),
+          });
+        } catch {}
+      }
+    },
   });
 
   // Handle error logging when error changes

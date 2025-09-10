@@ -1,9 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { apiService } from '../services/ApiService';
 import {
   backendApiService,
   StationSearchResult,
 } from '../services/BackendApiService';
+import { localStorageService } from '../services/LocalStorageService';
 
 export const useAirQuality = (
   latitude: number,
@@ -24,17 +26,37 @@ export const useAirQuality = (
 export const useAQICNAirQuality = (
   latitude: number,
   longitude: number,
-  enabled: boolean = true
+  enabled: boolean = true,
+  refreshInterval?: number
 ) => {
-  return useQuery({
+  const query = useQuery({
     queryKey: ['aqicnAirQuality', latitude, longitude],
     queryFn: () => apiService.fetchAQICNAirQuality(latitude, longitude),
     enabled: enabled && !!latitude && !!longitude,
     staleTime: 30 * 60 * 1000, // 30 minutes (AQICN updates hourly)
     gcTime: 60 * 60 * 1000, // 1 hour
+    refetchInterval: refreshInterval,
     retry: 3,
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  useEffect(() => {
+    if (query.isSuccess) {
+      (async () => {
+        try {
+          await localStorageService.setLastEnvironmentalQuery({
+            latitude,
+            longitude,
+            timestamp: Date.now(),
+          });
+        } catch (e) {
+          // non-fatal
+        }
+      })();
+    }
+  }, [query.isSuccess, latitude, longitude]);
+
+  return query;
 };
 
 export const useAQICNStationData = (

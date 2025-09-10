@@ -8,6 +8,7 @@ import {
   AVATAR_URL_KEY,
   USER_PROFILE_KEY,
 } from '../constants';
+import { LAST_ENV_QUERY_KEY, REVERSE_GEOCODE_CACHE_KEY } from '../constants';
 
 /**
  * LocalStorageService - Encrypted storage service using MMKV
@@ -289,6 +290,37 @@ export class LocalStorageService {
     }
   }
 
+  // ===== Environmental query bookkeeping =====
+
+  public async setLastEnvironmentalQuery(data: {
+    latitude: number;
+    longitude: number;
+    timestamp: number; // epoch millis
+  }): Promise<void> {
+    try {
+      await this.setItem(LAST_ENV_QUERY_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error('Failed to save last environmental query:', error);
+    }
+  }
+
+  public async getLastEnvironmentalQuery(): Promise<
+    | { latitude: number; longitude: number; timestamp: number }
+    | null
+  > {
+    try {
+      const json = await this.getItem(LAST_ENV_QUERY_KEY);
+      return json ? (JSON.parse(json) as {
+        latitude: number;
+        longitude: number;
+        timestamp: number;
+      }) : null;
+    } catch (error) {
+      console.error('Failed to retrieve last environmental query:', error);
+      return null;
+    }
+  }
+
   // Authentication methods
   public async isAuthenticationRequired(): Promise<boolean> {
     try {
@@ -525,6 +557,82 @@ export class LocalStorageService {
       return credentials !== false;
     } catch (error) {
       return false;
+    }
+  }
+
+  // ===== Reverse Geocode Cache =====
+
+  private async getReverseGeocodeCache(): Promise<
+    Record<
+      string,
+      {
+        label: string;
+        city?: string | null;
+        region?: string | null;
+        country?: string | null;
+        countryCode?: string | null;
+        ts?: number;
+      }
+    >
+  > {
+    const json = await this.getItem(REVERSE_GEOCODE_CACHE_KEY);
+    return json ? JSON.parse(json) : {};
+  }
+
+  private async setReverseGeocodeCache(
+    data: Record<
+      string,
+      {
+        label: string;
+        city?: string | null;
+        region?: string | null;
+        country?: string | null;
+        countryCode?: string | null;
+        ts?: number;
+      }
+    >
+  ): Promise<void> {
+    await this.setItem(REVERSE_GEOCODE_CACHE_KEY, JSON.stringify(data));
+  }
+
+  public async getCachedReverseGeocode(
+    key: string
+  ): Promise<
+    | {
+        label: string;
+        city?: string | null;
+        region?: string | null;
+        country?: string | null;
+        countryCode?: string | null;
+        ts?: number;
+      }
+    | null
+  > {
+    try {
+      const cache = await this.getReverseGeocodeCache();
+      return cache[key] ?? null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  public async setCachedReverseGeocode(
+    key: string,
+    value: {
+      label: string;
+      city?: string | null;
+      region?: string | null;
+      country?: string | null;
+      countryCode?: string | null;
+      ts?: number;
+    }
+  ): Promise<void> {
+    try {
+      const cache = await this.getReverseGeocodeCache();
+      cache[key] = value;
+      await this.setReverseGeocodeCache(cache);
+    } catch (e) {
+      // ignore cache write failures
     }
   }
 
