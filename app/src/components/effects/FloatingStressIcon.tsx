@@ -54,46 +54,7 @@ export function FloatingStressIcon({
     }
   }, [stressLevel]);
 
-  // Animate the floating icon and keep it facing the camera (billboard)
-  useFrame(state => {
-    // Keep the outer container oriented toward the camera to prevent ellipse distortion
-    if (billboardRef.current) {
-      billboardRef.current.quaternion.copy(camera.quaternion);
-      // Ensure it renders last to avoid being occluded by scene geometry
-      billboardRef.current.renderOrder = 100000;
-    }
-
-    // Ensure the center symbol renders last among icon parts
-    if (iconRef.current) {
-      iconRef.current.renderOrder = 100010;
-      iconRef.current.traverse(obj => {
-        obj.renderOrder = 100010;
-      });
-    }
-
-    if (groupRef.current && shouldShow && enabled) {
-      const time = state.clock.elapsedTime;
-
-      // Floating animation
-      const floatY = Math.sin(time * 2) * 0.1;
-      groupRef.current.position.y = floatY;
-
-      // Gentle rotation for high stress
-      if (stressLevel === 'high') {
-        groupRef.current.rotation.z = Math.sin(time * 4) * 0.1;
-      }
-
-      // Scale pulsing based on congestion factor
-      const pulseScale = 1 + Math.sin(time * 3) * 0.1 * (congestionFactor - 1);
-      groupRef.current.scale.setScalar(Math.max(0.8, pulseScale));
-    }
-  });
-
-  if (!enabled || !shouldShow) {
-    return null;
-  }
-
-  // Create custom geometry for symbols
+  // Create custom geometry for symbols (helpers defined before any early returns)
   // High-stress: use white mark for strong contrast
   const createExclamationMark = (color: number | string = '#FFFFFF') => {
     const group = new THREE.Group();
@@ -159,6 +120,7 @@ export function FloatingStressIcon({
     return group;
   };
 
+  // Decide which symbol creator to use based on intensity
   const createStressSymbol = useMemo(() => {
     switch (intensity) {
       case 1:
@@ -192,6 +154,45 @@ export function FloatingStressIcon({
         return () => new THREE.Group();
     }
   }, [intensity]);
+
+  // Animate the floating icon and keep it facing the camera (billboard)
+  useFrame(state => {
+    // Keep the outer container oriented toward the camera to prevent ellipse distortion
+    if (billboardRef.current) {
+      billboardRef.current.quaternion.copy(camera.quaternion);
+      // Ensure it renders last to avoid being occluded by scene geometry
+      billboardRef.current.renderOrder = 100000;
+    }
+
+    // Ensure the center symbol renders last among icon parts
+    if (iconRef.current) {
+      iconRef.current.renderOrder = 100010;
+      iconRef.current.traverse(obj => {
+        obj.renderOrder = 100010;
+      });
+    }
+
+    if (groupRef.current && shouldShow && enabled) {
+      const time = state.clock.elapsedTime;
+
+      // Floating animation
+      const floatY = Math.sin(time * 2) * 0.1;
+      groupRef.current.position.y = floatY;
+
+      // Gentle rotation for high stress
+      if (stressLevel === 'high') {
+        groupRef.current.rotation.z = Math.sin(time * 4) * 0.1;
+      }
+
+      // Scale pulsing based on congestion factor
+      const pulseScale = 1 + Math.sin(time * 3) * 0.1 * (congestionFactor - 1);
+      groupRef.current.scale.setScalar(Math.max(0.8, pulseScale));
+    }
+  });
+
+  if (!enabled || !shouldShow) {
+    return null;
+  }
 
   return (
     <group ref={billboardRef} position={position}>
