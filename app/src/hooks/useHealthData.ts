@@ -27,7 +27,7 @@ export function useHealthData({
   const sync = useCallback(async () => {
     try {
       setLoading(true);
-      const snapshot = await healthDataService.syncLatest();
+      const snapshot = await healthDataService.syncNeeded(30);
       setData(snapshot);
       setError(null);
       return snapshot;
