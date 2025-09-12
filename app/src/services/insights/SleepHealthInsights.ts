@@ -1,5 +1,7 @@
-import { addDays, differenceInCalendarDays, parseISO } from 'date-fns';
 import type { HealthHistory, HealthSnapshot } from '../../models/Health';
+import { minutesSinceLocalMidnight } from '../../utils/datetimeUtils';
+import { getTierForSleepMinutes } from '../../utils/healthUtils';
+import { average, stdDev } from '../../utils/mathUtils';
 
 export type InsightTier = 1 | 2 | 3;
 
@@ -18,43 +20,8 @@ export interface EvaluateOptions {
   now?: Date;
 }
 
-function minutesToHours(min?: number | null): number | null {
-  if (typeof min !== 'number') return null;
-  return Math.round((min / 60) * 10) / 10;
-}
-
-function stdDev(values: number[]): number {
-  if (values.length <= 1) return 0;
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance =
-    values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) /
-    (values.length - 1);
-  return Math.sqrt(variance);
-}
-
-function minutesSinceLocalMidnight(iso: string): number {
-  const d = parseISO(iso);
-  return d.getHours() * 60 + d.getMinutes();
-}
-
-function average(values: number[]): number | null {
-  const nums = values.filter(v => typeof v === 'number' && isFinite(v));
-  if (nums.length === 0) return null;
-  return nums.reduce((a, b) => a + b, 0) / nums.length;
-}
-
 function lastN<T>(arr: T[], n: number): T[] {
   return arr.slice(Math.max(0, arr.length - n));
-}
-
-function getTierForSleepMinutes(
-  sleepMinutes: number | null | undefined
-): InsightTier | null {
-  if (typeof sleepMinutes !== 'number') return null;
-  if (sleepMinutes < 5 * 60) return 1;
-  if (sleepMinutes < 6.5 * 60) return 2;
-  if (sleepMinutes < 7.5 * 60) return 3;
-  return null;
 }
 
 function transparencyNoteFromSnapshot(s: HealthSnapshot): string {
@@ -150,8 +117,7 @@ export function evaluateSleepHealthInsights(
         title: 'Move a Little, Sleep a Lot Better',
         body: "We've noticed lower activity levels recently. Even a 20-minute walk today can help build natural sleep pressure and improve your rest tonight.",
         source: 'CDC',
-        sourceUrl:
-          'https://www.cdc.gov/physicalactivity/basics/pa-health/index.htm',
+        sourceUrl: 'https://www.cdc.gov/physical-activity-basics/benefits/',
         dataNote,
       });
     }

@@ -1,3 +1,5 @@
+import { InsightTier } from '../services/insights/SleepHealthInsights';
+
 export function computeEnergy(steps: number, sleepMinutes: number) {
   const sleepHours = sleepMinutes / 60;
   // Sleep score: 8h optimal, 6-9h good, <5h poor
@@ -35,4 +37,14 @@ export function computeEnergy(steps: number, sleepMinutes: number) {
   }
 
   return { energy, state, speedScale, message, sleepHours } as const;
+}
+
+export function getTierForSleepMinutes(
+  sleepMinutes: number | null | undefined
+): InsightTier | null {
+  if (typeof sleepMinutes !== 'number') return null;
+  if (sleepMinutes < 5 * 60) return 1;
+  if (sleepMinutes < 6.5 * 60) return 2;
+  if (sleepMinutes < 7.5 * 60) return 3;
+  return null;
 }

@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { navigate } from '../navigation/navigationRef';
 
 // Lazy import to avoid hard crashing if expo-notifications isn't installed yet
 let Notifications: typeof import('expo-notifications') | null = null;
@@ -44,6 +45,16 @@ export async function initNotifications() {
   }
 
   initialized = true;
+
+  // Handle notification taps to route into Alerts screen
+  try {
+    mod.addNotificationResponseReceivedListener(response => {
+      const data: any = response.notification.request.content.data || {};
+      const alertId = data.alertId as string | undefined;
+      // Route to Alerts with optional alertId so UI can highlight/show details
+      navigate('Alerts', alertId ? { alertId } : undefined);
+    });
+  } catch {}
 }
 
 export async function requestNotificationPermissions(): Promise<boolean> {

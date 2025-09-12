@@ -52,3 +52,18 @@ export const roundTo = (value: number, decimals = 0): number => {
   const factor = Math.pow(10, decimals);
   return Math.round(value * factor) / factor;
 };
+
+export const stdDev = (values: number[]): number => {
+  if (values.length <= 1) return 0;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance =
+    values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) /
+    (values.length - 1);
+  return Math.sqrt(variance);
+};
+
+export const average = (values: number[]): number | null => {
+  const nums = values.filter(v => typeof v === 'number' && isFinite(v));
+  if (nums.length === 0) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+};

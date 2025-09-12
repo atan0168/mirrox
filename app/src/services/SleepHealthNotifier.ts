@@ -6,23 +6,39 @@ import {
   InsightCandidate,
 } from './insights/SleepHealthInsights';
 import { differenceInCalendarDays } from 'date-fns';
-
-// Keys in secure local storage
-const SLEEP_NOTIF_LAST_KEY = 'sleep.notif.last';
-const SLEEP_NOTIF_MIN_DAYS_BETWEEN = 1; // Frequency cap: min full days between
+import { AlertsService } from './AlertsService';
+import type { AlertItem } from '../models/Alert';
+import { truncate } from '../utils/notificationUtils';
+import {
+  SLEEP_NOTIF_LAST_KEY,
+  SLEEP_NOTIF_MIN_DAYS_BETWEEN,
+} from '../constants';
 
 type LastSentInfo = {
   id: string;
   date: string; // YYYY-MM-DD
 };
 
-function formatNotificationBody(c: InsightCandidate): string {
-  const src = `Source: ${c.source}`;
-  const privacy = c.dataNote
-    ? `${c.dataNote} Your data stays on your device and is used only for personal insights.`
-    : 'Your data stays on your device and is used only for personal insights.';
-  // Keep concise; append source and short privacy note
-  return `${c.body}\n\n${src}\n${c.sourceUrl}\n\n${privacy}`;
+function tierToSeverity(tier: 1 | 2 | 3): 'high' | 'medium' | 'low' {
+  return tier === 1 ? 'high' : tier === 2 ? 'medium' : 'low';
+}
+
+function buildAlertFromCandidate(c: InsightCandidate): AlertItem {
+  const longBody = c.body; // Keep body clean; show source and notes separately in UI
+  return {
+    id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    type: 'sleep_health',
+    createdAt: new Date().toISOString(),
+    title: c.title,
+    shortBody: truncate(c.body, 120),
+    longBody,
+    sourceName: c.source,
+    sourceUrl: c.sourceUrl,
+    tier: c.tier,
+    dataNote: c.dataNote,
+    severity: tierToSeverity(c.tier),
+    dismissed: false,
+  };
 }
 
 export const SleepHealthNotifier = {
@@ -84,17 +100,15 @@ export const SleepHealthNotifier = {
       // Pick the top candidate (already sorted by tier priority)
       const chosen = candidates[0];
 
-      // Present immediately (foreground notifications are handled by handler)
+      // Store alert and present concise push that routes to Alerts screen
+      const alert = buildAlertFromCandidate(chosen);
+      await AlertsService.add(alert);
       const mod = await import('expo-notifications');
       await mod.scheduleNotificationAsync({
         content: {
-          title: chosen.title,
-          body: formatNotificationBody(chosen),
-          data: {
-            sourceUrl: chosen.sourceUrl,
-            id: chosen.id,
-            tier: chosen.tier,
-          },
+          title: alert.title,
+          body: alert.shortBody,
+          data: { alertId: alert.id, type: alert.type },
         },
         trigger: null,
       });
@@ -111,12 +125,44 @@ export const SleepHealthNotifier = {
     try {
       const ok = await requestNotificationPermissions();
       if (!ok) return;
+      // Try to send one of the real candidates
+      await healthDataService.syncNeeded(30);
+      const history = await healthDataService.getHistory(30);
+      const candidates = evaluateSleepHealthInsights(history);
+      if (candidates.length) {
+        const chosen = candidates[0];
+        const alert = buildAlertFromCandidate(chosen);
+        await AlertsService.add(alert);
+        const mod = await import('expo-notifications');
+        await mod.scheduleNotificationAsync({
+          content: {
+            title: alert.title,
+            body: alert.shortBody,
+            data: { alertId: alert.id, type: alert.type, debug: true },
+          },
+          trigger: null,
+        });
+        return;
+      }
+      // Fallback minimal sample that also adds to Alerts
+      const sample: AlertItem = {
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        type: 'sleep_health',
+        createdAt: new Date().toISOString(),
+        title: 'Sample Sleep Insight (Debug)',
+        shortBody: 'Preview how a sleep insight will appear in your alerts.',
+        longBody:
+          'This is a preview of a sleep insight. Actual insights are personalized based on your recent sleep and health patterns, and always include a source.',
+        severity: 'low',
+        dismissed: false,
+      };
+      await AlertsService.add(sample);
       const mod = await import('expo-notifications');
       await mod.scheduleNotificationAsync({
         content: {
-          title: 'Sample Sleep Insight (Debug)',
-          body: "Here's a sample insight to preview formatting. Keeping a consistent bedtime can support deeper, more restorative sleep.\n\nSource: Johns Hopkins Medicine\nhttps://www.hopkinsmedicine.org/health/wellness-and-prevention/sticking-to-a-sleep-schedule\n\nThis preview uses only local data and does not leave your device.",
-          data: { debug: true },
+          title: sample.title,
+          body: sample.shortBody,
+          data: { alertId: sample.id, type: sample.type, debug: true },
         },
         trigger: null,
       });

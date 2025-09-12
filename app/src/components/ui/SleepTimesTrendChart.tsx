@@ -6,6 +6,7 @@ import {
   Text,
   PanResponder,
   Animated,
+  GestureResponderEvent,
 } from 'react-native';
 import Svg, { Line, Circle, Text as SvgText, Rect } from 'react-native-svg';
 import { colors } from '../../theme';
@@ -129,7 +130,7 @@ const SleepTimesTrendChart: React.FC<SleepTimesTrendChartProps> = ({
     return closestIdx;
   };
 
-  const handleTouch = (evt: any) => {
+  const handleTouch = (evt: GestureResponderEvent) => {
     const { locationX, locationY } = evt.nativeEvent;
     if (locationY >= topPad && locationY <= height - PADDING_BOTTOM) {
       const idx = pickIndexFromX(locationX);

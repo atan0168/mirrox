@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { TrendingUp, Wind, HeartPulse } from 'lucide-react-native';
+import { HeartPulse } from 'lucide-react-native';
 import {
   EnvironmentalInfoSquares,
   EnvironmentalInfoSquaresSkeleton,
@@ -21,7 +21,6 @@ import {
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useTrafficData } from '../hooks/useTrafficData';
-import { getAQIInfo, getShortClassification } from '../utils/aqiUtils';
 import { useHealthData } from '../hooks/useHealthData';
 import { useHealthHistory } from '../hooks/useHealthHistory';
 import { ENV_REFRESH_INTERVAL_MS } from '../constants';
@@ -64,7 +63,7 @@ const StatsScreen: React.FC = () => {
   const [healthBannerDismissed, setHealthBannerDismissed] = useState(false);
   const [enablingHealth, setEnablingHealth] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [historyWindow, setHistoryWindow] = useState<7 | 14 | 30>(7);
+  const [historyWindow] = useState<7 | 14 | 30>(7);
 
   // Health history for bar chart
   const { refresh: refreshHistory } = useHealthHistory(historyWindow);

@@ -1,4 +1,4 @@
-import { format, addDays } from 'date-fns';
+import { format, addDays, parseISO } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 export function toMillis(d: Date | number): number {
@@ -43,4 +43,9 @@ export function startOfDayInTimeZone(d: Date, timeZone: string): Date {
   const dateStr = yyyymmddInTimeZone(d, timeZone);
   // Convert that local midnight to a UTC instant
   return fromZonedTime(`${dateStr}T00:00:00`, timeZone);
+}
+
+export function minutesSinceLocalMidnight(iso: string): number {
+  const d = parseISO(iso);
+  return d.getHours() * 60 + d.getMinutes();
 }

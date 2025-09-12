@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Pressable, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, Text } from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { colors } from '../theme';
 
 interface NotificationBellProps {
   onPress?: () => void;
+  badgeCount?: number;
 }
 
-const NotificationBell: React.FC<NotificationBellProps> = ({ onPress }) => {
+const NotificationBell: React.FC<NotificationBellProps> = ({ onPress, badgeCount }) => {
   return (
     <Pressable
       onPress={onPress}
@@ -19,9 +20,20 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ onPress }) => {
     >
       <View style={styles.iconWrapper}>
         <Bell size={22} color={colors.neutral[900]} />
+        {typeof badgeCount === 'number' && badgeCount > 0 && (
+          <View style={styles.badge}>
+            {/* Show 9+ when over 9 */}
+            <BellBadgeText count={badgeCount} />
+          </View>
+        )}
       </View>
     </Pressable>
   );
+};
+
+const BellBadgeText = ({ count }: { count: number }) => {
+  const text = count > 9 ? '9+' : String(count);
+  return <Text style={styles.badgeText}>{text}</Text>;
 };
 
 const styles = StyleSheet.create({

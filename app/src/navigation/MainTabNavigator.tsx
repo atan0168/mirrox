@@ -9,6 +9,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 // Import custom tab bar
 import CustomTabBar from '../components/CustomTabBar';
 import NotificationBell from '../components/NotificationBell';
+import { useAlertsCount } from '../hooks/useAlertsCount';
 import { colors } from '../theme';
 
 export type MainTabParamList = {
@@ -20,6 +21,7 @@ export type MainTabParamList = {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabNavigator: React.FC = () => {
+  const alertCount = useAlertsCount();
   return (
     <Tab.Navigator
       detachInactiveScreens
@@ -38,10 +40,9 @@ const MainTabNavigator: React.FC = () => {
         headerTintColor: '#000000',
         headerRight: () => (
           <NotificationBell
+            badgeCount={alertCount}
             onPress={() => {
               const parent = navigation.getParent();
-              // Navigate on the root stack so back returns to the last tab
-              // Type cast to appease TS without deep typing here
               parent?.navigate('Alerts' as never);
             }}
           />

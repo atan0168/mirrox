@@ -1,6 +1,7 @@
 import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
+import { navigationRef } from './src/navigation/navigationRef';
 import { createStackNavigator } from '@react-navigation/stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTimeOfDayScheduler } from './src/hooks/useTimeOfDayScheduler';
@@ -50,7 +51,7 @@ export type RootStackParamList = {
   };
   GeneratingTwin: undefined;
   MainTabs: undefined;
-  Alerts: undefined;
+  Alerts: { alertId?: string } | undefined;
   DebugDB: undefined;
 };
 
@@ -80,7 +81,7 @@ export default function App() {
   }, []);
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <StatusBar style="dark" />
         {/* Always-mounted background services */}
         <RootServices />
