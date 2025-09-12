@@ -28,6 +28,8 @@ import { Button } from './Button';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import type { HealthSnapshot } from '../../models/Health';
 import HistoryBarChart from './HistoryBarChart';
+import SleepStackedBarChart from './SleepStackedBarChart';
+import SleepTimesTrendChart from './SleepTimesTrendChart';
 import { useHealthHistory } from '../../hooks/useHealthHistory';
 import { format, parseISO } from 'date-fns';
 
@@ -77,6 +79,15 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     error: stepsHistoryError,
   } = useHealthHistory(stepsHistoryWindow);
 
+  // Sleep history state (for sleep modal chart)
+  const [sleepHistoryWindow, setSleepHistoryWindow] = useState<7 | 14 | 30>(7);
+  const [sleepChartType, setSleepChartType] = useState<'stages' | 'bedwake'>('stages');
+  const {
+    data: sleepHistory,
+    loading: isSleepHistoryLoading,
+    error: sleepHistoryError,
+  } = useHealthHistory(sleepHistoryWindow);
+
   const StepsHistoryToggle: React.FC = () => (
     <View style={{ flexDirection: 'row' }}>
       {[7, 14, 30].map(n => {
@@ -119,6 +130,75 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           : stepsHistoryError
             ? 'Unable to load history'
             : `Showing last ${stepsHistoryWindow} days`}
+      </Text>
+    </>
+  );
+
+  const SleepHistoryToggle: React.FC = () => (
+    <View style={{ flexDirection: 'row' }}>
+      {[7, 14, 30].map(n => {
+        const active = n === sleepHistoryWindow;
+        return (
+          <TouchableOpacity
+            key={n}
+            onPress={() => setSleepHistoryWindow(n as 7 | 14 | 30)}
+            style={active ? styles.historyToggleActive : styles.historyToggle}
+          >
+            <Text
+              style={
+                active
+                  ? styles.historyToggleTextActive
+                  : styles.historyToggleText
+              }
+            >
+              {n}d
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  // Sleep stacked chart (with stages or fallback total)
+  const SleepStackedHistoryChart: React.FC = () => (
+    <>
+      <SleepStackedBarChart
+        data={(sleepHistory?.snapshots || []).map(s => ({
+          label: format(parseISO(s.date), 'MM/dd'),
+          totalMinutes: s.sleepMinutes ?? 0,
+          lightMinutes: s.sleepLightMinutes ?? 0,
+          remMinutes: s.sleepRemMinutes ?? 0,
+          deepMinutes: s.sleepDeepMinutes ?? 0,
+        }))}
+        height={200}
+        showValueOnPress
+      />
+      <Text style={styles.timestamp}>
+        {isSleepHistoryLoading
+          ? 'Loading history…'
+          : sleepHistoryError
+            ? 'Unable to load history'
+            : `Showing last ${sleepHistoryWindow} days`}
+      </Text>
+    </>
+  );
+
+  const SleepBedWakeTrendChart: React.FC = () => (
+    <>
+      <SleepTimesTrendChart
+        data={(sleepHistory?.snapshots || []).map(s => ({
+          label: format(parseISO(s.date), 'MM/dd'),
+          sleepStart: s.sleepStart ?? null,
+          sleepEnd: s.sleepEnd ?? null,
+        }))}
+        height={200}
+      />
+      <Text style={styles.timestamp}>
+        {isSleepHistoryLoading
+          ? 'Loading history…'
+          : sleepHistoryError
+            ? 'Unable to load history'
+            : `Showing last ${sleepHistoryWindow} days`}
       </Text>
     </>
   );
@@ -493,6 +573,54 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             : 'N/A',
       color: getSleepColor(),
       statusText: sleepLabel(),
+      extra: (
+        <View style={styles.metricsSection}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: spacing.sm,
+            }}
+          >
+            <Text style={styles.sectionTitle}>History</Text>
+            <SleepHistoryToggle />
+          </View>
+          <Card>
+            <View style={{ paddingVertical: spacing.sm }}>
+              {sleepChartType === 'stages' ? (
+                <SleepStackedHistoryChart />
+              ) : (
+                <SleepBedWakeTrendChart />
+              )}
+            </View>
+          </Card>
+          {/* Chart type toggle below the chart */}
+          <View style={{ alignSelf: 'flex-end', marginTop: spacing.xs }}>
+            <View style={{ flexDirection: 'row' }}>
+              {(
+                [
+                  { key: 'stages', label: 'Stages' },
+                  { key: 'bedwake', label: 'Bed/Wake' },
+                ] as const
+              ).map(opt => {
+                const active = sleepChartType === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    onPress={() => setSleepChartType(opt.key)}
+                    style={active ? styles.historyToggleActive : styles.historyToggle}
+                  >
+                    <Text style={active ? styles.historyToggleTextActive : styles.historyToggleText}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      ),
       summary: [
         {
           label: 'Duration',

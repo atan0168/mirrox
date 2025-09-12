@@ -10,6 +10,8 @@ export function useHealthHistory(limit: number = 7) {
   const load = useCallback(async (lim: number) => {
     try {
       setLoading(true);
+      // Ensure we have up-to-date snapshots for the requested window
+      await healthDataService.syncNeeded(lim);
       const history = await healthDataService.getHistory(lim);
       setData(history);
       setError(null);
@@ -26,6 +28,9 @@ export function useHealthHistory(limit: number = 7) {
   useEffect(() => {
     let mounted = true;
     (async () => {
+      try {
+        await healthDataService.syncNeeded(limit);
+      } catch {}
       const history = await healthDataService.getHistory(limit);
       if (mounted) setData(history);
     })();
@@ -38,4 +43,3 @@ export function useHealthHistory(limit: number = 7) {
 
   return { data, loading, error, refresh } as const;
 }
-
