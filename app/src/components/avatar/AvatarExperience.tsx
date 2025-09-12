@@ -247,12 +247,19 @@ function AvatarExperience({
   const healthDrivenFacial = useMemo(() => {
     if (!health) return facialExpression;
     if (stressEffects.stressLevel !== 'none') return facialExpression;
+    // Only apply internal sleep tweak when no external recommendation was provided
+    // i.e., parent baseline is neutral (no combined logic).
+    if (externalFacialExpression !== 'neutral') return facialExpression;
     const sleepH = (health.sleepMinutes || 0) / 60;
-    // Only mark tired if we have sleep data and it's under 6h
     if (sleepH > 0 && sleepH < 6) return 'tired';
     if (sleepH > 8.5) return 'calm';
     return facialExpression;
-  }, [health, facialExpression, stressEffects.stressLevel]);
+  }, [
+    health,
+    facialExpression,
+    stressEffects.stressLevel,
+    externalFacialExpression,
+  ]);
 
   // Final expression with full manual override (bypasses sleep/stress/health)
   const finalFacialExpression = useMemo(() => {

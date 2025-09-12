@@ -166,7 +166,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const stepsLabel = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (!health) return 'N/A';
+    if (!health) return 'No data';
     const ratio = steps / dailyStepGoal;
     if (ratio >= 1) return 'Goal met';
     if (ratio >= 0.8) return 'Almost there';
@@ -178,7 +178,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const sleepLabel = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (!health) return 'N/A';
+    if (!health) return 'No data';
     if (sleepHours >= 7 && sleepHours <= 9) return 'Well rested';
     if (sleepHours >= 6 && sleepHours < 7) return 'Adequate';
     if (sleepHours >= 5 && sleepHours < 6) return 'Tired';
@@ -203,12 +203,12 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const hrvLabel = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (hrvMs == null) return 'N/A';
+    if (hrvMs == null) return 'No data';
     if (hrvMs >= 60) return 'Excellent';
     if (hrvMs >= 40) return 'Good';
     if (hrvMs >= 20) return 'Low';
     if (hrvMs > 0) return 'Very low';
-    return 'N/A';
+    return 'No data';
   };
 
   // Resting HR helpers
@@ -227,7 +227,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const rhrLabel = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (restingHeartRateBpm == null) return 'N/A';
+    if (restingHeartRateBpm == null) return 'No data';
     if (restingHeartRateBpm < 60) return 'Great';
     if (restingHeartRateBpm < 70) return 'Good';
     if (restingHeartRateBpm < 80) return 'High';
@@ -251,7 +251,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const energyLabel = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (activeEnergyKcal == null) return 'N/A';
+    if (activeEnergyKcal == null) return 'No data';
     if (activeEnergyKcal >= 500) return 'Very active';
     if (activeEnergyKcal >= 300) return 'Active';
     if (activeEnergyKcal >= 100) return 'Lightly active';
@@ -279,7 +279,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const rrLabel = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (respiratoryRateBrpm == null) return 'N/A';
+    if (respiratoryRateBrpm == null) return 'No data';
     if (respiratoryRateBrpm >= 12 && respiratoryRateBrpm <= 20) return 'Normal';
     if (
       (respiratoryRateBrpm > 20 && respiratoryRateBrpm <= 22) ||
@@ -304,7 +304,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const workoutsLabelText = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (workoutsCount == null) return 'N/A';
+    if (workoutsCount == null) return 'No data';
     if (workoutsCount >= 2) return 'Active';
     if (workoutsCount === 1) return '1 session';
     return 'None';
@@ -326,7 +326,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const mindfulLabelText = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (mindfulMinutes == null) return 'N/A';
+    if (mindfulMinutes == null) return 'No dta';
     if (mindfulMinutes >= 10) return 'Great';
     if (mindfulMinutes >= 5) return 'Good';
     if (mindfulMinutes > 0) return 'A little';
@@ -496,7 +496,8 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       summary: [
         {
           label: 'Duration',
-          value: sleepMinutes > 0 ? `${Math.round(sleepMinutes)} min` : 'N/A',
+          value:
+            sleepMinutes > 0 ? `${Math.round(sleepMinutes)} min` : 'No data',
         },
         { label: 'Recommended', value: '7–9 hours' },
         { label: 'Quality', value: sleepLabel() },
@@ -616,7 +617,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
         { label: 'Status', value: workoutsLabelText() },
         {
           label: 'Sessions',
-          value: workoutsCount != null ? `${workoutsCount}` : 'N/A',
+          value: workoutsCount != null ? `${workoutsCount}` : 'No data',
         },
         {
           label: 'Source',
@@ -635,14 +636,14 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             : '...'
           : mindfulMinutes != null
             ? `${mindfulMinutes} min`
-            : 'N/A',
+            : 'No data',
       color: getMindfulColor(),
       statusText: mindfulLabelText(),
       summary: [
         { label: 'Status', value: mindfulLabelText() },
         {
           label: 'Minutes',
-          value: mindfulMinutes != null ? `${mindfulMinutes} min` : 'N/A',
+          value: mindfulMinutes != null ? `${mindfulMinutes} min` : 'No data',
         },
         {
           label: 'Source',

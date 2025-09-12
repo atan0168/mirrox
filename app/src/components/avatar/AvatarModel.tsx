@@ -196,6 +196,22 @@ export function AvatarModel({
       mouthPressLeft: 0.3,
       mouthPressRight: 0.3,
     },
+    upset: {
+      // Visibly displeased but not angry; between concerned and angry
+      browDownLeft: 0.55,
+      browDownRight: 0.55,
+      browInnerUp: 0.35,
+      eyeSquintLeft: 0.35,
+      eyeSquintRight: 0.35,
+      eyeBlinkLeft: 0.1,
+      eyeBlinkRight: 0.1,
+      jawOpen: 0.12,
+      mouthFrownLeft: 0.55,
+      mouthFrownRight: 0.55,
+      mouthPressLeft: 0.15,
+      mouthPressRight: 0.15,
+      mouthClose: 0.2,
+    },
     sick: {
       browInnerUp: 1.0,
       browDownLeft: 0.8,

@@ -19,9 +19,10 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
 import {
   calculateCombinedEnvironmentalSkinEffects,
-  getRecommendedFacialExpression,
   calculateSmogEffects,
 } from '../utils/skinEffectsUtils';
+import { getCombinedRecommendedExpression } from '../utils/expressionUtils';
+import { useHealthData } from '../hooks/useHealthData';
 import { SkinToneButton } from '../components/controls/SkinToneButton';
 import SceneSwitcher, {
   SceneOption,
@@ -167,11 +168,17 @@ const DashboardScreen: React.FC = () => {
     });
   }, [airQuality]);
 
-  // Auto-adjust facial expression based on air quality
+  // Health data (for sleep minutes)
+  const { data: health } = useHealthData({ autoSync: false });
+
+  // Auto-adjust facial expression based on air quality and sleep
   const recommendedExpression = useMemo(() => {
-    if (!airQuality) return 'neutral';
-    return getRecommendedFacialExpression(airQuality.pm25, airQuality.aqi);
-  }, [airQuality]);
+    return getCombinedRecommendedExpression({
+      aqi: airQuality?.aqi ?? null,
+      pm25: airQuality?.pm25 ?? null,
+      sleepMinutes: health?.sleepMinutes ?? null,
+    });
+  }, [airQuality?.aqi, airQuality?.pm25, health?.sleepMinutes]);
 
   // Create effects data for the effects list
   const activeEffects = useMemo((): EffectData[] => {
@@ -254,15 +261,16 @@ const DashboardScreen: React.FC = () => {
       effects.push({
         id: 'facial-expression',
         title: 'Facial Expression',
-        description: `Avatar expression adjusted to "${recommendedExpression}" based on air quality conditions`,
+        description: `Avatar expression set to "${recommendedExpression}" based on air quality and sleep`,
         details: [
           `Current expression: ${recommendedExpression}`,
           `Based on AQI: ${airQuality?.aqi || 'N/A'}`,
           `PM2.5 level: ${airQuality?.pm25 || 'N/A'} μg/m³`,
-          'Expression reflects health impact of air quality',
+          `Last-night sleep: ${health?.sleepMinutes != null ? (health.sleepMinutes / 60).toFixed(1) + 'h' : 'N/A'}`,
+          'Expression reflects health impact of air quality and sleep',
         ],
         severity,
-        source: 'Air Quality Analysis',
+        source: 'Air + Sleep Analysis',
         actionRecommendations: [
           'Practice deep breathing exercises to reduce stress',
           'Take breaks from outdoor activities if feeling discomfort',
@@ -274,7 +282,13 @@ const DashboardScreen: React.FC = () => {
     }
 
     return effects;
-  }, [skinEffects, smogEffects, recommendedExpression, airQuality]);
+  }, [
+    skinEffects,
+    smogEffects,
+    recommendedExpression,
+    airQuality,
+    health?.sleepMinutes,
+  ]);
 
   if (isLoading) {
     return (
@@ -304,7 +318,7 @@ const DashboardScreen: React.FC = () => {
           <View style={styles.avatarContainer}>
             <AvatarExperience
               showAnimationButton={developerControlsEnabled}
-              facialExpression={manualExpression || 'neutral'}
+              facialExpression={manualExpression || recommendedExpression}
               skinToneAdjustment={skinEffects.totalAdjustment}
               isActive={!!isFocused}
               rainIntensity={rainIntensity}
