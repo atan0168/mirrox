@@ -8,6 +8,7 @@ import {
   Alert,
   Linking,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { TrendingUp, Wind, HeartPulse } from 'lucide-react-native';
@@ -68,6 +69,28 @@ const StatsScreen: React.FC = () => {
   // Health history for bar chart
   const { refresh: refreshHistory } = useHealthHistory(historyWindow);
 
+  const openPlatformHealthSettings = async () => {
+    if (Platform.OS === 'ios') {
+      // Best-effort deep link to Health app Sources (Data Access & Devices)
+      const sourcesUrl = 'x-apple-health://sources';
+      const healthUrl = 'x-apple-health://';
+      try {
+        if (await Linking.canOpenURL(sourcesUrl)) {
+          await Linking.openURL(sourcesUrl);
+          return;
+        }
+        if (await Linking.canOpenURL(healthUrl)) {
+          await Linking.openURL(healthUrl);
+          return;
+        }
+      } catch {}
+    }
+    // Fallback to app settings (works on both platforms)
+    try {
+      await Linking.openSettings();
+    } catch {}
+  };
+
   const shouldShowHealthBanner = useMemo(() => {
     if (healthBannerDismissed) return false;
     if (healthError) return true;
@@ -94,10 +117,15 @@ const StatsScreen: React.FC = () => {
       } else {
         Alert.alert(
           'Enable Health Access',
-          'To re-enable health permissions, open your app settings and allow Health access.',
+          Platform.OS === 'ios'
+            ? 'To re-enable Health permissions, open the Health app, then go to Data Access & Devices and select Mirrox to allow access.'
+            : 'To re-enable health permissions, open your app settings and allow Health access.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+            {
+              text: 'Open Settings',
+              onPress: () => openPlatformHealthSettings(),
+            },
           ]
         );
       }
@@ -126,15 +154,6 @@ const StatsScreen: React.FC = () => {
       }
     }, [healthError, health, refreshHealth])
   );
-
-  const getAirQualityStatValue = () => {
-    if (isAirQualityLoading) return '...';
-    if (!airQuality?.aqi) return 'N/A';
-    return (
-      airQuality.classification ||
-      getShortClassification(getAQIInfo(airQuality.aqi).classification)
-    );
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -167,8 +186,8 @@ const StatsScreen: React.FC = () => {
             primaryAction={
               healthError
                 ? {
-                    label: 'Open Settings',
-                    onPress: () => Linking.openSettings(),
+                    label: 'Open Health App',
+                    onPress: openPlatformHealthSettings,
                     disabled: enablingHealth,
                   }
                 : {
