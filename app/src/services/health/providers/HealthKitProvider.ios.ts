@@ -51,6 +51,10 @@ export class HealthKitProvider implements HealthProvider {
             startDate: start,
             endDate: end,
           },
+          // Ensure we fetch the full day's samples. Some bridges default to a
+          // relatively small limit which can undercount on active days.
+          // 0 typically means "no limit" in native bridges
+          limit: 0,
           unit: 'count',
         }
       );
