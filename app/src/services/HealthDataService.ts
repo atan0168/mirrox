@@ -31,7 +31,9 @@ export class HealthDataService {
     const dayStart = startOfDayInTimeZone(now, timeZone);
     const steps = await healthProvider.getDailySteps(dayStart, now);
     const sleepDetails = await healthProvider.getLastNightSleepDetails(now);
-    const sleepMinutes = sleepDetails?.asleepMinutes ?? (await healthProvider.getLastNightSleepMinutes(now));
+    const sleepMinutes =
+      sleepDetails?.asleepMinutes ??
+      (await healthProvider.getLastNightSleepMinutes(now));
     // Additional wellness metrics (best-effort; may return null if unavailable)
     const [
       hrvMs,
@@ -84,7 +86,10 @@ export class HealthDataService {
    * - If data exists but is stale, fills the gap day-by-day up to today.
    * Returns the latest (today's) snapshot when done.
    */
-  async syncNeeded(maxDays: number = 30, now: Date = new Date()): Promise<HealthSnapshot> {
+  async syncNeeded(
+    maxDays: number = 30,
+    now: Date = new Date()
+  ): Promise<HealthSnapshot> {
     const timeZone = getDeviceTimeZone();
     const todayStr = yyyymmddInTimeZone(now, timeZone);
 
@@ -93,18 +98,28 @@ export class HealthDataService {
     // Helper to sync a specific local-date string (YYYY-MM-DD)
     const syncForDate = async (dateStr: string): Promise<HealthSnapshot> => {
       // Determine window [start, end)
-      const dayStart = startOfDayInTimeZone(new Date(`${dateStr}T00:00:00`), timeZone);
+      const dayStart = startOfDayInTimeZone(
+        new Date(`${dateStr}T00:00:00`),
+        timeZone
+      );
       const nextDay = addDays(dayStart, 1);
       const end = isAfter(nextDay, now) ? now : nextDay;
 
       const platform: HealthPlatform =
-        Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'mock';
+        Platform.OS === 'ios'
+          ? 'ios'
+          : Platform.OS === 'android'
+            ? 'android'
+            : 'mock';
 
       const steps = await healthProvider.getDailySteps(dayStart, end);
       // Sleep: use a reference time within this date so lastNightWindow(date) resolves correctly
       const sleepReference = new Date(`${dateStr}T09:00:00`);
-      const sleepDetails = await healthProvider.getLastNightSleepDetails(sleepReference);
-      const sleepMinutes = sleepDetails?.asleepMinutes ?? (await healthProvider.getLastNightSleepMinutes(sleepReference));
+      const sleepDetails =
+        await healthProvider.getLastNightSleepDetails(sleepReference);
+      const sleepMinutes =
+        sleepDetails?.asleepMinutes ??
+        (await healthProvider.getLastNightSleepMinutes(sleepReference));
 
       const [
         hrvMs,

@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, LayoutChangeEvent, Text, PanResponder, GestureResponderEvent, Animated } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  LayoutChangeEvent,
+  Text,
+  PanResponder,
+  GestureResponderEvent,
+  Animated,
+} from 'react-native';
 import Svg, { Rect, Text as SvgText, Line } from 'react-native-svg';
 import { colors } from '../../theme';
 
@@ -58,7 +66,10 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
   const { bars, innerW, hasFallback, topPad, innerH } = useMemo(() => {
     const totals = data.map(d => Math.max(0, d.totalMinutes));
     const maxTotal = Math.max(1, ...totals);
-    const innerW = Math.max(0, width - PADDING_X - (PADDING_X + EXTRA_RIGHT_PAD));
+    const innerW = Math.max(
+      0,
+      width - PADDING_X - (PADDING_X + EXTRA_RIGHT_PAD)
+    );
     const topPad = PADDING_TOP + LEGEND_RESERVED_PX;
     const innerH = Math.max(0, height - topPad - PADDING_BOTTOM);
     const count = Math.max(1, data.length);
@@ -75,7 +86,7 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
       const light = Math.max(0, d.lightMinutes ?? 0);
       const rem = Math.max(0, d.remMinutes ?? 0);
       const deep = Math.max(0, d.deepMinutes ?? 0);
-      const hasBreakdown = (light + rem + deep) > 0;
+      const hasBreakdown = light + rem + deep > 0;
       if (hasBreakdown) {
         const toH = (m: number) => Math.round((m / maxTotal) * innerH);
         if (light > 0) segs.push({ h: toH(light), fill: colorLight });
@@ -93,12 +104,21 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
       }
       const thisX = x;
       x += barW + gap;
-      return { x: thisX, y, width: barW, height: totalH, segments: segs, label: d.label, totalMinutes: total };
+      return {
+        x: thisX,
+        y,
+        width: barW,
+        height: totalH,
+        segments: segs,
+        label: d.label,
+        totalMinutes: total,
+      };
     });
     return { bars, innerW, hasFallback: fallbackDetected, topPad, innerH };
   }, [data, width, height, colorLight, colorREM, colorDeep, colorFallback]);
 
-  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  const onLayout = (e: LayoutChangeEvent) =>
+    setWidth(e.nativeEvent.layout.width);
 
   // Interaction helpers
   const pickIndexFromX = (px: number) => {
@@ -120,7 +140,10 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
 
   const handleTouch = (evt: any) => {
     const { locationX, locationY } = evt.nativeEvent;
-    if (locationY >= (PADDING_TOP + LEGEND_RESERVED_PX) && locationY <= height - PADDING_BOTTOM) {
+    if (
+      locationY >= PADDING_TOP + LEGEND_RESERVED_PX &&
+      locationY <= height - PADDING_BOTTOM
+    ) {
       const idx = pickIndexFromX(locationX);
       if (idx != null) setSelectedIndex(idx);
       setIsTouching(true);
@@ -132,13 +155,16 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
       PanResponder.create({
         onStartShouldSetPanResponder: e => {
           const y = e.nativeEvent.locationY;
-          return y >= (PADDING_TOP + LEGEND_RESERVED_PX) && y <= height - PADDING_BOTTOM;
+          return (
+            y >= PADDING_TOP + LEGEND_RESERVED_PX &&
+            y <= height - PADDING_BOTTOM
+          );
         },
         onMoveShouldSetPanResponder: (e, gesture) => {
           const y = e.nativeEvent.locationY;
           return (
             (Math.abs(gesture.dx) > 1 || Math.abs(gesture.dy) > 1) &&
-            y >= (PADDING_TOP + LEGEND_RESERVED_PX) &&
+            y >= PADDING_TOP + LEGEND_RESERVED_PX &&
             y <= height - PADDING_BOTTOM
           );
         },
@@ -167,7 +193,9 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
   }, [isTouching, dimAnim]);
 
   useEffect(() => {
-    const id = dimAnim.addListener(({ value }) => setDimT(typeof value === 'number' ? value : 0));
+    const id = dimAnim.addListener(({ value }) =>
+      setDimT(typeof value === 'number' ? value : 0)
+    );
     return () => dimAnim.removeListener(id);
   }, [dimAnim]);
 
@@ -186,7 +214,8 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
         {/* Bars */}
         {bars.map((b, i) => {
           let yCursor = b.y + b.height; // start from bottom
-          const isDimmed = isTouching && selectedIndex != null && selectedIndex !== i;
+          const isDimmed =
+            isTouching && selectedIndex != null && selectedIndex !== i;
           const barOpacity: number = isDimmed ? 1 - 0.65 * dimT : 1; // 1 -> 0.35
           return (
             <React.Fragment key={`stack-${i}`}>
@@ -224,9 +253,17 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
           <SelectedBarOverlay bar={bars[selectedIndex]} dimT={dimT} />
         )}
         {/* Selected value label */}
-        {showValueOnPress && isTouching && selectedIndex != null && bars[selectedIndex] && (
-          <SelectedValueOnPressLabel bar={bars[selectedIndex]} chartWidth={width} chartHeight={height} topPad={topPad} />
-        )}
+        {showValueOnPress &&
+          isTouching &&
+          selectedIndex != null &&
+          bars[selectedIndex] && (
+            <SelectedValueOnPressLabel
+              bar={bars[selectedIndex]}
+              chartWidth={width}
+              chartHeight={height}
+              topPad={topPad}
+            />
+          )}
         {/* X labels */}
         <XAxisLabels bars={bars} innerW={innerW} chartHeight={height} />
       </Svg>
@@ -243,7 +280,10 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
   );
 };
 
-const LegendSwatch: React.FC<{ color: string; label: string }> = ({ color, label }) => (
+const LegendSwatch: React.FC<{ color: string; label: string }> = ({
+  color,
+  label,
+}) => (
   <View style={styles.legendItem}>
     <View style={[styles.swatch, { backgroundColor: color }]} />
     <View style={{ width: 4 }} />
@@ -257,7 +297,8 @@ const XAxisLabels: React.FC<{
   chartHeight: number;
 }> = ({ bars, innerW, chartHeight }) => {
   const MIN_LABEL_SPACING = 32;
-  const maxLabels = innerW > 0 ? Math.max(2, Math.floor(innerW / MIN_LABEL_SPACING)) : 4;
+  const maxLabels =
+    innerW > 0 ? Math.max(2, Math.floor(innerW / MIN_LABEL_SPACING)) : 4;
   const count = bars.length;
   const step = Math.max(1, Math.ceil(count / maxLabels));
   const anchorIdx = count - 1;
@@ -269,7 +310,14 @@ const XAxisLabels: React.FC<{
         if (!show) return null;
         const xCenter = b.x + b.width / 2;
         return (
-          <SvgText key={`label-${i}`} x={xCenter} y={chartHeight - 8} fontSize={10} fill={colors.neutral[500]} textAnchor="middle">
+          <SvgText
+            key={`label-${i}`}
+            x={xCenter}
+            y={chartHeight - 8}
+            fontSize={10}
+            fill={colors.neutral[500]}
+            textAnchor="middle"
+          >
             {b.label}
           </SvgText>
         );
@@ -278,10 +326,21 @@ const XAxisLabels: React.FC<{
   );
 };
 
-const SelectedBarOverlay: React.FC<{ bar: ChartBarStack; dimT: number }> = ({ bar, dimT }) => {
+const SelectedBarOverlay: React.FC<{ bar: ChartBarStack; dimT: number }> = ({
+  bar,
+  dimT,
+}) => {
   return (
     <>
-      <Rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} fill={'white'} opacity={0.18 * dimT} rx={4} />
+      <Rect
+        x={bar.x}
+        y={bar.y}
+        width={bar.width}
+        height={bar.height}
+        fill={'white'}
+        opacity={0.18 * dimT}
+        rx={4}
+      />
       <Rect
         x={bar.x}
         y={bar.y}
@@ -311,7 +370,10 @@ const SelectedValueOnPressLabel: React.FC<{
   let rectX = xCenter - estWidth / 2;
   rectX = Math.max(
     PADDING_X,
-    Math.min(rectX, (chartWidth || 0) - (PADDING_X + EXTRA_RIGHT_PAD) - estWidth)
+    Math.min(
+      rectX,
+      (chartWidth || 0) - (PADDING_X + EXTRA_RIGHT_PAD) - estWidth
+    )
   );
   let rectY = bar.y - LABEL_HEIGHT - 6;
   if (rectY < topPad) {

@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame } from '@react-three/fiber/native';
 
 interface EyeBagsProps {
   target: THREE.Object3D | null; // typically head mesh

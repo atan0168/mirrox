@@ -463,6 +463,7 @@ export class LocalStorageService {
     enableStressVisuals?: boolean;
     enableDeveloperControls?: boolean;
     enableEnergyNotifications?: boolean;
+    enableSleepHealthNotifications?: boolean;
   }): Promise<void> {
     try {
       const profile = await this.getUserProfile();
@@ -483,6 +484,11 @@ export class LocalStorageService {
           enableEnergyNotifications:
             preferences.enableEnergyNotifications ??
             profile.preferences?.enableEnergyNotifications ??
+            true,
+          // Default to enabled for sleep & health notifications
+          enableSleepHealthNotifications:
+            preferences.enableSleepHealthNotifications ??
+            profile.preferences?.enableSleepHealthNotifications ??
             true,
         };
         await this.saveUserProfile(profile);
@@ -518,6 +524,19 @@ export class LocalStorageService {
       return profile?.preferences?.enableEnergyNotifications ?? true; // Default to enabled
     } catch (error) {
       console.error('Failed to get energy notifications preference:', error);
+      return true; // Default to enabled on error
+    }
+  }
+
+  public async getSleepHealthNotificationsEnabled(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.preferences?.enableSleepHealthNotifications ?? true; // Default to enabled
+    } catch (error) {
+      console.error(
+        'Failed to get sleep & health notifications preference:',
+        error
+      );
       return true; // Default to enabled on error
     }
   }

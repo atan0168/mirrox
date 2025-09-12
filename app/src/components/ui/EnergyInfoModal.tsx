@@ -26,17 +26,25 @@ export function EnergyInfoModal({ visible, onClose }: EnergyInfoModalProps) {
     >
       <View style={styles.overlay}>
         <Card style={styles.modalContainer} variant="default">
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.scrollView}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Header */}
             <View style={styles.header}>
-              <Battery size={32} color={colors.neutral[800]} style={styles.headerIcon} />
+              <Battery
+                size={32}
+                color={colors.neutral[800]}
+                style={styles.headerIcon}
+              />
               <Text style={styles.headerTitle}>Energy Battery</Text>
             </View>
 
             {/* Description */}
             <View style={styles.section}>
               <Text style={styles.description}>
-                A simple estimate of daily energy based on your sleep and time awake.
+                A simple estimate of daily energy based on your sleep and time
+                awake.
               </Text>
             </View>
 
@@ -61,7 +69,8 @@ export function EnergyInfoModal({ visible, onClose }: EnergyInfoModalProps) {
               <View style={styles.infoRow}>
                 <Info size={16} color={colors.neutral[400]} />
                 <Text style={styles.infoText}>
-                  This is a lightweight guide, not a medical or diagnostic metric.
+                  This is a lightweight guide, not a medical or diagnostic
+                  metric.
                 </Text>
               </View>
             </View>
@@ -165,4 +174,3 @@ const styles = StyleSheet.create({
 });
 
 export default EnergyInfoModal;
-

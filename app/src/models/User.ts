@@ -23,5 +23,6 @@ export interface UserProfile {
     enableStressVisuals: boolean; // Whether to show stress animations and effects
     enableDeveloperControls: boolean; // Whether to show developer controls and UI overlays
     enableEnergyNotifications?: boolean; // Whether to send energy low notifications
+    enableSleepHealthNotifications?: boolean; // Whether to send sleep & health insights
   };
 }

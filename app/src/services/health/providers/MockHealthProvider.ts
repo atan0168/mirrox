@@ -62,7 +62,7 @@ export class MockHealthProvider implements HealthProvider {
     );
     const total = 360 + seededRandom(day + 42) * 180; // minutes
     const deep = Math.round(total * (0.15 + seededRandom(day + 1) * 0.1));
-    const rem = Math.round(total * (0.20 + seededRandom(day + 2) * 0.1));
+    const rem = Math.round(total * (0.2 + seededRandom(day + 2) * 0.1));
     const light = Math.max(0, Math.round(total - deep - rem));
     const awakenings = Math.floor(seededRandom(day + 3) * 3); // 0-2
     // Bedtime around 22:00-00:30
@@ -71,7 +71,9 @@ export class MockHealthProvider implements HealthProvider {
     const start = new Date(reference);
     start.setDate(reference.getDate() - 1);
     start.setHours(bedtimeHour % 24, bedtimeMin, 0, 0);
-    const end = new Date(start.getTime() + total * 60000 + awakenings * 5 * 60000);
+    const end = new Date(
+      start.getTime() + total * 60000 + awakenings * 5 * 60000
+    );
     return {
       asleepMinutes: Math.round(total),
       sleepStart: start.toISOString(),

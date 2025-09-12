@@ -119,10 +119,7 @@ export class HealthConnectProvider implements HealthProvider {
     return this.getSleepDetails(start, end);
   }
 
-  async getSleepDetails(
-    start: Date,
-    end: Date
-  ): Promise<SleepDetails | null> {
+  async getSleepDetails(start: Date, end: Date): Promise<SleepDetails | null> {
     if (!(await this.isAvailable())) return null;
     try {
       const { initialize, readRecords } = HealthConnect;
@@ -175,7 +172,9 @@ export class HealthConnectProvider implements HealthProvider {
           const se = s?.endTime ? new Date(s.endTime).getTime() : null;
           if (ss == null || se == null) continue;
           const durMin = Math.max(0, se - ss) / 60000;
-          const stage = (s?.stage || s?.stageType || '').toString().toLowerCase();
+          const stage = (s?.stage || s?.stageType || '')
+            .toString()
+            .toLowerCase();
           if (stage.includes('awake')) {
             awakenings += 1;
           } else if (stage.includes('deep')) {

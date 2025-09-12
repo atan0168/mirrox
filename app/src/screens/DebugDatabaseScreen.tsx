@@ -108,7 +108,10 @@ export default function DebugDatabaseScreen() {
                 // Attempt to truncate WAL and vacuum space (best-effort)
                 await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE);');
               } catch {}
-              Alert.alert('Reset Complete', 'All health data has been removed.');
+              Alert.alert(
+                'Reset Complete',
+                'All health data has been removed.'
+              );
             } catch (e: any) {
               Alert.alert(
                 'Reset Failed',

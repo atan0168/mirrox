@@ -81,7 +81,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
 
   // Sleep history state (for sleep modal chart)
   const [sleepHistoryWindow, setSleepHistoryWindow] = useState<7 | 14 | 30>(7);
-  const [sleepChartType, setSleepChartType] = useState<'stages' | 'bedwake'>('stages');
+  const [sleepChartType, setSleepChartType] = useState<'stages' | 'bedwake'>(
+    'stages'
+  );
   const {
     data: sleepHistory,
     loading: isSleepHistoryLoading,
@@ -609,9 +611,17 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
                   <TouchableOpacity
                     key={opt.key}
                     onPress={() => setSleepChartType(opt.key)}
-                    style={active ? styles.historyToggleActive : styles.historyToggle}
+                    style={
+                      active ? styles.historyToggleActive : styles.historyToggle
+                    }
                   >
-                    <Text style={active ? styles.historyToggleTextActive : styles.historyToggleText}>
+                    <Text
+                      style={
+                        active
+                          ? styles.historyToggleTextActive
+                          : styles.historyToggleText
+                      }
+                    >
                       {opt.label}
                     </Text>
                   </TouchableOpacity>

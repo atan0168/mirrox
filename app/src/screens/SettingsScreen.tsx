@@ -28,10 +28,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
 import { useEnergyNotificationsPreference } from '../hooks/useEnergyNotificationsPreference';
+import { useSleepHealthNotificationsPreference } from '../hooks/useSleepHealthNotificationsPreference';
 import {
   cancelAllNotifications,
   requestNotificationPermissions,
 } from '../services/notifications';
+import { SleepHealthNotifier } from '../services/SleepHealthNotifier';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function SettingsScreen() {
@@ -66,6 +68,12 @@ export default function SettingsScreen() {
     energyNotificationsEnabled: enableEnergyNotifications,
     updateEnergyNotificationsPreference,
   } = useEnergyNotificationsPreference();
+
+  // Use the sleep & health notifications preference hook
+  const {
+    sleepHealthNotificationsEnabled: enableSleepHealthNotifications,
+    updateSleepHealthNotificationsPreference,
+  } = useSleepHealthNotificationsPreference();
 
   useEffect(() => {
     loadSecuritySettings();
@@ -177,6 +185,41 @@ export default function SettingsScreen() {
         'Error',
         'Failed to update notifications setting. Please try again.'
       );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSleepHealthNotificationsToggle = async (value: boolean) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const success = await updateSleepHealthNotificationsPreference(value);
+      if (success) {
+        if (value) {
+          const granted = await requestNotificationPermissions();
+          if (!granted) {
+            Alert.alert(
+              'Permission Needed',
+              'Please allow notifications in system settings to receive sleep insights.'
+            );
+          }
+          Alert.alert(
+            'Sleep Insights Enabled',
+            'You may receive up to one sleep & health insight per day based on recent patterns.'
+          );
+        } else {
+          Alert.alert(
+            'Sleep Insights Disabled',
+            'Sleep & health notifications have been turned off.'
+          );
+        }
+      } else {
+        Alert.alert('Error', 'Failed to update setting. Please try again.');
+      }
+    } catch (e) {
+      console.error('Failed to toggle sleep & health notifications:', e);
+      Alert.alert('Error', 'Failed to update setting. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -400,6 +443,23 @@ export default function SettingsScreen() {
               thumbColor={colors.white}
             />
           </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Sleep & Health Insights</Text>
+              <Text style={styles.settingDescription}>
+                Receive one supportive, sourced insight per day based on your
+                recent sleep and health data
+              </Text>
+            </View>
+            <Switch
+              value={!!enableSleepHealthNotifications}
+              onValueChange={handleSleepHealthNotificationsToggle}
+              disabled={loading}
+              trackColor={{ false: colors.neutral[300], true: colors.black }}
+              thumbColor={colors.white}
+            />
+          </View>
         </View>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -517,6 +577,32 @@ export default function SettingsScreen() {
                 </Text>
               </View>
               <Database size={20} color={colors.neutral[700]} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={async () => {
+                try {
+                  await SleepHealthNotifier.sendSampleNow();
+                  Alert.alert(
+                    'Sent',
+                    'Sample sleep insight sent to notification tray.'
+                  );
+                } catch (e) {
+                  Alert.alert('Error', 'Failed to send sample notification.');
+                }
+              }}
+            >
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>
+                  Send Sample Sleep Insight (Debug)
+                </Text>
+                <Text style={styles.settingDescription}>
+                  Triggers a preview notification without affecting frequency
+                  caps
+                </Text>
+              </View>
+              <Bell size={20} color={colors.neutral[700]} />
             </TouchableOpacity>
           </View>
         )}

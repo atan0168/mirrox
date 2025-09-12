@@ -84,7 +84,10 @@ const SleepTimesTrendChart: React.FC<SleepTimesTrendChartProps> = ({
     const MIN_POINT_W = 2; // allow small but visible
     if (pointW < MIN_POINT_W) {
       // Reduce gap if needed to keep point width readable and still fit.
-      gap = Math.max(1, (innerW - count * MIN_POINT_W) / Math.max(1, count - 1));
+      gap = Math.max(
+        1,
+        (innerW - count * MIN_POINT_W) / Math.max(1, count - 1)
+      );
       pointW = Math.max(MIN_POINT_W, (innerW - gap * (count - 1)) / count);
     }
 
@@ -178,7 +181,8 @@ const SleepTimesTrendChart: React.FC<SleepTimesTrendChartProps> = ({
         {/* Points and links */}
         {points.map((p, i) => {
           // Scale point radius a bit when dense to reduce overlap
-          const stepX = i === 0 ? (points[1]?.x ?? p.x) - p.x : p.x - points[i - 1].x;
+          const stepX =
+            i === 0 ? (points[1]?.x ?? p.x) - p.x : p.x - points[i - 1].x;
           const r = Math.max(1.5, Math.min(3, stepX * 0.35));
           const hasBed = typeof p.bedMin === 'number';
           const hasWake = typeof p.wakeMin === 'number';

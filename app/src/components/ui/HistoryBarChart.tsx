@@ -222,7 +222,12 @@ const HistoryBarChart: React.FC<HistoryBarChartProps> = ({
               chartHeight={height}
             />
             {/* X labels (auto-skip from latest to avoid crowding and edge clipping) */}
-            <XAxisLabels bars={bars} innerW={innerW} count={count} chartHeight={height} />
+            <XAxisLabels
+              bars={bars}
+              innerW={innerW}
+              count={count}
+              chartHeight={height}
+            />
           </Svg>
           {/* Gesture overlay to enable press-and-drag value preview */}
           <View style={styles.gestureOverlay} {...panResponder.panHandlers} />
@@ -243,15 +248,28 @@ const BarsWithTapZones: React.FC<{
   isTouching: boolean;
   selectedIndex: number | null;
   dimT: number;
-}> = ({ bars, gap, height, innerW, barColor, isTouching, selectedIndex, dimT }) => {
+}> = ({
+  bars,
+  gap,
+  height,
+  innerW,
+  barColor,
+  isTouching,
+  selectedIndex,
+  dimT,
+}) => {
   return (
     <>
       {bars.map((b, i) => {
         const center = b.x + b.width / 2;
         const tapWidth = Math.max(MIN_TAP_WIDTH, b.width + gap);
         let tapX = center - tapWidth / 2;
-        tapX = Math.max(PADDING_X, Math.min(tapX, PADDING_X + innerW - tapWidth));
-        const isDimmed = isTouching && selectedIndex != null && selectedIndex !== i;
+        tapX = Math.max(
+          PADDING_X,
+          Math.min(tapX, PADDING_X + innerW - tapWidth)
+        );
+        const isDimmed =
+          isTouching && selectedIndex != null && selectedIndex !== i;
         const barOpacity: number = isDimmed ? 1 - 0.65 * dimT : 1; // 1 -> 0.35
         return (
           <React.Fragment key={`wrap-${i}`}>
@@ -329,7 +347,10 @@ const SelectedValueOnPressLabel: React.FC<{
   let rectX = xCenter - estWidth / 2;
   rectX = Math.max(
     PADDING_X,
-    Math.min(rectX, (chartWidth || 0) - (PADDING_X + EXTRA_RIGHT_PAD) - estWidth)
+    Math.min(
+      rectX,
+      (chartWidth || 0) - (PADDING_X + EXTRA_RIGHT_PAD) - estWidth
+    )
   );
   let rectY = b.y - LABEL_HEIGHT - 6; // try above bar
   if (rectY < PADDING_TOP) {
@@ -340,7 +361,15 @@ const SelectedValueOnPressLabel: React.FC<{
   const rectStroke = 'transparent';
   return (
     <>
-      <Rect x={rectX} y={rectY} width={estWidth} height={LABEL_HEIGHT} rx={8} fill={rectFill} stroke={rectStroke} />
+      <Rect
+        x={rectX}
+        y={rectY}
+        width={estWidth}
+        height={LABEL_HEIGHT}
+        rx={8}
+        fill={rectFill}
+        stroke={rectStroke}
+      />
       <SvgText
         x={rectX + estWidth / 2}
         y={rectY + LABEL_HEIGHT / 2}
@@ -362,7 +391,8 @@ const XAxisLabels: React.FC<{
   count: number;
   chartHeight: number;
 }> = ({ bars, innerW, count, chartHeight }) => {
-  const maxLabels = innerW > 0 ? Math.max(2, Math.floor(innerW / MIN_LABEL_SPACING)) : 4;
+  const maxLabels =
+    innerW > 0 ? Math.max(2, Math.floor(innerW / MIN_LABEL_SPACING)) : 4;
   const step = Math.max(1, Math.ceil(count / maxLabels));
   const anchorIdx = count - 1; // Anchor from the latest (rightmost) index
   return (
@@ -373,7 +403,14 @@ const XAxisLabels: React.FC<{
         if (!show) return null;
         const xCenter = b.x + b.width / 2;
         return (
-          <SvgText key={`label-${i}`} x={xCenter} y={chartHeight - 8} fontSize={10} fill={colors.neutral[500]} textAnchor="middle">
+          <SvgText
+            key={`label-${i}`}
+            x={xCenter}
+            y={chartHeight - 8}
+            fontSize={10}
+            fill={colors.neutral[500]}
+            textAnchor="middle"
+          >
             {b.label}
           </SvgText>
         );

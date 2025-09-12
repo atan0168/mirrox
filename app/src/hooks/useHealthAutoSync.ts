@@ -30,4 +30,3 @@ export function useHealthAutoSync(maxDays: number = 30) {
     return () => sub.remove();
   }, [maxDays]);
 }
-
