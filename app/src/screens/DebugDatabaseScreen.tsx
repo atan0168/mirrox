@@ -15,6 +15,7 @@ import {
   Copy,
   Lock,
   Unlock,
+  RotateCcw,
 } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import {
@@ -90,6 +91,36 @@ export default function DebugDatabaseScreen() {
     }
   };
 
+  const confirmResetHealthData = () => {
+    Alert.alert(
+      'Reset Health Data',
+      'This will permanently delete all saved health snapshots from the local database. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const db = await getDatabase();
+              await db.execAsync('DELETE FROM health_snapshots;');
+              try {
+                // Attempt to truncate WAL and vacuum space (best-effort)
+                await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE);');
+              } catch {}
+              Alert.alert('Reset Complete', 'All health data has been removed.');
+            } catch (e: any) {
+              Alert.alert(
+                'Reset Failed',
+                e?.message ?? 'Unable to reset health data.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={[{ padding: spacing.lg }, styles.contentWrap]}>
@@ -140,6 +171,14 @@ export default function DebugDatabaseScreen() {
             <Text style={[styles.actionText, { color: colors.black }]}>
               Copy Path
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#d35400' }]}
+            onPress={confirmResetHealthData}
+          >
+            <RotateCcw size={18} color={colors.white} />
+            <Text style={styles.actionText}>Reset Health Data</Text>
           </TouchableOpacity>
         </View>
 
