@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
-import { Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Text, View, Pressable } from 'react-native';
 import { FULL_SLEEP_MINUTES } from '../constants';
 import { clamp } from '../utils/mathUtils';
 import { useEnergyStore } from '../store/energyStore';
+import EnergyInfoModal from './ui/EnergyInfoModal';
 
 const BatteryIndicator = ({
   sleepMinutes,
@@ -47,6 +48,8 @@ const BatteryIndicator = ({
     );
   }
 
+  const [showInfo, setShowInfo] = useState(false);
+
   return (
     <View
       style={{
@@ -58,7 +61,10 @@ const BatteryIndicator = ({
       }}
       accessibilityLabel={`Energy battery: ${Math.round(pct)} percent`}
     >
-      <View
+      <Pressable
+        onPress={() => setShowInfo(true)}
+        accessibilityRole="button"
+        accessibilityHint="Opens an explanation of the energy battery"
         style={{
           flexDirection: 'row',
           paddingHorizontal: 4,
@@ -81,7 +87,9 @@ const BatteryIndicator = ({
         >
           {`${Math.round(pct)}%`}
         </Text>
-      </View>
+      </Pressable>
+
+      <EnergyInfoModal visible={showInfo} onClose={() => setShowInfo(false)} />
     </View>
   );
 };
