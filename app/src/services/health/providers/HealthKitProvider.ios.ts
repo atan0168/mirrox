@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import type { HealthPermissionStatus } from '../../../models/Health';
-import type { HealthProvider } from '../types';
+import type { HealthProvider, SleepDetails } from '../types';
 import * as HealthKit from '@kingstinct/react-native-healthkit';
 import { lastNightWindow } from '../../../utils/datetimeUtils';
 
@@ -101,6 +101,90 @@ export class HealthKitProvider implements HealthProvider {
       return Math.round(minutes);
     } catch {}
     return 0;
+  }
+
+  async getLastNightSleepDetails(
+    reference: Date = new Date()
+  ): Promise<SleepDetails | null> {
+    if (!(await this.isAvailable())) return null;
+    const { start, end } = lastNightWindow(reference);
+    return this.getSleepDetails(start, end);
+  }
+
+  async getSleepDetails(start: Date, end: Date): Promise<SleepDetails | null> {
+    if (!(await this.isAvailable())) return null;
+    try {
+      const samples = await HealthKit.queryCategorySamples(
+        'HKCategoryTypeIdentifierSleepAnalysis',
+        { filter: { startDate: start, endDate: end } }
+      );
+      if (!samples || !samples.length) {
+        return {
+          asleepMinutes: 0,
+          sleepStart: null,
+          sleepEnd: null,
+          timeInBedMinutes: null,
+          awakeningsCount: 0,
+          sleepLightMinutes: null,
+          sleepDeepMinutes: null,
+          sleepRemMinutes: null,
+        };
+      }
+
+      let minStart: number | null = null;
+      let maxEnd: number | null = null;
+      let asleepMinutes = 0;
+      let timeInBedMinutes = 0;
+      let light = 0;
+      let deep = 0;
+      let rem = 0;
+      let awakenings = 0;
+
+      for (const s of samples) {
+        const st = s?.startDate ? new Date(s.startDate).getTime() : null;
+        const et = s?.endDate ? new Date(s.endDate).getTime() : null;
+        if (st == null || et == null) continue;
+        const durMin = Math.max(0, et - st) / 60000;
+        if (minStart == null || st < minStart) minStart = st;
+        if (maxEnd == null || et > maxEnd) maxEnd = et;
+
+        const v = s.value;
+        // HealthKit HKCategoryValueSleepAnalysis mapping (likely):
+        // 0 = InBed, 1 = Asleep (unspecified), 2 = Awake, 3 = Asleep Core/Light, 4 = Asleep Deep, 5 = Asleep REM
+        if (v === 0) {
+          timeInBedMinutes += durMin;
+        } else if (v === 2) {
+          awakenings += 1; // count each awake segment
+        } else if (v === 4) {
+          deep += durMin;
+          asleepMinutes += durMin;
+        } else if (v === 5) {
+          rem += durMin;
+          asleepMinutes += durMin;
+        } else if (v === 3) {
+          light += durMin;
+          asleepMinutes += durMin;
+        } else if (v === 1) {
+          // asleep unspecified
+          asleepMinutes += durMin;
+        } else {
+          // Unknown category; ignore
+        }
+      }
+
+      const details: SleepDetails = {
+        asleepMinutes: Math.round(asleepMinutes),
+        sleepStart: minStart ? new Date(minStart).toISOString() : null,
+        sleepEnd: maxEnd ? new Date(maxEnd).toISOString() : null,
+        timeInBedMinutes: Math.round(timeInBedMinutes) || null,
+        awakeningsCount: awakenings,
+        sleepLightMinutes: light ? Math.round(light) : null,
+        sleepDeepMinutes: deep ? Math.round(deep) : null,
+        sleepRemMinutes: rem ? Math.round(rem) : null,
+      };
+      return details;
+    } catch (e) {}
+    return null;
   }
 
   async getDailyHRVMs(start: Date, end: Date): Promise<number | null> {

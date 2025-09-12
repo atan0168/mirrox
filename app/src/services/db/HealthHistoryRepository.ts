@@ -7,15 +7,24 @@ export const HealthHistoryRepository = {
     await db.runAsync(
       `INSERT OR REPLACE INTO health_snapshots (
         date, timestamp, platform, steps, sleepMinutes,
+        sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount,
+        sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes,
         hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes,
         respiratoryRateBrpm, workoutsCount
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         snapshot.date,
         snapshot.timestamp,
         snapshot.platform,
         snapshot.steps,
         snapshot.sleepMinutes,
+        snapshot.sleepStart ?? null,
+        snapshot.sleepEnd ?? null,
+        snapshot.timeInBedMinutes ?? null,
+        snapshot.awakeningsCount ?? null,
+        snapshot.sleepLightMinutes ?? null,
+        snapshot.sleepDeepMinutes ?? null,
+        snapshot.sleepRemMinutes ?? null,
         snapshot.hrvMs ?? null,
         snapshot.restingHeartRateBpm ?? null,
         snapshot.activeEnergyKcal ?? null,
@@ -29,7 +38,7 @@ export const HealthHistoryRepository = {
   async getLatest(): Promise<HealthSnapshot | null> {
     const db = await getDatabase();
     const row = await db.getFirstAsync<HealthSnapshot>(
-      'SELECT date, timestamp, platform, steps, sleepMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT 1'
+      'SELECT date, timestamp, platform, steps, sleepMinutes, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT 1'
     );
     return row ?? null;
   },
@@ -37,7 +46,7 @@ export const HealthHistoryRepository = {
   async getByDate(date: string): Promise<HealthSnapshot | null> {
     const db = await getDatabase();
     const row = await db.getFirstAsync<HealthSnapshot>(
-      'SELECT date, timestamp, platform, steps, sleepMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots WHERE date = ?',
+      'SELECT date, timestamp, platform, steps, sleepMinutes, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots WHERE date = ?',
       [date]
     );
     return row ?? null;
@@ -46,7 +55,7 @@ export const HealthHistoryRepository = {
   async getHistory(limit = 30): Promise<HealthHistory> {
     const db = await getDatabase();
     const rows = await db.getAllAsync<HealthSnapshot>(
-      'SELECT date, timestamp, platform, steps, sleepMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT ?',
+      'SELECT date, timestamp, platform, steps, sleepMinutes, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT ?',
       [limit]
     );
     // Return ascending order like previous implementation

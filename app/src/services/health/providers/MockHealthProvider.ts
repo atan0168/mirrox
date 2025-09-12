@@ -1,5 +1,5 @@
 import type { HealthPermissionStatus } from '../../../models/Health';
-import type { HealthProvider } from '../types';
+import type { HealthProvider, SleepDetails } from '../types';
 
 function seededRandom(seed: number) {
   const x = Math.sin(seed) * 10000;
@@ -50,6 +50,44 @@ export class MockHealthProvider implements HealthProvider {
       10
     );
     return Math.round(360 + seededRandom(day + 42) * 180); // 6h to 9h
+  }
+
+  async getLastNightSleepDetails(
+    reference: Date = new Date()
+  ): Promise<SleepDetails | null> {
+    // Derive a deterministic mock details set around 6-9h sleep
+    const day = parseInt(
+      `${reference.getFullYear()}${reference.getMonth()}${reference.getDate()}`,
+      10
+    );
+    const total = 360 + seededRandom(day + 42) * 180; // minutes
+    const deep = Math.round(total * (0.15 + seededRandom(day + 1) * 0.1));
+    const rem = Math.round(total * (0.20 + seededRandom(day + 2) * 0.1));
+    const light = Math.max(0, Math.round(total - deep - rem));
+    const awakenings = Math.floor(seededRandom(day + 3) * 3); // 0-2
+    // Bedtime around 22:00-00:30
+    const bedtimeHour = 22 + Math.floor(seededRandom(day + 4) * 3); // 22-24
+    const bedtimeMin = Math.floor(seededRandom(day + 5) * 60);
+    const start = new Date(reference);
+    start.setDate(reference.getDate() - 1);
+    start.setHours(bedtimeHour % 24, bedtimeMin, 0, 0);
+    const end = new Date(start.getTime() + total * 60000 + awakenings * 5 * 60000);
+    return {
+      asleepMinutes: Math.round(total),
+      sleepStart: start.toISOString(),
+      sleepEnd: end.toISOString(),
+      timeInBedMinutes: Math.round(total + awakenings * 5),
+      awakeningsCount: awakenings,
+      sleepLightMinutes: light,
+      sleepDeepMinutes: deep,
+      sleepRemMinutes: rem,
+    };
+  }
+
+  async getSleepDetails(start: Date, end: Date): Promise<SleepDetails | null> {
+    // Use last-night details if window covers night range; otherwise return a short nap with no stages
+    const details = await this.getLastNightSleepDetails(end);
+    return details;
   }
 
   async getDailyHRVMs(start: Date, end: Date): Promise<number | null> {

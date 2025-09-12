@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import type { HealthPermissionStatus } from '../../../models/Health';
-import type { HealthProvider } from '../types';
+import type { HealthProvider, SleepDetails } from '../types';
 import * as HealthConnect from '@zensein/react-native-health-connect';
 import { lastNightWindow } from '../../../utils/datetimeUtils';
 
@@ -108,6 +108,109 @@ export class HealthConnectProvider implements HealthProvider {
     } catch (e) {
       console.warn('[HealthConnect] getSleepMinutes failed', e);
       return 0;
+    }
+  }
+
+  async getLastNightSleepDetails(
+    reference: Date = new Date()
+  ): Promise<SleepDetails | null> {
+    if (!(await this.isAvailable())) return null;
+    const { start, end } = lastNightWindow(reference);
+    return this.getSleepDetails(start, end);
+  }
+
+  async getSleepDetails(
+    start: Date,
+    end: Date
+  ): Promise<SleepDetails | null> {
+    if (!(await this.isAvailable())) return null;
+    try {
+      const { initialize, readRecords } = HealthConnect;
+      try {
+        await initialize();
+      } catch {}
+      const res = await readRecords('SleepSession', {
+        timeRangeFilter: {
+          operator: 'between',
+          startTime: toIso(start),
+          endTime: toIso(end),
+        },
+      });
+      const records = res?.records || [];
+      if (!records.length) {
+        return {
+          asleepMinutes: 0,
+          sleepStart: null,
+          sleepEnd: null,
+          timeInBedMinutes: null,
+          awakeningsCount: 0,
+          sleepLightMinutes: null,
+          sleepDeepMinutes: null,
+          sleepRemMinutes: null,
+        };
+      }
+
+      let minStart: number | null = null;
+      let maxEnd: number | null = null;
+      let asleepMinutes = 0;
+      let timeInBedMinutes = 0;
+      let light = 0;
+      let deep = 0;
+      let rem = 0;
+      let awakenings = 0;
+
+      for (const r of records as any[]) {
+        const st = r?.startTime ? new Date(r.startTime).getTime() : null;
+        const et = r?.endTime ? new Date(r.endTime).getTime() : null;
+        if (st != null && (minStart == null || st < minStart)) minStart = st;
+        if (et != null && (maxEnd == null || et > maxEnd)) maxEnd = et;
+        if (st != null && et != null) {
+          timeInBedMinutes += Math.max(0, et - st) / 60000; // session span as time in bed
+        }
+
+        const stages = (r as any)?.stages || (r as any)?.stage ? [r.stage] : [];
+        // stages is expected as array of { stage, startTime, endTime }
+        for (const s of stages as any[]) {
+          const ss = s?.startTime ? new Date(s.startTime).getTime() : null;
+          const se = s?.endTime ? new Date(s.endTime).getTime() : null;
+          if (ss == null || se == null) continue;
+          const durMin = Math.max(0, se - ss) / 60000;
+          const stage = (s?.stage || s?.stageType || '').toString().toLowerCase();
+          if (stage.includes('awake')) {
+            awakenings += 1;
+          } else if (stage.includes('deep')) {
+            deep += durMin;
+            asleepMinutes += durMin;
+          } else if (stage.includes('rem')) {
+            rem += durMin;
+            asleepMinutes += durMin;
+          } else if (stage.includes('light') || stage.includes('core')) {
+            light += durMin;
+            asleepMinutes += durMin;
+          } else {
+            // Unknown/other stages; treat as asleep if marked asleep
+            // Some APIs may mark 'asleep' generically
+            if (stage.includes('asleep')) {
+              asleepMinutes += durMin;
+            }
+          }
+        }
+      }
+
+      const details: SleepDetails = {
+        asleepMinutes: Math.round(asleepMinutes),
+        sleepStart: minStart ? new Date(minStart).toISOString() : null,
+        sleepEnd: maxEnd ? new Date(maxEnd).toISOString() : null,
+        timeInBedMinutes: Math.round(timeInBedMinutes) || null,
+        awakeningsCount: awakenings,
+        sleepLightMinutes: light ? Math.round(light) : null,
+        sleepDeepMinutes: deep ? Math.round(deep) : null,
+        sleepRemMinutes: rem ? Math.round(rem) : null,
+      };
+      return details;
+    } catch (e) {
+      console.warn('[HealthConnect] getSleepDetails failed', e);
+      return null;
     }
   }
 

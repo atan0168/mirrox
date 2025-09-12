@@ -30,7 +30,8 @@ export class HealthDataService {
     const timeZone = getDeviceTimeZone();
     const dayStart = startOfDayInTimeZone(now, timeZone);
     const steps = await healthProvider.getDailySteps(dayStart, now);
-    const sleepMinutes = await healthProvider.getLastNightSleepMinutes(now);
+    const sleepDetails = await healthProvider.getLastNightSleepDetails(now);
+    const sleepMinutes = sleepDetails?.asleepMinutes ?? (await healthProvider.getLastNightSleepMinutes(now));
     // Additional wellness metrics (best-effort; may return null if unavailable)
     const [
       hrvMs,
@@ -54,6 +55,13 @@ export class HealthDataService {
       platform,
       steps,
       sleepMinutes,
+      sleepStart: sleepDetails?.sleepStart ?? null,
+      sleepEnd: sleepDetails?.sleepEnd ?? null,
+      timeInBedMinutes: sleepDetails?.timeInBedMinutes ?? null,
+      awakeningsCount: sleepDetails?.awakeningsCount ?? null,
+      sleepLightMinutes: sleepDetails?.sleepLightMinutes ?? null,
+      sleepDeepMinutes: sleepDetails?.sleepDeepMinutes ?? null,
+      sleepRemMinutes: sleepDetails?.sleepRemMinutes ?? null,
       hrvMs: hrvMs ?? null,
       restingHeartRateBpm: restingHeartRateBpm ?? null,
       activeEnergyKcal: activeEnergyKcal ?? null,
@@ -95,7 +103,8 @@ export class HealthDataService {
       const steps = await healthProvider.getDailySteps(dayStart, end);
       // Sleep: use a reference time within this date so lastNightWindow(date) resolves correctly
       const sleepReference = new Date(`${dateStr}T09:00:00`);
-      const sleepMinutes = await healthProvider.getLastNightSleepMinutes(sleepReference);
+      const sleepDetails = await healthProvider.getLastNightSleepDetails(sleepReference);
+      const sleepMinutes = sleepDetails?.asleepMinutes ?? (await healthProvider.getLastNightSleepMinutes(sleepReference));
 
       const [
         hrvMs,
@@ -119,6 +128,13 @@ export class HealthDataService {
         platform,
         steps,
         sleepMinutes,
+        sleepStart: sleepDetails?.sleepStart ?? null,
+        sleepEnd: sleepDetails?.sleepEnd ?? null,
+        timeInBedMinutes: sleepDetails?.timeInBedMinutes ?? null,
+        awakeningsCount: sleepDetails?.awakeningsCount ?? null,
+        sleepLightMinutes: sleepDetails?.sleepLightMinutes ?? null,
+        sleepDeepMinutes: sleepDetails?.sleepDeepMinutes ?? null,
+        sleepRemMinutes: sleepDetails?.sleepRemMinutes ?? null,
         hrvMs: hrvMs ?? null,
         restingHeartRateBpm: restingHeartRateBpm ?? null,
         activeEnergyKcal: activeEnergyKcal ?? null,
