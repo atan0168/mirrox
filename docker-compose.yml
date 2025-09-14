@@ -9,8 +9,24 @@ services:
     ports:
       - '3000:3000'
     restart: unless-stopped
+    environment:
+      - PY_PREDICT_BASE_URL=http://dengue-pred:8000
+    depends_on:
+      - dengue-pred
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+  dengue-pred:
+    image: ghcr.io/atan0168/dengue_pred:latest
+    container_name: dengue-pred
+    restart: unless-stopped
+    ports:
+      - '8090:8000'
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8000/health']
       interval: 30s
       timeout: 5s
       retries: 3
