@@ -15,6 +15,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Bug,
 } from 'lucide-react-native';
 import { Card } from './Card';
 import { Button } from './Button';
@@ -26,6 +27,7 @@ import {
   formatTimestamp,
 } from '../../utils/aqiUtils';
 import { useReverseGeocode } from '../../hooks/useReverseGeocode';
+import { DenguePredictResponse } from '../../services/BackendApiService';
 
 interface AirQualityData {
   aqi?: number;
@@ -67,6 +69,15 @@ interface EnvironmentalInfoSquaresProps {
   // Optional explicit coords used for queries
   queryLatitude?: number;
   queryLongitude?: number;
+  // Dengue prediction
+  denguePrediction?: DenguePredictResponse | null;
+  isDengueLoading?: boolean;
+  isDengueError?: boolean;
+  dengueErrorMessage?: string;
+  // Nearby dengue live data
+  dengueHotspotCount?: number;
+  dengueOutbreakCount?: number;
+  showDengue?: boolean; // hide outside MY
 }
 
 export const EnvironmentalInfoSquares: React.FC<
@@ -82,8 +93,15 @@ export const EnvironmentalInfoSquares: React.FC<
   trafficErrorMessage = 'Unable to load traffic data',
   queryLatitude,
   queryLongitude,
+  denguePrediction,
+  isDengueLoading = false,
+  isDengueError = false,
+  dengueErrorMessage = 'Unable to load dengue risk',
+  dengueHotspotCount = 0,
+  dengueOutbreakCount = 0,
+  showDengue = true,
 }) => {
-  const [selectedModal, setSelectedModal] = useState<'air' | 'traffic' | null>(
+  const [selectedModal, setSelectedModal] = useState<'air' | 'traffic' | 'dengue' | null>(
     null
   );
 
@@ -96,7 +114,7 @@ export const EnvironmentalInfoSquares: React.FC<
   const { data: reverseGeo } = useReverseGeocode(
     latForLookup,
     lngForLookup,
-    selectedModal === 'air' || selectedModal === 'traffic'
+    selectedModal === 'air' || selectedModal === 'traffic' || selectedModal === 'dengue'
   );
 
   const getAirQualityColor = () => {
@@ -153,6 +171,40 @@ export const EnvironmentalInfoSquares: React.FC<
       default:
         return <Car size={24} color={color} />;
     }
+  };
+
+  // Dengue tile helpers
+  const getDengueColor = () => {
+    if (isDengueError) return colors.red[500];
+    // Prioritize live nearby outbreaks/hotspots
+    if (dengueOutbreakCount > 0) return colors.orange[700];
+    if (dengueHotspotCount > 0) return '#FFC107';
+    if (!denguePrediction) return colors.neutral[400];
+    const pSeason = denguePrediction.season?.prob_in_season ?? 0;
+    const pTrend = denguePrediction.trend?.prob_trend_increase_next_week ?? 0;
+    const high = pSeason >= 0.6 || pTrend >= 0.5;
+    const moderate = pSeason >= 0.3 || pTrend >= 0.3;
+    if (high) return colors.orange[600];
+    if (moderate) return '#FFC107';
+    return colors.green[500];
+  };
+
+  const getDengueIcon = () => {
+    if (isDengueError)
+      return <AlertTriangle size={24} color={colors.red[500]} />;
+    const color = getDengueColor();
+    return <Bug size={24} color={color} />;
+  };
+
+  const dengueStatusText = () => {
+    if (dengueOutbreakCount > 0) return 'Active outbreak nearby';
+    if (dengueHotspotCount > 0) return 'Hotspot nearby';
+    if (!denguePrediction) return '';
+    const inSeason = denguePrediction.season?.in_season;
+    const trendUp = denguePrediction.trend?.trend_increase;
+    if (inSeason && trendUp) return 'High risk';
+    if (inSeason || trendUp) return 'Moderate risk';
+    return 'Low risk';
   };
 
   const renderAirQualityModal = () => (
@@ -413,6 +465,112 @@ export const EnvironmentalInfoSquares: React.FC<
     </Modal>
   );
 
+  const renderDengueModal = () => (
+    <Modal
+      visible={selectedModal === 'dengue'}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setSelectedModal(null)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Dengue Risk</Text>
+          <TouchableOpacity
+            onPress={() => setSelectedModal(null)}
+            style={styles.closeButton}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          {isDengueError ? (
+            <Card
+              variant="outline"
+              style={{ ...styles.detailCard, borderColor: colors.red[500] }}
+            >
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorIcon}>⚠️</Text>
+                <Text style={styles.errorTitle}>Failed to Load Dengue Risk</Text>
+                <Text style={styles.errorMessage}>{dengueErrorMessage}</Text>
+                <Text style={styles.errorSubtext}>
+                  Please check your connection and try again
+                </Text>
+              </View>
+            </Card>
+          ) : denguePrediction ? (
+            <>
+              <Card
+                variant="outline"
+                style={{
+                  ...styles.detailCard,
+                  borderColor: getDengueColor(),
+                }}
+              >
+                {latForLookup != null && lngForLookup != null && (
+                  <Text style={styles.locationLine}>
+                    Location: {reverseGeo?.label || 'Fetching…'} • (
+                    {latForLookup.toFixed(4)}, {lngForLookup.toFixed(4)})
+                  </Text>
+                )}
+                <View style={styles.aqiHeader}>
+                  <Text style={styles.aqiTitle}>Current Risk</Text>
+                  <Text
+                    style={[styles.aqiValue, { color: getDengueColor() }]}
+                  >
+                    {dengueStatusText()}
+                  </Text>
+                </View>
+                {(dengueOutbreakCount > 0 || dengueHotspotCount > 0) && (
+                  <>
+                    <Text style={styles.dengueStat}>
+                      Active outbreaks within 10km: {dengueOutbreakCount}
+                    </Text>
+                    <Text style={styles.dengueStat}>
+                      Hotspots within 10km: {dengueHotspotCount}
+                    </Text>
+                  </>
+                )}
+                <Text style={styles.dengueStat}>
+                  In-season probability:{' '}
+                  {Math.round(
+                    (denguePrediction.season?.prob_in_season ?? 0) * 100
+                  )}
+                  %
+                </Text>
+                <Text style={styles.dengueStat}>
+                  Trend increase next week:{' '}
+                  {Math.round(
+                    (denguePrediction.trend?.
+                      prob_trend_increase_next_week ?? 0) * 100
+                  )}
+                  %
+                </Text>
+                <Text style={styles.timestamp}>
+                  EW {denguePrediction.as_of.ew} {denguePrediction.as_of.ew_year}
+                  {' · '}Source: {denguePrediction.as_of.source}
+                </Text>
+                <Text style={[styles.timestamp, { marginTop: 6 }]}>
+                  Disclaimer: model trained with data up to end of 2024; predictions are experimental.
+                </Text>
+              </Card>
+            </>
+          ) : null}
+        </ScrollView>
+
+        <View style={styles.modalFooter}>
+          <Button
+            variant="secondary"
+            onPress={() => setSelectedModal(null)}
+            fullWidth
+          >
+            Close
+          </Button>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Environmental Overview</Text>
@@ -477,8 +635,47 @@ export const EnvironmentalInfoSquares: React.FC<
         </TouchableOpacity>
       </View>
 
+      {/* Dengue Square */}
+      {showDengue && (
+      <View style={styles.squaresGrid}>
+        <TouchableOpacity
+          style={[styles.square, { borderColor: getDengueColor() }]}
+          onPress={() => setSelectedModal('dengue')}
+          disabled={isDengueLoading || isDengueError}
+        >
+          <View style={styles.squareIcon}>{getDengueIcon()}</View>
+          <Text style={styles.squareValue}>
+            {isDengueError
+              ? 'Error'
+              : isDengueLoading
+                ? '...'
+                : dengueOutbreakCount > 0
+                  ? `${dengueOutbreakCount} outbreak${dengueOutbreakCount>1?'s':''}`
+                  : dengueHotspotCount > 0
+                    ? `${dengueHotspotCount} hotspot${dengueHotspotCount>1?'s':''}`
+                    : denguePrediction
+                      ? `${Math.round(
+                          (denguePrediction.season?.prob_in_season ?? 0) * 100
+                        )}%`
+                      : 'N/A'}
+          </Text>
+          <Text style={styles.squareLabel}>Dengue</Text>
+          {isDengueError ? (
+            <Text style={[styles.squareError, { color: colors.red[500] }]}>
+              {dengueErrorMessage}
+            </Text>
+          ) : denguePrediction ? (
+            <Text style={[styles.squareStatus, { color: getDengueColor() }]}>
+              {dengueStatusText()}
+            </Text>
+          ) : null}
+        </TouchableOpacity>
+      </View>
+      )}
+
       {renderAirQualityModal()}
       {renderTrafficModal()}
+      {renderDengueModal()}
     </View>
   );
 };
@@ -653,6 +850,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.neutral[700],
     lineHeight: 20,
+  },
+  dengueStat: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[700],
+    marginBottom: spacing.xs,
   },
   sectionTitle: {
     fontSize: fontSize.base,

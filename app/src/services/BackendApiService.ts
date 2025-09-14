@@ -52,6 +52,67 @@ export interface StationSearchResult {
   aqi: number;
 }
 
+// Types for dengue prediction
+export interface DenguePredictResponse {
+  state: string;
+  as_of: {
+    ew_year: number;
+    ew: number;
+    week_start: string;
+    week_end: string;
+    source: string;
+  };
+  season: {
+    lags: number;
+    prob_in_season: number;
+    in_season: boolean;
+    threshold: number;
+  };
+  trend: {
+    lags: number;
+    prob_trend_increase_next_week: number;
+    trend_increase: boolean;
+    threshold: number;
+  };
+}
+
+// Minimal ArcGIS response types for dengue nearby endpoints
+export interface ArcGISField {
+  name: string;
+  type: string;
+  alias: string;
+  length?: number;
+}
+export interface ArcGISSpatialReference {
+  wkid?: number;
+  latestWkid?: number;
+}
+export interface ArcGISFeature<TAttributes, TGeometry = undefined> {
+  attributes: TAttributes;
+  geometry?: TGeometry;
+}
+export interface ArcGISResponse<TAttributes, TGeometry = undefined> {
+  fields: ArcGISField[];
+  features: Array<ArcGISFeature<TAttributes, TGeometry>>;
+  geometryType?: string;
+  spatialReference?: ArcGISSpatialReference;
+}
+export interface PointGeometry {
+  x: number;
+  y: number;
+}
+export interface PolygonGeometry {
+  rings: number[][][];
+}
+export interface HotspotAttributes {
+  'SPWD.DBO_LOKALITI_POINTS.LOKALITI': string;
+  'SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES': number;
+}
+export interface OutbreakAttributes {
+  'SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI': string;
+  'SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES': number;
+}
+
 class BackendApiService {
   private readonly axiosInstance;
 
@@ -289,6 +350,60 @@ class BackendApiService {
       console.error('Failed to get service status:', error);
       throw error;
     }
+  }
+
+  /** Dengue prediction via backend -> Python microservice */
+  async fetchDenguePrediction(
+    state: string,
+    params?: {
+      season_lags?: number;
+      trend_lags?: number;
+      season_threshold?: number;
+      trend_threshold?: number;
+      ref_year?: number;
+      ref_ew?: number;
+      live?: boolean;
+    }
+  ): Promise<{
+    success: boolean;
+    data?: DenguePredictResponse;
+    error?: string;
+  }> {
+    try {
+      const response = await this.axiosInstance.get('/dengue/predict', {
+        params: { state, ...(params || {}) },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch dengue prediction:', error);
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error('Unable to fetch dengue prediction.');
+    }
+  }
+
+  // Dengue nearby queries (live ArcGIS via backend)
+  async fetchDengueHotspots(
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 10
+  ): Promise<ArcGISResponse<HotspotAttributes, PointGeometry>> {
+    const response = await this.axiosInstance.get('/dengue/hotspots', {
+      params: { latitude, longitude, radius: radiusKm },
+    });
+    return response.data.data as ArcGISResponse<HotspotAttributes, PointGeometry>;
+  }
+
+  async fetchDengueOutbreaks(
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 10
+  ): Promise<ArcGISResponse<OutbreakAttributes, PolygonGeometry>> {
+    const response = await this.axiosInstance.get('/dengue/outbreaks', {
+      params: { latitude, longitude, radius: radiusKm },
+    });
+    return response.data.data as ArcGISResponse<OutbreakAttributes, PolygonGeometry>;
   }
 
   /**

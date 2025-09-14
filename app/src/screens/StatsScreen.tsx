@@ -21,6 +21,9 @@ import {
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useTrafficData } from '../hooks/useTrafficData';
+import { useDenguePrediction } from '../hooks/useDenguePrediction';
+import { useDengueNearby } from '../hooks/useDengueNearby';
+import { useReverseGeocode } from '../hooks/useReverseGeocode';
 import { useHealthData } from '../hooks/useHealthData';
 import { useHealthHistory } from '../hooks/useHealthHistory';
 import { ENV_REFRESH_INTERVAL_MS } from '../constants';
@@ -49,6 +52,35 @@ const StatsScreen: React.FC = () => {
     longitude: userProfile?.location.longitude,
     enabled: !!userProfile?.location,
     refreshInterval: ENV_REFRESH_INTERVAL_MS,
+  });
+
+  // Dengue prediction based on user location
+  const {
+    data: dengue,
+    isLoading: isDengueLoading,
+    error: dengueError,
+  } = useDenguePrediction({
+    latitude: userProfile?.location.latitude,
+    longitude: userProfile?.location.longitude,
+    enabled: !!userProfile?.location,
+    live: true,
+  });
+
+  // Determine if user is in Malaysia to conditionally show dengue tile
+  const { data: reverseGeo } = useReverseGeocode(
+    userProfile?.location.latitude,
+    userProfile?.location.longitude,
+    !!userProfile?.location
+  );
+  const isMalaysia =
+    reverseGeo?.countryCode === 'MY' || reverseGeo?.country === 'Malaysia';
+
+  // Query nearby hotspots/outbreaks (10km)
+  const { data: dengueNearby } = useDengueNearby({
+    latitude: userProfile?.location.latitude,
+    longitude: userProfile?.location.longitude,
+    radiusKm: 10,
+    enabled: !!userProfile?.location && !!isMalaysia,
   });
 
   // Health data (steps, sleep)
@@ -231,6 +263,16 @@ const StatsScreen: React.FC = () => {
             }
             queryLatitude={userProfile?.location.latitude}
             queryLongitude={userProfile?.location.longitude}
+            denguePrediction={dengue?.data || null}
+            isDengueLoading={isDengueLoading}
+            isDengueError={!!dengueError}
+            dengueErrorMessage={
+              (dengueError as Error | undefined)?.message ||
+              'Unable to load dengue risk'
+            }
+            dengueHotspotCount={dengueNearby?.hotspotCount}
+            dengueOutbreakCount={dengueNearby?.outbreakCount}
+            showDengue={!!isMalaysia}
           />
         )}
 
