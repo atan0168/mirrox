@@ -74,6 +74,8 @@ app.get('/', (req, res) => {
       dengueHotspots: '/api/dengue/hotspots?latitude=..&longitude=..&radius=5',
       dengueOutbreaks:
         '/api/dengue/outbreaks?latitude=..&longitude=..&radius=5',
+      denguePredict:
+        '/api/dengue/predict?state=SELANGOR&live=true',
     },
   });
 });

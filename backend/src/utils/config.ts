@@ -36,6 +36,10 @@ interface Config {
   tomtom: {
     apiKey: string;
   };
+  pythonPredict: {
+    baseUrl: string; // e.g. http://localhost:8000
+    timeoutMs: number;
+  };
 }
 
 const config: Config = {
@@ -74,10 +78,14 @@ const config: Config = {
       10
     ), // 1 hour
     trafficTtl: parseInt(process.env.CACHE_TTL_TRAFFIC || '300000', 10), // 5 minutes
-    dengueTtl: parseInt(process.env.CACHE_TTL_DENGUE || '21600000', 10), // 6 hours
+    dengueTtl: parseInt(process.env.CACHE_TTL_DENGUE || '3600000', 10), // 1 hours
   },
   tomtom: {
     apiKey: process.env.TOMTOM_API_KEY || '',
+  },
+  pythonPredict: {
+    baseUrl: process.env.PY_PREDICT_BASE_URL || 'http://localhost:8090',
+    timeoutMs: parseInt(process.env.PY_PREDICT_TIMEOUT_MS || '15000', 10),
   },
 };
 

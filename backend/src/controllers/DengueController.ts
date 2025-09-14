@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { dengueService } from '../services/DengueService';
+import { predictionService, PredictQuery } from '../services/PredictionService';
 
 function parsePointAndRadius(req: Request) {
   const q = req.query as Record<string, string>;
@@ -56,7 +57,7 @@ export class DengueController {
         res.status(400).json({
           success: false,
           error:
-            'latitude and longitude are required. Provide WGS84 coordinates and optional radius in km (default 5).',
+            'latitude and longitude are required. Provide WGS84 coordinates and optional radius in km (default 50).',
         });
         return;
       }
@@ -131,6 +132,57 @@ export class DengueController {
         error instanceof Error
           ? error.message
           : 'Failed to fetch active outbreak areas';
+      res.status(500).json({ success: false, error: message });
+    }
+  }
+
+  /**
+   * GET /api/dengue/predict
+   * Proxies prediction request to Python microservice /predict
+   * Query params mirror the Python API
+   */
+  async getPrediction(req: Request, res: Response) {
+    try {
+      const q = req.query as Record<string, string>;
+      const state = q.state;
+      if (!state || typeof state !== 'string') {
+        res.status(400).json({ success: false, error: 'state is required' });
+        return;
+      }
+
+      const toNumber = (v?: string) =>
+        v === undefined ? undefined : Number(v);
+      const toBoolean = (v?: string) =>
+        v === undefined ? undefined : v === 'true' || v === '1';
+
+      const query: PredictQuery = { state } as PredictQuery;
+      const season_lags = toNumber(q.season_lags);
+      const trend_lags = toNumber(q.trend_lags);
+      const season_threshold = q.season_threshold
+        ? Number(q.season_threshold)
+        : undefined;
+      const trend_threshold = q.trend_threshold
+        ? Number(q.trend_threshold)
+        : undefined;
+      const ref_year = toNumber(q.ref_year);
+      const ref_ew = toNumber(q.ref_ew);
+      const live = toBoolean(q.live);
+
+      if (season_lags !== undefined) query.season_lags = season_lags;
+      if (trend_lags !== undefined) query.trend_lags = trend_lags;
+      if (season_threshold !== undefined)
+        query.season_threshold = season_threshold;
+      if (trend_threshold !== undefined)
+        query.trend_threshold = trend_threshold;
+      if (ref_year !== undefined) query.ref_year = ref_year;
+      if (ref_ew !== undefined) query.ref_ew = ref_ew;
+      if (live !== undefined) query.live = live;
+
+      const data = await predictionService.predict(query);
+      res.json({ success: true, data });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to fetch prediction';
       res.status(500).json({ success: false, error: message });
     }
   }

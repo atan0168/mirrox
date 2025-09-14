@@ -26,4 +26,11 @@ router.get(
   dengueController.getActiveOutbreaks.bind(dengueController)
 );
 
+/**
+ * @route GET /api/dengue/predict
+ * @desc Proxy to Python microservice prediction endpoint
+ * @query state (required), season_lags, trend_lags, season_threshold, trend_threshold, ref_year, ref_ew, live
+ */
+router.get('/predict', dengueController.getPrediction.bind(dengueController));
+
 export default router;
