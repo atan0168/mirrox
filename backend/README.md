@@ -213,6 +213,44 @@ General API health check.
 
 API information and available endpoints.
 
+### Dengue
+
+#### GET `/api/dengue/states`
+
+Get daily cases, cumulative cases, and deaths by Malaysian state (attributes only, no geometry).
+
+#### GET `/api/dengue/hotspots`
+
+Get hotspot locations around a point with optional radius.
+
+Query parameters (WGS84/EPSG:4326 required):
+
+- `latitude` (required): [-90, 90]
+- `longitude` (required): [-180, 180]
+- `radius` (optional, km): default `5`
+
+Example:
+
+```
+GET /api/dengue/hotspots?latitude=3.1390&longitude=101.6869&radius=10
+```
+
+#### GET `/api/dengue/outbreaks`
+
+Get active outbreak areas around a point with optional radius.
+
+Query parameters (WGS84/EPSG:4326 required):
+
+- `latitude` (required): [-90, 90]
+- `longitude` (required): [-180, 180]
+- `radius` (optional, km): default `5`
+
+Example:
+
+```
+GET /api/dengue/outbreaks?latitude=3.1390&longitude=101.6869&radius=10
+```
+
 ## Environment Variables
 
 | Variable                      | Description               | Default                                                              | Required |
@@ -230,6 +268,7 @@ API information and available endpoints.
 | `CACHE_TTL_AIR_QUALITY`       | Air quality cache TTL     | `1800000` (30 min)                                                   | No       |
 | `CACHE_TTL_LOCATION_SEARCH`   | Location cache TTL        | `3600000` (1 hour)                                                   | No       |
 | `CACHE_TTL_TRAFFIC`           | Traffic cache TTL         | `300000` (5 min)                                                     | No       |
+| `CACHE_TTL_DENGUE`            | Dengue cache TTL          | `21600000` (6 hours)                                                 | No       |
 
 ## Project Structure
 
@@ -283,6 +322,7 @@ Common HTTP status codes:
 - **Air Quality Data**: Cached for 30 minutes to balance freshness with API usage
 - **Location Data**: Cached for 1 hour since monitoring stations rarely change
 - **Traffic Data**: Cached for 5 minutes due to rapidly changing traffic conditions
+- **Dengue Data**: Cached for 6 hours to avoid excessive requests to iDengue services
 - **Cache Keys**: Generated from coordinates rounded to 3 decimal places for efficient grouping
 
 ## Rate Limiting

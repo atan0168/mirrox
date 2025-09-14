@@ -70,6 +70,10 @@ app.get('/', (req, res) => {
       serviceStatus: '/api/air-quality/status',
       traffic: '/api/traffic/congestion',
       trafficStatus: '/api/traffic/status',
+      dengueStates: '/api/dengue/states',
+      dengueHotspots: '/api/dengue/hotspots?latitude=..&longitude=..&radius=5',
+      dengueOutbreaks:
+        '/api/dengue/outbreaks?latitude=..&longitude=..&radius=5',
     },
   });
 });

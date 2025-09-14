@@ -31,6 +31,7 @@ interface Config {
     airQualityTtl: number;
     locationSearchTtl: number;
     trafficTtl: number;
+    dengueTtl: number;
   };
   tomtom: {
     apiKey: string;
@@ -73,6 +74,7 @@ const config: Config = {
       10
     ), // 1 hour
     trafficTtl: parseInt(process.env.CACHE_TTL_TRAFFIC || '300000', 10), // 5 minutes
+    dengueTtl: parseInt(process.env.CACHE_TTL_DENGUE || '21600000', 10), // 6 hours
   },
   tomtom: {
     apiKey: process.env.TOMTOM_API_KEY || '',
