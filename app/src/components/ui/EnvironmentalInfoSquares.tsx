@@ -27,7 +27,14 @@ import {
   formatTimestamp,
 } from '../../utils/aqiUtils';
 import { useReverseGeocode } from '../../hooks/useReverseGeocode';
-import { DenguePredictResponse } from '../../services/BackendApiService';
+import {
+  DenguePredictResponse,
+  ArcGISResponse,
+  HotspotAttributes,
+  OutbreakAttributes,
+  PointGeometry,
+  PolygonGeometry,
+} from '../../services/BackendApiService';
 
 interface AirQualityData {
   aqi?: number;
@@ -77,6 +84,8 @@ interface EnvironmentalInfoSquaresProps {
   // Nearby dengue live data
   dengueHotspotCount?: number;
   dengueOutbreakCount?: number;
+  dengueHotspotsData?: ArcGISResponse<HotspotAttributes, PointGeometry>;
+  dengueOutbreaksData?: ArcGISResponse<OutbreakAttributes, PolygonGeometry>;
   showDengue?: boolean; // hide outside MY
 }
 
@@ -99,11 +108,16 @@ export const EnvironmentalInfoSquares: React.FC<
   dengueErrorMessage = 'Unable to load dengue risk',
   dengueHotspotCount = 0,
   dengueOutbreakCount = 0,
+  dengueHotspotsData,
+  dengueOutbreaksData,
   showDengue = true,
 }) => {
-  const [selectedModal, setSelectedModal] = useState<'air' | 'traffic' | 'dengue' | null>(
-    null
-  );
+  const [selectedModal, setSelectedModal] = useState<
+    'air' | 'traffic' | 'dengue' | null
+  >(null);
+  const [dengueList, setDengueList] = useState<
+    'none' | 'outbreaks' | 'hotspots'
+  >('none');
 
   // Reverse geocode when user opens the modal (avoid background geocoding)
   const latForLookup =
@@ -114,7 +128,9 @@ export const EnvironmentalInfoSquares: React.FC<
   const { data: reverseGeo } = useReverseGeocode(
     latForLookup,
     lngForLookup,
-    selectedModal === 'air' || selectedModal === 'traffic' || selectedModal === 'dengue'
+    selectedModal === 'air' ||
+      selectedModal === 'traffic' ||
+      selectedModal === 'dengue'
   );
 
   const getAirQualityColor = () => {
@@ -199,11 +215,6 @@ export const EnvironmentalInfoSquares: React.FC<
   const dengueStatusText = () => {
     if (dengueOutbreakCount > 0) return 'Active outbreak nearby';
     if (dengueHotspotCount > 0) return 'Hotspot nearby';
-    if (!denguePrediction) return '';
-    const inSeason = denguePrediction.season?.in_season;
-    const trendUp = denguePrediction.trend?.trend_increase;
-    if (inSeason && trendUp) return 'High risk';
-    if (inSeason || trendUp) return 'Moderate risk';
     return 'Low risk';
   };
 
@@ -470,7 +481,10 @@ export const EnvironmentalInfoSquares: React.FC<
       visible={selectedModal === 'dengue'}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={() => setSelectedModal(null)}
+      onRequestClose={() => {
+        setSelectedModal(null);
+        setDengueList('none');
+      }}
     >
       <View style={styles.modalContainer}>
         <View style={styles.modalHeader}>
@@ -491,7 +505,9 @@ export const EnvironmentalInfoSquares: React.FC<
             >
               <View style={styles.errorContainer}>
                 <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorTitle}>Failed to Load Dengue Risk</Text>
+                <Text style={styles.errorTitle}>
+                  Failed to Load Dengue Risk
+                </Text>
                 <Text style={styles.errorMessage}>{dengueErrorMessage}</Text>
                 <Text style={styles.errorSubtext}>
                   Please check your connection and try again
@@ -513,47 +529,207 @@ export const EnvironmentalInfoSquares: React.FC<
                     {latForLookup.toFixed(4)}, {lngForLookup.toFixed(4)})
                   </Text>
                 )}
-                <View style={styles.aqiHeader}>
+                <View style={styles.aqiHeaderColumn}>
                   <Text style={styles.aqiTitle}>Current Risk</Text>
                   <Text
-                    style={[styles.aqiValue, { color: getDengueColor() }]}
+                    style={[
+                      styles.aqiValue,
+                      { color: getDengueColor(), marginTop: spacing.xs },
+                    ]}
                   >
                     {dengueStatusText()}
                   </Text>
                 </View>
-                {(dengueOutbreakCount > 0 || dengueHotspotCount > 0) && (
-                  <>
-                    <Text style={styles.dengueStat}>
-                      Active outbreaks within 10km: {dengueOutbreakCount}
-                    </Text>
-                    <Text style={styles.dengueStat}>
-                      Hotspots within 10km: {dengueHotspotCount}
-                    </Text>
-                  </>
-                )}
-                <Text style={styles.dengueStat}>
-                  In-season probability:{' '}
-                  {Math.round(
-                    (denguePrediction.season?.prob_in_season ?? 0) * 100
-                  )}
-                  %
-                </Text>
-                <Text style={styles.dengueStat}>
-                  Trend increase next week:{' '}
-                  {Math.round(
-                    (denguePrediction.trend?.
-                      prob_trend_increase_next_week ?? 0) * 100
-                  )}
-                  %
-                </Text>
+
                 <Text style={styles.timestamp}>
-                  EW {denguePrediction.as_of.ew} {denguePrediction.as_of.ew_year}
+                  EW {denguePrediction.as_of.ew}{' '}
+                  {denguePrediction.as_of.ew_year}
                   {' · '}Source: {denguePrediction.as_of.source}
                 </Text>
                 <Text style={[styles.timestamp, { marginTop: 6 }]}>
-                  Disclaimer: model trained with data up to end of 2024; predictions are experimental.
+                  Disclaimer: model trained with data up to end of 2024;
+                  predictions are experimental.
                 </Text>
               </Card>
+              <View style={styles.metricsSection}>
+                <Text style={styles.sectionTitle}>Nearby (5km)</Text>
+                <View style={styles.metricGrid}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setDengueList('outbreaks')}
+                    style={styles.metricItem}
+                  >
+                    <Text style={styles.metricLabel}>Active Outbreaks</Text>
+                    <Text
+                      style={[styles.metricValue, { color: getDengueColor() }]}
+                    >
+                      {dengueOutbreakCount}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => setDengueList('hotspots')}
+                    style={styles.metricItem}
+                  >
+                    <Text style={styles.metricLabel}>Hotspots</Text>
+                    <Text style={styles.metricValue}>{dengueHotspotCount}</Text>
+                  </TouchableOpacity>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>
+                      In-season Probability
+                    </Text>
+                    <Text style={styles.metricValue}>
+                      {Math.round(
+                        (denguePrediction.season?.prob_in_season ?? 0) * 100
+                      )}
+                      %
+                    </Text>
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Trend Next Week</Text>
+                    <Text style={styles.metricValue}>
+                      {Math.round(
+                        (denguePrediction.trend
+                          ?.prob_trend_increase_next_week ?? 0) * 100
+                      )}
+                      %
+                    </Text>
+                  </View>
+                  <View style={[styles.metricItem, styles.metricItemFull]}>
+                    <Text style={styles.metricLabel}>Source</Text>
+                    <Text style={styles.metricValue}>
+                      iDengue (MOH Malaysia)
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {dengueList !== 'none' && (
+                <View style={styles.metricsSection}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: spacing.sm,
+                    }}
+                  >
+                    <Text style={styles.sectionTitle}>
+                      {dengueList === 'outbreaks'
+                        ? 'Active Outbreaks'
+                        : 'Hotspots'}
+                    </Text>
+                    <TouchableOpacity onPress={() => setDengueList('none')}>
+                      <Text
+                        style={{
+                          color: colors.neutral[600],
+                          fontSize: fontSize.sm,
+                        }}
+                      >
+                        Hide details
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {dengueList === 'outbreaks' && (
+                    <View style={{ gap: spacing.sm }}>
+                      {dengueOutbreaksData?.features?.map((f, idx) => (
+                        <Card
+                          key={`outbreak-${idx}`}
+                          variant="outline"
+                          style={{ borderColor: colors.orange[600] }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: fontSize.base,
+                              fontWeight: '600',
+                              color: colors.neutral[900],
+                              marginBottom: 4,
+                            }}
+                          >
+                            {
+                              f.attributes[
+                                'SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI'
+                              ]
+                            }
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: fontSize.sm,
+                              color: colors.neutral[700],
+                            }}
+                          >
+                            Total cases:{' '}
+                            {
+                              f.attributes[
+                                'SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES'
+                              ]
+                            }
+                          </Text>
+                        </Card>
+                      ))}
+                      {(!dengueOutbreaksData?.features ||
+                        dengueOutbreaksData.features.length === 0) && (
+                        <Text
+                          style={{
+                            fontSize: fontSize.sm,
+                            color: colors.neutral[600],
+                          }}
+                        >
+                          No active outbreaks within 5km.
+                        </Text>
+                      )}
+                    </View>
+                  )}
+
+                  {dengueList === 'hotspots' && (
+                    <View style={{ gap: spacing.sm }}>
+                      {dengueHotspotsData?.features?.map((f, idx) => (
+                        <Card
+                          key={`hotspot-${idx}`}
+                          variant="outline"
+                          style={{ borderColor: colors.orange[400] }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: fontSize.base,
+                              fontWeight: '600',
+                              color: colors.neutral[900],
+                              marginBottom: 4,
+                            }}
+                          >
+                            {f.attributes['SPWD.DBO_LOKALITI_POINTS.LOKALITI']}
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: fontSize.sm,
+                              color: colors.neutral[700],
+                            }}
+                          >
+                            Cumulative cases:{' '}
+                            {
+                              f.attributes[
+                                'SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES'
+                              ]
+                            }
+                          </Text>
+                        </Card>
+                      ))}
+                      {(!dengueHotspotsData?.features ||
+                        dengueHotspotsData.features.length === 0) && (
+                        <Text
+                          style={{
+                            fontSize: fontSize.sm,
+                            color: colors.neutral[600],
+                          }}
+                        >
+                          No hotspots within 5km.
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
             </>
           ) : null}
         </ScrollView>
@@ -561,7 +737,10 @@ export const EnvironmentalInfoSquares: React.FC<
         <View style={styles.modalFooter}>
           <Button
             variant="secondary"
-            onPress={() => setSelectedModal(null)}
+            onPress={() => {
+              setSelectedModal(null);
+              setDengueList('none');
+            }}
             fullWidth
           >
             Close
@@ -637,40 +816,40 @@ export const EnvironmentalInfoSquares: React.FC<
 
       {/* Dengue Square */}
       {showDengue && (
-      <View style={styles.squaresGrid}>
-        <TouchableOpacity
-          style={[styles.square, { borderColor: getDengueColor() }]}
-          onPress={() => setSelectedModal('dengue')}
-          disabled={isDengueLoading || isDengueError}
-        >
-          <View style={styles.squareIcon}>{getDengueIcon()}</View>
-          <Text style={styles.squareValue}>
-            {isDengueError
-              ? 'Error'
-              : isDengueLoading
-                ? '...'
-                : dengueOutbreakCount > 0
-                  ? `${dengueOutbreakCount} outbreak${dengueOutbreakCount>1?'s':''}`
-                  : dengueHotspotCount > 0
-                    ? `${dengueHotspotCount} hotspot${dengueHotspotCount>1?'s':''}`
-                    : denguePrediction
-                      ? `${Math.round(
-                          (denguePrediction.season?.prob_in_season ?? 0) * 100
-                        )}%`
-                      : 'N/A'}
-          </Text>
-          <Text style={styles.squareLabel}>Dengue</Text>
-          {isDengueError ? (
-            <Text style={[styles.squareError, { color: colors.red[500] }]}>
-              {dengueErrorMessage}
+        <View style={[styles.squaresGrid, styles.squaresGridBottom]}>
+          <TouchableOpacity
+            style={[styles.square, { borderColor: getDengueColor() }]}
+            onPress={() => setSelectedModal('dengue')}
+            disabled={isDengueLoading || isDengueError}
+          >
+            <View style={styles.squareIcon}>{getDengueIcon()}</View>
+            <Text style={styles.squareValue}>
+              {isDengueError
+                ? 'Error'
+                : isDengueLoading
+                  ? '...'
+                  : dengueOutbreakCount > 0
+                    ? `${dengueOutbreakCount} area${dengueOutbreakCount > 1 ? 's' : ''}`
+                    : dengueHotspotCount > 0
+                      ? `${dengueHotspotCount} hotspot${dengueHotspotCount > 1 ? 's' : ''}`
+                      : denguePrediction
+                        ? `${Math.round(
+                            (denguePrediction.season?.prob_in_season ?? 0) * 100
+                          )}%`
+                        : 'N/A'}
             </Text>
-          ) : denguePrediction ? (
-            <Text style={[styles.squareStatus, { color: getDengueColor() }]}>
-              {dengueStatusText()}
-            </Text>
-          ) : null}
-        </TouchableOpacity>
-      </View>
+            <Text style={styles.squareLabel}>Dengue</Text>
+            {isDengueError ? (
+              <Text style={[styles.squareError, { color: colors.red[500] }]}>
+                {dengueErrorMessage}
+              </Text>
+            ) : denguePrediction ? (
+              <Text style={[styles.squareStatus, { color: getDengueColor() }]}>
+                {dengueStatusText()}
+              </Text>
+            ) : null}
+          </TouchableOpacity>
+        </View>
       )}
 
       {renderAirQualityModal()}
@@ -697,6 +876,9 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     gap: spacing.md,
   },
+  squaresGridBottom: {
+    marginTop: spacing.md,
+  },
   square: {
     width: '47%',
     backgroundColor: colors.neutral[50],
@@ -704,7 +886,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     padding: spacing.lg,
     alignItems: 'center',
-    minHeight: 140,
+    minHeight: 160,
   },
   squareIcon: {
     marginBottom: spacing.sm,
@@ -714,6 +896,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.neutral[900],
     marginBottom: 4,
+    textAlign: 'center',
   },
   squareLabel: {
     fontSize: fontSize.sm,
@@ -724,6 +907,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: '600',
     textTransform: 'capitalize',
+    textAlign: 'center',
   },
   squareError: {
     fontSize: fontSize.xs,
@@ -805,6 +989,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: '600',
     color: colors.neutral[900],
+  },
+  aqiHeaderColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
   },
   aqiValue: {
     fontSize: fontSize.xxl,
@@ -903,6 +1092,10 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     padding: spacing.md,
     alignItems: 'center',
+  },
+  metricItemFull: {
+    minWidth: '100%',
+    flexBasis: '100%',
   },
   metricLabel: {
     fontSize: fontSize.xs,

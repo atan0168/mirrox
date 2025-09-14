@@ -79,7 +79,7 @@ const StatsScreen: React.FC = () => {
   const { data: dengueNearby } = useDengueNearby({
     latitude: userProfile?.location.latitude,
     longitude: userProfile?.location.longitude,
-    radiusKm: 10,
+    radiusKm: 5,
     enabled: !!userProfile?.location && !!isMalaysia,
   });
 
@@ -272,6 +272,8 @@ const StatsScreen: React.FC = () => {
             }
             dengueHotspotCount={dengueNearby?.hotspotCount}
             dengueOutbreakCount={dengueNearby?.outbreakCount}
+            dengueHotspotsData={dengueNearby?.hotspots}
+            dengueOutbreaksData={dengueNearby?.outbreaks}
             showDengue={!!isMalaysia}
           />
         )}
