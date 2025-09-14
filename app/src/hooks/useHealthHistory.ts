@@ -34,7 +34,10 @@ export function useHealthHistory(limit: number = 7) {
       try {
         const tz = getDeviceTimeZone();
         const todayStr = yyyymmddInTimeZone(new Date(), tz);
-        const startStr = yyyymmddInTimeZone(addDays(new Date(), -(limit - 1)), tz);
+        const startStr = yyyymmddInTimeZone(
+          addDays(new Date(), -(limit - 1)),
+          tz
+        );
         if (snapshot.date >= startStr && snapshot.date <= todayStr) {
           const history = await healthDataService.getHistory(limit);
           if (mounted) setData(history);

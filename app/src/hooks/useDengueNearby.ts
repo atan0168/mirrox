@@ -30,13 +30,15 @@ export const useDengueNearby = ({
   enabled = true,
 }: UseDengueNearbyOptions) => {
   const { data: reverseGeo } = useReverseGeocode(latitude, longitude, enabled);
-  const isMY = reverseGeo?.countryCode === 'MY' || reverseGeo?.country === 'Malaysia';
+  const isMY =
+    reverseGeo?.countryCode === 'MY' || reverseGeo?.country === 'Malaysia';
 
   return useQuery<DengueNearbyResult>({
     queryKey: ['dengueNearby', latitude, longitude, radiusKm],
     enabled: enabled && !!latitude && !!longitude && !!isMY,
     queryFn: async () => {
-      if (latitude == null || longitude == null) throw new Error('Missing coordinates');
+      if (latitude == null || longitude == null)
+        throw new Error('Missing coordinates');
       const [hotspots, outbreaks] = await Promise.all([
         backendApiService.fetchDengueHotspots(latitude, longitude, radiusKm),
         backendApiService.fetchDengueOutbreaks(latitude, longitude, radiusKm),
@@ -53,4 +55,3 @@ export const useDengueNearby = ({
     retry: 2,
   });
 };
-

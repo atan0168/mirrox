@@ -1,4 +1,5 @@
 import { useRef, useMemo } from 'react';
+import { colors } from '../../theme';
 import { useFrame, useThree } from '@react-three/fiber/native';
 import * as THREE from 'three';
 
@@ -29,25 +30,25 @@ export function FloatingStressIcon({
     switch (stressLevel) {
       case 'mild':
         return {
-          color: '#FFC107', // Yellow
+          color: colors.yellow[400], // Yellow
           shouldShow: true,
           intensity: 1,
         };
       case 'moderate':
         return {
-          color: '#FF9800', // Orange
+          color: colors.orange[500], // Orange
           shouldShow: true,
           intensity: 2,
         };
       case 'high':
         return {
-          color: '#F44336', // Red
+          color: colors.red[500], // Red
           shouldShow: true,
           intensity: 3,
         };
       default:
         return {
-          color: '#4CAF50',
+          color: colors.green[500],
           shouldShow: false,
           intensity: 0,
         };
@@ -56,7 +57,7 @@ export function FloatingStressIcon({
 
   // Create custom geometry for symbols (helpers defined before any early returns)
   // High-stress: use white mark for strong contrast
-  const createExclamationMark = (color: number | string = '#FFFFFF') => {
+  const createExclamationMark = (color: number | string = colors.white) => {
     const group = new THREE.Group();
     group.renderOrder = 100000;
     group.frustumCulled = false;
@@ -102,7 +103,7 @@ export function FloatingStressIcon({
     const triangleMesh = new THREE.Mesh(
       triangleGeometry,
       new THREE.MeshBasicMaterial({
-        color: '#FFFFFF',
+        color: colors.white,
         transparent: true,
         opacity: 0.9,
         depthTest: false,
@@ -113,7 +114,7 @@ export function FloatingStressIcon({
     group.add(triangleMesh);
 
     // Inner exclamation
-    const innerExclamation = createExclamationMark(0xff9800);
+    const innerExclamation = createExclamationMark(colors.orange[500]);
     innerExclamation.scale.setScalar(0.6);
     group.add(innerExclamation);
 
@@ -133,7 +134,7 @@ export function FloatingStressIcon({
           const dotMesh = new THREE.Mesh(
             dotGeometry,
             new THREE.MeshBasicMaterial({
-              color: '#FFFFFF',
+              color: colors.white,
               transparent: true,
               opacity: 1,
               depthTest: false,

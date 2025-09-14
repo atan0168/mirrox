@@ -8,7 +8,10 @@ interface NotificationBellProps {
   badgeCount?: number;
 }
 
-const NotificationBell: React.FC<NotificationBellProps> = ({ onPress, badgeCount }) => {
+const NotificationBell: React.FC<NotificationBellProps> = ({
+  onPress,
+  badgeCount,
+}) => {
   return (
     <Pressable
       onPress={onPress}

@@ -49,6 +49,7 @@ import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
 import Mattress from '../scene/Mattress';
 import BatteryIndicator from '../BatteryIndicator';
+import { colors } from '../../theme';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -1035,13 +1036,13 @@ function AvatarExperience({
 const getStatusColor = (stressLevel: string): string => {
   switch (stressLevel) {
     case 'mild':
-      return '#FFC107';
+      return colors.yellow[400];
     case 'moderate':
-      return '#FF9800';
+      return colors.orange[500];
     case 'high':
-      return '#F44336';
+      return colors.red[500];
     default:
-      return '#4CAF50';
+      return colors.green[500];
   }
 };
 

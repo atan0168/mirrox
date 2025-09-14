@@ -199,7 +199,9 @@ export class HealthDataService {
 
     // Determine which of the window dates are missing or not finalized in DB
     const existing = await this.getHistory(maxDays + 5); // fetch recent dates
-    const byDate = new Map((existing.snapshots || []).map(s => [s.date, s] as const));
+    const byDate = new Map(
+      (existing.snapshots || []).map(s => [s.date, s] as const)
+    );
     let datesToSync = windowDates.filter(ds => {
       if (!byDate.has(ds)) return true; // missing
       const snap = byDate.get(ds)!;

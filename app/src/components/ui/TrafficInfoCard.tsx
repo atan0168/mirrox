@@ -1,17 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import {
-  CheckCircle,
-  AlertTriangle,
-  AlertCircle,
-  XCircle,
-  HelpCircle,
-  AlertOctagon,
-} from 'lucide-react-native';
+import { AlertOctagon } from 'lucide-react-native';
 import { useTrafficData } from '../../hooks/useTrafficData';
 import { Card } from './Card';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import Loader from './Loader';
+import { getTrafficDisplay } from './display/traffic';
 
 interface TrafficInfoCardProps {
   latitude?: number;
@@ -71,52 +65,11 @@ export const TrafficInfoCard: React.FC<TrafficInfoCardProps> = ({
     );
   }
 
-  const getStressDescription = (level: string): string => {
-    switch (level) {
-      case 'none':
-        return 'Traffic is flowing smoothly';
-      case 'mild':
-        return 'Light traffic congestion detected';
-      case 'moderate':
-        return 'Moderate traffic delays expected';
-      case 'high':
-        return 'Heavy traffic congestion - high stress';
-      default:
-        return 'Unknown traffic conditions';
-    }
-  };
-
-  const getStressColor = (level: string): string => {
-    switch (level) {
-      case 'none':
-        return '#4CAF50';
-      case 'mild':
-        return '#FFC107';
-      case 'moderate':
-        return '#FF9800';
-      case 'high':
-        return '#F44336';
-      default:
-        return '#666';
-    }
-  };
-
-  const getStressIcon = (level: string) => {
-    const iconProps = { size: 20, color: getStressColor(level) };
-
-    switch (level) {
-      case 'none':
-        return <CheckCircle {...iconProps} />;
-      case 'mild':
-        return <AlertTriangle {...iconProps} />;
-      case 'moderate':
-        return <AlertCircle {...iconProps} />;
-      case 'high':
-        return <XCircle {...iconProps} />;
-      default:
-        return <HelpCircle {...iconProps} />;
-    }
-  };
+  const {
+    color: stressColor,
+    icon: stressIcon,
+    description,
+  } = getTrafficDisplay(data as any, false, 20);
 
   return (
     <Card>
@@ -126,18 +79,13 @@ export const TrafficInfoCard: React.FC<TrafficInfoCardProps> = ({
       </View>
 
       <View style={styles.stressLevelContainer}>
-        <View style={styles.stressIcon}>{getStressIcon(data.stressLevel)}</View>
+        <View style={styles.stressIcon}>{stressIcon}</View>
         <View style={styles.stressInfo}>
-          <Text
-            style={[
-              styles.stressLevel,
-              { color: getStressColor(data.stressLevel) },
-            ]}
-          >
+          <Text style={[styles.stressLevel, { color: stressColor }]}>
             {data.stressLevel.toUpperCase()}
           </Text>
           <Text style={styles.stressDescription}>
-            {getStressDescription(data.stressLevel)}
+            {description || 'Unknown traffic conditions'}
           </Text>
         </View>
       </View>
@@ -145,12 +93,7 @@ export const TrafficInfoCard: React.FC<TrafficInfoCardProps> = ({
       <View style={styles.metricsContainer}>
         <View style={styles.metric}>
           <Text style={styles.metricLabel}>Congestion Factor</Text>
-          <Text
-            style={[
-              styles.metricValue,
-              { color: getStressColor(data.stressLevel) },
-            ]}
-          >
+          <Text style={[styles.metricValue, { color: stressColor }]}>
             {data.congestionFactor.toFixed(1)}x
           </Text>
         </View>

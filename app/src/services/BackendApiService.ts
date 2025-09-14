@@ -392,7 +392,10 @@ class BackendApiService {
     const response = await this.axiosInstance.get('/dengue/hotspots', {
       params: { latitude, longitude, radius: radiusKm },
     });
-    return response.data.data as ArcGISResponse<HotspotAttributes, PointGeometry>;
+    return response.data.data as ArcGISResponse<
+      HotspotAttributes,
+      PointGeometry
+    >;
   }
 
   async fetchDengueOutbreaks(
@@ -403,7 +406,10 @@ class BackendApiService {
     const response = await this.axiosInstance.get('/dengue/outbreaks', {
       params: { latitude, longitude, radius: radiusKm },
     });
-    return response.data.data as ArcGISResponse<OutbreakAttributes, PolygonGeometry>;
+    return response.data.data as ArcGISResponse<
+      OutbreakAttributes,
+      PolygonGeometry
+    >;
   }
 
   /**

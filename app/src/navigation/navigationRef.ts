@@ -12,4 +12,3 @@ export function navigate<Name extends keyof RootStackParamList>(
     navigationRef.navigate(name as never, params as never);
   }
 }
-

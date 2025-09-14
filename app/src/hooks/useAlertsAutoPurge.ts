@@ -22,4 +22,3 @@ export function useAlertsAutoPurge(days: number = ALERT_RETENTION_DAYS) {
     return () => sub.remove();
   }, [days]);
 }
-

@@ -95,4 +95,3 @@ export const AlertsRepository = {
     return 0;
   },
 };
-

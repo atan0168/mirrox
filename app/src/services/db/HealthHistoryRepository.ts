@@ -42,7 +42,10 @@ export const HealthHistoryRepository = {
       'SELECT date, timestamp, platform, steps, sleepMinutes, finalized, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT 1'
     );
     if (!row) return null;
-    return { ...row, finalized: row.finalized ? true : false } as HealthSnapshot;
+    return {
+      ...row,
+      finalized: row.finalized ? true : false,
+    } as HealthSnapshot;
   },
 
   async getByDate(date: string): Promise<HealthSnapshot | null> {
@@ -51,7 +54,9 @@ export const HealthHistoryRepository = {
       'SELECT date, timestamp, platform, steps, sleepMinutes, finalized, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots WHERE date = ?',
       [date]
     );
-    return row ? ({ ...row, finalized: row.finalized ? true : false } as HealthSnapshot) : null;
+    return row
+      ? ({ ...row, finalized: row.finalized ? true : false } as HealthSnapshot)
+      : null;
   },
 
   async getHistory(limit = 30): Promise<HealthHistory> {
@@ -62,7 +67,9 @@ export const HealthHistoryRepository = {
     );
     // Map finalized to boolean and return ascending order like previous implementation
     const snapshots = rows
-      .map(r => ({ ...r, finalized: r.finalized ? true : false } as HealthSnapshot))
+      .map(
+        r => ({ ...r, finalized: r.finalized ? true : false }) as HealthSnapshot
+      )
       .sort((a, b) => a.date.localeCompare(b.date));
     return { snapshots };
   },

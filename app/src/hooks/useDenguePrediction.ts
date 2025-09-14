@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useReverseGeocode } from './useReverseGeocode';
-import { backendApiService, DenguePredictResponse } from '../services/BackendApiService';
+import {
+  backendApiService,
+  DenguePredictResponse,
+} from '../services/BackendApiService';
 
 export interface UseDenguePredictionOptions {
   latitude?: number;
@@ -19,9 +22,14 @@ export const useDenguePrediction = ({
   const { data: reverseGeo } = useReverseGeocode(latitude, longitude, enabled);
 
   const state = reverseGeo?.region || reverseGeo?.city || undefined;
-  const isMY = reverseGeo?.countryCode === 'MY' || reverseGeo?.country === 'Malaysia';
+  const isMY =
+    reverseGeo?.countryCode === 'MY' || reverseGeo?.country === 'Malaysia';
 
-  return useQuery<{ success: boolean; data?: DenguePredictResponse; error?: string }>({
+  return useQuery<{
+    success: boolean;
+    data?: DenguePredictResponse;
+    error?: string;
+  }>({
     queryKey: ['denguePredict', state, live],
     enabled: enabled && !!state && isMY,
     queryFn: async () => {
@@ -33,4 +41,3 @@ export const useDenguePrediction = ({
     retry: 2,
   });
 };
-
