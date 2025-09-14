@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import { addDays } from 'date-fns';
 import { healthDataService } from '../services/HealthDataService';
 import type { HealthHistory } from '../models/Health';
+import { getDeviceTimeZone, yyyymmddInTimeZone } from '../utils/datetimeUtils';
 
 export function useHealthHistory(limit: number = 7) {
   const [data, setData] = useState<HealthHistory | null>(null);
@@ -27,6 +29,18 @@ export function useHealthHistory(limit: number = 7) {
 
   useEffect(() => {
     let mounted = true;
+    // Subscribe to updates from health syncs and refresh history if within window
+    const unsubscribe = healthDataService.onUpdate(async snapshot => {
+      try {
+        const tz = getDeviceTimeZone();
+        const todayStr = yyyymmddInTimeZone(new Date(), tz);
+        const startStr = yyyymmddInTimeZone(addDays(new Date(), -(limit - 1)), tz);
+        if (snapshot.date >= startStr && snapshot.date <= todayStr) {
+          const history = await healthDataService.getHistory(limit);
+          if (mounted) setData(history);
+        }
+      } catch {}
+    });
     (async () => {
       try {
         await healthDataService.syncNeeded(limit);
@@ -36,6 +50,7 @@ export function useHealthHistory(limit: number = 7) {
     })();
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [limit]);
 

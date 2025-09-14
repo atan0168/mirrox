@@ -36,6 +36,8 @@ export interface HealthSnapshot {
   platform: HealthPlatform;
   steps: number; // total steps for date
   sleepMinutes: number; // last-night sleep minutes
+  // Sync state
+  finalized?: boolean | null; // true if day is fully synced (past day window)
   // Sleep details (nullable fields; best-effort based on platform data)
   sleepStart?: string | null; // ISO bedtime (last night)
   sleepEnd?: string | null; // ISO wake time (this morning)

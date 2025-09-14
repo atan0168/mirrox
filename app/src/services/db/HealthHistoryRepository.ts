@@ -6,18 +6,19 @@ export const HealthHistoryRepository = {
     const db = await getDatabase();
     await db.runAsync(
       `INSERT OR REPLACE INTO health_snapshots (
-        date, timestamp, platform, steps, sleepMinutes,
+        date, timestamp, platform, steps, sleepMinutes, finalized,
         sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount,
         sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes,
         hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes,
         respiratoryRateBrpm, workoutsCount
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         snapshot.date,
         snapshot.timestamp,
         snapshot.platform,
         snapshot.steps,
         snapshot.sleepMinutes,
+        snapshot.finalized ? 1 : 0,
         snapshot.sleepStart ?? null,
         snapshot.sleepEnd ?? null,
         snapshot.timeInBedMinutes ?? null,
@@ -37,29 +38,32 @@ export const HealthHistoryRepository = {
 
   async getLatest(): Promise<HealthSnapshot | null> {
     const db = await getDatabase();
-    const row = await db.getFirstAsync<HealthSnapshot>(
-      'SELECT date, timestamp, platform, steps, sleepMinutes, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT 1'
+    const row = await db.getFirstAsync<any>(
+      'SELECT date, timestamp, platform, steps, sleepMinutes, finalized, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT 1'
     );
-    return row ?? null;
+    if (!row) return null;
+    return { ...row, finalized: row.finalized ? true : false } as HealthSnapshot;
   },
 
   async getByDate(date: string): Promise<HealthSnapshot | null> {
     const db = await getDatabase();
-    const row = await db.getFirstAsync<HealthSnapshot>(
-      'SELECT date, timestamp, platform, steps, sleepMinutes, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots WHERE date = ?',
+    const row = await db.getFirstAsync<any>(
+      'SELECT date, timestamp, platform, steps, sleepMinutes, finalized, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots WHERE date = ?',
       [date]
     );
-    return row ?? null;
+    return row ? ({ ...row, finalized: row.finalized ? true : false } as HealthSnapshot) : null;
   },
 
   async getHistory(limit = 30): Promise<HealthHistory> {
     const db = await getDatabase();
-    const rows = await db.getAllAsync<HealthSnapshot>(
-      'SELECT date, timestamp, platform, steps, sleepMinutes, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT ?',
+    const rows = await db.getAllAsync<any>(
+      'SELECT date, timestamp, platform, steps, sleepMinutes, finalized, sleepStart, sleepEnd, timeInBedMinutes, awakeningsCount, sleepLightMinutes, sleepDeepMinutes, sleepRemMinutes, hrvMs, restingHeartRateBpm, activeEnergyKcal, mindfulMinutes, respiratoryRateBrpm, workoutsCount FROM health_snapshots ORDER BY date DESC LIMIT ?',
       [limit]
     );
-    // Return ascending order like previous implementation
-    const snapshots = rows.sort((a, b) => a.date.localeCompare(b.date));
+    // Map finalized to boolean and return ascending order like previous implementation
+    const snapshots = rows
+      .map(r => ({ ...r, finalized: r.finalized ? true : false } as HealthSnapshot))
+      .sort((a, b) => a.date.localeCompare(b.date));
     return { snapshots };
   },
 };

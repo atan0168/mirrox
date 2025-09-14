@@ -41,6 +41,10 @@ export function useHealthData({
 
   useEffect(() => {
     let mounted = true;
+    // Subscribe to live updates from background/auto syncs
+    const unsubscribe = healthDataService.onUpdate(snapshot => {
+      if (mounted) setData(snapshot);
+    });
     (async () => {
       const latest = await healthDataService.getLatest();
       if (mounted && latest) setData(latest);
@@ -50,6 +54,7 @@ export function useHealthData({
     })();
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [autoSync, sync]);
 

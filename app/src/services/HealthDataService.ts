@@ -14,6 +14,22 @@ import { HealthHistoryRepository } from './db/HealthHistoryRepository';
 import { healthProvider } from './health';
 
 export class HealthDataService {
+  private listeners: Set<(snapshot: HealthSnapshot) => void> = new Set();
+
+  onUpdate(listener: (snapshot: HealthSnapshot) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notifyUpdate(snapshot: HealthSnapshot) {
+    for (const l of this.listeners) {
+      try {
+        l(snapshot);
+      } catch {
+        // ignore listener errors
+      }
+    }
+  }
   async requestPermissions(): Promise<boolean> {
     const status = await healthProvider.requestPermissions();
     return status === 'granted';
@@ -57,6 +73,7 @@ export class HealthDataService {
       platform,
       steps,
       sleepMinutes,
+      finalized: false,
       sleepStart: sleepDetails?.sleepStart ?? null,
       sleepEnd: sleepDetails?.sleepEnd ?? null,
       timeInBedMinutes: sleepDetails?.timeInBedMinutes ?? null,
@@ -72,10 +89,10 @@ export class HealthDataService {
       workoutsCount: workoutsCount ?? null,
     };
 
-    // Store latest
+    // Store latest and append (dedupe by date)
     await this.saveLatest(snapshot);
-    // Append to history (dedupe by date)
     await this.appendHistory(snapshot);
+    this.notifyUpdate(snapshot);
 
     return snapshot;
   }
@@ -143,6 +160,7 @@ export class HealthDataService {
         platform,
         steps,
         sleepMinutes,
+        finalized: end === nextDay, // finalized only if we synced full-day window
         sleepStart: sleepDetails?.sleepStart ?? null,
         sleepEnd: sleepDetails?.sleepEnd ?? null,
         timeInBedMinutes: sleepDetails?.timeInBedMinutes ?? null,
@@ -160,6 +178,7 @@ export class HealthDataService {
 
       await this.saveLatest(snapshot);
       await this.appendHistory(snapshot);
+      this.notifyUpdate(snapshot);
       return snapshot;
     };
 
@@ -178,12 +197,21 @@ export class HealthDataService {
       windowDates.push(ds);
     }
 
-    // Determine which of the window dates are missing in DB
+    // Determine which of the window dates are missing or not finalized in DB
     const existing = await this.getHistory(maxDays + 5); // fetch recent dates
-    const have = new Set((existing.snapshots || []).map(s => s.date));
-    let datesToSync = windowDates.filter(ds => !have.has(ds));
-    // Always include today for a fresh latest snapshot
-    if (!datesToSync.includes(todayStr)) datesToSync.push(todayStr);
+    const byDate = new Map((existing.snapshots || []).map(s => [s.date, s] as const));
+    let datesToSync = windowDates.filter(ds => {
+      if (!byDate.has(ds)) return true; // missing
+      const snap = byDate.get(ds)!;
+      // Always resync today; for past days, only resync if not finalized
+      if (ds === todayStr) return true;
+      return !snap.finalized;
+    });
+
+    // Execute in ascending date order for determinism
+    if (datesToSync.length > 0) {
+      datesToSync = windowDates.filter(ds => datesToSync.includes(ds));
+    }
 
     if (datesToSync.length === 0) {
       // Nothing to do; ensure we return a current snapshot

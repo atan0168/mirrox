@@ -76,6 +76,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           platform TEXT NOT NULL,
           steps INTEGER NOT NULL,
           sleepMinutes INTEGER NOT NULL,
+          finalized INTEGER NOT NULL DEFAULT 0,
           sleepStart TEXT NULL,
           sleepEnd TEXT NULL,
           timeInBedMinutes INTEGER NULL,
@@ -96,6 +97,7 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       // Backfill columns in case table already existed without new fields
       // Each ALTER is attempted individually and ignored if the column exists
       const alterStatements = [
+        'ALTER TABLE health_snapshots ADD COLUMN finalized INTEGER NOT NULL DEFAULT 0;',
         'ALTER TABLE health_snapshots ADD COLUMN hrvMs REAL NULL;',
         'ALTER TABLE health_snapshots ADD COLUMN restingHeartRateBpm REAL NULL;',
         'ALTER TABLE health_snapshots ADD COLUMN activeEnergyKcal REAL NULL;',
