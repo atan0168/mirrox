@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import {
   PointGeometry,
   PolygonGeometry,
 } from '../../../services/BackendApiService';
+import DengueMap, { DengueSelection } from '../DengueMap';
 
 interface Props {
   visible: boolean;
@@ -54,7 +55,8 @@ export const DengueModal: React.FC<Props> = ({
   const [dengueList, setDengueList] = useState<
     'none' | 'outbreaks' | 'hotspots'
   >('none');
-  console.log('data', dengueOutbreaksData);
+  const [selection, setSelection] = useState<DengueSelection | null>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
 
   const { statusText } = getDengueDisplay(
     denguePrediction,
@@ -65,7 +67,25 @@ export const DengueModal: React.FC<Props> = ({
 
   const handleClose = () => {
     setDengueList('none');
+    setSelection(null);
     onClose();
+  };
+
+  const openListAndScroll = (which: 'outbreaks' | 'hotspots') => {
+    setDengueList(which);
+    setSelection(null);
+    // Give time for layout, then scroll into view
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 150);
+  };
+
+  const setSelectionAndScroll = (selection: DengueSelection | null) => {
+    setSelection(selection);
+    // Give time for layout, then scroll into view
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 150);
   };
 
   return (
@@ -83,7 +103,7 @@ export const DengueModal: React.FC<Props> = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.modalContent}>
+        <ScrollView style={styles.modalContent} ref={scrollRef}>
           {isError ? (
             <Card
               variant="outline"
@@ -130,8 +150,8 @@ export const DengueModal: React.FC<Props> = ({
                   {denguePrediction.as_of.source}
                 </Text>
                 <Text style={[styles.timestamp, { marginTop: 6 }]}>
-                  Disclaimer: model trained with data up to end of 2024;
-                  predictions are experimental.
+                  Disclaimer: In-season & trend prediction models trained with
+                  data up to end of 2024
                 </Text>
               </Card>
 
@@ -140,7 +160,7 @@ export const DengueModal: React.FC<Props> = ({
                 <View style={styles.metricGrid}>
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => setDengueList('outbreaks')}
+                    onPress={() => openListAndScroll('outbreaks')}
                     style={styles.metricItem}
                   >
                     <Text style={styles.metricLabel}>Active Outbreaks</Text>
@@ -150,7 +170,7 @@ export const DengueModal: React.FC<Props> = ({
                   </TouchableOpacity>
                   <TouchableOpacity
                     activeOpacity={0.7}
-                    onPress={() => setDengueList('hotspots')}
+                    onPress={() => openListAndScroll('hotspots')}
                     style={styles.metricItem}
                   >
                     <Text style={styles.metricLabel}>Hotspots</Text>
@@ -201,7 +221,12 @@ export const DengueModal: React.FC<Props> = ({
                         ? 'Active Outbreaks'
                         : 'Hotspots'}
                     </Text>
-                    <TouchableOpacity onPress={() => setDengueList('none')}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setDengueList('none');
+                        setSelection(null);
+                      }}
+                    >
                       <Text
                         style={{
                           color: colors.neutral[600],
@@ -215,43 +240,89 @@ export const DengueModal: React.FC<Props> = ({
 
                   {dengueList === 'outbreaks' && (
                     <View style={{ gap: spacing.sm }}>
-                      {dengueOutbreaksData?.features?.map((f, idx) => (
-                        <Card
-                          key={`outbreak-${idx}`}
-                          variant="outline"
-                          style={{ borderColor: colors.orange[600] }}
-                        >
-                          <Text
-                            style={{
-                              fontSize: fontSize.base,
-                              fontWeight: '600',
-                              color: colors.neutral[900],
-                              marginBottom: 4,
-                            }}
-                          >
-                            {
-                              f.attributes[
-                                'SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI'
-                              ]
+                      {dengueOutbreaksData?.features &&
+                      dengueOutbreaksData.features.length > 0 ? (
+                        <>
+                          <DengueMap
+                            height={320}
+                            center={
+                              latitude != null && longitude != null
+                                ? { lat: latitude, lng: longitude }
+                                : null
                             }
-                          </Text>
-                          <Text
-                            style={{
-                              fontSize: fontSize.sm,
-                              color: colors.neutral[700],
-                            }}
-                          >
-                            Total cases:{' '}
-                            {
-                              f.attributes[
-                                'SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES'
-                              ]
-                            }
-                          </Text>
-                        </Card>
-                      ))}
-                      {(!dengueOutbreaksData?.features ||
-                        dengueOutbreaksData.features.length === 0) && (
+                            polygons={dengueOutbreaksData.features
+                              .filter(f => !!f.geometry?.rings)
+                              .map(f => ({
+                                rings: f.geometry!.rings,
+                                label: String(
+                                  f.attributes[
+                                    'SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES'
+                                  ] || ''
+                                ),
+                                name: String(
+                                  f.attributes[
+                                    'SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI'
+                                  ] || ''
+                                ),
+                                subtitle: 'Active outbreak area',
+                              }))}
+                            onSelectionChange={setSelectionAndScroll}
+                          />
+                          {selection && (
+                            <Card
+                              variant="outline"
+                              style={styles.selectionCard}
+                            >
+                              {selection.type === 'polygon' && (
+                                <>
+                                  <Text style={styles.selectionTitle}>
+                                    {selection.name || 'Selected outbreak area'}
+                                  </Text>
+                                  {selection.label ? (
+                                    <Text style={styles.selectionLine}>
+                                      Cases: {selection.label}
+                                    </Text>
+                                  ) : null}
+                                  {selection.subtitle ? (
+                                    <Text style={styles.selectionSub}>
+                                      {selection.subtitle}
+                                    </Text>
+                                  ) : null}
+                                </>
+                              )}
+                              {selection.type === 'point' && (
+                                <>
+                                  <Text style={styles.selectionTitle}>
+                                    {selection.name || 'Selected location'}
+                                  </Text>
+                                  {selection.label ? (
+                                    <Text style={styles.selectionLine}>
+                                      Cases: {selection.label}
+                                    </Text>
+                                  ) : null}
+                                  <Text style={styles.selectionLine}>
+                                    Coordinates: (
+                                    {selection.coordinates.lat.toFixed(5)},
+                                    {selection.coordinates.lng.toFixed(5)})
+                                  </Text>
+                                  {selection.subtitle ? (
+                                    <Text style={styles.selectionSub}>
+                                      {selection.subtitle}
+                                    </Text>
+                                  ) : null}
+                                </>
+                              )}
+                              {selection.type === 'coordinates' && (
+                                <Text style={styles.selectionLine}>
+                                  Coordinates: (
+                                  {selection.coordinates.lat.toFixed(5)},
+                                  {selection.coordinates.lng.toFixed(5)})
+                                </Text>
+                              )}
+                            </Card>
+                          )}
+                        </>
+                      ) : (
                         <Text
                           style={{
                             fontSize: fontSize.sm,
@@ -266,39 +337,90 @@ export const DengueModal: React.FC<Props> = ({
 
                   {dengueList === 'hotspots' && (
                     <View style={{ gap: spacing.sm }}>
-                      {dengueHotspotsData?.features?.map((f, idx) => (
-                        <Card
-                          key={`hotspot-${idx}`}
-                          variant="outline"
-                          style={{ borderColor: colors.orange[400] }}
-                        >
-                          <Text
-                            style={{
-                              fontSize: fontSize.base,
-                              fontWeight: '600',
-                              color: colors.neutral[900],
-                              marginBottom: 4,
-                            }}
-                          >
-                            {f.attributes['SPWD.DBO_LOKALITI_POINTS.LOKALITI']}
-                          </Text>
-                          <Text
-                            style={{
-                              fontSize: fontSize.sm,
-                              color: colors.neutral[700],
-                            }}
-                          >
-                            Cumulative cases:{' '}
-                            {
-                              f.attributes[
-                                'SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES'
-                              ]
+                      {dengueHotspotsData?.features &&
+                      dengueHotspotsData.features.length > 0 ? (
+                        <>
+                          <DengueMap
+                            height={320}
+                            center={
+                              latitude != null && longitude != null
+                                ? { lat: latitude, lng: longitude }
+                                : null
                             }
-                          </Text>
-                        </Card>
-                      ))}
-                      {(!dengueHotspotsData?.features ||
-                        dengueHotspotsData.features.length === 0) && (
+                            points={dengueHotspotsData.features
+                              .filter(f => !!f.geometry)
+                              .map(f => ({
+                                lat: f.geometry!.y,
+                                lng: f.geometry!.x,
+                                label: String(
+                                  f.attributes[
+                                    'SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES'
+                                  ] || ''
+                                ),
+                                name: String(
+                                  f.attributes[
+                                    'SPWD.DBO_LOKALITI_POINTS.LOKALITI'
+                                  ] || ''
+                                ),
+                                subtitle: 'Hotspot',
+                              }))}
+                            onSelectionChange={setSelectionAndScroll}
+                          />
+                          {selection && (
+                            <Card
+                              variant="outline"
+                              style={styles.selectionCard}
+                            >
+                              {selection.type === 'polygon' && (
+                                <>
+                                  <Text style={styles.selectionTitle}>
+                                    {selection.name || 'Selected outbreak area'}
+                                  </Text>
+                                  {selection.label ? (
+                                    <Text style={styles.selectionLine}>
+                                      Cases: {selection.label}
+                                    </Text>
+                                  ) : null}
+                                  {selection.subtitle ? (
+                                    <Text style={styles.selectionSub}>
+                                      {selection.subtitle}
+                                    </Text>
+                                  ) : null}
+                                </>
+                              )}
+                              {selection.type === 'point' && (
+                                <>
+                                  <Text style={styles.selectionTitle}>
+                                    {selection.name || 'Selected location'}
+                                  </Text>
+                                  {selection.label ? (
+                                    <Text style={styles.selectionLine}>
+                                      Cases: {selection.label}
+                                    </Text>
+                                  ) : null}
+                                  <Text style={styles.selectionLine}>
+                                    Coordinates: (
+                                    {selection.coordinates.lat.toFixed(5)},
+                                    {selection.coordinates.lng.toFixed(5)})
+                                  </Text>
+                                  {selection.subtitle ? (
+                                    <Text style={styles.selectionSub}>
+                                      {selection.subtitle}
+                                    </Text>
+                                  ) : null}
+                                </>
+                              )}
+                              {selection.type === 'coordinates' && (
+                                <Text style={styles.selectionLine}>
+                                  Coordinates: (
+                                  {selection.coordinates.lat.toFixed(5)},
+                                  {selection.coordinates.lng.toFixed(5)})
+                                </Text>
+                              )}
+                            </Card>
+                          )}
+                        </>
+                      ) : (
                         <Text
                           style={{
                             fontSize: fontSize.sm,
@@ -450,6 +572,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.neutral[600],
     marginBottom: spacing.sm,
+  },
+  selectionCard: {
+    marginTop: spacing.sm,
+    borderColor: colors.neutral[300],
+  },
+  selectionTitle: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.neutral[900],
+    marginBottom: 4,
+    flexShrink: 1,
+    flexWrap: 'wrap',
+    lineHeight: Math.round(fontSize.base * 1.25),
+  },
+  selectionLine: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[800],
+  },
+  selectionSub: {
+    fontSize: fontSize.xs,
+    color: colors.neutral[600],
+    marginTop: 2,
   },
 });
 

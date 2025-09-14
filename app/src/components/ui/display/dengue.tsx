@@ -48,7 +48,7 @@ export function getDengueDisplay(
   const valueText = isError
     ? 'Error'
     : dengueOutbreakCount > 0
-      ? `${dengueOutbreakCount} area${dengueOutbreakCount > 1 ? 's' : ''}`
+      ? `${dengueOutbreakCount} outbreak${dengueOutbreakCount > 1 ? 's' : ''}`
       : dengueHotspotCount > 0
         ? `${dengueHotspotCount} hotspot${dengueHotspotCount > 1 ? 's' : ''}`
         : denguePrediction

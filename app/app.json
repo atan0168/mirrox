@@ -79,7 +79,8 @@
           "background": true
         }
       ],
-      ["@zensein/expo-health-connect"]
+      ["@zensein/expo-health-connect"],
+      ["@maplibre/maplibre-react-native"]
     ],
     "extra": {
       "eas": {
