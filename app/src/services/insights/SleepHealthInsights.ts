@@ -74,9 +74,8 @@ export function evaluateSleepHealthInsights(
           tier: 1,
           title: "Let's Stabilize Your Sleep Clock ⏰",
           body: "Your bedtime varied by over 90 minutes this week. A consistent sleep schedule is the single most effective way to improve sleep. Let's aim for the same bedtime tonight.",
-          source: 'Johns Hopkins Medicine',
-          sourceUrl:
-            'https://www.hopkinsmedicine.org/health/wellness-and-prevention/sticking-to-a-sleep-schedule',
+          source: 'Sleep.com',
+          sourceUrl: 'https://www.sleep.com/sleep-health/sleep-schedule',
           dataNote,
         });
       }
@@ -99,9 +98,9 @@ export function evaluateSleepHealthInsights(
         tier: 1,
         title: 'Your Body is Working Overtime 📈',
         body: "Your resting heart rate was higher than usual during sleep last night. This can mean your body isn't fully recovering. Prioritizing rest and a calming wind-down routine tonight is key.",
-        source: 'Cleveland Clinic',
+        source: 'Sleep Foundation',
         sourceUrl:
-          'https://health.clevelandclinic.org/why-is-my-resting-heart-rate-so-high-at-night/',
+          'https://www.sleepfoundation.org/physical-health/sleeping-heart-rate',
         dataNote,
       });
     }
@@ -144,8 +143,9 @@ export function evaluateSleepHealthInsights(
         tier: 2,
         title: 'Trouble Falling Asleep? 🧠',
         body: "It seems to be taking you a while to drift off. A 30-minute 'wind-down' routine away from screens can help signal to your brain that it's time for bed.",
-        source: 'American Academy of Sleep Medicine',
-        sourceUrl: 'https://aasm.org/7-tips-for-better-sleep-in-the-new-year/',
+        source: 'Sleep Foundation',
+        sourceUrl:
+          'https://www.sleepfoundation.org/sleep-hygiene/healthy-sleep-tips',
         dataNote,
       });
     }
@@ -167,9 +167,9 @@ export function evaluateSleepHealthInsights(
         tier: 2,
         title: 'Time for Recovery 🧘',
         body: 'Your HRV was low last night, suggesting your body needs more recovery. Gentle activities like meditation or stretching before bed can help your nervous system relax.',
-        source: 'Harvard Health Publishing',
+        source: 'Cleveland Clinic',
         sourceUrl:
-          'https://www.health.harvard.edu/blog/heart-rate-variability-new-way-track-well-2017112212789',
+          'https://my.clevelandclinic.org/health/symptoms/21773-heart-rate-variability-hrv',
         dataNote,
       });
     }
@@ -242,9 +242,9 @@ export function evaluateSleepHealthInsights(
         tier: 3,
         title: 'Aim for Uninterrupted Sleep',
         body: `It looks like you woke up a few times last night. This can fragment your sleep. Simple things like limiting fluids before bed and ensuring your room is pitch-black can help. ${advice}`.trim(),
-        source: 'Mayo Clinic',
+        source: 'Sleep Foundation',
         sourceUrl:
-          'https://www.mayoclinic.org/healthy-lifestyle/adult-health/in-depth/sleep/art-20048379',
+          'https://www.sleepfoundation.org/sleep-deprivation/interrupted-sleep',
         dataNote,
       });
     }
