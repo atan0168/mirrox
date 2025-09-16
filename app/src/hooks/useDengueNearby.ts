@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useReverseGeocode } from './useReverseGeocode';
 import {
   backendApiService,
+  ArcGISFeature,
   ArcGISResponse,
   HotspotAttributes,
   OutbreakAttributes,
@@ -23,6 +24,43 @@ export interface DengueNearbyResult {
   outbreakCount: number;
 }
 
+const dedupeHotspotsByLocality = (
+  hotspots?: ArcGISResponse<HotspotAttributes, PointGeometry>
+): ArcGISResponse<HotspotAttributes, PointGeometry> | undefined => {
+  const features = hotspots?.features;
+  if (!features?.length || !hotspots) return hotspots;
+
+  const deduped = new Map<
+    string,
+    ArcGISFeature<HotspotAttributes, PointGeometry>
+  >();
+
+  for (const feature of features) {
+    const locality = feature.attributes['SPWD.DBO_LOKALITI_POINTS.LOKALITI'];
+    const geometry = feature.geometry;
+    // don't include if no location
+    if (!locality || !geometry) continue;
+    const x = geometry.x;
+    const y = geometry.y;
+    const key = `${locality}|${x}|${y}`;
+
+    const current = deduped.get(key);
+    const currentDuration =
+      current?.attributes['SPWD.AVT_HOTSPOTMINGGUAN.TEMPOH_WABAK'] ?? -Infinity;
+    const candidateDuration =
+      feature.attributes['SPWD.AVT_HOTSPOTMINGGUAN.TEMPOH_WABAK'] ?? -Infinity;
+
+    if (!current || candidateDuration >= currentDuration) {
+      deduped.set(key, feature);
+    }
+  }
+
+  return {
+    ...hotspots,
+    features: Array.from(deduped.values()),
+  };
+};
+
 export const useDengueNearby = ({
   latitude,
   longitude,
@@ -39,10 +77,11 @@ export const useDengueNearby = ({
     queryFn: async () => {
       if (latitude == null || longitude == null)
         throw new Error('Missing coordinates');
-      const [hotspots, outbreaks] = await Promise.all([
+      const [hotspotsRaw, outbreaks] = await Promise.all([
         backendApiService.fetchDengueHotspots(latitude, longitude, radiusKm),
         backendApiService.fetchDengueOutbreaks(latitude, longitude, radiusKm),
       ]);
+      const hotspots = dedupeHotspotsByLocality(hotspotsRaw);
       return {
         hotspots,
         outbreaks,

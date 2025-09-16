@@ -75,7 +75,7 @@ const StatsScreen: React.FC = () => {
   const isMalaysia =
     reverseGeo?.countryCode === 'MY' || reverseGeo?.country === 'Malaysia';
 
-  // Query nearby hotspots/outbreaks (10km)
+  // Query nearby hotspots/outbreaks (5km)
   const { data: dengueNearby } = useDengueNearby({
     latitude: userProfile?.location.latitude,
     longitude: userProfile?.location.longitude,

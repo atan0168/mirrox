@@ -109,6 +109,7 @@ export interface PolygonGeometry {
 export interface HotspotAttributes {
   'SPWD.DBO_LOKALITI_POINTS.LOKALITI': string;
   'SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES': number;
+  'SPWD.AVT_HOTSPOTMINGGUAN.TEMPOH_WABAK'?: number;
 }
 export interface OutbreakAttributes {
   'SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI': string;
