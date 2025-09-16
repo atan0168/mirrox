@@ -8,7 +8,7 @@ import {
   Alert,
   ViewStyle,
 } from 'react-native';
-import { Droplets, Plus, Minus, RefreshCw } from 'lucide-react-native';
+import { Plus, Minus, RefreshCw } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
 import { useHydrationStore } from '../../store/hydrationStore';
 import {
@@ -17,6 +17,14 @@ import {
   getHydrationStatusInfo,
 } from '../../utils/hydrationUtils';
 import { hydrationService } from '../../services/HydrationService';
+
+const getProgressColor = (progressPercentage: number) => {
+  if (progressPercentage < 25) return colors.red[500];
+  if (progressPercentage < 50) return colors.orange[500];
+  if (progressPercentage < 75) return colors.yellow[500];
+  if (progressPercentage <= 100) return colors.green[500];
+  return colors.teal[500];
+};
 
 interface HydrationTrackerProps {
   style?: ViewStyle;
@@ -28,7 +36,6 @@ export const HydrationTracker: React.FC<HydrationTrackerProps> = ({
   const {
     currentHydrationMl,
     dailyGoalMl,
-    logFluidIntake,
     getProgressPercentage,
     getHydrationStatus,
   } = useHydrationStore();
@@ -45,7 +52,6 @@ export const HydrationTracker: React.FC<HydrationTrackerProps> = ({
     setIsLoading(true);
 
     try {
-      logFluidIntake(suggestion.amount);
       hydrationService.logFluidIntake(suggestion.amount, suggestion.label);
     } catch (error) {
       console.error('Failed to log fluid intake:', error);
@@ -61,7 +67,6 @@ export const HydrationTracker: React.FC<HydrationTrackerProps> = ({
       return;
     }
 
-    logFluidIntake(customAmount);
     hydrationService.logFluidIntake(customAmount, 'Custom');
   };
 
@@ -87,14 +92,6 @@ export const HydrationTracker: React.FC<HydrationTrackerProps> = ({
     }
   };
 
-  const getProgressBarColor = () => {
-    if (progressPercentage < 25) return colors.red[500];
-    if (progressPercentage < 50) return colors.orange[500];
-    if (progressPercentage < 75) return colors.yellow[500];
-    if (progressPercentage <= 100) return colors.green[500];
-    return colors.teal[500];
-  };
-
   return (
     <View style={style}>
       {/* Progress Display */}
@@ -112,6 +109,8 @@ export const HydrationTracker: React.FC<HydrationTrackerProps> = ({
           <TouchableOpacity
             style={styles.refreshButton}
             onPress={() => hydrationService.checkForNewDay()}
+            accessibilityLabel="Reset hydration for new day"
+            accessibilityHint="Checks for a new day and applies overnight adjustments"
           >
             <RefreshCw size={16} color={colors.neutral[600]} />
           </TouchableOpacity>
@@ -125,7 +124,7 @@ export const HydrationTracker: React.FC<HydrationTrackerProps> = ({
                 styles.progressBarFill,
                 {
                   width: `${Math.min(100, progressPercentage)}%`,
-                  backgroundColor: getProgressBarColor(),
+                  backgroundColor: getProgressColor(progressPercentage),
                 },
               ]}
             />
@@ -201,18 +200,6 @@ export const HydrationTracker: React.FC<HydrationTrackerProps> = ({
           <Text style={styles.addCustomButtonText}>Add {customAmount} mL</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Recommendations */}
-      {statusInfo.recommendations.length > 0 && (
-        <View style={styles.recommendationsSection}>
-          <Text style={styles.sectionTitle}>Recommendations</Text>
-          {statusInfo.recommendations.slice(0, 2).map((rec, index) => (
-            <Text key={index} style={styles.recommendation}>
-              • {rec}
-            </Text>
-          ))}
-        </View>
-      )}
     </View>
   );
 };
@@ -244,6 +231,8 @@ const styles = StyleSheet.create({
   progressHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
     marginBottom: spacing.sm,
   },
   progressInfo: {
@@ -259,7 +248,6 @@ const styles = StyleSheet.create({
   goalAmount: {
     fontSize: fontSize.base,
     color: colors.neutral[600],
-    marginLeft: spacing.xs,
   },
   progressBarContainer: {
     flexDirection: 'row',

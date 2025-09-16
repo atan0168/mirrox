@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { localStorageService } from '../services/LocalStorageService';
+import { HydrationStateRepository } from '../services/db/HydrationStateRepository';
 
 export interface HydrationState {
   // Current hydration state for today
@@ -8,6 +8,7 @@ export interface HydrationState {
   dailyGoalMl: number; // Daily hydration goal
   currentDay: string; // YYYY-MM-DD format
   lastActivitySync: string | null; // ISO timestamp of last activity-based deduction
+  lastBasalUpdate: string | null; // ISO timestamp of last basal fluid deduction
 
   // Actions
   setDailyGoal: (goalMl: number) => void;
@@ -38,15 +39,29 @@ export interface HydrationState {
 const HYDRATION_PERSIST_KEY = 'hydration-state';
 
 // Basal metabolic water loss per hour (mL)
-const BASAL_FLUID_LOSS_PER_HOUR = 8; // Conservative estimate: ~192mL per day
+const BASAL_FLUID_LOSS_PER_HOUR = 50; // Approximate daytime insensible loss (~1.2L/day)
+
+const toDayString = (date: Date): string => date.toISOString().split('T')[0];
+
+const getLocalDayStart = (dayString: string): Date => {
+  const [year, month, day] = dayString.split('-').map(Number);
+  const start = new Date();
+  start.setFullYear(year, month - 1, day);
+  start.setHours(0, 0, 0, 0);
+  return start;
+};
+
+const initialDay = toDayString(new Date());
+const initialBasalUpdateIso = getLocalDayStart(initialDay).toISOString();
 
 export const useHydrationStore = create<HydrationState>()(
   persist(
     (set, get) => ({
       currentHydrationMl: 0,
       dailyGoalMl: 2000, // Default 2L
-      currentDay: new Date().toISOString().split('T')[0],
+      currentDay: initialDay,
       lastActivitySync: null,
+      lastBasalUpdate: initialBasalUpdateIso,
 
       setDailyGoal: (goalMl: number) => {
         set({ dailyGoalMl: Math.max(500, Math.min(5000, goalMl)) }); // Reasonable bounds
@@ -89,28 +104,35 @@ export const useHydrationStore = create<HydrationState>()(
 
       processBasalFluidLoss: () => {
         const now = new Date();
-        const state = get();
-        const lastUpdate = state.lastActivitySync
-          ? new Date(state.lastActivitySync)
-          : now;
+        set(state => {
+          const lastUpdate = state.lastBasalUpdate
+            ? new Date(state.lastBasalUpdate)
+            : getLocalDayStart(state.currentDay);
 
-        // Calculate hours since last update
-        const hoursSinceUpdate = Math.max(
-          0,
-          (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60)
-        );
+          const hoursSinceUpdate =
+            (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
 
-        if (hoursSinceUpdate > 0.5) {
-          // Only process if more than 30 minutes
+          if (hoursSinceUpdate <= 0.5) {
+            if (!state.lastBasalUpdate) {
+              return { lastBasalUpdate: now.toISOString() };
+            }
+            return {};
+          }
+
+          const cappedHours = Math.min(hoursSinceUpdate, 48); // limit runaway deficits
           const basalLoss = Math.round(
-            hoursSinceUpdate * BASAL_FLUID_LOSS_PER_HOUR
+            cappedHours * BASAL_FLUID_LOSS_PER_HOUR
           );
 
-          set({
+          if (basalLoss <= 0) {
+            return { lastBasalUpdate: now.toISOString() };
+          }
+
+          return {
             currentHydrationMl: state.currentHydrationMl - basalLoss,
-            lastActivitySync: now.toISOString(),
-          });
-        }
+            lastBasalUpdate: now.toISOString(),
+          };
+        });
       },
 
       adjustGoalForClimate: heatIndexCategory => {
@@ -142,7 +164,8 @@ export const useHydrationStore = create<HydrationState>()(
         set({
           currentDay: newDay,
           currentHydrationMl: overnightDeficit,
-          lastActivitySync: new Date().toISOString(),
+          lastActivitySync: null,
+          lastBasalUpdate: getLocalDayStart(newDay).toISOString(),
         });
       },
 
@@ -171,13 +194,13 @@ export const useHydrationStore = create<HydrationState>()(
       version: 1,
       storage: createJSONStorage(() => ({
         getItem: async (name: string) => {
-          return await localStorageService.getString(name);
+          return await HydrationStateRepository.get(name);
         },
         setItem: async (name: string, value: string) => {
-          await localStorageService.setString(name, value);
+          await HydrationStateRepository.set(name, value);
         },
         removeItem: async (name: string) => {
-          await localStorageService.remove(name);
+          await HydrationStateRepository.remove(name);
         },
       })),
       partialize: state => ({
@@ -185,6 +208,7 @@ export const useHydrationStore = create<HydrationState>()(
         dailyGoalMl: state.dailyGoalMl,
         currentDay: state.currentDay,
         lastActivitySync: state.lastActivitySync,
+        lastBasalUpdate: state.lastBasalUpdate,
       }),
     }
   )

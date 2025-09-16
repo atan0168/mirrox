@@ -51,26 +51,12 @@ export const HydrationIndicator: React.FC = () => {
         ]}
       >
         <View style={[styles.iconContainer, { borderColor: colors.sky[400] }]}>
-          <Droplet size={16} color={colors.sky[400]} />
+          <Droplet size={16} color={colors.sky[400]} fill={colors.sky[400]} />
         </View>
         <View style={styles.content}>
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>Hydration</Text>
-            <Text style={[styles.percentage, { color: progressColor }]}>
-              {displayProgress}%
-            </Text>
-          </View>
-          <View style={styles.barTrack}>
-            <View
-              style={[
-                styles.barFill,
-                {
-                  width: `${Math.min(progress, 100)}%`,
-                  backgroundColor: progressColor,
-                },
-              ]}
-            />
-          </View>
+          <Text style={[styles.percentage, { color: progressColor }]}>
+            {displayProgress}%
+          </Text>
           <Text style={styles.detailText}>
             {currentAmount.toLocaleString()} / {goalAmount.toLocaleString()} mL
           </Text>
@@ -125,7 +111,6 @@ const styles = StyleSheet.create({
     borderColor: colors.neutral[200],
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
     marginRight: spacing.sm,
   },
   content: {
@@ -146,17 +131,6 @@ const styles = StyleSheet.create({
   percentage: {
     fontSize: fontSize.sm,
     fontWeight: '600',
-  },
-  barTrack: {
-    height: 6,
-    borderRadius: borderRadius.full,
-    overflow: 'hidden',
-    backgroundColor: colors.overlay.medium,
-    marginBottom: 4,
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: borderRadius.full,
   },
   detailText: {
     fontSize: fontSize.xs,

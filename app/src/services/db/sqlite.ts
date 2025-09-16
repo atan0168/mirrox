@@ -140,6 +140,16 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
         CREATE INDEX IF NOT EXISTS idx_alerts_dismissed ON alerts(dismissed);
       `);
 
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS hydration_state (
+          key TEXT PRIMARY KEY NOT NULL,
+          value TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_hydration_state_updatedAt
+          ON hydration_state(updatedAt DESC);
+      `);
+
       return db;
     })();
   }
