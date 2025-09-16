@@ -1,6 +1,8 @@
 import { useHydrationStore } from '../store/hydrationStore';
 import { localStorageService } from './LocalStorageService';
 import { apiService } from './ApiService';
+import { healthDataService } from './HealthDataService';
+import { getDeviceTimeZone, yyyymmddInTimeZone } from '../utils/datetimeUtils';
 import {
   calculateBaselineHydrationGoal,
   calculateHeatIndexCategory,
@@ -28,6 +30,18 @@ export class HydrationService {
 
     await this.initializeDailyGoal();
     await this.checkForNewDay();
+
+    // Immediately process basal fluid loss once on initialization
+    try {
+      const { processBasalFluidLoss } = useHydrationStore.getState();
+      processBasalFluidLoss();
+    } catch (e) {
+      console.warn(
+        '[HydrationService] Initial basal fluid loss processing failed:',
+        e
+      );
+    }
+
     this.startBasalFluidLossTracking();
 
     this.isInitialized = true;
@@ -76,27 +90,95 @@ export class HydrationService {
    */
   async checkForNewDay(): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
-    const { currentDay, resetForNewDay } = useHydrationStore.getState();
+    const state = useHydrationStore.getState();
+    const { currentDay, resetForNewDay, processNightlyDehydration } = state;
+
+    // Helper to obtain sleep minutes from health data
+    const getSleepMinutes = async (): Promise<number> => {
+      try {
+        const now = new Date();
+        const tz = getDeviceTimeZone();
+        const todayStr = yyyymmddInTimeZone(now, tz);
+
+        let snapshot = await healthDataService.getLatest();
+        if (!snapshot || snapshot.date !== todayStr) {
+          // Ensure we have today's snapshot
+          snapshot = await healthDataService.syncLatest(now);
+        }
+        const minutes = snapshot?.sleepMinutes ?? 0;
+        return Math.max(0, Math.round(minutes));
+      } catch (error) {
+        console.warn(
+          '[HydrationService] Could not get sleep data from health service',
+          error
+        );
+        return 0;
+      }
+    };
 
     if (currentDay !== today) {
       console.log(`[HydrationService] New day detected: ${today}`);
-
-      // Try to get sleep data for overnight dehydration calculation
-      let sleepDurationMinutes = 0;
-      try {
-        // This would integrate with your existing health data service
-        // For now, we'll use a default value
-        sleepDurationMinutes = 480; // Default 8 hours
-      } catch (error) {
-        console.warn(
-          '[HydrationService] Could not get sleep data, using default'
-        );
-      }
+      const sleepDurationMinutes = await getSleepMinutes();
 
       resetForNewDay(today, sleepDurationMinutes);
 
+      // After applying overnight dehydration, set basal tracking start to wake time to avoid double-counting sleep hours
+      try {
+        const wakeTime = new Date();
+        wakeTime.setHours(0, 0, 0, 0);
+        wakeTime.setMinutes(wakeTime.getMinutes() + sleepDurationMinutes);
+        useHydrationStore.setState({ lastBasalUpdate: wakeTime.toISOString() });
+      } catch (e) {
+        console.warn(
+          '[HydrationService] Failed to set wake-time basal start:',
+          e
+        );
+      }
+
       // Recalculate goal for new day (in case climate conditions changed)
       await this.adjustGoalForCurrentClimate();
+      return;
+    }
+
+    // Same-day initialization path: if the store is freshly initialized for today and
+    // nightly dehydration hasn't been applied yet, apply it once.
+    try {
+      const now = new Date();
+      const dayStart = new Date(now);
+      dayStart.setHours(0, 0, 0, 0);
+      const lastUpdate = state.lastBasalUpdate
+        ? new Date(state.lastBasalUpdate)
+        : dayStart;
+
+      const isAtDayStart = lastUpdate.getTime() === dayStart.getTime();
+      const isFreshState = state.currentHydrationMl === 0; // heuristic: nothing applied/logged yet
+
+      if (isAtDayStart && isFreshState) {
+        const sleepDurationMinutes = await getSleepMinutes();
+        processNightlyDehydration(sleepDurationMinutes);
+        // After applying overnight dehydration, set basal tracking start to wake time to avoid double-counting sleep hours
+        try {
+          const wakeTime = new Date();
+          wakeTime.setHours(0, 0, 0, 0);
+          wakeTime.setMinutes(wakeTime.getMinutes() + sleepDurationMinutes);
+          useHydrationStore.setState({
+            lastBasalUpdate: wakeTime.toISOString(),
+          });
+        } catch (e) {
+          console.warn(
+            '[HydrationService] Failed to set wake-time basal start (same-day):',
+            e
+          );
+        }
+        console.log(
+          `[HydrationService] Applied nightly dehydration for today: ${sleepDurationMinutes} minutes`
+        );
+      }
+    } catch (e) {
+      console.warn(
+        '[HydrationService] Failed to apply same-day nightly dehydration heuristic:',
+        e
+      );
     }
   }
 

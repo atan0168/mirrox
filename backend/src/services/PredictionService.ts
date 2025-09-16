@@ -18,7 +18,7 @@ export interface PredictResponse {
     ew_year: number;
     ew: number;
     week_start: string; // ISO date
-    week_end: string;   // ISO date
+    week_end: string; // ISO date
     source: 'live' | 'csv' | string;
   };
   season: {
@@ -65,4 +65,3 @@ class PredictionService {
 }
 
 export const predictionService = new PredictionService();
-

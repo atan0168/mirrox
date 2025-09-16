@@ -120,9 +120,7 @@ export const useHydrationStore = create<HydrationState>()(
           }
 
           const cappedHours = Math.min(hoursSinceUpdate, 48); // limit runaway deficits
-          const basalLoss = Math.round(
-            cappedHours * BASAL_FLUID_LOSS_PER_HOUR
-          );
+          const basalLoss = Math.round(cappedHours * BASAL_FLUID_LOSS_PER_HOUR);
 
           if (basalLoss <= 0) {
             return { lastBasalUpdate: now.toISOString() };
