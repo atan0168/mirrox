@@ -13,12 +13,19 @@ export function useSleepHealthNotifications() {
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   const evaluate = async () => {
+    const todayKey = dayKey();
+    if (lastEvalDayRef.current === todayKey) return;
+
+    // Mark evaluation for today up front so concurrent triggers can't double-send
+    lastEvalDayRef.current = todayKey;
     try {
-      const todayKey = dayKey();
-      if (lastEvalDayRef.current === todayKey) return;
       await SleepHealthNotifier.evaluateAndNotifyNow();
-      lastEvalDayRef.current = todayKey;
-    } catch {}
+    } catch {
+      // Allow a retry later if something went wrong
+      if (lastEvalDayRef.current === todayKey) {
+        lastEvalDayRef.current = null;
+      }
+    }
   };
 
   useEffect(() => {
@@ -34,6 +41,5 @@ export function useSleepHealthNotifications() {
       }
     });
     return () => sub.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
