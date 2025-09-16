@@ -140,6 +140,9 @@ class AQICNService {
       co: aqicnData.iaqi.co?.v || null,
     };
 
+    const temperature = aqicnData.iaqi.t?.v ?? null;
+    const humidity = aqicnData.iaqi.h?.v ?? null;
+
     // Extract UV data from forecast if available
     const uvForecast = aqicnData.forecast?.daily?.uvi || null;
     let currentUVIndex: number | null = null;
@@ -233,6 +236,8 @@ class AQICNService {
       no2: pollutants.no2,
       co: pollutants.co,
       o3: pollutants.o3,
+      temperature,
+      humidity,
       // Add UV data
       uvIndex: currentUVIndex,
       uvForecast: uvForecast,

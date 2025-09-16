@@ -1,5 +1,6 @@
 import { useHydrationStore } from '../store/hydrationStore';
 import { localStorageService } from './LocalStorageService';
+import { apiService } from './ApiService';
 import {
   calculateBaselineHydrationGoal,
   calculateHeatIndexCategory,
@@ -112,10 +113,42 @@ export class HydrationService {
         return;
       }
 
-      // This would integrate with your weather service
-      // For now, we'll use mock data
-      const temperature = 25; // Celsius
-      const humidity = 60; // %
+      const { latitude, longitude } = userProfile.location;
+
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        console.warn(
+          '[HydrationService] Invalid location coordinates for climate adjustment'
+        );
+        return;
+      }
+
+      let temperature: number | null = null;
+      let humidity: number | null = null;
+
+      try {
+        const airQuality = await apiService.fetchAQICNAirQuality(
+          latitude,
+          longitude
+        );
+        temperature = airQuality.temperature ?? null;
+        humidity = airQuality.humidity ?? null;
+
+        if (temperature == null || humidity == null) {
+          console.log(
+            '[HydrationService] AQICN response missing temperature or humidity, using defaults'
+          );
+        }
+      } catch (apiError) {
+        console.warn(
+          '[HydrationService] Failed to retrieve climate data from AQICN, using defaults',
+          apiError
+        );
+      }
+
+      if (temperature == null || humidity == null) {
+        temperature = 25;
+        humidity = 60;
+      }
 
       const heatIndexCategory = calculateHeatIndexCategory(
         temperature,

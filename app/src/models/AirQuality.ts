@@ -88,6 +88,9 @@ export interface AirQualityData {
   // UV data from AQICN forecast
   uvIndex?: number;
   uvForecast?: Array<{ avg: number; day: string; max: number; min: number }>;
+  // Local weather readings from AQICN (if provided)
+  temperature?: number | null;
+  humidity?: number | null;
   // AQICN specific fields
   classification?: string;
   colorCode?: string;

@@ -98,6 +98,9 @@ export interface AirQualityData {
   no2?: number;
   co?: number;
   o3?: number;
+  // Local weather readings (if available)
+  temperature?: number;
+  humidity?: number;
 }
 
 // Unified air quality data structure for API responses

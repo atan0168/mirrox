@@ -24,6 +24,8 @@ export interface AirQualityApiResponse {
     no2?: number;
     co?: number;
     o3?: number;
+    temperature?: number | null;
+    humidity?: number | null;
     // UV data from AQICN forecast
     uvIndex?: number;
     uvForecast?: Array<{ avg: number; day: string; max: number; min: number }>;
