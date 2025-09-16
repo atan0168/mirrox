@@ -11,9 +11,9 @@ import { FloatingStressIcon } from '../effects/FloatingStressIcon';
 import { AnimationControls } from '../controls/AnimationControls';
 import { LoadingState, ErrorState } from '../ui/StateComponents';
 import AvatarLoadingIndicator from '../ui/AvatarLoadingIndicator';
-import { useTrafficData } from '../../hooks/useTrafficData';
 import { useStressVisualsPreference } from '../../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../../hooks/useDeveloperControlsPreference';
+import { useStressLevel } from '../../hooks/useStressLevel';
 import { localStorageService } from '../../services/LocalStorageService';
 import { assetPreloader } from '../../services/AssetPreloader';
 import {
@@ -66,18 +66,12 @@ interface AvatarExperienceProps {
   skinToneAdjustment?: number;
   rainIntensity?: number; // 0..1 slider for developer to control rain density
   rainDirection?: 'vertical' | 'angled';
-  // Location for traffic data
-  latitude?: number;
-  longitude?: number;
   // Air quality props for automatic smog effects
   airQualityData?: {
     aqi?: number | null;
     pm25?: number | null;
     pm10?: number | null;
   } | null;
-  // Traffic stress configuration
-  enableTrafficStress?: boolean;
-  trafficRefreshInterval?: number;
   // Optional environment context
   weather?: 'sunny' | 'cloudy' | 'rainy' | null;
   // Notify parent when user is interacting (e.g., to disable ScrollView)
@@ -99,11 +93,7 @@ function AvatarExperience({
   skinToneAdjustment = 0,
   rainIntensity = 0.6,
   rainDirection = 'vertical',
-  latitude,
-  longitude,
   airQualityData = null,
-  enableTrafficStress = true,
-  trafficRefreshInterval = 300000, // 5 minutes
   weather = null,
   // onInteractionChange removed,
   scene = 'zenpark',
@@ -140,19 +130,14 @@ function AvatarExperience({
   const canvasRef = useRef<View | null>(null);
   const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch traffic data
-  const { data: trafficData, loading: trafficLoading } = useTrafficData({
-    latitude,
-    longitude,
-    enabled: enableTrafficStress && !!latitude && !!longitude,
-    refreshInterval: trafficRefreshInterval,
-  });
-
   // Get stress visuals preference
   const { stressVisualsEnabled } = useStressVisualsPreference();
 
   // Get developer controls preference
   const { developerControlsEnabled } = useDeveloperControlsPreference();
+
+  // HRV-driven stress insights
+  const stressResult = useStressLevel();
 
   // Health data
   const { data: health } = useHealthData({ autoSync: false });
@@ -192,36 +177,12 @@ function AvatarExperience({
     [weatherPreset]
   );
 
-  // Calculate stress effects from traffic data
+  // Calculate stress effects from HRV-based health signals
   const stressEffects = useMemo(() => {
-    if (!trafficData || !enableTrafficStress || !stressVisualsEnabled) {
-      return {
-        stressLevel: 'none' as const,
-        intensity: 0,
-        shouldShowIcon: false,
-        facialExpression: externalFacialExpression,
-      };
-    }
+    const result = stressResult;
+    const stressLevel = stressVisualsEnabled ? result.stressLevel : 'none';
+    const intensity = stressVisualsEnabled ? result.intensity : 0;
 
-    const { stressLevel, congestionFactor } = trafficData;
-
-    // Calculate intensity based on congestion factor
-    let intensity = 0;
-    switch (stressLevel) {
-      case 'mild':
-        intensity = 0.3;
-        break;
-      case 'moderate':
-        intensity = 0.6;
-        break;
-      case 'high':
-        intensity = 1.0;
-        break;
-      default:
-        intensity = 0;
-    }
-
-    // Determine facial expression based on stress level
     let facialExpression = externalFacialExpression;
     if (stressLevel !== 'none') {
       switch (stressLevel) {
@@ -240,15 +201,19 @@ function AvatarExperience({
     return {
       stressLevel,
       intensity,
-      shouldShowIcon: stressLevel !== 'none',
+      shouldShowIcon: stressLevel !== 'none' && stressVisualsEnabled,
       facialExpression,
-      congestionFactor,
-    };
-  }, [trafficData, enableTrafficStress, externalFacialExpression]);
+      hrvMs: result.hrvMs,
+      baselineHrvMs: result.baselineHrvMs,
+      restingHeartRateBpm: result.restingHeartRateBpm,
+      baselineRestingHeartRateBpm: result.baselineRestingHeartRateBpm,
+      reasons: result.reasons,
+    } as const;
+  }, [stressResult, stressVisualsEnabled, externalFacialExpression]);
 
   // Use stress-modified facial expression unless manually overridden via controls
   const facialExpression = stressEffects.facialExpression;
-  // If no traffic stress override, tweak facial expression based on sleep and hydration
+  // If no HRV stress override, tweak facial expression based on sleep and hydration
   const healthDrivenFacial = useMemo(() => {
     if (!health) return facialExpression;
     if (stressEffects.stressLevel !== 'none') return facialExpression;
@@ -413,7 +378,7 @@ function AvatarExperience({
     }
   }, [scene, derivedPhase, setHomeTime]);
 
-  // Automatic animation control based on AQI and traffic stress (suppressed during sleepMode unless user overrides)
+  // Automatic animation control based on AQI and HRV stress (suppressed during sleepMode unless user overrides)
   // During sleep mode: if not manually overridden, cycle between sleep animations.
   const sleepCycleRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
@@ -481,11 +446,9 @@ function AvatarExperience({
 
     // Only apply automatic animations if not manually set
     if (!isManualAnimation) {
-      // Traffic stress animations take priority over AQI animations, but only if stress visuals are enabled
+      // HRV stress animations take priority over AQI animations, but only if stress visuals are enabled
       if (stressEffects.stressLevel === 'high' && stressVisualsEnabled) {
-        console.log(
-          '🚨 High traffic stress detected - triggering stress animation'
-        );
+        console.log('🚨 High HRV stress detected - triggering stress animation');
         setActiveAnimation('M_Standing_Expressions_007'); // Cough animation for high stress
       } else if (aqiAnimationRecommendation) {
         if (
@@ -893,18 +856,17 @@ function AvatarExperience({
             color={new THREE.Color(0x888888)}
           />
 
-          {/* Traffic Stress Effects - only show if stress visuals are enabled */}
-          {enableTrafficStress && trafficData && stressVisualsEnabled && (
+          {/* HRV-driven stress effects */}
+          {stressVisualsEnabled && stressEffects.stressLevel !== 'none' && (
             <>
               <StressAura
                 intensity={stressEffects.intensity}
                 stressLevel={stressEffects.stressLevel}
-                congestionFactor={stressEffects.congestionFactor || 1.0}
                 enabled={stressEffects.stressLevel !== 'none'}
               />
               <FloatingStressIcon
                 stressLevel={stressEffects.stressLevel}
-                congestionFactor={stressEffects.congestionFactor || 1.0}
+                stressIntensity={stressEffects.intensity}
                 enabled={stressEffects.shouldShowIcon}
                 onPress={() => {
                   setShowStressInfoModal(true);
@@ -1014,32 +976,34 @@ function AvatarExperience({
 
       {/* Loading Indicator Overlay */}
       <AvatarLoadingIndicator
-        isLoading={isAvatarLoading || trafficLoading}
+        isLoading={isAvatarLoading}
         progress={loadingProgress}
       />
 
-      {/* Traffic Status Indicator - only show if stress visuals are enabled */}
-      {enableTrafficStress &&
-        trafficData &&
-        stressVisualsEnabled &&
-        stressEffects.stressLevel !== 'none' && (
-          <View style={styles.trafficStatus}>
-            <View
-              style={[
-                styles.statusIndicator,
-                { backgroundColor: getStatusColor(stressEffects.stressLevel) },
-              ]}
-            />
-          </View>
-        )}
+      {/* HRV stress status indicator */}
+      {stressVisualsEnabled && stressEffects.stressLevel !== 'none' && (
+        <View style={styles.stressStatus}>
+          <View
+            style={[
+              styles.statusIndicator,
+              { backgroundColor: getStressIndicatorColor(stressEffects.stressLevel) },
+            ]}
+          />
+          <Text style={styles.statusLabel}>HRV Stress</Text>
+        </View>
+      )}
 
       <StressInfoModal
         visible={showStressInfoModal}
         onClose={() => setShowStressInfoModal(false)}
-        stressLevel="moderate"
-        congestionFactor={2.0}
-        // stressLevel={stressEffects.stressLevel}
-        // congestionFactor={stressEffects.congestionFactor || 1.0}
+        stressLevel={stressResult.stressLevel}
+        hrvMs={stressResult.hrvMs}
+        baselineHrvMs={stressResult.baselineHrvMs}
+        restingHeartRateBpm={stressResult.restingHeartRateBpm}
+        baselineRestingHeartRateBpm={
+          stressResult.baselineRestingHeartRateBpm
+        }
+        reasons={stressResult.reasons}
       />
 
       {/* Health bubble with dynamic text */}
@@ -1055,7 +1019,7 @@ function AvatarExperience({
   );
 }
 
-const getStatusColor = (stressLevel: string): string => {
+const getStressIndicatorColor = (stressLevel: string): string => {
   switch (stressLevel) {
     case 'mild':
       return colors.yellow[400];
@@ -1073,11 +1037,17 @@ const styles = StyleSheet.create({
     // Full-bleed container for canvas
     position: 'relative',
   },
-  trafficStatus: {
+  stressStatus: {
     position: 'absolute',
     top: 10,
     right: 10,
     zIndex: 1000,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   hydrationIndicator: {
     position: 'absolute',
@@ -1091,6 +1061,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: 'white',
+    marginRight: 6,
+  },
+  statusLabel: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

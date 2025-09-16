@@ -337,10 +337,6 @@ const DashboardScreen: React.FC = () => {
               isActive={!!isFocused}
               rainIntensity={rainIntensity}
               rainDirection={rainDirection}
-              latitude={userProfile?.location.latitude}
-              longitude={userProfile?.location.longitude}
-              enableTrafficStress={true}
-              trafficRefreshInterval={ENV_REFRESH_INTERVAL_MS}
               airQualityData={
                 airQuality
                   ? {

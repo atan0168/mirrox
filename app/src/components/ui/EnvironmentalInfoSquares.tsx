@@ -36,7 +36,6 @@ interface AirQualityData {
 }
 
 interface TrafficData {
-  stressLevel: string;
   congestionFactor: number;
   currentSpeed: number;
   freeFlowSpeed: number;
@@ -122,7 +121,7 @@ export const EnvironmentalInfoSquares: React.FC<
     icon: trafficIcon,
     statusText: trafficStatus,
     description: trafficDescription,
-  } = getTrafficDisplay(trafficData as any, isTrafficError);
+  } = getTrafficDisplay(trafficData ?? null, isTrafficError);
   const {
     color: dengueColor,
     icon: dengueIcon,

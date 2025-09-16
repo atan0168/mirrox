@@ -37,13 +37,6 @@ export const useTrafficData = ({
         longitude
       );
 
-      // Log stress level changes
-      if (result.stressLevel !== 'none') {
-        console.log(
-          `🚨 Traffic stress detected: ${result.stressLevel} (factor: ${result.congestionFactor})`
-        );
-      }
-
       return result;
     },
     enabled: enabled && !!latitude && !!longitude,

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 
 interface FloatingStressIconProps {
   stressLevel: 'none' | 'mild' | 'moderate' | 'high';
-  congestionFactor: number;
+  stressIntensity: number;
   enabled?: boolean;
   position?: [number, number, number];
   onPress?: () => void; // Callback for when the icon is pressed
@@ -13,7 +13,7 @@ interface FloatingStressIconProps {
 
 export function FloatingStressIcon({
   stressLevel,
-  congestionFactor,
+  stressIntensity,
   enabled = true,
   position = [0, 2.5, 0], // Above avatar's head
   onPress,
@@ -26,31 +26,31 @@ export function FloatingStressIcon({
   const { camera } = useThree();
 
   // Get visual style based on stress level
-  const { color, shouldShow, intensity } = useMemo(() => {
+  const { color, shouldShow, severityTier } = useMemo(() => {
     switch (stressLevel) {
       case 'mild':
         return {
           color: colors.yellow[400], // Yellow
           shouldShow: true,
-          intensity: 1,
+          severityTier: 1,
         };
       case 'moderate':
         return {
           color: colors.orange[500], // Orange
           shouldShow: true,
-          intensity: 2,
+          severityTier: 2,
         };
       case 'high':
         return {
           color: colors.red[500], // Red
           shouldShow: true,
-          intensity: 3,
+          severityTier: 3,
         };
       default:
         return {
           color: colors.green[500],
           shouldShow: false,
-          intensity: 0,
+          severityTier: 0,
         };
     }
   }, [stressLevel]);
@@ -123,7 +123,7 @@ export function FloatingStressIcon({
 
   // Decide which symbol creator to use based on intensity
   const createStressSymbol = useMemo(() => {
-    switch (intensity) {
+    switch (severityTier) {
       case 1:
         // Mild stress - simple dot
         return () => {
@@ -154,7 +154,7 @@ export function FloatingStressIcon({
       default:
         return () => new THREE.Group();
     }
-  }, [intensity]);
+  }, [severityTier]);
 
   // Animate the floating icon and keep it facing the camera (billboard)
   useFrame(state => {
@@ -185,8 +185,10 @@ export function FloatingStressIcon({
         groupRef.current.rotation.z = Math.sin(time * 4) * 0.1;
       }
 
-      // Scale pulsing based on congestion factor
-      const pulseScale = 1 + Math.sin(time * 3) * 0.1 * (congestionFactor - 1);
+      // Scale pulsing based on HRV stress intensity (0..1)
+      const normalized = Math.min(Math.max(stressIntensity, 0), 1);
+      const pulseStrength = 0.6 + normalized * 0.6;
+      const pulseScale = 1 + Math.sin(time * 3) * 0.08 * pulseStrength;
       groupRef.current.scale.setScalar(Math.max(0.8, pulseScale));
     }
   });
@@ -237,7 +239,7 @@ export function FloatingStressIcon({
         </mesh>
 
         {/* Subtle glow effect for higher stress levels */}
-        {intensity >= 2 && (
+        {severityTier >= 2 && (
           <mesh position={[0, 0, -0.05]}>
             <circleGeometry args={[0.25, 32]} />
             <meshBasicMaterial
@@ -252,7 +254,7 @@ export function FloatingStressIcon({
         )}
 
         {/* Additional pulsing ring for high stress */}
-        {intensity === 3 && (
+        {severityTier === 3 && (
           <mesh position={[0, 0, -0.03]}>
             <ringGeometry args={[0.3, 0.4, 32]} />
             <meshBasicMaterial

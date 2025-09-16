@@ -41,25 +41,6 @@ class TrafficService {
   }
 
   /**
-   * Determine stress level based on congestion factor
-   * @param congestionFactor The calculated congestion factor
-   * @returns Stress level category
-   */
-  private determineStressLevel(
-    congestionFactor: number
-  ): 'none' | 'mild' | 'moderate' | 'high' {
-    if (congestionFactor <= this.congestionThresholds.none.max) {
-      return 'none';
-    } else if (congestionFactor <= this.congestionThresholds.mild.max) {
-      return 'mild';
-    } else if (congestionFactor <= this.congestionThresholds.moderate.max) {
-      return 'moderate';
-    } else {
-      return 'high';
-    }
-  }
-
-  /**
    * Generate cache key for traffic data
    * @param latitude Latitude coordinate
    * @param longitude Longitude coordinate
@@ -115,9 +96,6 @@ class TrafficService {
         flowData.freeFlowTravelTime
       );
 
-      // Determine stress level
-      const stressLevel = this.determineStressLevel(congestionFactor);
-
       // Prepare response data
       const congestionData: CongestionData = {
         latitude,
@@ -127,7 +105,6 @@ class TrafficService {
         freeFlowSpeed: flowData.freeFlowSpeed,
         currentTravelTime: flowData.currentTravelTime,
         freeFlowTravelTime: flowData.freeFlowTravelTime,
-        stressLevel,
         confidence: flowData.confidence,
         roadClosure: flowData.roadClosure,
         timestamp: new Date().toISOString(),

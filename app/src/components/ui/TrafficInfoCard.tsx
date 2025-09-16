@@ -69,7 +69,7 @@ export const TrafficInfoCard: React.FC<TrafficInfoCardProps> = ({
     color: stressColor,
     icon: stressIcon,
     description,
-  } = getTrafficDisplay(data as any, false, 20);
+  } = getTrafficDisplay(data ?? null, false, 20);
 
   return (
     <Card>
@@ -82,7 +82,7 @@ export const TrafficInfoCard: React.FC<TrafficInfoCardProps> = ({
         <View style={styles.stressIcon}>{stressIcon}</View>
         <View style={styles.stressInfo}>
           <Text style={[styles.stressLevel, { color: stressColor }]}>
-            {data.stressLevel.toUpperCase()}
+            {(description ? description : 'Unknown').toUpperCase()}
           </Text>
           <Text style={styles.stressDescription}>
             {description || 'Unknown traffic conditions'}

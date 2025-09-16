@@ -13,7 +13,6 @@ import { colors, spacing, fontSize } from '../../../theme';
 import { getTrafficDisplay } from '../display/traffic';
 
 interface TrafficData {
-  stressLevel: string;
   congestionFactor: number;
   currentSpeed: number;
   freeFlowSpeed: number;
@@ -46,7 +45,10 @@ export const TrafficModal: React.FC<Props> = ({
   latitude,
   longitude,
 }) => {
-  const { description } = getTrafficDisplay(trafficData as any, isError);
+  const { description, level } = getTrafficDisplay(
+    trafficData ?? null,
+    isError
+  );
 
   return (
     <Modal
@@ -95,7 +97,7 @@ export const TrafficModal: React.FC<Props> = ({
                 <View style={styles.trafficHeader}>
                   <Text style={styles.trafficTitle}>Current Conditions</Text>
                   <Text style={[styles.trafficLevel, { color }]}>
-                    {trafficData.stressLevel.toUpperCase()}
+                    {level.toUpperCase()}
                   </Text>
                 </View>
                 {description ? (

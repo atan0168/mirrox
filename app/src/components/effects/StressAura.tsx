@@ -5,14 +5,12 @@ import * as THREE from 'three';
 interface StressAuraProps {
   intensity: number; // 0-1, where 1 is maximum stress
   stressLevel: 'none' | 'mild' | 'moderate' | 'high';
-  congestionFactor?: number;
   enabled?: boolean;
 }
 
 export function StressAura({
   intensity,
   stressLevel,
-  congestionFactor = 1.0,
   enabled = true,
 }: StressAuraProps) {
   const groupRef = useRef<THREE.Group>(null);

@@ -9,6 +9,7 @@ A React Native mobile application with Node.js backend that creates personalized
 - **Health Insights**: Combines sleep patterns, commute habits, and environmental data for wellness recommendations
 - **3D Avatar System**: Dynamic avatar that changes based on air quality and personal health metrics
 - **Multi-API Integration**: OpenAQ, AQICN, and Malaysian MyEQMS for comprehensive air quality data
+- **HRV Stress Awareness**: Stress cues are computed locally from heart rate variability and recovery signals; insights are informational and not medical advice
 
 ## 🏗️ Architecture
 

@@ -8,8 +8,8 @@ import {
 } from 'lucide-react-native';
 import { colors } from '../../../theme';
 
+// Minimal traffic data shape used for display; no personal stress terminology
 export interface TrafficData {
-  stressLevel: 'none' | 'mild' | 'moderate' | 'high' | string;
   congestionFactor: number;
   currentSpeed: number;
   freeFlowSpeed: number;
@@ -24,27 +24,36 @@ export function getTrafficDisplay(
   isError: boolean,
   iconSize: number = 24
 ) {
+  const classify = (factor?: number) => {
+    if (factor == null) return 'unknown' as const;
+    if (factor <= 1.3) return 'smooth' as const;
+    if (factor <= 2.0) return 'mild' as const;
+    if (factor <= 3.0) return 'moderate' as const;
+    return 'high' as const;
+  };
+  const level =
+    isError || !trafficData
+      ? 'unknown'
+      : classify(trafficData.congestionFactor);
   const color = isError
     ? colors.red[500]
-    : !trafficData
+    : level === 'unknown'
       ? colors.neutral[400]
-      : trafficData.stressLevel === 'none'
+      : level === 'smooth'
         ? colors.green[400]
-        : trafficData.stressLevel === 'mild'
+        : level === 'mild'
           ? colors.yellow[400]
-          : trafficData.stressLevel === 'moderate'
+          : level === 'moderate'
             ? colors.orange[600]
-            : trafficData.stressLevel === 'high'
-              ? colors.red[500]
-              : colors.neutral[400];
+            : colors.red[500];
 
   let icon: React.ReactNode;
   if (isError) icon = <AlertTriangle size={iconSize} color={colors.red[500]} />;
   else if (!trafficData)
     icon = <Car size={iconSize} color={colors.neutral[400]} />;
   else {
-    switch (trafficData.stressLevel) {
-      case 'none':
+    switch (level) {
+      case 'smooth':
         icon = <CheckCircle size={iconSize} color={color} />;
         break;
       case 'mild':
@@ -62,19 +71,23 @@ export function getTrafficDisplay(
     }
   }
 
-  const statusText = isError ? undefined : trafficData?.stressLevel;
+  const statusText = isError
+    ? undefined
+    : level === 'unknown'
+      ? undefined
+      : level;
 
   const description = !trafficData
     ? undefined
-    : trafficData.stressLevel === 'none'
+    : level === 'smooth'
       ? 'Traffic is flowing smoothly'
-      : trafficData.stressLevel === 'mild'
+      : level === 'mild'
         ? 'Light traffic congestion detected'
-        : trafficData.stressLevel === 'moderate'
+        : level === 'moderate'
           ? 'Moderate traffic delays expected'
-          : trafficData.stressLevel === 'high'
-            ? 'Heavy traffic congestion - high stress'
+          : level === 'high'
+            ? 'Heavy traffic congestion'
             : undefined;
 
-  return { color, icon, statusText, description } as const;
+  return { color, icon, statusText, description, level } as const;
 }

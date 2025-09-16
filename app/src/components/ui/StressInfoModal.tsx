@@ -22,14 +22,22 @@ interface StressInfoModalProps {
   visible: boolean;
   onClose: () => void;
   stressLevel: 'none' | 'mild' | 'moderate' | 'high';
-  congestionFactor: number;
+  hrvMs: number | null;
+  baselineHrvMs: number | null;
+  restingHeartRateBpm: number | null;
+  baselineRestingHeartRateBpm: number | null;
+  reasons: string[];
 }
 
 export function StressInfoModal({
   visible,
   onClose,
   stressLevel,
-  congestionFactor,
+  hrvMs,
+  baselineHrvMs,
+  restingHeartRateBpm,
+  baselineRestingHeartRateBpm,
+  reasons,
 }: StressInfoModalProps) {
   const getStressInfo = () => {
     switch (stressLevel) {
@@ -37,88 +45,96 @@ export function StressInfoModal({
         return {
           title: 'Mild Stress Detected',
           icon: Heart,
-          description: 'Your avatar is experiencing light stress levels.',
-          causes: [
-            'Light traffic congestion in your area',
-            'Minor air quality concerns',
-            'Slightly elevated heart rate indicators',
+          description:
+            'HRV is showing a light sympathetic response compared with your usual baseline.',
+          defaultReasons: [
+            'Slight reduction in HRV vs baseline',
+            'Minor sleep disruption or fatigue',
+            'Everyday life stressors',
           ],
           recommendations: [
-            'Take a few deep breaths',
-            'Consider a short walk if air quality permits',
-            'Stay hydrated',
-            'Monitor traffic conditions for better route planning',
+            'Practice 2–3 minutes of slow breathing',
+            'Take a gentle movement or stretch break',
+            'Stay hydrated through the day',
+            'Schedule a short pause between tasks',
           ],
           color: colors.neutral[600],
           backgroundColor: colors.neutral[100],
-        };
+        } as const;
       case 'moderate':
         return {
           title: 'Moderate Stress Detected',
           icon: AlertTriangle,
-          description: 'Your avatar is showing noticeable stress responses.',
-          causes: [
-            `Traffic congestion factor: ${(congestionFactor * 100).toFixed(0)}%`,
-            'Moderate air pollution levels',
-            'Environmental stress indicators',
-            'Potential commute delays',
+          description:
+            'Your nervous system is working harder today based on HRV and recovery signals.',
+          defaultReasons: [
+            'HRV is notably below your baseline',
+            'Short or fragmented sleep recently',
+            'Resting heart rate trending higher than normal',
+            'Limited recovery or mindfulness time',
           ],
           recommendations: [
-            'Consider alternative routes or transportation',
-            'Practice stress-reduction techniques',
-            'Limit outdoor activities if air quality is poor',
-            'Plan extra time for travel',
-            'Stay informed about traffic conditions',
+            'Spend 5–10 minutes with guided breathing or mindfulness',
+            'Prioritise a lighter schedule or screen breaks',
+            'Aim for an earlier, consistent bedtime tonight',
+            'Consider a light outdoor walk if it feels good',
           ],
           color: colors.neutral[800],
           backgroundColor: colors.warning,
-        };
+        } as const;
       case 'high':
         return {
           title: 'High Stress Alert',
           icon: AlertCircle,
           description:
-            'Your avatar is experiencing significant stress levels that may impact wellbeing.',
-          causes: [
-            `High traffic congestion: ${(congestionFactor * 100).toFixed(0)}%`,
-            'Poor air quality conditions',
-            'Severe environmental stressors',
-            'Major transportation disruptions',
+            'HRV indicates a strong stress response. Give yourself space to recover and recharge.',
+          defaultReasons: [
+            'Large HRV drop vs personal baseline',
+            'Resting heart rate significantly elevated',
+            'Very limited restorative sleep or downtime',
+            'Body still recovering from recent load',
           ],
           recommendations: [
-            'Avoid unnecessary travel if possible',
-            'Work from home if available',
-            'Use air purifiers indoors',
-            'Practice meditation or relaxation techniques',
-            'Stay indoors during peak pollution hours',
-            'Consider rescheduling outdoor activities',
+            'Block time for deep rest or mindfulness',
+            'Keep physical activity light and restorative',
+            'Reduce high-pressure tasks if possible',
+            'Connect with supportive people or calming music',
+            'Hydrate regularly and fuel with balanced meals',
+            'Seek professional support if stress feels overwhelming',
           ],
           color: colors.neutral[100],
           backgroundColor: colors.error,
-        };
+        } as const;
       default:
         return {
           title: 'No Stress Detected',
           icon: CheckCircle,
-          description: 'Your avatar is in a calm, stress-free state.',
-          causes: [
-            'Good air quality',
-            'Minimal traffic congestion',
-            'Optimal environmental conditions',
+          description:
+            'HRV and resting heart rate look stable compared with your usual patterns.',
+          defaultReasons: [
+            'HRV aligns with your baseline',
+            'Resting heart rate looks steady',
+            'Recent recovery habits are supporting balance',
           ],
           recommendations: [
-            'Enjoy the good conditions!',
-            'Great time for outdoor activities',
+            'Keep up the routines that work for you',
+            'Great moment for focused work or movement',
           ],
           color: colors.neutral[600],
           backgroundColor: colors.neutral[50],
-        };
+        } as const;
     }
   };
 
   const stressInfo = getStressInfo();
-
   const IconComponent = stressInfo.icon;
+  const reasonList =
+    reasons && reasons.length > 0 ? reasons : stressInfo.defaultReasons;
+
+  const formatMs = (value: number | null) =>
+    value != null ? `${Math.round(value)} ms` : '—';
+  const formatBpm = (value: number | null) =>
+    value != null ? `${Math.round(value)} bpm` : '—';
 
   return (
     <Modal
@@ -155,13 +171,39 @@ export function StressInfoModal({
               <Text style={styles.description}>{stressInfo.description}</Text>
             </View>
 
+            {/* Key metrics */}
+            <View style={styles.section}>
+              <View style={styles.metricsGrid}>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>HRV Today</Text>
+                  <Text style={styles.metricValue}>{formatMs(hrvMs)}</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Baseline HRV</Text>
+                  <Text style={styles.metricValue}>{formatMs(baselineHrvMs)}</Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Resting HR</Text>
+                  <Text style={styles.metricValue}>
+                    {formatBpm(restingHeartRateBpm)}
+                  </Text>
+                </View>
+                <View style={styles.metricItem}>
+                  <Text style={styles.metricLabel}>Baseline Resting HR</Text>
+                  <Text style={styles.metricValue}>
+                    {formatBpm(baselineRestingHeartRateBpm)}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
             {/* Causes */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Activity size={18} color={colors.neutral[600]} />
                 <Text style={styles.sectionTitle}>Contributing Factors</Text>
               </View>
-              {stressInfo.causes.map((cause, index) => (
+              {reasonList.map((cause, index) => (
                 <View key={index} style={styles.listItem}>
                   <View style={styles.bullet} />
                   <Text style={styles.listText}>{cause}</Text>
@@ -188,9 +230,11 @@ export function StressInfoModal({
               <View style={styles.infoContainer}>
                 <Info size={16} color={colors.neutral[400]} />
                 <Text style={styles.infoText}>
-                  This stress indicator is based on real-time traffic and air
-                  quality data in your area. Your digital twin responds to
-                  environmental conditions to help you make informed decisions.
+                  These stress insights interpret your heart rate variability,
+                  resting heart rate, sleep, and mindfulness signals relative to
+                  your personal baseline. They are for general wellness
+                  guidance only and are not a substitute for professional
+                  medical advice.
                 </Text>
               </View>
             </View>
@@ -278,6 +322,25 @@ const styles = StyleSheet.create({
     color: colors.neutral[700],
     flex: 1,
     lineHeight: lineHeight.normal * fontSize.sm,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  metricItem: {
+    width: '48%',
+    marginBottom: spacing.md,
+  },
+  metricLabel: {
+    fontSize: fontSize.xs,
+    color: colors.neutral[500],
+    marginBottom: spacing.xs,
+  },
+  metricValue: {
+    fontSize: fontSize.base,
+    color: colors.neutral[800],
+    fontWeight: '600',
   },
   infoContainer: {
     flexDirection: 'row',

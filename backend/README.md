@@ -108,7 +108,6 @@ curl "http://localhost:3000/api/traffic/congestion?lat=3.1390&lng=101.6869"
     "freeFlowSpeed": 50,
     "currentTravelTime": 120,
     "freeFlowTravelTime": 83,
-    "stressLevel": "mild",
     "confidence": 0.95,
     "roadClosure": false,
     "timestamp": "2024-01-15T10:30:00.000Z",
@@ -135,7 +134,7 @@ curl "http://localhost:3000/api/traffic/congestion?lat=3.1390&lng=101.6869"
 - `2.0` - Moderate congestion (twice as long)
 - `3.0+` - Heavy congestion (3x or more travel time)
 
-**Stress Levels:**
+**Congestion Tiers (by congestionFactor):**
 
 - `none`: Factor ≤ 1.3 (up to 30% longer)
 - `mild`: Factor 1.3-2.0 (30%-100% longer)
