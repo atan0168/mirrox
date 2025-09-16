@@ -124,6 +124,8 @@ class ApiService {
         o3: response.data.o3,
         temperature: response.data.temperature ?? null,
         humidity: response.data.humidity ?? null,
+        uvIndex: response.data.uvIndex,
+        uvForecast: response.data.uvForecast,
         classification: response.data.classification,
         colorCode: response.data.colorCode,
         healthAdvice: response.data.healthAdvice,

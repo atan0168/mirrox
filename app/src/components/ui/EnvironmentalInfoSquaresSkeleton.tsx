@@ -41,6 +41,15 @@ export const EnvironmentalInfoSquaresSkeleton: React.FC = () => {
         />
       </Card>
 
+      {/* Temperature Square Skeleton */}
+      <Card style={styles.square}>
+        <View style={styles.iconSkeleton} />
+        <Animated.View style={[styles.textSkeleton, { opacity }]} />
+        <Animated.View
+          style={[styles.textSkeleton, { opacity, width: '60%' }]}
+        />
+      </Card>
+
       {/* Traffic Square Skeleton */}
       <Card style={styles.square}>
         <View style={styles.iconSkeleton} />
@@ -56,12 +65,13 @@ export const EnvironmentalInfoSquaresSkeleton: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.xl,
   },
   square: {
-    flex: 1,
+    flexBasis: '47%',
     alignItems: 'center',
     padding: spacing.lg,
     minHeight: 120,

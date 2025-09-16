@@ -6,9 +6,11 @@ import InfoSquare from './InfoSquare';
 import AirQualityModal from './modals/AirQualityModal';
 import TrafficModal from './modals/TrafficModal';
 import DengueModal from './modals/DengueModal';
+import WeatherModal from './modals/WeatherModal';
 import { getAirQualityDisplay } from './display/airQuality';
 import { getTrafficDisplay } from './display/traffic';
 import { getDengueDisplay } from './display/dengue';
+import { getWeatherDisplay } from './display/weather';
 import {
   DenguePredictResponse,
   ArcGISResponse,
@@ -24,6 +26,10 @@ interface AirQualityData {
   pm10?: number;
   o3?: number;
   no2?: number;
+  temperature?: number | null;
+  humidity?: number | null;
+  uvIndex?: number | null;
+  uvForecast?: Array<{ avg: number; day: string; max: number; min: number }> | null;
   classification?: string;
   healthAdvice?: string;
   timestamp?: string;
@@ -94,7 +100,7 @@ export const EnvironmentalInfoSquares: React.FC<
   showDengue = true,
 }) => {
   const [selectedModal, setSelectedModal] = useState<
-    'air' | 'traffic' | 'dengue' | null
+    'air' | 'traffic' | 'dengue' | 'weather' | null
   >(null);
 
   // Reverse geocode when user opens the modal (avoid background geocoding)
@@ -116,11 +122,24 @@ export const EnvironmentalInfoSquares: React.FC<
     icon: airIcon,
     statusText: airStatus,
   } = getAirQualityDisplay(airQuality, isAirQualityError);
+  const resolvedUVIndex =
+    airQuality?.uvIndex ??
+    (airQuality?.uvForecast && airQuality.uvForecast.length > 0
+      ? airQuality.uvForecast[0].avg
+      : null);
+  const {
+    color: weatherColor,
+    icon: weatherIcon,
+    statusText: weatherStatus,
+  } = getWeatherDisplay({
+    temperature: airQuality?.temperature ?? null,
+    humidity: airQuality?.humidity ?? null,
+    uvIndex: resolvedUVIndex ?? null,
+  });
   const {
     color: trafficColor,
     icon: trafficIcon,
     statusText: trafficStatus,
-    description: trafficDescription,
   } = getTrafficDisplay(trafficData ?? null, isTrafficError);
   const {
     color: dengueColor,
@@ -158,6 +177,28 @@ export const EnvironmentalInfoSquares: React.FC<
         />
 
         <InfoSquare
+          title="Temperature"
+          value={
+            isAirQualityError
+              ? 'Error'
+              : isAirQualityLoading
+                ? '...'
+                : airQuality?.temperature != null
+                  ? `${airQuality.temperature.toFixed(1)}°C`
+                  : 'N/A'
+          }
+          statusText={isAirQualityError ? undefined : weatherStatus}
+          color={weatherColor}
+          icon={weatherIcon}
+          loading={isAirQualityLoading}
+          errorMessage={isAirQualityError ? airQualityErrorMessage : undefined}
+          disabled={isAirQualityLoading || isAirQualityError}
+          onPress={() => setSelectedModal('weather')}
+        />
+      </View>
+
+      <View style={[styles.squaresGrid, styles.squaresGridBottom]}>
+        <InfoSquare
           title="Traffic"
           value={
             isTrafficError
@@ -176,10 +217,8 @@ export const EnvironmentalInfoSquares: React.FC<
           disabled={isTrafficLoading || isTrafficError}
           onPress={() => setSelectedModal('traffic')}
         />
-      </View>
 
-      {showDengue && (
-        <View style={[styles.squaresGrid, styles.squaresGridBottom]}>
+        {showDengue && (
           <InfoSquare
             title="Dengue"
             value={
@@ -199,8 +238,8 @@ export const EnvironmentalInfoSquares: React.FC<
             disabled={isDengueLoading || isDengueError}
             onPress={() => setSelectedModal('dengue')}
           />
-        </View>
-      )}
+        )}
+      </View>
 
       <AirQualityModal
         visible={selectedModal === 'air'}
@@ -238,6 +277,20 @@ export const EnvironmentalInfoSquares: React.FC<
         dengueOutbreakCount={dengueOutbreakCount}
         dengueHotspotsData={dengueHotspotsData}
         dengueOutbreaksData={dengueOutbreaksData}
+      />
+      <WeatherModal
+        visible={selectedModal === 'weather'}
+        onClose={() => setSelectedModal(null)}
+        temperature={airQuality?.temperature ?? null}
+        humidity={airQuality?.humidity ?? null}
+        uvIndex={resolvedUVIndex ?? null}
+        uvForecast={airQuality?.uvForecast}
+        isError={isAirQualityError}
+        errorMessage={airQualityErrorMessage}
+        color={weatherColor}
+        locationLabel={reverseGeo?.label || null}
+        latitude={latForLookup ?? null}
+        longitude={lngForLookup ?? null}
       />
     </View>
   );
