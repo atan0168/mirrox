@@ -1,8 +1,21 @@
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface UserLocationDetails {
+  coordinates: Coordinates;
+  label: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  countryCode?: string | null;
+  postcode?: string | null;
+}
+
 export interface UserProfile {
-  location: {
-    latitude: number;
-    longitude: number;
-  };
+  location: Coordinates;
   commuteMode: 'car' | 'transit' | 'wfh' | 'bike' | 'walk';
   sleepHours: number;
   gender: 'male' | 'female';
@@ -25,4 +38,9 @@ export interface UserProfile {
     enableEnergyNotifications?: boolean; // Whether to send energy low notifications
     enableSleepHealthNotifications?: boolean; // Whether to send sleep & health insights
   };
+  homeLocation?: UserLocationDetails | null;
+  workLocation?: UserLocationDetails | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  idealSleepHours?: number | null;
 }
