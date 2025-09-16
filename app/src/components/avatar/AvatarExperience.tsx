@@ -49,6 +49,7 @@ import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
 import Mattress from '../scene/Mattress';
 import BatteryIndicator from '../BatteryIndicator';
+import HydrationIndicator from '../HydrationIndicator';
 import { colors } from '../../theme';
 
 // Initialize Three.js configuration
@@ -85,6 +86,8 @@ interface AvatarExperienceProps {
   scene?: 'zenpark' | 'city' | 'home';
   // Whether this canvas is active/visible (used to pause rendering when not focused)
   isActive?: boolean;
+  // Hydration progress percentage (0-100) for visual feedback
+  hydrationProgressPercentage?: number;
 }
 
 function AvatarExperience({
@@ -105,6 +108,7 @@ function AvatarExperience({
   // onInteractionChange removed,
   scene = 'zenpark',
   isActive = true,
+  hydrationProgressPercentage = 50,
 }: AvatarExperienceProps) {
   const screenWidth = Dimensions.get('window').width;
   const effectiveWidth = width ?? screenWidth;
@@ -244,22 +248,35 @@ function AvatarExperience({
 
   // Use stress-modified facial expression unless manually overridden via controls
   const facialExpression = stressEffects.facialExpression;
-  // If no traffic stress override, tweak facial expression based on sleep
+  // If no traffic stress override, tweak facial expression based on sleep and hydration
   const healthDrivenFacial = useMemo(() => {
     if (!health) return facialExpression;
     if (stressEffects.stressLevel !== 'none') return facialExpression;
-    // Only apply internal sleep tweak when no external recommendation was provided
+    // Only apply internal health tweaks when no external recommendation was provided
     // i.e., parent baseline is neutral (no combined logic).
     if (externalFacialExpression !== 'neutral') return facialExpression;
+
+    // Hydration takes priority over sleep if severely dehydrated
+    if (hydrationProgressPercentage < 25) {
+      return 'exhausted'; // Severe dehydration - fatigued expression
+    }
+
     const sleepH = (health.sleepMinutes || 0) / 60;
     if (sleepH > 0 && sleepH < 6) return 'tired';
     if (sleepH > 8.5) return 'calm';
+
+    // Optimal hydration (≥100%) promotes calm/happy expression
+    if (hydrationProgressPercentage >= 100) {
+      return 'calm'; // Well-hydrated - calm, content expression
+    }
+
     return facialExpression;
   }, [
     health,
     facialExpression,
     stressEffects.stressLevel,
     externalFacialExpression,
+    hydrationProgressPercentage,
   ]);
 
   // Final expression with full manual override (bypasses sleep/stress/health)
@@ -1027,6 +1044,11 @@ function AvatarExperience({
 
       {/* Health bubble with dynamic text */}
       {/* <HealthBubble message={energyInfo?.message ?? null} /> */}
+      {/* Hydration indicator overlay */}
+      <View style={styles.hydrationIndicator}>
+        <HydrationIndicator />
+      </View>
+
       {/* Sleep battery indicator overlay */}
       <BatteryIndicator sleepMinutes={health?.sleepMinutes} />
     </View>
@@ -1055,6 +1077,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
+    zIndex: 1000,
+  },
+  hydrationIndicator: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
     zIndex: 1000,
   },
   statusIndicator: {

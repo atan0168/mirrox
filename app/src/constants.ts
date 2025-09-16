@@ -50,3 +50,6 @@ export const SLEEP_NOTIF_MIN_DAYS_BETWEEN = 1; // Frequency cap: min full days b
 export const ALERTS_KEY = 'alerts.items';
 export const MAX_ALERTS = 50;
 export const ALERT_RETENTION_DAYS = 30; // Auto-purge alerts older than this
+// Hydration tracking
+export const HYDRATION_PERSIST_KEY = 'hydration-state-v1';
+export const DEFAULT_HYDRATION_GOAL_ML = 2000; // Default 2L daily goal

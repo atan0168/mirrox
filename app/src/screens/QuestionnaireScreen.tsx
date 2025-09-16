@@ -18,6 +18,7 @@ import { localStorageService } from '../services/LocalStorageService';
 import { useQueryClient } from '@tanstack/react-query';
 import { UserLocationDetails, UserProfile } from '../models/User';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { calculateBaselineHydrationGoal } from '../utils/hydrationUtils';
 
 interface QuestionnaireScreenProps {
   route: {
@@ -92,17 +93,16 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
     };
 
     const homeCoordinates = homeLocation?.coordinates ?? fallbackCoordinates;
-    const normalizedHome: UserLocationDetails =
-      homeLocation ?? {
-        coordinates: homeCoordinates,
-        label: `${homeCoordinates.latitude.toFixed(3)}, ${homeCoordinates.longitude.toFixed(3)}`,
-        address: null,
-        city: null,
-        state: null,
-        country: null,
-        countryCode: null,
-        postcode: null,
-      };
+    const normalizedHome: UserLocationDetails = homeLocation ?? {
+      coordinates: homeCoordinates,
+      label: `${homeCoordinates.latitude.toFixed(3)}, ${homeCoordinates.longitude.toFixed(3)}`,
+      address: null,
+      city: null,
+      state: null,
+      country: null,
+      countryCode: null,
+      postcode: null,
+    };
 
     const normalizedWork = workLocation
       ? {
@@ -110,6 +110,9 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
           coordinates: { ...workLocation.coordinates },
         }
       : null;
+
+    // Calculate baseline hydration goal based on weight
+    const baselineHydrationMl = calculateBaselineHydrationGoal(parsedWeight);
 
     const profile: UserProfile = {
       location: homeCoordinates,
@@ -124,6 +127,8 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
       weightKg: parsedWeight,
       heightCm: parsedHeight,
       idealSleepHours: sleepTarget,
+      hydrationBaselineMl: baselineHydrationMl,
+      hydrationGoalMl: baselineHydrationMl,
     };
 
     // Persist the updated profile BEFORE navigating so GeneratingTwin uses fresh data

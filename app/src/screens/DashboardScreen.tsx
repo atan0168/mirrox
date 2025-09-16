@@ -34,6 +34,8 @@ import { useIsFocused } from '@react-navigation/native';
 import OnboardingOverlay from '../components/ui/OnboardingOverlay';
 import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { useUIStore } from '../store/uiStore';
+import { useHydrationStore } from '../store/hydrationStore';
+import { hydrationService } from '../services/HydrationService';
 
 const DashboardScreen: React.FC = () => {
   const isFocused = useIsFocused();
@@ -170,6 +172,18 @@ const DashboardScreen: React.FC = () => {
 
   // Health data (for sleep minutes)
   const { data: health } = useHealthData({ autoSync: false });
+
+  // Initialize hydration service
+  useEffect(() => {
+    if (userProfile && storeHydrated) {
+      hydrationService.initialize();
+    }
+  }, [userProfile, storeHydrated]);
+
+  // Get hydration progress percentage for avatar visual feedback
+  const hydrationProgressPercentage = useHydrationStore(s =>
+    s.getProgressPercentage()
+  );
 
   // Auto-adjust facial expression based on air quality and sleep
   const recommendedExpression = useMemo(() => {
@@ -337,6 +351,7 @@ const DashboardScreen: React.FC = () => {
                   : null
               }
               scene={scene}
+              hydrationProgressPercentage={hydrationProgressPercentage}
             />
           </View>
 

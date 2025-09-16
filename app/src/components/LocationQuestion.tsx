@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-  Alert,
-} from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { ActivityIndicator, StyleSheet, Text, View, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import { locationIQService } from '../services/LocationIQService';
 import { UserLocationDetails } from '../models/User';
@@ -85,16 +85,15 @@ export const LocationQuestion: React.FC<LocationQuestionProps> = ({
         await Location.requestForegroundPermissionsAsync();
       if (permissionStatus !== Location.PermissionStatus.GRANTED) {
         setStatus(null);
-        setError('Location permission is required to use your current location.');
+        setError(
+          'Location permission is required to use your current location.'
+        );
         return;
       }
 
       setStatus('Fetching current location…');
       const position = await Location.getCurrentPositionAsync({});
-      await handleLookup(
-        position.coords.latitude,
-        position.coords.longitude
-      );
+      await handleLookup(position.coords.latitude, position.coords.longitude);
     } catch (locationError) {
       console.error('Failed to obtain current location', locationError);
       setStatus(null);
@@ -110,7 +109,10 @@ export const LocationQuestion: React.FC<LocationQuestionProps> = ({
     if (!defaultCoordinates) {
       return;
     }
-    void handleLookup(defaultCoordinates.latitude, defaultCoordinates.longitude);
+    void handleLookup(
+      defaultCoordinates.latitude,
+      defaultCoordinates.longitude
+    );
   }, [defaultCoordinates, handleLookup]);
 
   const handleManualLookup = useCallback(() => {
@@ -139,12 +141,7 @@ export const LocationQuestion: React.FC<LocationQuestionProps> = ({
         defaultCoordinates.longitude
       );
     }
-  }, [
-    defaultCoordinates,
-    handleLookup,
-    hasDefault,
-    value,
-  ]);
+  }, [defaultCoordinates, handleLookup, hasDefault, value]);
 
   const handleCopyFrom = useCallback(() => {
     if (allowCopyFrom && onCopyRequested) {

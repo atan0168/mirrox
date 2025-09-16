@@ -43,4 +43,7 @@ export interface UserProfile {
   weightKg?: number | null;
   heightCm?: number | null;
   idealSleepHours?: number | null;
+  // Hydration settings
+  hydrationGoalMl?: number | null; // Daily hydration goal in mL
+  hydrationBaselineMl?: number | null; // Baseline calculated from weight
 }
