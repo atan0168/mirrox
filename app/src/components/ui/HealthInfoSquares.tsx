@@ -228,6 +228,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const getSleepColor = () => {
     if (isError) return colors.red[500];
     if (!health) return colors.neutral[400];
+    if (sleepHours >= 9) return colors.green[400];
     if (sleepHours >= 7 && sleepHours <= 9) return colors.green[500];
     if (sleepHours >= 6 && sleepHours < 7) return colors.yellow[500];
     if (sleepHours >= 5 && sleepHours < 6) return colors.orange[600];
@@ -238,6 +239,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const getSleepIcon = () => {
     if (isError) return <AlertTriangle size={24} color={colors.red[500]} />;
     const color = getSleepColor();
+    if (sleepHours >= 9) return <CheckCircle size={24} color={color} />;
     if (sleepHours >= 7 && sleepHours <= 9)
       return <CheckCircle size={24} color={color} />;
     if (sleepHours >= 6) return <AlertCircle size={24} color={color} />;
@@ -261,6 +263,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     if (isError) return 'Error';
     if (isLoading) return '...';
     if (!health) return 'No data';
+    if (sleepHours >= 9) return 'Restful';
     if (sleepHours >= 7 && sleepHours <= 9) return 'Well rested';
     if (sleepHours >= 6 && sleepHours < 7) return 'Adequate';
     if (sleepHours >= 5 && sleepHours < 6) return 'Tired';

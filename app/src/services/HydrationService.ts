@@ -1,7 +1,9 @@
 import { useHydrationStore } from '../store/hydrationStore';
+import { useAvatarStore } from '../store/avatarStore';
 import { localStorageService } from './LocalStorageService';
 import { apiService } from './ApiService';
 import { healthDataService } from './HealthDataService';
+import { assetPreloader } from './AssetPreloader';
 import { getDeviceTimeZone, yyyymmddInTimeZone } from '../utils/datetimeUtils';
 import {
   calculateBaselineHydrationGoal,
@@ -11,6 +13,7 @@ import {
 export class HydrationService {
   private static instance: HydrationService | null = null;
   private syncInterval: NodeJS.Timeout | null = null;
+  private hydrationAnimationTimeout: NodeJS.Timeout | null = null;
   private isInitialized = false;
 
   static getInstance(): HydrationService {
@@ -292,6 +295,60 @@ export class HydrationService {
     }
   }
 
+  private getDrinkingAnimationDurationMs(): number {
+    const clips = assetPreloader.getPreloadedAnimation('drinking');
+    if (Array.isArray(clips) && clips.length > 0) {
+      const clipWithDuration = clips.find(clip => {
+        const duration = (clip as { duration?: number })?.duration;
+        return typeof duration === 'number' && duration > 0;
+      }) as { duration?: number } | undefined;
+
+      if (clipWithDuration?.duration) {
+        return Math.round(clipWithDuration.duration * 1000) + 500;
+      }
+    }
+
+    // Fallback duration if we can't read clip metadata
+    return 3500;
+  }
+
+  private triggerDrinkingAnimation(): void {
+    try {
+      const avatarState = useAvatarStore.getState();
+      if (avatarState.isManualAnimation) {
+        // Respect manual overrides; don't interrupt user-selected animations
+        return;
+      }
+
+      avatarState.setActiveAnimation('drinking');
+
+      if (this.hydrationAnimationTimeout) {
+        clearTimeout(this.hydrationAnimationTimeout);
+      }
+
+      const durationMs = this.getDrinkingAnimationDurationMs();
+
+      this.hydrationAnimationTimeout = setTimeout(() => {
+        const {
+          activeAnimation,
+          isManualAnimation,
+          setActiveAnimation,
+        } = useAvatarStore.getState();
+
+        if (activeAnimation === 'drinking' && !isManualAnimation) {
+          setActiveAnimation(null);
+        }
+
+        this.hydrationAnimationTimeout = null;
+      }, durationMs);
+    } catch (error) {
+      console.warn(
+        '[HydrationService] Failed to trigger drinking animation:',
+        error
+      );
+    }
+  }
+
   /**
    * Log fluid intake
    */
@@ -303,6 +360,10 @@ export class HydrationService {
       console.log(
         `[HydrationService] Logged ${amountMl}mL of ${fluidType || 'fluid'} intake`
       );
+
+      if (amountMl > 0) {
+        this.triggerDrinkingAnimation();
+      }
     } catch (error) {
       console.error('[HydrationService] Failed to log fluid intake:', error);
     }
@@ -385,6 +446,10 @@ export class HydrationService {
     if (this.syncInterval) {
       clearInterval(this.syncInterval);
       this.syncInterval = null;
+    }
+    if (this.hydrationAnimationTimeout) {
+      clearTimeout(this.hydrationAnimationTimeout);
+      this.hydrationAnimationTimeout = null;
     }
     this.isInitialized = false;
   }

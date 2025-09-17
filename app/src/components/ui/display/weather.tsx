@@ -1,11 +1,17 @@
 import React from 'react';
-import { Snowflake, Sun, Thermometer } from 'lucide-react-native';
+import {
+  AlertTriangle,
+  Snowflake,
+  Sun,
+  Thermometer,
+} from 'lucide-react-native';
 import { colors } from '../../../theme';
 
 export interface WeatherSnapshot {
   temperature?: number | null;
   humidity?: number | null;
   uvIndex?: number | null;
+  isError: boolean;
 }
 
 export function getWeatherDisplay(weather: WeatherSnapshot | null | undefined) {
@@ -22,22 +28,28 @@ export function getWeatherDisplay(weather: WeatherSnapshot | null | undefined) {
   let statusText = 'Comfortable';
   let icon: React.ReactNode = <Thermometer size={24} color={colors.sky[500]} />;
 
-  if (temp <= 10) {
-    color = colors.sky[500];
-    statusText = 'Cold';
-    icon = <Snowflake size={24} color={color} />;
-  } else if (temp <= 25) {
-    color = colors.green[500];
-    statusText = 'Comfortable';
-    icon = <Thermometer size={24} color={color} />;
-  } else if (temp <= 32) {
-    color = colors.orange[500];
-    statusText = 'Warm';
-    icon = <Sun size={24} color={color} />;
-  } else {
+  if (weather.isError) {
     color = colors.red[500];
-    statusText = 'Hot';
-    icon = <Sun size={24} color={color} />;
+    statusText = 'Error';
+    icon = <AlertTriangle size={24} color={colors.red[500]} />;
+  } else {
+    if (temp <= 10) {
+      color = colors.sky[500];
+      statusText = 'Cold';
+      icon = <Snowflake size={24} color={color} />;
+    } else if (temp <= 25) {
+      color = colors.green[500];
+      statusText = 'Comfortable';
+      icon = <Thermometer size={24} color={color} />;
+    } else if (temp <= 32) {
+      color = colors.orange[500];
+      statusText = 'Warm';
+      icon = <Sun size={24} color={color} />;
+    } else {
+      color = colors.red[500];
+      statusText = 'Hot';
+      icon = <Sun size={24} color={color} />;
+    }
   }
 
   return {

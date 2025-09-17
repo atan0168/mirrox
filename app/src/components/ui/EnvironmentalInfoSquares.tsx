@@ -29,7 +29,12 @@ interface AirQualityData {
   temperature?: number | null;
   humidity?: number | null;
   uvIndex?: number | null;
-  uvForecast?: Array<{ avg: number; day: string; max: number; min: number }> | null;
+  uvForecast?: Array<{
+    avg: number;
+    day: string;
+    max: number;
+    min: number;
+  }> | null;
   classification?: string;
   healthAdvice?: string;
   timestamp?: string;
@@ -135,6 +140,7 @@ export const EnvironmentalInfoSquares: React.FC<
     temperature: airQuality?.temperature ?? null,
     humidity: airQuality?.humidity ?? null,
     uvIndex: resolvedUVIndex ?? null,
+    isError: isAirQualityError,
   });
   const {
     color: trafficColor,
@@ -277,6 +283,7 @@ export const EnvironmentalInfoSquares: React.FC<
         dengueOutbreakCount={dengueOutbreakCount}
         dengueHotspotsData={dengueHotspotsData}
         dengueOutbreaksData={dengueOutbreaksData}
+        stateName={reverseGeo?.region || null}
       />
       <WeatherModal
         visible={selectedModal === 'weather'}

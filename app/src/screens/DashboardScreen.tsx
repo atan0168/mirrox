@@ -23,6 +23,7 @@ import {
 } from '../utils/skinEffectsUtils';
 import { getCombinedRecommendedExpression } from '../utils/expressionUtils';
 import { useHealthData } from '../hooks/useHealthData';
+import { useDengueNearby } from '../hooks/useDengueNearby';
 import { SkinToneButton } from '../components/controls/SkinToneButton';
 import SceneSwitcher, {
   SceneOption,
@@ -95,6 +96,17 @@ const DashboardScreen: React.FC = () => {
     !!userProfile,
     ENV_REFRESH_INTERVAL_MS
   );
+
+  const { data: dengueNearby } = useDengueNearby({
+    latitude: userProfile?.location.latitude,
+    longitude: userProfile?.location.longitude,
+    radiusKm: 5,
+    enabled: !!userProfile?.location,
+  });
+
+  const hasNearbyDengueRisk =
+    (dengueNearby?.hotspotCount ?? 0) > 0 ||
+    (dengueNearby?.outbreakCount ?? 0) > 0;
 
   // Track hydration of persisted store to avoid flicker
   useEffect(() => {
@@ -348,6 +360,7 @@ const DashboardScreen: React.FC = () => {
               }
               scene={scene}
               hydrationProgressPercentage={hydrationProgressPercentage}
+              hasNearbyDengueRisk={hasNearbyDengueRisk}
             />
           </View>
 

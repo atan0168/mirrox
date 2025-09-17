@@ -4,6 +4,7 @@ export const AVAILABLE_ANIMATIONS = [
   { name: 'wiping_sweat', label: 'Wipe Sweat' },
   { name: 'shock', label: 'Shock' },
   { name: 'swat_bugs', label: 'Swat Bugs' },
+  { name: 'drinking', label: 'Drink Water' },
   { name: 'breathing', label: 'Breathing' },
   { name: 'yawn', label: 'Yawn' },
   { name: 'sleeping', label: 'Sleeping' },

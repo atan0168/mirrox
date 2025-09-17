@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -18,8 +18,39 @@ import {
   OutbreakAttributes,
   PointGeometry,
   PolygonGeometry,
+  StateAttributes,
+  ArcGISFeature,
 } from '../../../services/BackendApiService';
 import DengueMap, { DengueSelection } from '../DengueMap';
+import { useDengueStateStats } from '../../../hooks/useDengueStateStats';
+
+const normalizeStateName = (name: string) =>
+  name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[^a-z\s]/g, '')
+    .replace(/wilayah\s+persekutuan/g, 'wp')
+    .replace(/^negeri\s+/g, '')
+    .replace(/\s+/g, '');
+
+const STATE_SYNONYMS: Record<string, string> = {
+  penang: 'pulaupinang',
+  malacca: 'melaka',
+  melacca: 'melaka',
+  melaka: 'melaka',
+  kualalumpur: 'wpkualalumpur',
+  federalterritoryofkualalumpur: 'wpkualalumpur',
+  wilayahpersekutuankualalumpur: 'wpkualalumpur',
+  labuan: 'wplabuan',
+  wilayahpersekutuanlabuan: 'wplabuan',
+  putrajaya: 'wpputrajaya',
+  wilayahpersekutuanputrajaya: 'wpputrajaya',
+};
+
+const canonicalizeStateName = (name: string) => {
+  const normalized = normalizeStateName(name);
+  return STATE_SYNONYMS[normalized] || normalized;
+};
 
 interface Props {
   visible: boolean;
@@ -31,6 +62,7 @@ interface Props {
   locationLabel?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  stateName?: string | null;
   dengueHotspotCount?: number;
   dengueOutbreakCount?: number;
   dengueHotspotsData?: ArcGISResponse<HotspotAttributes, PointGeometry>;
@@ -47,6 +79,7 @@ export const DengueModal: React.FC<Props> = ({
   locationLabel,
   latitude,
   longitude,
+  stateName,
   dengueHotspotCount = 0,
   dengueOutbreakCount = 0,
   dengueHotspotsData,
@@ -64,6 +97,83 @@ export const DengueModal: React.FC<Props> = ({
     dengueOutbreakCount,
     isError
   );
+
+  const resolvedStateName = stateName || denguePrediction?.state || null;
+
+  const {
+    data: stateStats,
+    isLoading: isStateStatsLoading,
+    error: stateStatsError,
+  } = useDengueStateStats({ enabled: visible });
+
+  const matchedStateStats = useMemo(() => {
+    if (!stateStats?.features?.length || !resolvedStateName) return null;
+    const target = canonicalizeStateName(resolvedStateName);
+    if (!target) return null;
+
+    const direct = stateStats.features.find(feature => {
+      const candidate = canonicalizeStateName(feature.attributes.NEGERI);
+      return candidate === target;
+    });
+
+    if (direct) return direct as ArcGISFeature<StateAttributes>;
+
+    const fuzzy = stateStats.features.find(feature => {
+      const candidate = canonicalizeStateName(feature.attributes.NEGERI);
+      return candidate.includes(target) || target.includes(candidate);
+    });
+
+    return (fuzzy as ArcGISFeature<StateAttributes>) ?? null;
+  }, [resolvedStateName, stateStats]);
+
+  const nationalTotals = useMemo(() => {
+    if (!stateStats?.features?.length) return null;
+    return stateStats.features.reduce(
+      (acc, feature) => {
+        const { JUMLAH_HARIAN, JUMLAH_KUMULATIF, JUMLAH_KEMATIAN } =
+          feature.attributes;
+        acc.daily += JUMLAH_HARIAN ?? 0;
+        acc.cumulative += JUMLAH_KUMULATIF ?? 0;
+        acc.deaths += JUMLAH_KEMATIAN ?? 0;
+        return acc;
+      },
+      { daily: 0, cumulative: 0, deaths: 0 }
+    );
+  }, [stateStats]);
+
+  const statsRegionLabel = useMemo(() => {
+    if (matchedStateStats) return matchedStateStats.attributes.NEGERI;
+    if (resolvedStateName) return resolvedStateName;
+    if (stateStats?.features?.length) return 'Malaysia';
+    return null;
+  }, [matchedStateStats, resolvedStateName, stateStats]);
+
+  const metricsForDisplay = useMemo(() => {
+    const daily =
+      matchedStateStats?.attributes.JUMLAH_HARIAN ??
+      nationalTotals?.daily ??
+      null;
+    const cumulative =
+      matchedStateStats?.attributes.JUMLAH_KUMULATIF ??
+      nationalTotals?.cumulative ??
+      null;
+    const deaths =
+      matchedStateStats?.attributes.JUMLAH_KEMATIAN ??
+      nationalTotals?.deaths ??
+      null;
+
+    return { daily, cumulative, deaths };
+  }, [matchedStateStats, nationalTotals]);
+
+  const hasStateStatsError = !!stateStatsError;
+  const hasStateStats = !!stateStats?.features?.length;
+
+  const formatMetricValue = (value: number | null) => {
+    if (isStateStatsLoading) return '...';
+    if (hasStateStatsError) return 'N/A';
+    if (value == null) return hasStateStats ? 'N/A' : '—';
+    return value.toLocaleString();
+  };
 
   const handleClose = () => {
     setDengueList('none');
@@ -197,7 +307,36 @@ export const DengueModal: React.FC<Props> = ({
                       %
                     </Text>
                   </View>
-                  <View style={[styles.metricItem, styles.metricItemFull]}>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Daily Cases</Text>
+                    {statsRegionLabel && (
+                      <Text style={styles.metricLabel}>{statsRegionLabel}</Text>
+                    )}
+                    <Text style={styles.metricValue}>
+                      {formatMetricValue(metricsForDisplay.daily)}
+                    </Text>
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Cumulative Cases</Text>
+                    {statsRegionLabel && (
+                      <Text style={styles.metricLabel}>{statsRegionLabel}</Text>
+                    )}
+                    <Text style={styles.metricValue}>
+                      {formatMetricValue(metricsForDisplay.cumulative)}
+                    </Text>
+                    <Text style={styles.metricDetail}>YTD</Text>
+                  </View>
+                  <View style={styles.metricItem}>
+                    <Text style={styles.metricLabel}>Cumulative Deaths</Text>
+                    {statsRegionLabel && (
+                      <Text style={styles.metricLabel}>{statsRegionLabel}</Text>
+                    )}
+                    <Text style={styles.metricValue}>
+                      {formatMetricValue(metricsForDisplay.deaths)}
+                    </Text>
+                    <Text style={styles.metricDetail}>YTD</Text>
+                  </View>
+                  <View style={styles.metricItem}>
                     <Text style={styles.metricLabel}>Source</Text>
                     <Text style={styles.metricValue}>
                       iDengue (MOH Malaysia)
@@ -560,13 +699,20 @@ const styles = StyleSheet.create({
   metricLabel: {
     fontSize: fontSize.xs,
     color: colors.neutral[600],
-    marginBottom: 4,
+    marginBottom: spacing.xs,
     textAlign: 'center',
   },
   metricValue: {
     fontSize: fontSize.sm,
     fontWeight: '600',
     color: colors.neutral[900],
+    textAlign: 'center',
+  },
+  metricDetail: {
+    marginTop: spacing.xxs,
+    fontSize: fontSize.xxs,
+    color: colors.neutral[600],
+    textAlign: 'center',
   },
   locationLine: {
     fontSize: fontSize.xs,
@@ -581,7 +727,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontWeight: '600',
     color: colors.neutral[900],
-    marginBottom: 4,
+    marginBottom: spacing.sm,
     flexShrink: 1,
     flexWrap: 'wrap',
     lineHeight: Math.round(fontSize.base * 1.25),
@@ -593,7 +739,7 @@ const styles = StyleSheet.create({
   selectionSub: {
     fontSize: fontSize.xs,
     color: colors.neutral[600],
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
 });
 

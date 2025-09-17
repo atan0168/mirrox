@@ -82,6 +82,7 @@ interface AvatarExperienceProps {
   isActive?: boolean;
   // Hydration progress percentage (0-100) for visual feedback
   hydrationProgressPercentage?: number;
+  hasNearbyDengueRisk?: boolean;
 }
 
 function AvatarExperience({
@@ -99,6 +100,7 @@ function AvatarExperience({
   scene = 'zenpark',
   isActive = true,
   hydrationProgressPercentage = 50,
+  hasNearbyDengueRisk = false,
 }: AvatarExperienceProps) {
   const screenWidth = Dimensions.get('window').width;
   const effectiveWidth = width ?? screenWidth;
@@ -260,6 +262,13 @@ function AvatarExperience({
     const sleepH = (health.sleepMinutes || 0) / 60;
     return sleepH > 0 && sleepH < 6;
   }, [health]);
+
+  const contextualIdleAnimations = useMemo(() => {
+    const extras: string[] = [];
+    if (isSleepDeprived) extras.push('yawn');
+    if (hasNearbyDengueRisk && !sleepMode) extras.push('swat_bugs');
+    return Array.from(new Set(extras));
+  }, [hasNearbyDengueRisk, isSleepDeprived, sleepMode]);
 
   // Eye-bag effect (dark circles) — auto derive from sleep when not explicitly provided
   // If user sleeps < 7h (FULL_SLEEP_MINUTES), apply 0.1 intensity per
@@ -448,7 +457,9 @@ function AvatarExperience({
     if (!isManualAnimation) {
       // HRV stress animations take priority over AQI animations, but only if stress visuals are enabled
       if (stressEffects.stressLevel === 'high' && stressVisualsEnabled) {
-        console.log('🚨 High HRV stress detected - triggering stress animation');
+        console.log(
+          '🚨 High HRV stress detected - triggering stress animation'
+        );
         setActiveAnimation('M_Standing_Expressions_007'); // Cough animation for high stress
       } else if (aqiAnimationRecommendation) {
         if (
@@ -502,6 +513,15 @@ function AvatarExperience({
               cycleAnimations.push('yawn');
             }
 
+            // Add swat bugs when dengue risk is nearby unless sleeping
+            if (
+              hasNearbyDengueRisk &&
+              !sleepMode &&
+              !cycleAnimations.includes('swat_bugs')
+            ) {
+              cycleAnimations.push('swat_bugs');
+            }
+
             if (cycleAnimations.length > 1) {
               let currentIndex = 0;
               animationCycleRef.current = setInterval(() => {
@@ -545,6 +565,7 @@ function AvatarExperience({
     stressVisualsEnabled,
     isSleepDeprived,
     sleepMode,
+    hasNearbyDengueRisk,
   ]);
 
   // Independent sleep deprivation posture animation (slump) if:
@@ -862,7 +883,7 @@ function AvatarExperience({
               <StressAura
                 intensity={stressEffects.intensity}
                 stressLevel={stressEffects.stressLevel}
-                enabled={stressEffects.stressLevel !== 'none'}
+                enabled={stressEffects.stressLevel !== 'mild'}
               />
               <FloatingStressIcon
                 stressLevel={stressEffects.stressLevel}
@@ -902,7 +923,7 @@ function AvatarExperience({
               animationSpeedScale={energyInfo?.speedScale ?? 1}
               onLoadingChange={handleAvatarLoadingChange}
               onLoadingProgress={handleLoadingProgress}
-              additionalIdleAnimations={isSleepDeprived ? ['yawn'] : []}
+              additionalIdleAnimations={contextualIdleAnimations}
             />
           </group>
 
@@ -986,7 +1007,11 @@ function AvatarExperience({
           <View
             style={[
               styles.statusIndicator,
-              { backgroundColor: getStressIndicatorColor(stressEffects.stressLevel) },
+              {
+                backgroundColor: getStressIndicatorColor(
+                  stressEffects.stressLevel
+                ),
+              },
             ]}
           />
           <Text style={styles.statusLabel}>HRV Stress</Text>
@@ -1000,9 +1025,7 @@ function AvatarExperience({
         hrvMs={stressResult.hrvMs}
         baselineHrvMs={stressResult.baselineHrvMs}
         restingHeartRateBpm={stressResult.restingHeartRateBpm}
-        baselineRestingHeartRateBpm={
-          stressResult.baselineRestingHeartRateBpm
-        }
+        baselineRestingHeartRateBpm={stressResult.baselineRestingHeartRateBpm}
         reasons={stressResult.reasons}
       />
 

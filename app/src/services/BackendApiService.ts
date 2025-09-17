@@ -116,6 +116,15 @@ export interface OutbreakAttributes {
   'SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES': number;
 }
 
+export interface StateAttributes {
+  NEGERI: string;
+  JUMLAH_HARIAN: number;
+  JUMLAH_SPATIALHARIAN: number;
+  JUMLAH_SPATIALKUMCURR: number;
+  JUMLAH_KUMULATIF: number;
+  JUMLAH_KEMATIAN: number;
+}
+
 class BackendApiService {
   private readonly axiosInstance;
 
@@ -413,6 +422,11 @@ class BackendApiService {
       OutbreakAttributes,
       PolygonGeometry
     >;
+  }
+
+  async fetchDengueStateStats(): Promise<ArcGISResponse<StateAttributes>> {
+    const response = await this.axiosInstance.get('/dengue/states');
+    return response.data.data as ArcGISResponse<StateAttributes>;
   }
 
   /**

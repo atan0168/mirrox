@@ -9,6 +9,7 @@ import { useAvatarStore } from '../../store/avatarStore';
 import { assetPreloader } from '../../services/AssetPreloader';
 import { IDLE_ANIMATIONS, AVATAR_DEBUG } from '../../constants';
 import { buildBoneRemapper } from '../../utils/ThreeUtils';
+const ONE_SHOT_ANIMATION_KEYWORDS = ['drinking'];
 
 interface AvatarModelProps {
   url: string;
@@ -950,6 +951,10 @@ export function AvatarModel({
           name: 'swat_bugs',
         },
         {
+          asset: require('../../../assets/animations/drinking.glb'),
+          name: 'drinking',
+        },
+        {
           asset: require('../../../assets/animations/yawn.glb'),
           name: 'yawn',
         },
@@ -1128,7 +1133,17 @@ export function AvatarModel({
         try {
           console.log(`Loading GLB animation ${index}: ${clip.name}`);
           const action = mixer.clipAction(clip);
-          action.setLoop(THREE.LoopRepeat, Infinity);
+          const clipNameLower = clip.name.toLowerCase();
+          const isOneShot = ONE_SHOT_ANIMATION_KEYWORDS.some(keyword =>
+            clipNameLower.includes(keyword)
+          );
+          if (isOneShot) {
+            action.setLoop(THREE.LoopOnce, 0);
+            action.clampWhenFinished = true;
+          } else {
+            action.setLoop(THREE.LoopRepeat, Infinity);
+            action.clampWhenFinished = false;
+          }
           actionsMap.set(clip.name, action);
         } catch (error) {
           console.error(`Error setting up GLB animation ${index}:`, error);

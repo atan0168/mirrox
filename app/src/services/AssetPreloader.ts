@@ -120,6 +120,10 @@ export class AssetPreloader {
           name: 'swat_bugs',
         },
         {
+          asset: require('../../assets/animations/drinking.glb'),
+          name: 'drinking',
+        },
+        {
           asset: require('../../assets/animations/yawn.glb'),
           name: 'yawn',
         },
