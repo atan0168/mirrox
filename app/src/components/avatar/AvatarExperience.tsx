@@ -33,7 +33,6 @@ import { StressInfoModal } from '../ui/StressInfoModal';
 import { useHealthData } from '../../hooks/useHealthData';
 import { computeEnergy } from '../../utils/healthUtils';
 import { healthDataService } from '../../services/HealthDataService';
-import HealthBubble from '../effects/HealthBubble';
 import { SceneEnvironment } from '../scene/SceneEnvironment';
 import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
 import SceneZenPark from '../scene/SceneZenPark';
@@ -365,6 +364,8 @@ function AvatarExperience({
     return recommendation;
   }, [airQualityData?.aqi, stressVisualsEnabled]);
 
+  const recommendedAnimation = aqiAnimationRecommendation?.animation ?? null;
+
   // Sleep mode time window (00:00 - 08:00 local)
   useEffect(() => {
     const checkSleepWindow = () => {
@@ -455,6 +456,13 @@ function AvatarExperience({
 
     // Only apply automatic animations if not manually set
     if (!isManualAnimation) {
+      const shouldPreserveSleepDeprivedIdle =
+        recommendedAnimation === null &&
+        isSleepDeprived &&
+        stressEffects.stressLevel === 'none' &&
+        !sleepMode &&
+        activeAnimation === 'slump';
+
       // HRV stress animations take priority over AQI animations, but only if stress visuals are enabled
       if (stressEffects.stressLevel === 'high' && stressVisualsEnabled) {
         console.log(
@@ -467,12 +475,13 @@ function AvatarExperience({
             activeAnimation,
             aqiAnimationRecommendation,
             isManualAnimation
-          )
+          ) &&
+          !shouldPreserveSleepDeprivedIdle
         ) {
           console.log(
             `🌬️ AQI-based animation: ${aqiAnimationRecommendation.reason}`
           );
-          setActiveAnimation(aqiAnimationRecommendation.animation);
+          setActiveAnimation(recommendedAnimation);
 
           // For moderate air quality (breathing) + sleep deprivation, cycle with yawn
           if (
@@ -537,7 +546,7 @@ function AvatarExperience({
               console.log(
                 `🔄 Single animation remaining: ${cycleAnimations[0]} (unhealthy AQI: ${aqi})`
               );
-            } else {
+            } else if (!shouldPreserveSleepDeprivedIdle) {
               // If no animations left after filtering, use idle animations
               console.log(
                 '🔄 No animations remaining after filtering - using idle animations'
@@ -576,6 +585,9 @@ function AvatarExperience({
   useEffect(() => {
     if (sleepMode || isManualAnimation) return;
     if (!isSleepDeprived) return;
+    if (recommendedAnimation !== null) return;
+    if (stressEffects.stressLevel !== 'none') return;
+
     const lowPriorityAnimations = [
       null,
       'idle_breathing',
@@ -594,6 +606,8 @@ function AvatarExperience({
     isSleepDeprived,
     activeAnimation,
     setActiveAnimation,
+    recommendedAnimation,
+    stressEffects.stressLevel,
   ]);
 
   // Load avatar
@@ -1029,8 +1043,6 @@ function AvatarExperience({
         reasons={stressResult.reasons}
       />
 
-      {/* Health bubble with dynamic text */}
-      {/* <HealthBubble message={energyInfo?.message ?? null} /> */}
       {/* Hydration indicator overlay */}
       <View style={styles.hydrationIndicator}>
         <HydrationIndicator />
