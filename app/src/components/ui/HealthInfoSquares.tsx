@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   Wind,
   Dumbbell,
   Brain,
+  Droplet,
 } from 'lucide-react-native';
 import { Card } from './Card';
 import { Button } from './Button';
@@ -32,6 +33,8 @@ import SleepStackedBarChart from './SleepStackedBarChart';
 import SleepTimesTrendChart from './SleepTimesTrendChart';
 import { useHealthHistory } from '../../hooks/useHealthHistory';
 import { format, parseISO } from 'date-fns';
+import { useHydrationStore } from '../../store/hydrationStore';
+import { getHydrationStatusInfo } from '../../utils/hydrationUtils';
 
 interface HealthInfoSquaresProps {
   health?: HealthSnapshot | null;
@@ -51,6 +54,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const [selectedModal, setSelectedModal] = useState<
     | 'steps'
     | 'sleep'
+    | 'hydration'
     | 'hrv'
     | 'rhr'
     | 'energy'
@@ -70,6 +74,62 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const respiratoryRateBrpm = health?.respiratoryRateBrpm ?? null;
   const workoutsCount = health?.workoutsCount ?? null;
   const isAndroid = Platform.OS === 'android';
+
+  const currentHydrationMl = useHydrationStore(
+    state => state.currentHydrationMl
+  );
+  const hydrationGoalMl = useHydrationStore(state => state.dailyGoalMl);
+  const hydrationProgressPercentage = useHydrationStore(state =>
+    state.getProgressPercentage()
+  );
+  const hydrationStatus = useHydrationStore(state => state.getHydrationStatus());
+
+  const hydrationStatusInfo = useMemo(
+    () => getHydrationStatusInfo(hydrationProgressPercentage),
+    [hydrationProgressPercentage]
+  );
+  const hydrationRemainingMl = Math.max(0, hydrationGoalMl - currentHydrationMl);
+
+  const getHydrationColor = () => {
+    switch (hydrationStatus) {
+      case 'severely_dehydrated':
+      case 'dehydrated':
+        return colors.red[500];
+      case 'low':
+        return colors.orange[600];
+      case 'adequate':
+        return colors.yellow[500];
+      case 'optimal':
+        return colors.green[500];
+      case 'over_hydrated':
+        return colors.sky[500];
+      default:
+        return colors.neutral[400];
+    }
+  };
+
+  const getHydrationIcon = () => (
+    <Droplet size={24} color={getHydrationColor()} />
+  );
+
+  const hydrationLabel = () => {
+    switch (hydrationStatus) {
+      case 'severely_dehydrated':
+        return 'Critical';
+      case 'dehydrated':
+        return 'Dehydrated';
+      case 'low':
+        return 'Low';
+      case 'adequate':
+        return 'Adequate';
+      case 'optimal':
+        return 'Optimal';
+      case 'over_hydrated':
+        return 'Over hydrated';
+      default:
+        return 'Unknown';
+    }
+  };
 
   // Steps history state (for steps modal chart)
   const [stepsHistoryWindow, setStepsHistoryWindow] = useState<7 | 14 | 30>(7);
@@ -423,6 +483,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     key:
       | 'steps'
       | 'sleep'
+      | 'hydration'
       | 'hrv'
       | 'rhr'
       | 'energy'
@@ -649,6 +710,49 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       ],
     });
 
+  const renderHydrationModal = () =>
+    renderMetricModal('hydration', {
+      title: 'Hydration Today',
+      valueText: `${Math.max(0, Math.round(currentHydrationMl))} mL`,
+      color: getHydrationColor(),
+      statusText: hydrationLabel(),
+      extra: (
+        <View style={styles.metricsSection}>
+          <Text style={styles.sectionTitle}>Recommendations</Text>
+          <Card>
+            <View style={styles.recommendationList}>
+              <Text
+                style={[styles.recommendationMessage, { color: getHydrationColor() }]}
+              >
+                {hydrationStatusInfo.message}
+              </Text>
+              {hydrationStatusInfo.recommendations.map((item, idx) => (
+                <Text key={idx} style={styles.recommendationItem}>
+                  • {item}
+                </Text>
+              ))}
+            </View>
+          </Card>
+        </View>
+      ),
+      summary: [
+        { label: 'Status', value: hydrationLabel() },
+        { label: 'Goal', value: `${Math.round(hydrationGoalMl)} mL` },
+        {
+          label: 'Consumed',
+          value: `${Math.max(0, Math.round(currentHydrationMl))} mL`,
+        },
+        {
+          label: 'Remaining',
+          value: `${Math.max(0, Math.round(hydrationRemainingMl))} mL`,
+        },
+        {
+          label: 'Progress',
+          value: `${Math.min(200, Math.round(hydrationProgressPercentage))}%`,
+        },
+      ],
+    });
+
   // Newly added modals using the shared renderer
   const renderHRVModal = () =>
     renderMetricModal('hrv', {
@@ -835,6 +939,21 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           </Text>
         </TouchableOpacity>
 
+        {/* Hydration Square */}
+        <TouchableOpacity
+          style={[styles.square, { borderColor: getHydrationColor() }]}
+          onPress={() => setSelectedModal('hydration')}
+        >
+          <View style={styles.squareIcon}>{getHydrationIcon()}</View>
+          <Text style={styles.squareValue}>
+            {`${Math.max(0, Math.round(currentHydrationMl))} mL`}
+          </Text>
+          <Text style={styles.squareLabel}>Hydration</Text>
+          <Text style={[styles.squareStatus, { color: getHydrationColor() }]}>
+            {hydrationLabel()}
+          </Text>
+        </TouchableOpacity>
+
         {/* HRV Square */}
         <TouchableOpacity
           style={[styles.square, { borderColor: getHRVColor() }]}
@@ -972,6 +1091,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
 
       {renderStepsModal()}
       {renderSleepModal()}
+      {renderHydrationModal()}
       {renderHRVModal()}
       {renderRHRModal()}
       {renderEnergyModal()}
@@ -1176,5 +1296,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.green[700],
     fontWeight: '700',
+  },
+  recommendationList: {
+    paddingVertical: spacing.sm,
+  },
+  recommendationMessage: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.neutral[800],
+    marginBottom: spacing.sm,
+  },
+  recommendationItem: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[700],
+    marginBottom: spacing.xs,
   },
 });
