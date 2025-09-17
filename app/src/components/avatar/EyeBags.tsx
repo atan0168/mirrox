@@ -1,178 +1,320 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { useAvatarStore } from '../../store/avatarStore';
+import { AVATAR_DEBUG } from '../../constants';
 
-interface EyeBagsProps {
-  target: THREE.Object3D | null; // typically head mesh
-  enabled: boolean;
-  intensity?: number; // 0..1
-  offsetX?: number; // eye horizontal offset from head center
-  offsetY?: number; // vertical offset from eye line
-  offsetZ?: number; // forward offset to avoid z-fighting
-  width?: number; // plane width
-  height?: number; // plane height
-  aspectX?: number; // elliptic stretch on X (wider = more oval)
-}
-
-// Simple radial-alpha shader for soft, dark under-eye circles
-const EyeBagMaterial = (
-  color: THREE.Color | string | number,
-  opacity: number
-) => {
-  const uniforms = {
-    uColor: { value: new THREE.Color(color) },
-    uOpacity: { value: opacity },
-    uRadius: { value: 0.5 },
-    uSoftness: { value: 0.45 },
+type EyeBagShaderMaterial = THREE.ShaderMaterial & {
+  uniforms: {
+    intensity: { value: number };
+    aspect: { value: number };
+    softness: { value: number };
+    verticalShift: { value: number };
+    color: { value: THREE.Color };
   };
-
-  const mat = new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.NormalBlending,
-    uniforms,
-    vertexShader: `
-      varying vec2 vUv;
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      precision mediump float;
-      varying vec2 vUv;
-      uniform vec3 uColor;
-      uniform float uOpacity;
-      uniform float uRadius;
-      uniform float uSoftness;
-      void main() {
-        // Centered radial falloff for soft edges
-        vec2 p = vUv * 2.0 - 1.0;
-        float r = length(p);
-        float edge = smoothstep(uRadius, uRadius - uSoftness, r);
-        float a = edge * uOpacity;
-        gl_FragColor = vec4(uColor, a);
-      }
-    `,
-  });
-  return mat;
 };
 
-export default function EyeBags({
-  target,
-  enabled,
-  intensity = 0.6,
-  offsetX = -0.035,
-  offsetY = 0.065,
-  offsetZ = 0.11,
-  width = 0.1,
-  height = 0.065,
-  aspectX = 1.6,
-}: EyeBagsProps) {
-  const containerRef = useRef<THREE.Group | null>(null);
-  const leftRef = useRef<THREE.Mesh | null>(null);
-  const rightRef = useRef<THREE.Mesh | null>(null);
-  const geomRef = useRef<THREE.PlaneGeometry | null>(null);
-  const matRef = useRef<THREE.ShaderMaterial | null>(null);
+type EyeBagMesh = THREE.Mesh<THREE.PlaneGeometry, EyeBagShaderMaterial>;
 
-  // Clamp intensity and derive opacity
-  const clamped = Math.max(0, Math.min(1, intensity));
-  const opacity = 0.35 + clamped * 0.4; // 0.35..0.75
+interface EyeBagsState {
+  left: { mesh: EyeBagMesh; parent: THREE.Object3D };
+  right: { mesh: EyeBagMesh; parent: THREE.Object3D };
+}
 
-  // Create or update material
+const EYE_BAG_VERTEX_SHADER = /* glsl */ `
+  varying vec2 vUv;
+
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const EYE_BAG_FRAGMENT_SHADER = /* glsl */ `
+  varying vec2 vUv;
+  uniform float intensity;
+  uniform float aspect;
+  uniform float softness;
+  uniform float verticalShift;
+  uniform vec3 color;
+
+  void main() {
+    vec2 uv = vUv;
+    vec2 centered = uv - vec2(0.5, verticalShift);
+    centered.x *= aspect;
+    centered.y = max(centered.y, -0.3);
+
+    float radial = length(centered);
+    float radialMask = 1.0 - smoothstep(0.22, 0.68, radial * softness);
+
+    float lowerFade = smoothstep(0.08, 0.7, uv.y);
+    float upperFade = 1.0 - smoothstep(0.82, 0.98, uv.y);
+
+    float mask = clamp(radialMask * lowerFade * upperFade, 0.0, 1.0);
+    float alpha = intensity * mask;
+
+    if (alpha <= 0.001) discard;
+
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
+const EYE_BONE_HINTS: Record<'left' | 'right', string[]> = {
+  left: [
+    'Eye_L',
+    'LeftEye',
+    'eyeLeft',
+    'eye_left',
+    'Wolf3D_EyeLeft',
+    'mixamorigLeftEye',
+    'LeftEye_Bone',
+  ],
+  right: [
+    'Eye_R',
+    'RightEye',
+    'eyeRight',
+    'eye_right',
+    'Wolf3D_EyeRight',
+    'mixamorigRightEye',
+    'RightEye_Bone',
+  ],
+};
+
+const HEAD_BONE_HINTS = [
+  'Head',
+  'Wolf3D_Head',
+  'mixamorigHead',
+  'HeadTop_End',
+  'Armature_Head',
+];
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+const createEyeBagMaterial = (): EyeBagShaderMaterial => {
+  const material = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    side: THREE.DoubleSide,
+    vertexShader: EYE_BAG_VERTEX_SHADER,
+    fragmentShader: EYE_BAG_FRAGMENT_SHADER,
+    uniforms: {
+      intensity: { value: 0 },
+      aspect: { value: 1.0 },
+      softness: { value: 1.35 },
+      verticalShift: { value: 0.6 },
+      color: { value: new THREE.Color(0.18, 0.13, 0.15) },
+    },
+  });
+
+  material.name = 'AvatarEyeBagMaterial';
+  return material as EyeBagShaderMaterial;
+};
+
+const findHeadBone = (skeleton: THREE.Skeleton): THREE.Bone | null => {
+  for (const hint of HEAD_BONE_HINTS) {
+    const direct = skeleton.bones.find(b => b.name === hint);
+    if (direct) return direct;
+  }
+
+  return (
+    skeleton.bones.find(bone => bone.name?.toLowerCase?.().includes('head')) ||
+    null
+  );
+};
+
+const findEyeBone = (
+  skeleton: THREE.Skeleton,
+  side: 'left' | 'right'
+): THREE.Bone | null => {
+  for (const hint of EYE_BONE_HINTS[side]) {
+    const direct = skeleton.bones.find(b => b.name === hint);
+    if (direct) return direct;
+  }
+
+  const fallback = skeleton.bones.find(bone => {
+    const name = bone.name?.toLowerCase?.();
+    if (!name || !name.includes('eye')) return false;
+    if (side === 'left' && name.includes('right')) return false;
+    if (side === 'right' && name.includes('left')) return false;
+    if (name.includes(side)) return true;
+    return side === 'left'
+      ? name.endsWith('_l') || name.endsWith('.l')
+      : name.endsWith('_r') || name.endsWith('.r');
+  });
+
+  return fallback || null;
+};
+
+interface EyeBagsProps {
+  headMesh: THREE.SkinnedMesh | null;
+}
+
+export function EyeBags({ headMesh }: EyeBagsProps) {
+  const eyeBagsOverrideEnabled = useAvatarStore(
+    state => state.eyeBagsOverrideEnabled
+  );
+  const eyeBagsAutoEnabled = useAvatarStore(state => state.eyeBagsAutoEnabled);
+  const eyeBagsAutoIntensity = useAvatarStore(
+    state => state.eyeBagsAutoIntensity
+  );
+  const eyeBagsIntensity = useAvatarStore(state => state.eyeBagsIntensity);
+  const eyeBagsOffsetX = useAvatarStore(state => state.eyeBagsOffsetX);
+  const eyeBagsOffsetY = useAvatarStore(state => state.eyeBagsOffsetY);
+  const eyeBagsOffsetZ = useAvatarStore(state => state.eyeBagsOffsetZ);
+  const eyeBagsWidth = useAvatarStore(state => state.eyeBagsWidth);
+  const eyeBagsHeight = useAvatarStore(state => state.eyeBagsHeight);
+  const eyeBagsAspectX = useAvatarStore(state => state.eyeBagsAspectX);
+
+  const stateRef = useRef<EyeBagsState | null>(null);
+
+  const disposeEyeBags = useCallback(() => {
+    const current = stateRef.current;
+    if (!current) return;
+
+    const removeOverlay = ({ mesh, parent }: EyeBagsState['left']) => {
+      if (parent && mesh.parent === parent) {
+        parent.remove(mesh);
+      }
+      mesh.geometry.dispose();
+      mesh.material.dispose();
+    };
+
+    removeOverlay(current.left);
+    removeOverlay(current.right);
+    stateRef.current = null;
+  }, []);
+
+  const effectiveIntensity = useMemo(() => {
+    if (eyeBagsOverrideEnabled) return clamp01(eyeBagsIntensity);
+    if (eyeBagsAutoEnabled) return clamp01(eyeBagsAutoIntensity);
+    return 0;
+  }, [
+    eyeBagsAutoEnabled,
+    eyeBagsAutoIntensity,
+    eyeBagsIntensity,
+    eyeBagsOverrideEnabled,
+  ]);
+
+  const applyParameters = useCallback(() => {
+    const state = stateRef.current;
+    if (!state) return;
+
+    const intensity = effectiveIntensity;
+    const aspect = Math.max(0.1, eyeBagsAspectX);
+    const visible = intensity > 0.01;
+
+    const overlays: Array<{ mesh: EyeBagMesh; side: 'left' | 'right' }> = [
+      { mesh: state.left.mesh, side: 'left' },
+      { mesh: state.right.mesh, side: 'right' },
+    ];
+
+    overlays.forEach(({ mesh, side }) => {
+      const material = mesh.material as EyeBagShaderMaterial | undefined;
+      if (!material?.uniforms) {
+        if (AVATAR_DEBUG) {
+          console.warn('Eye-bag material missing uniforms, skipping update.');
+        }
+        return;
+      }
+
+      const uniforms = material.uniforms;
+      uniforms.intensity.value = intensity;
+      uniforms.aspect.value = aspect;
+      uniforms.softness.value = 1.15 + eyeBagsWidth * 1.45;
+      uniforms.verticalShift.value = 0.55 + eyeBagsHeight * 0.6;
+      material.needsUpdate = true;
+
+      mesh.visible = visible;
+      if (!visible) return;
+
+      const offsetX = side === 'left' ? eyeBagsOffsetX : -eyeBagsOffsetX;
+      mesh.position.set(offsetX, eyeBagsOffsetY, eyeBagsOffsetZ);
+      mesh.scale.set(eyeBagsWidth, eyeBagsHeight, 1);
+    });
+  }, [
+    AVATAR_DEBUG,
+    effectiveIntensity,
+    eyeBagsAspectX,
+    eyeBagsHeight,
+    eyeBagsOffsetX,
+    eyeBagsOffsetY,
+    eyeBagsOffsetZ,
+    eyeBagsWidth,
+  ]);
+
   useEffect(() => {
-    if (!matRef.current) {
-      matRef.current = EyeBagMaterial('#2b1f1f', opacity);
-      matRef.current.side = THREE.DoubleSide;
-      // Make it feel like part of the skin by using depth testing and multiply blending
-      matRef.current.depthTest = true;
-      matRef.current.depthWrite = false;
-      matRef.current.transparent = true;
-      matRef.current.blending = THREE.MultiplyBlending;
-      matRef.current.premultipliedAlpha = true;
-      // Slight polygon offset to sit just above the skin and avoid z-fighting
-      matRef.current.polygonOffset = true;
-      matRef.current.polygonOffsetFactor = -1;
-      matRef.current.polygonOffsetUnits = -1;
-      matRef.current.needsUpdate = true;
-    } else if (matRef.current.uniforms?.uOpacity) {
-      matRef.current.uniforms.uOpacity.value = opacity;
+    if (!headMesh || !headMesh.skeleton) {
+      disposeEyeBags();
+      return;
     }
-  }, [opacity]);
 
-  // Ensure geometry exists and matches width/height
-  useEffect(() => {
-    if (geomRef.current) {
-      geomRef.current.dispose();
-      geomRef.current = null;
+    const skeleton = headMesh.skeleton;
+    const headBone = findHeadBone(skeleton);
+    const leftParent = findEyeBone(skeleton, 'left') || headBone;
+    const rightParent = findEyeBone(skeleton, 'right') || headBone;
+
+    if (!leftParent || !rightParent) {
+      disposeEyeBags();
+      if (AVATAR_DEBUG) {
+        console.warn('Unable to locate eye bones for eye-bag placement.');
+      }
+      return;
     }
-    geomRef.current = new THREE.PlaneGeometry(width, height, 1, 1);
-    if (leftRef.current) leftRef.current.geometry = geomRef.current;
-    if (rightRef.current) rightRef.current.geometry = geomRef.current;
-  }, [width, height]);
 
-  // Attach container to head target imperatively
-  useEffect(() => {
-    if (!enabled || !target) return;
+    disposeEyeBags();
 
-    if (!containerRef.current) containerRef.current = new THREE.Group();
-    const container = containerRef.current;
+    const leftMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      createEyeBagMaterial()
+    ) as EyeBagMesh;
+    leftMesh.name = 'AvatarEyeBagLeft';
+    leftMesh.renderOrder = 9999;
+    leftMesh.frustumCulled = false;
+    leftMesh.rotation.y = Math.PI;
+    leftMesh.userData.__isEyeBagOverlay = true;
 
-    if (!leftRef.current) {
-      leftRef.current = new THREE.Mesh(
-        geomRef.current || new THREE.PlaneGeometry(width, height, 1, 1),
-        matRef.current || EyeBagMaterial('#2b1f1f', opacity)
+    const rightMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      createEyeBagMaterial()
+    ) as EyeBagMesh;
+    rightMesh.name = 'AvatarEyeBagRight';
+    rightMesh.renderOrder = 9999;
+    rightMesh.frustumCulled = false;
+    rightMesh.rotation.y = Math.PI;
+    rightMesh.userData.__isEyeBagOverlay = true;
+
+    leftParent.add(leftMesh);
+    rightParent.add(rightMesh);
+
+    stateRef.current = {
+      left: { mesh: leftMesh, parent: leftParent },
+      right: { mesh: rightMesh, parent: rightParent },
+    };
+
+    if (AVATAR_DEBUG) {
+      console.log(
+        'Eye-bags attached to parents:',
+        leftParent.name,
+        rightParent.name
       );
-      // Normal render order to let depth test handle occlusion
-      container.add(leftRef.current);
-    }
-    if (!rightRef.current) {
-      rightRef.current = new THREE.Mesh(
-        geomRef.current || new THREE.PlaneGeometry(width, height, 1, 1),
-        matRef.current || EyeBagMaterial('#2b1f1f', opacity)
-      );
-      // Normal render order to let depth test handle occlusion
-      container.add(rightRef.current);
     }
 
-    // Add to head
-    target.add(container);
-
-    // Initial placement scaled by head bounds
-    try {
-      const box = new THREE.Box3().setFromObject(target);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      const headW = size.x || 0.18;
-      const headH = size.y || 0.24;
-      const headD = size.z || 0.16;
-
-      const dx = offsetX || headW * 0.28;
-      const dy = offsetY || -headH * 0.1;
-      const dz = offsetZ || headD * 0.12;
-      if (leftRef.current) leftRef.current.position.set(-dx, dy, dz);
-      if (rightRef.current) rightRef.current.position.set(dx, dy, dz);
-    } catch {}
+    applyParameters();
 
     return () => {
-      if (container.parent) container.parent.remove(container);
+      disposeEyeBags();
     };
-  }, [enabled, target]);
+  }, [headMesh, applyParameters, disposeEyeBags]);
 
-  // Live offset updates
   useEffect(() => {
-    if (!enabled) return;
-    if (leftRef.current)
-      leftRef.current.position.set(-offsetX, offsetY, offsetZ);
-    if (rightRef.current)
-      rightRef.current.position.set(offsetX, offsetY, offsetZ);
-  }, [enabled, offsetX, offsetY, offsetZ]);
+    applyParameters();
+  }, [applyParameters]);
 
-  // Slightly squash/extend on X to form an oval shadow
   useEffect(() => {
-    if (leftRef.current) leftRef.current.scale.set(aspectX, 1, 1);
-    if (rightRef.current) rightRef.current.scale.set(aspectX, 1, 1);
-  }, [aspectX]);
+    return () => {
+      disposeEyeBags();
+    };
+  }, [disposeEyeBags]);
 
-  // Imperative attachment only; no JSX needed
   return null;
 }

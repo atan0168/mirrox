@@ -270,8 +270,8 @@ function AvatarExperience({
   }, [hasNearbyDengueRisk, isSleepDeprived, sleepMode]);
 
   // Eye-bag effect (dark circles) — auto derive from sleep when not explicitly provided
-  // If user sleeps < 7h (FULL_SLEEP_MINUTES), apply 0.1 intensity per
-  // consecutive day of insufficient sleep, capped at 0.6. Disable when >= 7h.
+  // If user sleeps < 7.5h (FULL_SLEEP_MINUTES), apply 0.1 intensity per
+  // consecutive day of insufficient sleep, capped at 0.6. Disable when >= 7.5h.
   const setEyeBagsAuto = useAvatarStore(s => s.setEyeBagsAuto);
   useEffect(() => {
     let cancelled = false;
@@ -282,35 +282,58 @@ function AvatarExperience({
         return;
       }
 
+      if (sleepMin >= FULL_SLEEP_MINUTES) {
+        if (!cancelled) setEyeBagsAuto(false, 0);
+        return;
+      }
+
       try {
         const history = await healthDataService.getHistory();
         const snapshots = history?.snapshots ?? [];
 
-        // Count consecutive days (from latest backwards) with sleep < FULL_SLEEP_MINUTES and > 0
-        let streak = 0;
-        for (let i = snapshots.length - 1; i >= 0; i--) {
-          const m = snapshots[i]?.sleepMinutes ?? 0;
-          if (m > 0 && m < FULL_SLEEP_MINUTES) streak++;
-          else break; // reset streak on sufficient or missing data
-        }
+        const todayDate = health?.date ?? null;
+        let streak = 1; // We've already confirmed today's sleep was insufficient
+        let previousDate: Date | null = todayDate
+          ? new Date(`${todayDate}T00:00:00`)
+          : null;
 
-        // Fallback to just last night if no history snapshots available
-        if (snapshots.length === 0) {
-          const insufficient = sleepMin > 0 && sleepMin < FULL_SLEEP_MINUTES;
-          streak = insufficient ? 1 : 0;
+        for (let i = snapshots.length - 1; i >= 0 && streak < 6; i--) {
+          const snapshot = snapshots[i];
+          if (!snapshot) continue;
+
+          // Skip today's snapshot if it's already counted via `health`
+          if (todayDate && snapshot.date === todayDate) {
+            continue;
+          }
+
+          const minutes = snapshot.sleepMinutes ?? 0;
+          if (minutes > 0 && minutes < FULL_SLEEP_MINUTES) {
+            if (snapshot.date) {
+              const currentDate = new Date(`${snapshot.date}T00:00:00`);
+              if (previousDate) {
+                const diffDays = Math.round(
+                  (previousDate.getTime() - currentDate.getTime()) /
+                    (24 * 60 * 60 * 1000)
+                );
+                if (diffDays > 1) break; // Non-consecutive day -> stop streak
+              }
+              previousDate = currentDate;
+            }
+            streak += 1;
+          } else {
+            break; // Streak broken by sufficient sleep or missing data
+          }
         }
 
         const enabled = streak > 0;
         const intensity = enabled
-          ? Math.min(0.6, Math.max(0.1, streak * 0.1))
+          ? Math.min(0.7, Math.max(0.1, streak * 0.1))
           : 0;
 
         if (!cancelled) setEyeBagsAuto(enabled, intensity);
       } catch (e) {
         // On error, degrade gracefully to last-night-only logic
-        const insufficient = sleepMin > 0 && sleepMin < FULL_SLEEP_MINUTES;
-        const intensity = insufficient ? 0.1 : 0;
-        if (!cancelled) setEyeBagsAuto(insufficient, intensity);
+        if (!cancelled) setEyeBagsAuto(true, 0.1);
       }
     };
 
@@ -318,7 +341,7 @@ function AvatarExperience({
     return () => {
       cancelled = true;
     };
-  }, [health?.sleepMinutes, setEyeBagsAuto]);
+  }, [health?.sleepMinutes, health?.date, setEyeBagsAuto]);
 
   // Calculate automatic smog effects based on air quality
   const autoSmogEffects = useMemo(() => {
