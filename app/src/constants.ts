@@ -20,7 +20,7 @@ export const IDLE_ANIMATIONS = [
 ];
 
 export const FULL_SLEEP_MINUTES = 7.5 * 60; // 100% energy when last-night sleep >= 7.5h
-export const AWAKE_DEPLETION_PER_MIN = 100 / (16 * 60); // ~16 hours awake to reach 0%
+export const AWAKE_DEPLETION_PER_MIN = 100 / (24 * 60); // 24 hours to reach 0%
 export const TICK_MS = 30 * 1000; // update roughly every 30s
 
 export const RPM_SUBDOMAIN = 'mirrox';

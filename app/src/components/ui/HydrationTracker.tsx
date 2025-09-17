@@ -110,7 +110,7 @@ export const HydrationTracker: React.FC<HydrationTrackerProps> = ({
             style={styles.refreshButton}
             onPress={() => hydrationService.checkForNewDay()}
             accessibilityLabel="Reset hydration for new day"
-            accessibilityHint="Checks for a new day and applies overnight adjustments"
+            accessibilityHint="Refreshes today's hydration totals and goal"
           >
             <RefreshCw size={16} color={colors.neutral[600]} />
           </TouchableOpacity>

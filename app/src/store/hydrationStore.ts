@@ -2,28 +2,31 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { HydrationStateRepository } from '../services/db/HydrationStateRepository';
 
+export interface HydrationIntakeEntry {
+  id: string;
+  day: string; // YYYY-MM-DD format
+  amountMl: number;
+  fluidType?: string;
+  timestamp: string; // ISO timestamp
+}
+
 export interface HydrationState {
-  // Current hydration state for today
-  currentHydrationMl: number; // Current hydration level (can be negative for dehydration)
-  dailyGoalMl: number; // Daily hydration goal
-  currentDay: string; // YYYY-MM-DD format
-  lastActivitySync: string | null; // ISO timestamp of last activity-based deduction
-  lastBasalUpdate: string | null; // ISO timestamp of last basal fluid deduction
+  // Current hydration totals for the active day
+  currentHydrationMl: number; // Sum of intake for the current day
+  dailyGoalMl: number; // Climate-adjusted hydration goal for the day
+  baselineGoalMl: number | null; // Baseline goal before climate adjustments
+  currentDay: string; // YYYY-MM-DD format for the active tracking period
+  intakeEntries: HydrationIntakeEntry[]; // All recorded intakes (historical)
 
   // Actions
   setDailyGoal: (goalMl: number) => void;
-  logFluidIntake: (amountMl: number) => void;
-  processActivityDeduction: (activityData: {
-    type: string;
-    durationMinutes: number;
-    intensity: 'low' | 'moderate' | 'high' | 'very_high';
+  setBaselineGoal: (goalMl: number | null) => void;
+  logFluidIntake: (params: {
+    amountMl: number;
+    fluidType?: string;
+    timestamp?: string;
   }) => void;
-  processNightlyDehydration: (sleepDurationMinutes: number) => void;
-  processBasalFluidLoss: () => void;
-  adjustGoalForClimate: (
-    heatIndexCategory: 'normal' | 'caution' | 'extreme_caution' | 'danger'
-  ) => void;
-  resetForNewDay: (newDay: string, sleepDurationMinutes?: number) => void;
+  resetForNewDay: (newDay: string) => void;
 
   // Computed getters
   getProgressPercentage: () => number;
@@ -38,141 +41,91 @@ export interface HydrationState {
 
 const HYDRATION_PERSIST_KEY = 'hydration-state';
 
-// Basal metabolic water loss per hour (mL)
-const BASAL_FLUID_LOSS_PER_HOUR = 50; // Approximate daytime insensible loss (~1.2L/day)
-
 const toDayString = (date: Date): string => date.toISOString().split('T')[0];
 
-const getLocalDayStart = (dayString: string): Date => {
-  const [year, month, day] = dayString.split('-').map(Number);
-  const start = new Date();
-  start.setFullYear(year, month - 1, day);
-  start.setHours(0, 0, 0, 0);
-  return start;
-};
-
 const initialDay = toDayString(new Date());
-const initialBasalUpdateIso = getLocalDayStart(initialDay).toISOString();
+
+const generateEntryId = (): string =>
+  `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const sumIntakeForDay = (
+  entries: HydrationIntakeEntry[],
+  day: string
+): number =>
+  entries.reduce((total, entry) => {
+    if (entry.day === day) {
+      return total + entry.amountMl;
+    }
+    return total;
+  }, 0);
 
 export const useHydrationStore = create<HydrationState>()(
   persist(
     (set, get) => ({
       currentHydrationMl: 0,
-      dailyGoalMl: 2000, // Default 2L
+      dailyGoalMl: 2000, // Default 2L baseline until we compute a personalised goal
+      baselineGoalMl: null,
       currentDay: initialDay,
-      lastActivitySync: null,
-      lastBasalUpdate: initialBasalUpdateIso,
+      intakeEntries: [],
 
       setDailyGoal: (goalMl: number) => {
-        set({ dailyGoalMl: Math.max(500, Math.min(5000, goalMl)) }); // Reasonable bounds
+        const safeGoal = Math.max(500, Math.min(5000, Math.round(goalMl)));
+        set({ dailyGoalMl: safeGoal });
       },
 
-      logFluidIntake: (amountMl: number) => {
-        set(state => ({
-          currentHydrationMl: state.currentHydrationMl + Math.max(0, amountMl),
-        }));
+      setBaselineGoal: (goalMl: number | null) => {
+        if (goalMl == null) {
+          set({ baselineGoalMl: null });
+          return;
+        }
+        const safeGoal = Math.max(500, Math.min(5000, Math.round(goalMl)));
+        set({ baselineGoalMl: safeGoal });
       },
 
-      processActivityDeduction: activityData => {
-        const { durationMinutes, intensity } = activityData;
+      logFluidIntake: ({ amountMl, fluidType, timestamp }) => {
+        const amount = Math.max(0, Math.round(amountMl));
+        if (!Number.isFinite(amount) || amount <= 0) {
+          return;
+        }
 
-        // Fluid loss rates per minute based on intensity (mL/min)
-        const lossRates = {
-          low: 3, // ~180mL/hour (light walking)
-          moderate: 5, // ~300mL/hour (brisk walking, light jogging)
-          high: 8, // ~480mL/hour (running, cycling)
-          very_high: 12, // ~720mL/hour (intense exercise)
+        const now = timestamp ? new Date(timestamp) : new Date();
+        const entryTimestamp = now.toISOString();
+        const entryDay = toDayString(now);
+        const entry: HydrationIntakeEntry = {
+          id: generateEntryId(),
+          day: entryDay,
+          amountMl: amount,
+          fluidType,
+          timestamp: entryTimestamp,
         };
 
-        const fluidLoss = durationMinutes * lossRates[intensity];
-
-        set(state => ({
-          currentHydrationMl: state.currentHydrationMl - fluidLoss,
-          lastActivitySync: new Date().toISOString(),
-        }));
-      },
-
-      processNightlyDehydration: (sleepDurationMinutes: number) => {
-        // Insensible water loss during sleep: ~0.5-1L over 8 hours
-        // Conservative estimate: 60mL per hour of sleep
-        const sleepFluidLoss = Math.round((sleepDurationMinutes / 60) * 60);
-
-        set(state => ({
-          currentHydrationMl: state.currentHydrationMl - sleepFluidLoss,
-        }));
-      },
-
-      processBasalFluidLoss: () => {
-        const now = new Date();
         set(state => {
-          const lastUpdate = state.lastBasalUpdate
-            ? new Date(state.lastBasalUpdate)
-            : getLocalDayStart(state.currentDay);
-
-          const hoursSinceUpdate =
-            (now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
-
-          if (hoursSinceUpdate <= 0.5) {
-            if (!state.lastBasalUpdate) {
-              return { lastBasalUpdate: now.toISOString() };
-            }
-            return {};
-          }
-
-          const cappedHours = Math.min(hoursSinceUpdate, 48); // limit runaway deficits
-          const basalLoss = Math.round(cappedHours * BASAL_FLUID_LOSS_PER_HOUR);
-
-          if (basalLoss <= 0) {
-            return { lastBasalUpdate: now.toISOString() };
-          }
+          const updatedEntries = [...state.intakeEntries, entry];
+          const isToday = entryDay === state.currentDay;
+          const updatedHydration = isToday
+            ? state.currentHydrationMl + amount
+            : state.currentHydrationMl;
 
           return {
-            currentHydrationMl: state.currentHydrationMl - basalLoss,
-            lastBasalUpdate: now.toISOString(),
+            intakeEntries: updatedEntries,
+            currentHydrationMl: updatedHydration,
           };
         });
       },
 
-      adjustGoalForClimate: heatIndexCategory => {
-        const state = get();
-        let adjustmentFactor = 1.0;
-
-        switch (heatIndexCategory) {
-          case 'extreme_caution':
-            adjustmentFactor = 1.15; // 15% increase
-            break;
-          case 'danger':
-            adjustmentFactor = 1.2; // 20% increase
-            break;
-          default:
-            adjustmentFactor = 1.0;
-        }
-
-        const adjustedGoal = Math.round(state.dailyGoalMl * adjustmentFactor);
-        set({ dailyGoalMl: adjustedGoal });
-      },
-
-      resetForNewDay: (newDay: string, sleepDurationMinutes = 0) => {
-        // Start new day with deficit from overnight dehydration
-        const overnightDeficit =
-          sleepDurationMinutes > 0
-            ? -Math.round((sleepDurationMinutes / 60) * 60) // 60mL per hour of sleep
-            : -500; // Default 500mL deficit if no sleep data
-
-        set({
+      resetForNewDay: (newDay: string) => {
+        set(state => ({
           currentDay: newDay,
-          currentHydrationMl: overnightDeficit,
-          lastActivitySync: null,
-          lastBasalUpdate: getLocalDayStart(newDay).toISOString(),
-        });
+          currentHydrationMl: sumIntakeForDay(state.intakeEntries, newDay),
+        }));
       },
 
       getProgressPercentage: () => {
         const { currentHydrationMl: current, dailyGoalMl: goal } = get();
         if (!Number.isFinite(goal) || goal <= 0) return 0; // avoid div-by-zero / bad input
 
-        const pct = (current / goal + 1) * 50; // -goal→0%, 0→50%, +goal→100%
-        return Math.max(0, Math.min(200, pct)); // allow up to 200% if you want to show overshoot
+        const pct = (current / goal) * 100;
+        return Math.max(0, Math.min(200, pct)); // cap displayed progress to 200%
       },
 
       getHydrationStatus: () => {
@@ -189,7 +142,6 @@ export const useHydrationStore = create<HydrationState>()(
     }),
     {
       name: HYDRATION_PERSIST_KEY,
-      version: 1,
       storage: createJSONStorage(() => ({
         getItem: async (name: string) => {
           return await HydrationStateRepository.get(name);
@@ -204,9 +156,9 @@ export const useHydrationStore = create<HydrationState>()(
       partialize: state => ({
         currentHydrationMl: state.currentHydrationMl,
         dailyGoalMl: state.dailyGoalMl,
+        baselineGoalMl: state.baselineGoalMl,
         currentDay: state.currentDay,
-        lastActivitySync: state.lastActivitySync,
-        lastBasalUpdate: state.lastBasalUpdate,
+        intakeEntries: state.intakeEntries,
       }),
     }
   )
