@@ -156,7 +156,8 @@ export class HydrationService {
     try {
       const today = toDayString(new Date());
       const state = useHydrationStore.getState();
-      const { currentDay, resetForNewDay, setBaselineGoal, setDailyGoal } = state;
+      const { currentDay, resetForNewDay, setBaselineGoal, setDailyGoal } =
+        state;
 
       const userProfile = await localStorageService.getUserProfile();
       const baseGoal = await this.resolveBaseHydrationGoal(userProfile);
@@ -169,12 +170,17 @@ export class HydrationService {
       setDailyGoal(adjustedGoal);
 
       if (forceGoalRefresh || currentDay !== today) {
-        console.log(`[HydrationService] Hydration context refreshed for ${today}`);
+        console.log(
+          `[HydrationService] Hydration context refreshed for ${today}`
+        );
       }
 
       resetForNewDay(today);
     } catch (error) {
-      console.error('[HydrationService] Failed to refresh daily context:', error);
+      console.error(
+        '[HydrationService] Failed to refresh daily context:',
+        error
+      );
     }
   }
 
@@ -212,11 +218,8 @@ export class HydrationService {
       const durationMs = this.getDrinkingAnimationDurationMs();
 
       this.hydrationAnimationTimeout = setTimeout(() => {
-        const {
-          activeAnimation,
-          isManualAnimation,
-          setActiveAnimation,
-        } = useAvatarStore.getState();
+        const { activeAnimation, isManualAnimation, setActiveAnimation } =
+          useAvatarStore.getState();
 
         if (activeAnimation === 'drinking' && !isManualAnimation) {
           setActiveAnimation(null);

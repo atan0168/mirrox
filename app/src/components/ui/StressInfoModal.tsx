@@ -180,7 +180,9 @@ export function StressInfoModal({
                 </View>
                 <View style={styles.metricItem}>
                   <Text style={styles.metricLabel}>Baseline HRV</Text>
-                  <Text style={styles.metricValue}>{formatMs(baselineHrvMs)}</Text>
+                  <Text style={styles.metricValue}>
+                    {formatMs(baselineHrvMs)}
+                  </Text>
                 </View>
                 <View style={styles.metricItem}>
                   <Text style={styles.metricLabel}>Resting HR</Text>
@@ -232,9 +234,8 @@ export function StressInfoModal({
                 <Text style={styles.infoText}>
                   These stress insights interpret your heart rate variability,
                   resting heart rate, sleep, and mindfulness signals relative to
-                  your personal baseline. They are for general wellness
-                  guidance only and are not a substitute for professional
-                  medical advice.
+                  your personal baseline. They are for general wellness guidance
+                  only and are not a substitute for professional medical advice.
                 </Text>
               </View>
             </View>

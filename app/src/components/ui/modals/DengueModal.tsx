@@ -1,28 +1,29 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Modal,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Card } from '../Card';
-import { Button } from '../Button';
-import { colors, spacing, fontSize } from '../../../theme';
-import { getDengueDisplay } from '../display/dengue';
+import { useDengueStateStats } from '../../../hooks/useDengueStateStats';
 import {
-  DenguePredictResponse,
+  ArcGISFeature,
   ArcGISResponse,
+  DenguePredictResponse,
   HotspotAttributes,
   OutbreakAttributes,
   PointGeometry,
   PolygonGeometry,
   StateAttributes,
-  ArcGISFeature,
 } from '../../../services/BackendApiService';
+import { colors, fontSize, spacing } from '../../../theme';
+import { Button } from '../Button';
+import { Card } from '../Card';
 import DengueMap, { DengueSelection } from '../DengueMap';
-import { useDengueStateStats } from '../../../hooks/useDengueStateStats';
+import { getDengueDisplay } from '../display/dengue';
+import LoadingDots from '../LoadingDots';
 
 const normalizeStateName = (name: string) =>
   name
@@ -169,7 +170,7 @@ export const DengueModal: React.FC<Props> = ({
   const hasStateStats = !!stateStats?.features?.length;
 
   const formatMetricValue = (value: number | null) => {
-    if (isStateStatsLoading) return '...';
+    if (isStateStatsLoading) return <LoadingDots />;
     if (hasStateStatsError) return 'N/A';
     if (value == null) return hasStateStats ? 'N/A' : '—';
     return value.toLocaleString();

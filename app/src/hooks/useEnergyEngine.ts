@@ -66,7 +66,8 @@ export function useEnergyEngine() {
 
       if (wakeMs == null && sleepMinutes) {
         // Fallback: assume wake time occurs after midnight based on total sleep minutes
-        wakeMs = dayStartMs + Math.min(sleepMinutes, FULL_SLEEP_MINUTES) * 60000;
+        wakeMs =
+          dayStartMs + Math.min(sleepMinutes, FULL_SLEEP_MINUTES) * 60000;
       }
 
       if (wakeMs == null || !Number.isFinite(wakeMs)) {
@@ -75,7 +76,10 @@ export function useEnergyEngine() {
 
       wakeMs = Math.max(dayStartMs, Math.min(wakeMs, nowMs));
 
-      const minutesAwake = Math.max(0, Math.min((nowMs - wakeMs) / 60000, 24 * 60));
+      const minutesAwake = Math.max(
+        0,
+        Math.min((nowMs - wakeMs) / 60000, 24 * 60)
+      );
       const accounted = accountedNapMinutesRef.current;
       const napBonus =
         accounted > 0 ? (accounted * 100) / FULL_SLEEP_MINUTES : 0;

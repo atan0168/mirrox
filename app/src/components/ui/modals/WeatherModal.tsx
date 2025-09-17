@@ -18,7 +18,12 @@ interface WeatherModalProps {
   temperature?: number | null;
   humidity?: number | null;
   uvIndex?: number | null;
-  uvForecast?: Array<{ avg: number; day: string; max: number; min: number }> | null;
+  uvForecast?: Array<{
+    avg: number;
+    day: string;
+    max: number;
+    min: number;
+  }> | null;
   isError?: boolean;
   errorMessage?: string;
   color?: string;
@@ -173,7 +178,9 @@ export const WeatherModal: React.FC<WeatherModalProps> = ({
             </>
           ) : (
             <Card variant="outline" style={styles.detailCard}>
-              <Text style={styles.emptyStateTitle}>No weather data available</Text>
+              <Text style={styles.emptyStateTitle}>
+                No weather data available
+              </Text>
               <Text style={styles.emptyStateText}>
                 We couldn't find temperature or UV information for this location
                 right now.

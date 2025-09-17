@@ -176,8 +176,6 @@ export function getHydrationStatusInfo(progressPercentage: number): {
   let recommendations: string[];
   let urgency: 'low' | 'medium' | 'high' | 'critical';
 
-  console.log('progressPercentage', progressPercentage);
-
   if (progressPercentage < 25) {
     status = 'severely_dehydrated';
     message = 'Severely dehydrated - immediate action needed';

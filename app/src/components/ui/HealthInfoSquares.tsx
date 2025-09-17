@@ -82,13 +82,18 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const hydrationProgressPercentage = useHydrationStore(state =>
     state.getProgressPercentage()
   );
-  const hydrationStatus = useHydrationStore(state => state.getHydrationStatus());
+  const hydrationStatus = useHydrationStore(state =>
+    state.getHydrationStatus()
+  );
 
   const hydrationStatusInfo = useMemo(
     () => getHydrationStatusInfo(hydrationProgressPercentage),
     [hydrationProgressPercentage]
   );
-  const hydrationRemainingMl = Math.max(0, hydrationGoalMl - currentHydrationMl);
+  const hydrationRemainingMl = Math.max(
+    0,
+    hydrationGoalMl - currentHydrationMl
+  );
 
   const getHydrationColor = () => {
     switch (hydrationStatus) {
@@ -722,7 +727,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           <Card>
             <View style={styles.recommendationList}>
               <Text
-                style={[styles.recommendationMessage, { color: getHydrationColor() }]}
+                style={[
+                  styles.recommendationMessage,
+                  { color: getHydrationColor() },
+                ]}
               >
                 {hydrationStatusInfo.message}
               </Text>
