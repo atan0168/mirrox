@@ -42,9 +42,8 @@ function transparencyNoteFromSnapshot(s: HealthSnapshot): string {
 
 export function evaluateSleepHealthInsights(
   history: HealthHistory,
-  options: EvaluateOptions = {}
+  _options: EvaluateOptions = {}
 ): InsightCandidate[] {
-  const now = options.now ?? new Date();
   const snapshots = (history.snapshots || []).filter(s => !!s);
   if (snapshots.length === 0) return [];
   const latest = snapshots[snapshots.length - 1];
@@ -55,7 +54,6 @@ export function evaluateSleepHealthInsights(
 
   // Helper arrays
   const last7 = lastN(snapshots, 7);
-  const last14 = lastN(snapshots, 14);
   const last30 = lastN(snapshots, 30);
 
   const candidates: InsightCandidate[] = [];

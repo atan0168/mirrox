@@ -31,8 +31,15 @@ export function useHealthData({
       setData(snapshot);
       setError(null);
       return snapshot;
-    } catch (e: any) {
-      setError(e?.message || 'Failed to sync health data');
+    } catch (e: unknown) {
+      let message = 'Failed to sync health data';
+      if (e instanceof Error) {
+        message = e.message;
+      } else if (typeof e === 'object' && e !== null && 'message' in e) {
+        const maybeMessage = (e as Record<string, unknown>).message;
+        if (typeof maybeMessage === 'string') message = maybeMessage;
+      }
+      setError(message);
       return null;
     } finally {
       setLoading(false);

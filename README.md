@@ -210,6 +210,7 @@ npm run format      # Format with Prettier
 ### Health Metrics Collection
 
 The app collects the following metrics via Apple HealthKit (iOS) and Health Connect (Android):
+
 - Steps (daily)
 - Sleep (last night minutes)
 - Heart Rate Variability (ms, daily average)

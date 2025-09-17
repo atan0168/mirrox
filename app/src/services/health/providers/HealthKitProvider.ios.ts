@@ -183,7 +183,7 @@ export class HealthKitProvider implements HealthProvider {
         sleepRemMinutes: rem ? Math.round(rem) : null,
       };
       return details;
-    } catch (e) {}
+    } catch {}
     return null;
   }
 

@@ -14,10 +14,8 @@ interface SmogControllerProps {
   windStrength?: number;
   density?: number;
   enableTurbulence?: boolean;
-  turbulenceStrength?: [number, number, number];
   enableWind?: boolean;
   windDirection?: [number, number, number];
-  maxVelocity?: [number, number, number];
   minBounds?: [number, number, number];
   maxBounds?: [number, number, number];
   size?: [number, number, number];
@@ -31,10 +29,8 @@ export function SmogController({
   windStrength = 0.5,
   density = 50,
   enableTurbulence = true,
-  turbulenceStrength = [0.01, 0.01, 0.01],
   enableWind = true,
   windDirection = [1, 0, 0],
-  maxVelocity = [30, 30, 0],
   minBounds = [-8, -2, -8],
   maxBounds = [8, 6, 8],
   size = [100, 100, 100],
@@ -91,8 +87,6 @@ export function SmogController({
   }, []);
 
   // Frustum culling utilities
-  const frustum = useMemo(() => new THREE.Frustum(), []);
-  const boundingBox = useMemo(() => new THREE.Box3(), []);
   const tempVec3 = useMemo(() => new THREE.Vector3(), []);
 
   // Use the utility generators
@@ -304,8 +298,8 @@ export function SmogController({
       particle.lookAt(camera.position);
 
       // Gentle bounds checking - respawn particles that drift too far
-      const [minX, minY, minZ] = minBounds;
-      const [maxX, maxY, maxZ] = maxBounds;
+      const [, minY] = minBounds;
+      const [, maxY] = maxBounds;
 
       if (particle.position.y > maxY + 2) {
         // Respawn at bottom with new random position

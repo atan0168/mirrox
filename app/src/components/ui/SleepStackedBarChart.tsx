@@ -5,8 +5,8 @@ import {
   LayoutChangeEvent,
   Text,
   PanResponder,
-  GestureResponderEvent,
   Animated,
+  GestureResponderEvent,
 } from 'react-native';
 import Svg, { Rect, Text as SvgText, Line } from 'react-native-svg';
 import { colors } from '../../theme';
@@ -63,7 +63,7 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
   const dimAnim = useRef(new Animated.Value(0)).current;
   const [dimT, setDimT] = useState(0);
 
-  const { bars, innerW, hasFallback, topPad, innerH } = useMemo(() => {
+  const { bars, innerW, hasFallback, topPad } = useMemo(() => {
     const totals = data.map(d => Math.max(0, d.totalMinutes));
     const maxTotal = Math.max(1, ...totals);
     const innerW = Math.max(
@@ -138,7 +138,7 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
     return closestIdx;
   };
 
-  const handleTouch = (evt: any) => {
+  const handleTouch = (evt: GestureResponderEvent) => {
     const { locationX, locationY } = evt.nativeEvent;
     if (
       locationY >= PADDING_TOP + LEGEND_RESERVED_PX &&
@@ -260,7 +260,6 @@ const SleepStackedBarChart: React.FC<SleepStackedBarChartProps> = ({
             <SelectedValueOnPressLabel
               bar={bars[selectedIndex]}
               chartWidth={width}
-              chartHeight={height}
               topPad={topPad}
             />
           )}
@@ -359,9 +358,8 @@ const SelectedBarOverlay: React.FC<{ bar: ChartBarStack; dimT: number }> = ({
 const SelectedValueOnPressLabel: React.FC<{
   bar: ChartBarStack;
   chartWidth: number;
-  chartHeight: number;
   topPad: number;
-}> = ({ bar, chartWidth, chartHeight, topPad }) => {
+}> = ({ bar, chartWidth, topPad }) => {
   const LABEL_HEIGHT = 18;
   const hours = Math.round((bar.totalMinutes / 60) * 10) / 10;
   const valueStr = `${hours}h`;

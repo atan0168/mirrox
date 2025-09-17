@@ -1,5 +1,5 @@
 import { getDatabase } from './sqlite';
-import type { AlertItem, AlertSeverity } from '../../models/Alert';
+import type { AlertItem, AlertSeverity, AlertType } from '../../models/Alert';
 
 export const AlertsRepository = {
   async add(alert: AlertItem): Promise<void> {
@@ -28,7 +28,20 @@ export const AlertsRepository = {
   async getAll(includeDismissed = false, limit = 200): Promise<AlertItem[]> {
     const db = await getDatabase();
     const where = includeDismissed ? '' : 'WHERE dismissed = 0';
-    const rows = await db.getAllAsync<any>(
+    const rows = await db.getAllAsync<{
+      id: string;
+      type: AlertType;
+      createdAt: string;
+      title: string;
+      shortBody: string;
+      longBody: string;
+      sourceName: string | null;
+      sourceUrl: string | null;
+      tier: number | null;
+      dataNote: string | null;
+      severity: string;
+      dismissed: number;
+    }>(
       `SELECT id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed
        FROM alerts ${where} ORDER BY datetime(createdAt) DESC LIMIT ?`,
       [limit]
@@ -51,7 +64,20 @@ export const AlertsRepository = {
 
   async getById(id: string): Promise<AlertItem | null> {
     const db = await getDatabase();
-    const r = await db.getFirstAsync<any>(
+    const r = await db.getFirstAsync<{
+      id: string;
+      type: AlertType;
+      createdAt: string;
+      title: string;
+      shortBody: string;
+      longBody: string;
+      sourceName: string | null;
+      sourceUrl: string | null;
+      tier: number | null;
+      dataNote: string | null;
+      severity: string;
+      dismissed: number;
+    }>(
       `SELECT id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed FROM alerts WHERE id = ?`,
       [id]
     );
@@ -87,7 +113,7 @@ export const AlertsRepository = {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
       .toISOString()
       .slice(0, 19);
-    const res = await db.runAsync(
+    await db.runAsync(
       `DELETE FROM alerts WHERE datetime(createdAt) < datetime(?)`,
       [cutoff]
     );

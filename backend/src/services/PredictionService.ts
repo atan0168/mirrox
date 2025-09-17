@@ -40,7 +40,7 @@ class PredictionService {
 
   async predict(query: PredictQuery): Promise<PredictResponse> {
     const url = `${this.baseUrl}/predict`;
-    const params: Record<string, any> = {};
+    const params: Record<string, unknown> = {};
 
     // required
     params.state = query.state;

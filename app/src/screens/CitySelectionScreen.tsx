@@ -8,8 +8,10 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Button, Input } from '../components/ui';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
+import { RootStackParamList } from '../../App';
 
 interface City {
   id: string;
@@ -21,8 +23,13 @@ interface City {
   };
 }
 
+type CitySelectionScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'CitySelection'
+>;
+
 interface CitySelectionScreenProps {
-  navigation: any;
+  navigation: CitySelectionScreenNavigationProp;
 }
 
 const MALAYSIAN_CITIES: City[] = [

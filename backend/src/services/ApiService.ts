@@ -4,6 +4,7 @@ import {
   AirQualityLocation,
   AirQualityMeasurement,
   OpenAQResponse,
+  RateLimitStatus,
 } from '../models/AirQuality';
 import { cacheService } from './CacheService';
 import { rateLimiterService } from './RateLimiterService';
@@ -58,7 +59,7 @@ class ApiService {
    */
   private async makeRateLimitedRequest<T>(
     url: string,
-    params?: Record<string, any>
+    params?: Record<string, unknown>
   ): Promise<AxiosResponse<T>> {
     return rateLimiterService.executeWithRateLimit(async () => {
       return this.axiosInstance.get<T>(url, { params });
@@ -301,7 +302,7 @@ class ApiService {
    */
   public getServiceStatus(): {
     cache: { size: number; keys: string[] };
-    rateLimit: any;
+    rateLimit: RateLimitStatus;
   } {
     return {
       cache: cacheService.getStats(),

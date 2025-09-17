@@ -90,7 +90,7 @@ const DashboardScreen: React.FC = () => {
     return () => loop.stop();
   }, [skeletonAnim]);
 
-  const { data: airQuality, error: airQualityError } = useAQICNAirQuality(
+  const { data: airQuality, error: _airQualityError } = useAQICNAirQuality(
     userProfile?.location.latitude || 0,
     userProfile?.location.longitude || 0,
     !!userProfile,

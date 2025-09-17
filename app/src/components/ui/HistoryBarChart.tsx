@@ -337,7 +337,7 @@ const SelectedValueOnPressLabel: React.FC<{
   selectedIndex: number | null;
   chartWidth: number;
   chartHeight: number;
-}> = ({ show, bars, selectedIndex, chartWidth, chartHeight }) => {
+}> = ({ show, bars, selectedIndex, chartWidth }) => {
   if (!show || selectedIndex == null || !bars[selectedIndex]) return null;
   const b = bars[selectedIndex];
   const LABEL_HEIGHT = 18;

@@ -19,6 +19,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { UserLocationDetails, UserProfile } from '../models/User';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { calculateBaselineHydrationGoal } from '../utils/hydrationUtils';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../App';
 
 interface QuestionnaireScreenProps {
   route: {
@@ -26,8 +28,7 @@ interface QuestionnaireScreenProps {
       location: { latitude: number; longitude: number } | null;
     };
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  navigation: any;
+  navigation: StackNavigationProp<RootStackParamList, 'Questionnaire'>;
 }
 
 const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({

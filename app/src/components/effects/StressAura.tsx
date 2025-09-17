@@ -14,7 +14,6 @@ export function StressAura({
   enabled = true,
 }: StressAuraProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const particlesRef = useRef<THREE.Points[]>([]);
 
   // Create particle-based stress aura
   const particleSystem = useMemo(() => {

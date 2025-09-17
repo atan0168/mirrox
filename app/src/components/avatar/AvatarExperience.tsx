@@ -331,7 +331,7 @@ function AvatarExperience({
           : 0;
 
         if (!cancelled) setEyeBagsAuto(enabled, intensity);
-      } catch (e) {
+      } catch {
         // On error, degrade gracefully to last-night-only logic
         if (!cancelled) setEyeBagsAuto(true, 0.1);
       }
@@ -903,10 +903,8 @@ function AvatarExperience({
             windStrength={1.0}
             density={effectiveSmogDensity}
             enableTurbulence={true}
-            turbulenceStrength={[0.005, 0.005, 0.005]}
             enableWind={true}
             windDirection={[1, 0.2, 0]}
-            maxVelocity={[2, 2, 1]}
             minBounds={[-10, -3, -10]}
             maxBounds={[10, 8, 10]}
             size={[200, 200, 200]}

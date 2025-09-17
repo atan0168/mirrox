@@ -34,7 +34,7 @@ export class MockHealthProvider implements HealthProvider {
   async requestPermissions(): Promise<HealthPermissionStatus> {
     return 'granted';
   }
-  async getDailySteps(start: Date, end: Date): Promise<number> {
+  async getDailySteps(start: Date, _end: Date): Promise<number> {
     // mock deterministic steps based on date
     const day = parseInt(
       `${start.getFullYear()}${start.getMonth()}${start.getDate()}`,
@@ -86,13 +86,13 @@ export class MockHealthProvider implements HealthProvider {
     };
   }
 
-  async getSleepDetails(start: Date, end: Date): Promise<SleepDetails | null> {
+  async getSleepDetails(_start: Date, end: Date): Promise<SleepDetails | null> {
     // Use last-night details if window covers night range; otherwise return a short nap with no stages
     const details = await this.getLastNightSleepDetails(end);
     return details;
   }
 
-  async getDailyHRVMs(start: Date, end: Date): Promise<number | null> {
+  async getDailyHRVMs(start: Date, _end: Date): Promise<number | null> {
     const seed =
       parseInt(
         `${start.getFullYear()}${start.getMonth()}${start.getDate()}`,
@@ -103,7 +103,7 @@ export class MockHealthProvider implements HealthProvider {
 
   async getDailyRestingHeartRateBpm(
     start: Date,
-    end: Date
+    _end: Date
   ): Promise<number | null> {
     const seed =
       parseInt(
@@ -115,7 +115,7 @@ export class MockHealthProvider implements HealthProvider {
 
   async getDailyActiveEnergyKcal(
     start: Date,
-    end: Date
+    _end: Date
   ): Promise<number | null> {
     const seed =
       parseInt(
@@ -125,7 +125,10 @@ export class MockHealthProvider implements HealthProvider {
     return Math.round(200 + seededRandom(seed) * 600); // 200-800 kcal
   }
 
-  async getDailyMindfulMinutes(start: Date, end: Date): Promise<number | null> {
+  async getDailyMindfulMinutes(
+    start: Date,
+    _end: Date
+  ): Promise<number | null> {
     const seed =
       parseInt(
         `${start.getFullYear()}${start.getMonth()}${start.getDate()}`,
@@ -136,7 +139,7 @@ export class MockHealthProvider implements HealthProvider {
 
   async getDailyRespiratoryRateBrpm(
     start: Date,
-    end: Date
+    _end: Date
   ): Promise<number | null> {
     const seed =
       parseInt(
@@ -146,7 +149,7 @@ export class MockHealthProvider implements HealthProvider {
     return Math.round((12 + seededRandom(seed) * 6) * 10) / 10; // 12-18 brpm
   }
 
-  async getDailyWorkoutsCount(start: Date, end: Date): Promise<number | null> {
+  async getDailyWorkoutsCount(start: Date, _end: Date): Promise<number | null> {
     const seed =
       parseInt(
         `${start.getFullYear()}${start.getMonth()}${start.getDate()}`,

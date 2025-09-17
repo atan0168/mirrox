@@ -85,7 +85,7 @@ export class LocalStorageService {
         console.log('Retrieved existing encryption key from secure storage');
         return credentials.password;
       }
-    } catch (error) {
+    } catch {
       console.log('No existing encryption key found, generating new one');
     }
 
@@ -205,7 +205,7 @@ export class LocalStorageService {
     try {
       // MMKV supports delete by key
       this.storage.delete(key);
-    } catch (e) {
+    } catch {
       // Fallback: set empty string if delete fails
       // This ensures old values are not read back as valid JSON
       try {
@@ -430,7 +430,7 @@ export class LocalStorageService {
                 securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
               }
             );
-          } catch (error) {
+          } catch {
             // Fallback to software security
             await Keychain.setInternetCredentials(
               authKeyService,
@@ -582,7 +582,7 @@ export class LocalStorageService {
         ENCRYPTION_KEY_SERVICE
       );
       return credentials !== false;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -646,7 +646,7 @@ export class LocalStorageService {
         await this.setReverseGeocodeCache(cache);
       }
       return entry;
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -680,7 +680,7 @@ export class LocalStorageService {
         }
       }
       await this.setReverseGeocodeCache(cache);
-    } catch (e) {
+    } catch {
       // ignore cache write failures
     }
   }

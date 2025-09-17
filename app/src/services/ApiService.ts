@@ -228,7 +228,7 @@ class ApiService {
   /**
    * Get service status for debugging (development only)
    */
-  public async getServiceStatus(): Promise<any> {
+  public async getServiceStatus() {
     try {
       return await backendApiService.getServiceStatus();
     } catch (error) {

@@ -588,7 +588,7 @@ export default function SettingsScreen() {
                     'Sent',
                     'Sample sleep insight sent to notification tray.'
                   );
-                } catch (e) {
+                } catch {
                   Alert.alert('Error', 'Failed to send sample notification.');
                 }
               }}

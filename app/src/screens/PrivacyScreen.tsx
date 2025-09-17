@@ -7,11 +7,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Card } from '../components/ui';
-import { borderRadius, colors, fontSize, spacing } from '../theme';
+import { colors, fontSize, spacing } from '../theme';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../App';
 
 interface PrivacyScreenProps {
-  navigation: any;
+  navigation: StackNavigationProp<RootStackParamList, 'Privacy'>;
 }
 
 const PrivacyScreen: React.FC<PrivacyScreenProps> = ({ navigation }) => {

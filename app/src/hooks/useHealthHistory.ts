@@ -18,8 +18,11 @@ export function useHealthHistory(limit: number = 7) {
       setData(history);
       setError(null);
       return history;
-    } catch (e: any) {
-      const message = e?.message || 'Failed to load health history';
+    } catch (e: unknown) {
+      let message = 'Failed to load health history';
+      if (e instanceof Error) {
+        message = e?.message;
+      }
       setError(message);
       return null;
     } finally {

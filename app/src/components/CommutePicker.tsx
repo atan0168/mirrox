@@ -10,13 +10,11 @@ interface CommutePickerProps {
 
 const CommuteOption = ({
   label,
-  value,
   icon,
   isSelected,
   onPress,
 }: {
   label: string;
-  value: string;
   icon: React.ReactNode;
   isSelected: boolean;
   onPress: () => void;
@@ -114,7 +112,6 @@ export const CommutePicker: React.FC<CommutePickerProps> = ({
           <CommuteOption
             key={option.value}
             label={option.label}
-            value={option.value}
             icon={option.icon}
             isSelected={selectedValue === option.value}
             onPress={() => onValueChange(option.value)}

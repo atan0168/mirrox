@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import Loader from './Loader';
 import { colors } from '../../theme';
 
@@ -10,7 +10,7 @@ interface AvatarLoadingIndicatorProps {
     total: number;
     item: string;
   };
-  style?: any;
+  style?: ViewStyle;
 }
 
 export function AvatarLoadingIndicator({

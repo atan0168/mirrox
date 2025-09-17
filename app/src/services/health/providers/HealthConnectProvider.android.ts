@@ -156,7 +156,22 @@ export class HealthConnectProvider implements HealthProvider {
       let rem = 0;
       let awakenings = 0;
 
-      for (const r of records as any[]) {
+      for (const r of records as Array<{
+        startTime?: string;
+        endTime?: string;
+        stages?: Array<{
+          stage?: string;
+          stageType?: string;
+          startTime?: string;
+          endTime?: string;
+        }>;
+        stage?: {
+          stage?: string;
+          stageType?: string;
+          startTime?: string;
+          endTime?: string;
+        };
+      }>) {
         const st = r?.startTime ? new Date(r.startTime).getTime() : null;
         const et = r?.endTime ? new Date(r.endTime).getTime() : null;
         if (st != null && (minStart == null || st < minStart)) minStart = st;
@@ -165,9 +180,14 @@ export class HealthConnectProvider implements HealthProvider {
           timeInBedMinutes += Math.max(0, et - st) / 60000; // session span as time in bed
         }
 
-        const stages = (r as any)?.stages || (r as any)?.stage ? [r.stage] : [];
+        const stages = r?.stages || (r?.stage ? [r.stage] : []);
         // stages is expected as array of { stage, startTime, endTime }
-        for (const s of stages as any[]) {
+        for (const s of stages as Array<{
+          stage?: string;
+          stageType?: string;
+          startTime?: string;
+          endTime?: string;
+        }>) {
           const ss = s?.startTime ? new Date(s.startTime).getTime() : null;
           const se = s?.endTime ? new Date(s.endTime).getTime() : null;
           if (ss == null || se == null) continue;
@@ -300,7 +320,10 @@ export class HealthConnectProvider implements HealthProvider {
     }
   }
 
-  async getDailyMindfulMinutes(start: Date, end: Date): Promise<number | null> {
+  async getDailyMindfulMinutes(
+    _start: Date,
+    _end: Date
+  ): Promise<number | null> {
     // Not supported until Api level 36 (Android 16)
     return null;
   }

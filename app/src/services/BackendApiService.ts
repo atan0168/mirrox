@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, AxiosInstance } from 'axios';
 import { API_BASE_URL } from '../constants';
 
 export interface AirQualityApiResponse {
@@ -126,7 +126,7 @@ export interface StateAttributes {
 }
 
 class BackendApiService {
-  private readonly axiosInstance;
+  private readonly axiosInstance: AxiosInstance;
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -293,7 +293,10 @@ class BackendApiService {
     error?: string;
   }> {
     try {
-      const params: any = { latitude, longitude };
+      const params: { latitude: number; longitude: number; radius?: number } = {
+        latitude,
+        longitude,
+      };
       if (radius) params.radius = radius;
 
       const response = await this.axiosInstance.get(
@@ -354,7 +357,7 @@ class BackendApiService {
    * Get service status and statistics (development only)
    * @returns Promise with service status
    */
-  async getServiceStatus(): Promise<any> {
+  async getServiceStatus() {
     try {
       const response = await this.axiosInstance.get('/air-quality/status');
       return response.data;

@@ -12,7 +12,7 @@ type UIState = {
 // Persist UI state using our encrypted LocalStorageService as storage backend
 export const useUIStore = create<UIState>()(
   persist(
-    (set, get) => ({
+    set => ({
       dashboardOnboardingSeen: false,
       markDashboardOnboardingSeen: () => set({ dashboardOnboardingSeen: true }),
       resetDashboardOnboarding: () => set({ dashboardOnboardingSeen: false }),

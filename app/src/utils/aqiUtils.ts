@@ -103,7 +103,7 @@ export function getShortClassification(classification: string): string {
  */
 export function getHealthRecommendations(
   aqi: number,
-  isOutdoor: boolean = true
+  _isOutdoor: boolean = true
 ): string[] {
   const level = getAQIInfo(aqi).level;
 

@@ -4,6 +4,20 @@ import { navigate } from '../navigation/navigationRef';
 // Lazy import to avoid hard crashing if expo-notifications isn't installed yet
 let Notifications: typeof import('expo-notifications') | null = null;
 
+type AlertNotificationData = {
+  alertId?: string;
+};
+
+function isAlertNotificationData(
+  value: unknown
+): value is AlertNotificationData {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const maybeAlertId = (value as { alertId?: unknown }).alertId;
+  return maybeAlertId === undefined || typeof maybeAlertId === 'string';
+}
+
 async function getModule() {
   if (!Notifications) {
     try {
@@ -49,8 +63,8 @@ export async function initNotifications() {
   // Handle notification taps to route into Alerts screen
   try {
     mod.addNotificationResponseReceivedListener(response => {
-      const data: any = response.notification.request.content.data || {};
-      const alertId = data.alertId as string | undefined;
+      const data = response.notification.request.content.data;
+      const alertId = isAlertNotificationData(data) ? data.alertId : undefined;
       // Route to Alerts with optional alertId so UI can highlight/show details
       navigate('Alerts', alertId ? { alertId } : undefined);
     });

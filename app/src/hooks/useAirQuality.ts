@@ -49,7 +49,7 @@ export const useAQICNAirQuality = (
             longitude,
             timestamp: Date.now(),
           });
-        } catch (e) {
+        } catch {
           // non-fatal
         }
       })();

@@ -110,8 +110,6 @@ export class HealthDataService {
     const timeZone = getDeviceTimeZone();
     const todayStr = yyyymmddInTimeZone(now, timeZone);
 
-    const latest = await this.getLatest();
-
     // Helper to sync a specific local-date string (YYYY-MM-DD)
     const syncForDate = async (dateStr: string): Promise<HealthSnapshot> => {
       // Determine window [start, end)
