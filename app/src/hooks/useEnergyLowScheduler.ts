@@ -73,7 +73,7 @@ export function useEnergyLowScheduler(thresholdPct = 30) {
               });
               const id = await scheduleEnergyLowAt(
                 when,
-                `Your energy is predicted to drop below 30% around ${eta}.`
+                `Your energy is predicted to drop below ${thresholdPct}% around ${eta}.`
               );
               scheduledIdRef.current = id;
             } catch {}
