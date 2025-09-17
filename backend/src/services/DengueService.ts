@@ -17,9 +17,7 @@ export class DengueService {
     const cached = cacheService.get<ArcGISResponse<StateAttributes>>(cacheKey);
     if (cached) return cached;
 
-    const url = this.proxyBase + this.serviceBase + '/5/query';
-
-    const params = {
+    const qs = new URLSearchParams({
       f: 'json',
       where: '1=1',
       returnGeometry: 'false',
@@ -32,9 +30,12 @@ export class DengueService {
         'JUMLAH_KEMATIAN',
       ].join(','),
       orderByFields: 'NEGERI ASC',
-    } as const;
+    }).toString();
 
-    const { data } = await axios.get(url, { params });
+    const target = `${this.serviceBase}/5/query?${qs}`;
+    const url = this.proxyBase + encodeURIComponent(target);
+
+    const { data } = await axios.get(url);
 
     const typed = data as ArcGISResponse<StateAttributes>;
     cacheService.set(cacheKey, typed, config.cache.dengueTtl);
