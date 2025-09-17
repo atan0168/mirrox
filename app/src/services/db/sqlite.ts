@@ -129,16 +129,20 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           title TEXT NOT NULL,
           shortBody TEXT NOT NULL,
           longBody TEXT NOT NULL,
-          sourceName TEXT NULL,
-          sourceUrl TEXT NULL,
-          tier INTEGER NULL,
-          dataNote TEXT NULL,
-          severity TEXT NOT NULL,
-          dismissed INTEGER NOT NULL DEFAULT 0
-        );
-        CREATE INDEX IF NOT EXISTS idx_alerts_createdAt ON alerts(createdAt DESC);
-        CREATE INDEX IF NOT EXISTS idx_alerts_dismissed ON alerts(dismissed);
-      `);
+         sourceName TEXT NULL,
+         sourceUrl TEXT NULL,
+         tier INTEGER NULL,
+         dataNote TEXT NULL,
+         severity TEXT NOT NULL,
+         dismissed INTEGER NOT NULL DEFAULT 0,
+         dismissedAt TEXT NULL,
+         dedupeKey TEXT NULL
+       );
+       CREATE INDEX IF NOT EXISTS idx_alerts_createdAt ON alerts(createdAt DESC);
+       CREATE INDEX IF NOT EXISTS idx_alerts_dismissed ON alerts(dismissed);
+       CREATE INDEX IF NOT EXISTS idx_alerts_dismissedAt ON alerts(dismissedAt);
+       CREATE INDEX IF NOT EXISTS idx_alerts_dedupeKey ON alerts(dedupeKey);
+     `);
 
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS hydration_state (

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { colors, spacing, fontSize } from '../theme';
 import { useAlerts } from '../hooks/useAlerts';
+import { useDismissedAlertsToday } from '../hooks/useDismissedAlertsToday';
 import { AlertsService } from '../services/AlertsService';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -62,12 +63,18 @@ const AlertDetails: React.FC<{
 
 const AlertsScreen: React.FC = () => {
   const { alerts, refresh } = useAlerts();
+  const { alerts: dismissedToday, refresh: refreshDismissed } = useDismissedAlertsToday();
+  const [tab, setTab] = useState<'active' | 'dismissed'>('active');
   const route = useRoute<RouteProp<RootStackParamList, 'Alerts'>>();
   const targetId = route.params?.alertId;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const data = useMemo(() => alerts, [alerts]);
+  const data = useMemo(() => (tab === 'active' ? alerts : dismissedToday), [alerts, dismissedToday, tab]);
+
+  const onRefreshBoth = async () => {
+    await Promise.all([refresh(), refreshDismissed()]);
+  };
 
   if (!data.length) {
     return (
@@ -82,6 +89,22 @@ const AlertsScreen: React.FC = () => {
 
   return (
     <>
+      <View style={styles.tabsRow}>
+        <TouchableOpacity
+          style={[styles.tabBtn, tab === 'active' && styles.tabBtnActive]}
+          onPress={() => setTab('active')}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.tabText, tab === 'active' && styles.tabTextActive]}>Active</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabBtn, tab === 'dismissed' && styles.tabBtnActive]}
+          onPress={() => setTab('dismissed')}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.tabText, tab === 'dismissed' && styles.tabTextActive]}>Dismissed Today</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
         contentContainerStyle={{ padding: spacing.lg }}
         data={data}
@@ -101,10 +124,10 @@ const AlertsScreen: React.FC = () => {
             >
               <TouchableOpacity
                 style={styles.dismissBtn}
-                onPress={async () => {
-                  await AlertsService.dismiss(item.id);
-                  await refresh();
-                }}
+               onPress={async () => {
+                 await AlertsService.dismiss(item.id);
+                 await onRefreshBoth();
+               }}
                 accessibilityLabel="Dismiss"
               >
                 <X size={16} color={colors.neutral[700]} />
@@ -152,6 +175,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.neutral[200],
     position: 'relative',
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    gap: spacing.sm,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    backgroundColor: colors.neutral[100],
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+  },
+  tabBtnActive: {
+    backgroundColor: colors.white,
+    borderColor: colors.neutral[400],
+  },
+  tabText: {
+    color: colors.neutral[700],
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: colors.neutral[900],
   },
   cardHighlight: {
     borderColor: colors.black,

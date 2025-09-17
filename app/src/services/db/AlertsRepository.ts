@@ -6,8 +6,8 @@ export const AlertsRepository = {
     const db = await getDatabase();
     await db.runAsync(
       `INSERT OR REPLACE INTO alerts (
-        id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed, dismissedAt, dedupeKey
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         alert.id,
         alert.type,
@@ -21,6 +21,8 @@ export const AlertsRepository = {
         alert.dataNote ?? null,
         alert.severity,
         alert.dismissed ? 1 : 0,
+        alert.dismissed ? new Date().toISOString() : null,
+        alert.dedupeKey ?? null,
       ]
     );
   },
@@ -42,7 +44,7 @@ export const AlertsRepository = {
       severity: string;
       dismissed: number;
     }>(
-      `SELECT id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed
+      `SELECT id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed, dismissedAt, dedupeKey
        FROM alerts ${where} ORDER BY datetime(createdAt) DESC LIMIT ?`,
       [limit]
     );
@@ -59,12 +61,15 @@ export const AlertsRepository = {
       dataNote: r.dataNote ?? undefined,
       severity: r.severity as AlertSeverity,
       dismissed: !!r.dismissed,
+      dedupeKey: (r as any).dedupeKey ?? undefined,
     }));
   },
 
   async getById(id: string): Promise<AlertItem | null> {
     const db = await getDatabase();
     const r = await db.getFirstAsync<{
+      dedupeKey: string | null;
+      dismissedAt: string | null;
       id: string;
       type: AlertType;
       createdAt: string;
@@ -78,7 +83,7 @@ export const AlertsRepository = {
       severity: string;
       dismissed: number;
     }>(
-      `SELECT id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed FROM alerts WHERE id = ?`,
+      `SELECT id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed, dismissedAt, dedupeKey FROM alerts WHERE id = ?`,
       [id]
     );
     if (!r) return null;
@@ -95,17 +100,60 @@ export const AlertsRepository = {
       dataNote: r.dataNote ?? undefined,
       severity: r.severity as AlertSeverity,
       dismissed: !!r.dismissed,
+      dedupeKey: r.dedupeKey ?? undefined,
     };
   },
 
   async dismiss(id: string): Promise<void> {
     const db = await getDatabase();
-    await db.runAsync(`UPDATE alerts SET dismissed = 1 WHERE id = ?`, [id]);
+    await db.runAsync(`UPDATE alerts SET dismissed = 1, dismissedAt = ? WHERE id = ?`, [new Date().toISOString(), id]);
   },
 
   async clear(): Promise<void> {
     const db = await getDatabase();
     await db.runAsync(`DELETE FROM alerts`);
+  },
+
+  async getDismissedOnDate(dateYmd: string, limit = 200): Promise<AlertItem[]> {
+    const db = await getDatabase();
+    const rows = await db.getAllAsync<{
+      id: string;
+      type: AlertType;
+      createdAt: string;
+      title: string;
+      shortBody: string;
+      longBody: string;
+      sourceName: string | null;
+      sourceUrl: string | null;
+      tier: number | null;
+      dataNote: string | null;
+      severity: string;
+      dismissed: number;
+      dismissedAt: string | null;
+      dedupeKey: string | null;
+    }>(
+      `SELECT id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed, dismissedAt, dedupeKey
+       FROM alerts
+       WHERE dismissed = 1 AND strftime('%Y-%m-%d', dismissedAt) = ?
+       ORDER BY datetime(dismissedAt) DESC
+       LIMIT ?`,
+      [dateYmd, limit]
+    );
+    return rows.map(r => ({
+      id: r.id,
+      type: r.type,
+      createdAt: r.createdAt,
+      title: r.title,
+      shortBody: r.shortBody,
+      longBody: r.longBody,
+      sourceName: r.sourceName ?? undefined,
+      sourceUrl: r.sourceUrl ?? undefined,
+      tier: (r.tier ?? undefined) as 1 | 2 | 3 | undefined,
+      dataNote: r.dataNote ?? undefined,
+      severity: r.severity as AlertSeverity,
+      dismissed: !!r.dismissed,
+      dedupeKey: r.dedupeKey ?? undefined,
+    }));
   },
 
   async purgeOlderThan(days: number): Promise<number> {

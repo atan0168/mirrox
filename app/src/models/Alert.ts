@@ -1,4 +1,13 @@
-export type AlertType = 'sleep_health' | 'system';
+export type AlertType =
+  | 'sleep_health'
+  | 'system'
+  | 'air_quality'
+  | 'weather'
+  | 'traffic'
+  | 'dengue'
+  | 'hydration'
+  | 'steps'
+  | 'stress';
 export type AlertSeverity = 'low' | 'medium' | 'high';
 
 export interface AlertItem {
@@ -16,4 +25,5 @@ export interface AlertItem {
   dataNote?: string;
   severity: AlertSeverity; // display priority/severity
   dismissed?: boolean; // soft-dismissed by user
+  dedupeKey?: string; // optional key to dedupe similar alerts per day
 }
