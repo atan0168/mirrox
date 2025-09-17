@@ -10,6 +10,7 @@ const BatteryIndicator = ({
 }: {
   sleepMinutes?: number | null;
 }) => {
+  const [showInfo, setShowInfo] = useState(false);
   const energyPct = useEnergyStore(s => s.energyPct);
 
   const hasSleep = useMemo(
@@ -27,8 +28,8 @@ const BatteryIndicator = ({
 
   // Map to 3 bars and color
   const totalBars = 3;
-  const filledBars = pct >= 66 ? 3 : pct >= 33 ? 2 : pct > 0 ? 1 : 0;
-  const color = pct < 33 ? '#EF4444' : pct < 66 ? '#F59E0B' : '#10B981';
+  const filledBars = pct >= 70 ? 3 : pct >= 30 ? 2 : pct > 0 ? 1 : 0;
+  const color = pct < 30 ? '#EF4444' : pct < 70 ? '#F59E0B' : '#10B981';
 
   const bars = [] as React.ReactNode[];
   for (let i = 0; i < totalBars; i++) {
@@ -47,8 +48,6 @@ const BatteryIndicator = ({
       />
     );
   }
-
-  const [showInfo, setShowInfo] = useState(false);
 
   return (
     <View
