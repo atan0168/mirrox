@@ -36,7 +36,7 @@ export function useEnergyLowScheduler(thresholdPct = 30) {
   // Helper: compute the predicted Date when energy will cross below threshold.
   const computeCrossingTime = (): Date | null => {
     if (typeof energyPct !== 'number') return null;
-    if (energyPct <= thresholdPct) return new Date();
+    if (energyPct <= thresholdPct) return null;
     const rate = AWAKE_DEPLETION_PER_MIN; // % per minute
     if (rate <= 0) return null;
     const minutes = (energyPct - thresholdPct) / rate;
