@@ -70,6 +70,7 @@ app.get('/', (req, res) => {
       serviceStatus: '/api/air-quality/status',
       traffic: '/api/traffic/congestion',
       trafficStatus: '/api/traffic/status',
+      locationAutocomplete: '/api/location/autocomplete?q=Melbourne',
       dengueStates: '/api/dengue/states',
       dengueHotspots: '/api/dengue/hotspots?latitude=..&longitude=..&radius=5',
       dengueOutbreaks:

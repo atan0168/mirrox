@@ -2,6 +2,7 @@ import { Router } from 'express';
 import airQualityRoutes from './airQuality';
 import trafficRoutes from './traffic';
 import dengueRoutes from './dengue';
+import locationRoutes from './location';
 
 const router = Router();
 
@@ -9,6 +10,7 @@ const router = Router();
 router.use('/air-quality', airQualityRoutes);
 router.use('/traffic', trafficRoutes);
 router.use('/dengue', dengueRoutes);
+router.use('/location', locationRoutes);
 
 // General health check
 router.get('/health', (req, res) => {

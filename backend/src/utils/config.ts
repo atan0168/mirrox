@@ -27,6 +27,10 @@ interface Config {
     windowMs: number;
     maxRequests: number;
   };
+  locationiq: {
+    apiKey: string;
+    baseUrl: string;
+  };
   cache: {
     airQualityTtl: number;
     locationSearchTtl: number;
@@ -71,6 +75,10 @@ const config: Config = {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
     maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
   },
+  locationiq: {
+    apiKey: process.env.LOCATIONIQ_API_KEY || '',
+    baseUrl: process.env.LOCATIONIQ_BASE_URL || 'https://us1.locationiq.com/v1',
+  },
   cache: {
     airQualityTtl: parseInt(process.env.CACHE_TTL_AIR_QUALITY || '1800000', 10), // 30 minutes
     locationSearchTtl: parseInt(
@@ -90,7 +98,7 @@ const config: Config = {
 };
 
 // Validate required environment variables
-const requiredVars = ['OPENAQ_API_KEY', 'AQICN_API_KEY', 'TOMTOM_API_KEY'];
+const requiredVars = ['OPENAQ_API_KEY', 'AQICN_API_KEY', 'TOMTOM_API_KEY', 'LOCATIONIQ_API_KEY'];
 const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
