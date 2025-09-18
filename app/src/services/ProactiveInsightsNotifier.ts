@@ -116,7 +116,7 @@ export const ProactiveInsightsNotifier = {
             severity: 'low',
             sourceName: 'CDC',
             sourceUrl:
-              'https://www.cdc.gov/physicalactivity/basics/adults/index.htm',
+              'https://www.cdc.gov/physical-activity-basics/guidelines/adults.html',
             tier: 3,
           });
         } else if (steps < 8000) {
@@ -128,7 +128,7 @@ export const ProactiveInsightsNotifier = {
             severity: 'low',
             sourceName: 'CDC',
             sourceUrl:
-              'https://www.cdc.gov/physicalactivity/basics/adults/index.htm',
+              'https://www.cdc.gov/physical-activity-basics/guidelines/adults.html',
             tier: 3,
           });
         }
@@ -175,9 +175,9 @@ export const ProactiveInsightsNotifier = {
                 title: 'UV index is high this afternoon',
                 body: 'A hat or sunscreen could help you feel more comfortable if you’re heading out.',
                 severity: 'low',
-                sourceName: 'WHO',
+                sourceName: 'CDC',
                 sourceUrl:
-                  'https://www.who.int/news-room/questions-and-answers/item/radiation-the-ultraviolet-(uv)-index',
+                  'https://www.cdc.gov/radiation-health/data-research/facts-stats/ultraviolet-radiation.html',
                 tier: 3,
               });
             }
@@ -189,8 +189,7 @@ export const ProactiveInsightsNotifier = {
                 body: 'Sipping water regularly and lighter activities can help you stay comfortable.',
                 severity: 'low',
                 sourceName: 'CDC',
-                sourceUrl:
-                  'https://www.cdc.gov/disasters/extremeheat/heattips.html',
+                sourceUrl: 'https://www.cdc.gov/heat-health/about/index.html',
                 tier: 3,
               });
             }
@@ -253,7 +252,7 @@ export const ProactiveInsightsNotifier = {
           severity: 'low',
           sourceName: 'NCCIH',
           sourceUrl:
-            'https://www.nccih.nih.gov/health/mindfulness-meditation-what-you-need-to-know',
+            'https://newsinhealth.nih.gov/2021/06/mindfulness-your-health',
           tier: 3,
         });
       }
