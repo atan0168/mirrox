@@ -1,3 +1,5 @@
+export const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+
 // Define available idle animations in order of preference
 export const AVAILABLE_ANIMATIONS = [
   { name: 'M_Standing_Expressions_007', label: 'Cough' },

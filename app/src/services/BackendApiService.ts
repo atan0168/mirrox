@@ -1,5 +1,9 @@
 import axios, { AxiosResponse, AxiosInstance } from 'axios';
 import { API_BASE_URL } from '../constants';
+import {
+  LocationAutocompleteResponse,
+  LocationSuggestion,
+} from '../models/Location';
 
 export interface AirQualityApiResponse {
   success: boolean;
@@ -364,6 +368,42 @@ class BackendApiService {
     } catch (error) {
       console.error('Failed to get service status:', error);
       throw error;
+    }
+  }
+
+  async searchLocations(
+    query: string,
+    options?: {
+      limit?: number;
+      countryCodes?: string;
+    }
+  ): Promise<LocationSuggestion[]> {
+    try {
+      const response = await this.axiosInstance.get<LocationAutocompleteResponse>(
+        '/location/autocomplete',
+        {
+          params: {
+            q: query,
+            limit: options?.limit,
+            countrycodes: options?.countryCodes,
+          },
+        }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to fetch location matches.');
+      }
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to search locations:', error);
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Unable to search for locations right now.');
     }
   }
 

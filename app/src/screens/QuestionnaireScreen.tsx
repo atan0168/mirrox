@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MapPin } from 'lucide-react-native';
+import { Controller, useForm } from 'react-hook-form';
 import { CommutePicker } from '../components/CommutePicker';
 import { SleepSlider } from '../components/SleepSlider';
 import { GenderPicker } from '../components/GenderPicker';
@@ -31,126 +32,132 @@ interface QuestionnaireScreenProps {
   navigation: StackNavigationProp<RootStackParamList, 'Questionnaire'>;
 }
 
+interface QuestionnaireFormValues {
+  commuteMode: 'car' | 'transit' | 'wfh' | 'bike' | 'walk';
+  sleepHours: number;
+  gender: 'male' | 'female';
+  skinTone: SkinTone;
+  homeLocation: UserLocationDetails | null;
+  workLocation: UserLocationDetails | null;
+  weightKg: string;
+  heightCm: string;
+}
+
 const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
   route,
   navigation,
 }) => {
   const { location } = route.params;
   const queryClient = useQueryClient();
-  const [commuteMode, setCommuteMode] = useState<
-    'car' | 'transit' | 'wfh' | 'bike' | 'walk'
-  >('wfh');
-  const [sleepTarget, setSleepTarget] = useState<number>(8);
-  const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [skinTone, setSkinTone] = useState<SkinTone>('medium');
-  const [homeLocation, setHomeLocation] = useState<UserLocationDetails | null>(
-    null
-  );
-  const [workLocation, setWorkLocation] = useState<UserLocationDetails | null>(
-    null
-  );
-  const [weightKg, setWeightKg] = useState('');
-  const [heightCm, setHeightCm] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
-  const defaultCoordinates = useMemo(() => {
-    if (!location) return null;
-    return { latitude: location.latitude, longitude: location.longitude };
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<QuestionnaireFormValues>({
+    defaultValues: {
+      commuteMode: 'wfh',
+      sleepHours: 8,
+      gender: 'male',
+      skinTone: 'medium',
+      homeLocation: null,
+      workLocation: null,
+      weightKg: '',
+      heightCm: '',
+    },
+  });
+
+  const homeLocation = watch('homeLocation');
+
+  const fallbackCoordinates = useMemo(() => {
+    if (location) {
+      return { latitude: location.latitude, longitude: location.longitude };
+    }
+    return { latitude: 3.139, longitude: 101.6869 };
   }, [location]);
 
-  const handleCompleteOnboarding = async () => {
-    if (isSubmitting) return;
-    setFormError(null);
+  const copyHomeToWork = useCallback(() => {
+    const currentHome = getValues('homeLocation');
+    if (!currentHome) return;
+    setValue(
+      'workLocation',
+      {
+        ...currentHome,
+        coordinates: { ...currentHome.coordinates },
+      },
+      { shouldDirty: true }
+    );
+  }, [getValues, setValue]);
 
-    const parsedWeight = Number.parseFloat(weightKg);
-    const parsedHeight = Number.parseFloat(heightCm);
+  const onSubmit = useCallback(
+    async (data: QuestionnaireFormValues) => {
+      setGeneralError(null);
 
-    if (!homeLocation) {
-      setFormError('Please confirm your home location.');
-      return;
-    }
+      const parsedWeight = Number.parseFloat(data.weightKg);
+      const parsedHeight = Number.parseFloat(data.heightCm);
 
-    if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
-      setFormError('Enter a valid weight in kilograms.');
-      return;
-    }
+      const normalizedHome = data.homeLocation
+        ? {
+            ...data.homeLocation,
+            coordinates: { ...data.homeLocation.coordinates },
+          }
+        : null;
 
-    if (!Number.isFinite(parsedHeight) || parsedHeight <= 0) {
-      setFormError('Enter a valid height in centimeters.');
-      return;
-    }
+      const normalizedWork = data.workLocation
+        ? {
+            ...data.workLocation,
+            coordinates: { ...data.workLocation.coordinates },
+          }
+        : null;
 
-    setIsSubmitting(true);
-    // If no location was provided, use a default location (you could show a city picker here)
-    const profileLocation = location || {
-      latitude: 3.139, // Kuala Lumpur default
-      longitude: 101.6869,
-    };
+      const primaryCoordinates =
+        normalizedHome?.coordinates ?? fallbackCoordinates;
 
-    const fallbackCoordinates = {
-      latitude: profileLocation.latitude,
-      longitude: profileLocation.longitude,
-    };
+      // Calculate baseline hydration goal based on weight
+      const baselineHydrationMl = calculateBaselineHydrationGoal(parsedWeight);
 
-    const homeCoordinates = homeLocation?.coordinates ?? fallbackCoordinates;
-    const normalizedHome: UserLocationDetails = homeLocation ?? {
-      coordinates: homeCoordinates,
-      label: `${homeCoordinates.latitude.toFixed(3)}, ${homeCoordinates.longitude.toFixed(3)}`,
-      address: null,
-      city: null,
-      state: null,
-      country: null,
-      countryCode: null,
-      postcode: null,
-    };
+      const profile: UserProfile = {
+        location: primaryCoordinates,
+        commuteMode: data.commuteMode,
+        sleepHours: data.sleepHours,
+        gender: data.gender,
+        skinTone: data.skinTone,
+        createdAt: new Date().toISOString(),
+        schemaVersion: 1,
+        homeLocation: normalizedHome,
+        workLocation: normalizedWork,
+        weightKg: parsedWeight,
+        heightCm: parsedHeight,
+        idealSleepHours: data.sleepHours,
+        hydrationBaselineMl: baselineHydrationMl,
+        hydrationGoalMl: baselineHydrationMl,
+      };
 
-    const normalizedWork = workLocation
-      ? {
-          ...workLocation,
-          coordinates: { ...workLocation.coordinates },
-        }
-      : null;
+      try {
+        await localStorageService.saveUserProfile(profile);
 
-    // Calculate baseline hydration goal based on weight
-    const baselineHydrationMl = calculateBaselineHydrationGoal(parsedWeight);
+        queryClient.setQueryData(['userProfile'], profile);
+        queryClient.invalidateQueries({
+          queryKey: ['userProfile'],
+          exact: true,
+        });
 
-    const profile: UserProfile = {
-      location: homeCoordinates,
-      commuteMode,
-      sleepHours: sleepTarget,
-      gender,
-      skinTone,
-      createdAt: new Date().toISOString(),
-      schemaVersion: 1,
-      homeLocation: normalizedHome,
-      workLocation: normalizedWork,
-      weightKg: parsedWeight,
-      heightCm: parsedHeight,
-      idealSleepHours: sleepTarget,
-      hydrationBaselineMl: baselineHydrationMl,
-      hydrationGoalMl: baselineHydrationMl,
-    };
-
-    // Persist the updated profile BEFORE navigating so GeneratingTwin uses fresh data
-    try {
-      await localStorageService.saveUserProfile(profile);
-
-      // Optimistically update / replace cached query data so next screen has latest immediately
-      queryClient.setQueryData(['userProfile'], profile);
-
-      // Invalidate to force a refetch later (keeps data fresh if storage changes elsewhere)
-      queryClient.invalidateQueries({
-        queryKey: ['userProfile'],
-        exact: true,
-      });
-
-      // Navigate only after profile is stored & cache updated
-      navigation.navigate('GeneratingTwin');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+        navigation.navigate('GeneratingTwin');
+      } catch (error) {
+        console.error('Failed to save onboarding profile', error);
+        setGeneralError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to save your profile. Please try again.'
+        );
+      }
+    },
+    [fallbackCoordinates, navigation, queryClient]
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -177,84 +184,149 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
           )}
 
           <Card style={styles.formCard}>
-            <LocationQuestion
-              label="Where is your home base?"
-              description="We use this to personalize weather, traffic, and local alerts."
-              value={homeLocation}
-              onChange={setHomeLocation}
-              defaultCoordinates={defaultCoordinates}
-            />
-          </Card>
-
-          <Card style={styles.formCard}>
-            <LocationQuestion
-              label="Where do you usually work?"
-              description="Helps us compare your commute and daytime environment."
-              value={workLocation}
-              onChange={setWorkLocation}
-              allowCopyFrom={homeLocation}
-              onCopyRequested={() =>
-                setWorkLocation(prev => {
-                  if (!homeLocation) return prev;
-                  return {
-                    ...homeLocation,
-                    coordinates: { ...homeLocation.coordinates },
-                  };
-                })
-              }
-            />
-          </Card>
-
-          <Card style={styles.formCard}>
             <View style={styles.inputStack}>
-              <Input
-                label="Weight (kg)"
-                keyboardType="decimal-pad"
-                value={weightKg}
-                onChangeText={text => {
-                  setWeightKg(text);
-                  setFormError(null);
+              <Controller
+                control={control}
+                name="weightKg"
+                rules={{
+                  required: 'Enter your weight in kilograms.',
+                  validate: value => {
+                    const parsed = Number.parseFloat(value);
+                    if (!Number.isFinite(parsed) || parsed <= 0) {
+                      return 'Enter a valid weight in kilograms.';
+                    }
+                    return true;
+                  },
                 }}
-                placeholder="e.g. 68"
+                render={({ field: { value, onChange } }) => (
+                  <Input
+                    label="Weight (kg)"
+                    keyboardType="decimal-pad"
+                    value={value}
+                    onChangeText={text => onChange(text)}
+                    placeholder="e.g. 68"
+                    error={errors.weightKg?.message}
+                  />
+                )}
               />
+
               <View style={styles.smallSeparator} />
-              <Input
-                label="Height (cm)"
-                keyboardType="decimal-pad"
-                value={heightCm}
-                onChangeText={text => {
-                  setHeightCm(text);
-                  setFormError(null);
+
+              <Controller
+                control={control}
+                name="heightCm"
+                rules={{
+                  required: 'Enter your height in centimeters.',
+                  validate: value => {
+                    const parsed = Number.parseFloat(value);
+                    if (!Number.isFinite(parsed) || parsed <= 0) {
+                      return 'Enter a valid height in centimeters.';
+                    }
+                    return true;
+                  },
                 }}
-                placeholder="e.g. 172"
+                render={({ field: { value, onChange } }) => (
+                  <Input
+                    label="Height (cm)"
+                    keyboardType="decimal-pad"
+                    value={value}
+                    onChangeText={text => onChange(text)}
+                    placeholder="e.g. 172"
+                    error={errors.heightCm?.message}
+                  />
+                )}
               />
             </View>
           </Card>
 
           <Card style={styles.formCard}>
-            <GenderPicker selectedValue={gender} onValueChange={setGender} />
-            <View style={styles.separator} />
-            <SkinTonePicker
-              selectedValue={skinTone}
-              onValueChange={setSkinTone}
+            <Controller
+              control={control}
+              name="gender"
+              render={({ field: { value, onChange } }) => (
+                <GenderPicker selectedValue={value} onValueChange={onChange} />
+              )}
             />
             <View style={styles.separator} />
-            <CommutePicker
-              selectedValue={commuteMode}
-              onValueChange={setCommuteMode}
+            <Controller
+              control={control}
+              name="skinTone"
+              render={({ field: { value, onChange } }) => (
+                <SkinTonePicker
+                  selectedValue={value}
+                  onValueChange={onChange}
+                />
+              )}
             />
             <View style={styles.separator} />
-            <SleepSlider value={sleepTarget} onValueChange={setSleepTarget} />
+            <Controller
+              control={control}
+              name="commuteMode"
+              render={({ field: { value, onChange } }) => (
+                <CommutePicker selectedValue={value} onValueChange={onChange} />
+              )}
+            />
+            <View style={styles.separator} />
+            <Controller
+              control={control}
+              name="sleepHours"
+              render={({ field: { value, onChange } }) => (
+                <SleepSlider value={value} onValueChange={onChange} />
+              )}
+            />
           </Card>
 
-          {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
+          <Card style={styles.formCard}>
+            <Controller
+              control={control}
+              name="homeLocation"
+              render={({ field: { value, onChange } }) => (
+                <LocationQuestion
+                  label="Where is your home base? (optional)"
+                  description="We use this to personalize weather, traffic, and local alerts."
+                  value={value}
+                  onChange={onChange}
+                />
+              )}
+            />
+
+            <View style={styles.separator} />
+
+            <Controller
+              control={control}
+              name="workLocation"
+              render={({ field: { value, onChange } }) => (
+                <LocationQuestion
+                  label="Where do you usually work? (optional)"
+                  description="Helps us compare your commute and daytime environment."
+                  value={value}
+                  onChange={onChange}
+                />
+              )}
+            />
+
+            {homeLocation ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onPress={copyHomeToWork}
+                style={styles.copyButton}
+              >
+                Copy home location to work
+              </Button>
+            ) : null}
+          </Card>
+
+          {generalError ? (
+            <Text style={styles.errorText}>{generalError}</Text>
+          ) : null}
 
           <View style={styles.buttonContainer}>
             <Button
               fullWidth
               variant="secondary"
               size="lg"
-              onPress={handleCompleteOnboarding}
+              onPress={handleSubmit(onSubmit)}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -337,7 +409,11 @@ const styles = StyleSheet.create({
     height: spacing.md,
   },
   inputStack: {
-    gap: spacing.lg,
+    gap: spacing.xs,
+  },
+  copyButton: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
   },
   buttonContainer: {
     paddingTop: spacing.md,

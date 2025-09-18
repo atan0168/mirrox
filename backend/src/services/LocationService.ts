@@ -39,7 +39,6 @@ class LocationService {
     try {
       const {
         limit = 5,
-        countryCodes,
         viewbox,
         bounded,
         dedupe = true,
@@ -54,7 +53,7 @@ class LocationService {
             key: config.locationiq.apiKey,
             q: query,
             limit,
-            countrycodes: countryCodes,
+            countrycodes: 'my', // fixed to Malaysia
             viewbox,
             bounded: bounded ? 1 : undefined,
             dedupe: dedupe ? 1 : 0,
@@ -97,7 +96,9 @@ class LocationService {
     }
   }
 
-  private mapSuggestion(result: LocationIQAutocompleteResult): LocationSuggestion {
+  private mapSuggestion(
+    result: LocationIQAutocompleteResult
+  ): LocationSuggestion {
     const latitude = parseFloat(result.lat);
     const longitude = parseFloat(result.lon);
 

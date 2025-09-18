@@ -1,259 +1,182 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import * as Location from 'expo-location';
-import { locationIQService } from '../services/LocationIQService';
+import { ChevronRight, MapPin } from 'lucide-react-native';
+
+import { RootStackParamList } from '../../App';
 import { UserLocationDetails } from '../models/User';
-import { Button, Input } from './ui';
-import { borderRadius, colors, fontSize, spacing } from '../theme';
+import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { Button } from './ui';
+import { placemarkToUserLocation } from '../utils/locationHelpers';
 
 interface LocationQuestionProps {
   label: string;
   description?: string;
   value: UserLocationDetails | null;
   onChange: (value: UserLocationDetails | null) => void;
-  defaultCoordinates?: { latitude: number; longitude: number } | null;
-  allowCopyFrom?: UserLocationDetails | null;
-  onCopyRequested?: () => void;
+  allowCurrentLocation?: boolean;
 }
 
-const formatCoord = (value: number) => value.toFixed(6);
+const formatCoord = (value: number) => value.toFixed(4);
+
+type LocationPickerNavigation = StackNavigationProp<
+  RootStackParamList,
+  'LocationPicker'
+>;
 
 export const LocationQuestion: React.FC<LocationQuestionProps> = ({
-  label,
   description,
   value,
   onChange,
-  defaultCoordinates,
-  allowCopyFrom,
-  onCopyRequested,
+  allowCurrentLocation = true,
 }) => {
-  const [latInput, setLatInput] = useState('');
-  const [lngInput, setLngInput] = useState('');
+  const navigation = useNavigation<LocationPickerNavigation>();
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const hasPrefilled = useRef(false);
+  const [loading, setLoading] = useState(false);
 
-  const hasDefault = useMemo(
-    () =>
-      defaultCoordinates != null &&
-      Number.isFinite(defaultCoordinates.latitude) &&
-      Number.isFinite(defaultCoordinates.longitude),
-    [defaultCoordinates]
-  );
+  const handleNavigate = useCallback(() => {
+    setStatus(null);
+    setError(null);
+    navigation.navigate('LocationPicker', {
+      initialLocation: value,
+      allowCurrentLocation,
+      onSelect: selection => {
+        onChange(selection);
+        setStatus(selection ? 'Location updated' : 'Location cleared');
+        setError(null);
+      },
+    });
+  }, [allowCurrentLocation, navigation, onChange, value]);
 
-  const handleLookup = useCallback(
-    async (latitude: number, longitude: number) => {
-      setIsLoading(true);
-      setError(null);
-      setStatus('Looking up address…');
-      try {
-        const location = await locationIQService.reverseGeocode(
-          latitude,
-          longitude
-        );
-        setLatInput(formatCoord(latitude));
-        setLngInput(formatCoord(longitude));
-        onChange(location);
-        setStatus('Address updated');
-      } catch (lookupError) {
-        console.error('Reverse geocode failed', lookupError);
-        const message =
-          lookupError instanceof Error
-            ? lookupError.message
-            : 'Unable to reverse geocode these coordinates.';
-        setError(message);
-        setStatus(null);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [onChange]
-  );
+  const ensurePermission = useCallback(async () => {
+    const { status: permissionStatus } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (permissionStatus !== Location.PermissionStatus.GRANTED) {
+      throw new Error('Location permission is required.');
+    }
+  }, []);
 
   const handleUseCurrentLocation = useCallback(async () => {
     try {
+      setLoading(true);
+      setStatus('Fetching your current location…');
       setError(null);
-      setStatus('Requesting location permission…');
-      const { status: permissionStatus } =
-        await Location.requestForegroundPermissionsAsync();
-      if (permissionStatus !== Location.PermissionStatus.GRANTED) {
-        setStatus(null);
-        setError(
-          'Location permission is required to use your current location.'
-        );
-        return;
-      }
 
-      setStatus('Fetching current location…');
+      await ensurePermission();
+
       const position = await Location.getCurrentPositionAsync({});
-      await handleLookup(position.coords.latitude, position.coords.longitude);
+      const placemarks = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+
+      const normalized = placemarkToUserLocation(
+        position.coords,
+        placemarks[0] ?? null
+      );
+
+      onChange(normalized);
+      setStatus('Current location set');
     } catch (locationError) {
-      console.error('Failed to obtain current location', locationError);
+      console.error('Failed to fetch current location', locationError);
       setStatus(null);
       setError(
         locationError instanceof Error
           ? locationError.message
-          : 'Unable to obtain your current location.'
+          : 'Unable to fetch your current location.'
       );
+    } finally {
+      setLoading(false);
     }
-  }, [handleLookup]);
+  }, [ensurePermission, onChange]);
 
-  const handleUseDefault = useCallback(() => {
-    if (!defaultCoordinates) {
-      return;
-    }
-    void handleLookup(
-      defaultCoordinates.latitude,
-      defaultCoordinates.longitude
-    );
-  }, [defaultCoordinates, handleLookup]);
-
-  const handleManualLookup = useCallback(() => {
-    const lat = Number.parseFloat(latInput);
-    const lng = Number.parseFloat(lngInput);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      setError('Enter valid latitude and longitude values.');
-      return;
-    }
-    void handleLookup(lat, lng);
-  }, [handleLookup, latInput, lngInput]);
-
-  useEffect(() => {
-    if (value) {
-      setLatInput(formatCoord(value.coordinates.latitude));
-      setLngInput(formatCoord(value.coordinates.longitude));
-    }
-  }, [value]);
-
-  useEffect(() => {
-    if (hasPrefilled.current) return;
-    if (!value && hasDefault && defaultCoordinates) {
-      hasPrefilled.current = true;
-      void handleLookup(
-        defaultCoordinates.latitude,
-        defaultCoordinates.longitude
-      );
-    }
-  }, [defaultCoordinates, handleLookup, hasDefault, value]);
-
-  const handleCopyFrom = useCallback(() => {
-    if (allowCopyFrom && onCopyRequested) {
-      onCopyRequested();
-    } else if (allowCopyFrom) {
-      onChange({ ...allowCopyFrom });
-    } else {
-      Alert.alert('No saved location to copy.');
-    }
-  }, [allowCopyFrom, onChange, onCopyRequested]);
+  const handleClear = useCallback(() => {
+    onChange(null);
+    setStatus('Location cleared');
+    setError(null);
+  }, [onChange]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.header}>
+        {value ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            onPress={handleClear}
+            disabled={loading}
+          >
+            Clear
+          </Button>
+        ) : null}
+      </View>
       {description ? (
         <Text style={styles.description}>{description}</Text>
       ) : null}
 
+      <TouchableOpacity
+        style={styles.summaryCard}
+        activeOpacity={0.8}
+        onPress={handleNavigate}
+      >
+        <View style={styles.summaryIcon}>
+          <MapPin size={18} color={colors.neutral[600]} />
+        </View>
+        <View style={styles.summaryContent}>
+          <Text style={styles.summaryTitle}>
+            {value?.label || 'No location selected'}
+          </Text>
+          {value ? (
+            <Text style={styles.summarySubtitle}>
+              {formatCoord(value.coordinates.latitude)},
+              {formatCoord(value.coordinates.longitude)}
+            </Text>
+          ) : (
+            <Text style={styles.summaryPlaceholder}>
+              Tap to choose via map or search
+            </Text>
+          )}
+        </View>
+        <ChevronRight size={20} color={colors.neutral[400]} />
+      </TouchableOpacity>
+
       <View style={styles.actionsRow}>
+        {allowCurrentLocation ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            onPress={handleUseCurrentLocation}
+            disabled={loading}
+          >
+            Use Current Location
+          </Button>
+        ) : null}
         <Button
           size="sm"
-          variant="secondary"
-          onPress={handleUseCurrentLocation}
-          disabled={isLoading}
+          variant="outline"
+          onPress={handleNavigate}
+          disabled={loading}
         >
-          Use Current Location
+          Open Location Picker
         </Button>
-        {hasDefault ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onPress={handleUseDefault}
-            disabled={isLoading}
-          >
-            Use Selected City
-          </Button>
-        ) : null}
-        {allowCopyFrom ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onPress={handleCopyFrom}
-            disabled={isLoading}
-          >
-            Use Saved Location
-          </Button>
-        ) : null}
       </View>
 
-      <View style={styles.coordinatesRow}>
-        <Input
-          label="Latitude"
-          keyboardType="decimal-pad"
-          value={latInput}
-          onChangeText={text => {
-            setLatInput(text);
-            setError(null);
-          }}
-          containerStyle={styles.coordinateInput}
-        />
-        <Input
-          label="Longitude"
-          keyboardType="decimal-pad"
-          value={lngInput}
-          onChangeText={text => {
-            setLngInput(text);
-            setError(null);
-          }}
-          containerStyle={styles.coordinateInput}
-        />
-      </View>
-
-      <Button
-        size="sm"
-        variant="ghost"
-        onPress={handleManualLookup}
-        disabled={isLoading}
-        style={styles.lookupButton}
-      >
-        Lookup Address
-      </Button>
-
-      <View style={styles.resultCard}>
-        <View style={styles.resultHeader}>
-          <Text style={styles.resultTitle}>
-            {value ? value.label : 'No location selected yet'}
-          </Text>
-          {isLoading ? (
-            <ActivityIndicator size="small" color={colors.neutral[600]} />
-          ) : null}
+      {loading ? (
+        <View style={styles.loadingRow}>
+          <ActivityIndicator size="small" color={colors.neutral[600]} />
+          <Text style={styles.loadingText}>Updating…</Text>
         </View>
-        {value ? (
-          <Text style={styles.resultCoordinates}>
-            {formatCoord(value.coordinates.latitude)},
-            {formatCoord(value.coordinates.longitude)}
-          </Text>
-        ) : (
-          <Text style={styles.resultPlaceholder}>
-            Choose an option above to populate your location.
-          </Text>
-        )}
-        {value?.city ? (
-          <Text style={styles.resultMeta}>
-            {value.city}
-            {value.state ? `, ${value.state}` : ''}
-            {value.country ? ` • ${value.country}` : ''}
-          </Text>
-        ) : null}
-        {value?.postcode ? (
-          <Text style={styles.resultMeta}>Postcode: {value.postcode}</Text>
-        ) : null}
-      </View>
+      ) : null}
 
       {status ? <Text style={styles.statusText}>{status}</Text> : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -263,61 +186,70 @@ export const LocationQuestion: React.FC<LocationQuestionProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.md,
+    gap: spacing.sm,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   label: {
     fontSize: fontSize.lg,
     fontWeight: '600',
     color: colors.black,
+    flexShrink: 1,
   },
   description: {
     fontSize: fontSize.sm,
     color: colors.neutral[600],
+  },
+  summaryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    backgroundColor: colors.white,
+    padding: spacing.md,
+    gap: spacing.md,
+  },
+  summaryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  summaryContent: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  summaryTitle: {
+    fontSize: fontSize.base,
+    color: colors.black,
+    fontWeight: '600',
+  },
+  summarySubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[600],
+  },
+  summaryPlaceholder: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[500],
   },
   actionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  coordinatesRow: {
+  loadingRow: {
     flexDirection: 'row',
-    gap: spacing.md,
-  },
-  coordinateInput: {
-    flex: 1,
-  },
-  lookupButton: {
-    alignSelf: 'flex-start',
-  },
-  resultCard: {
-    backgroundColor: colors.neutral[50],
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.neutral[200],
-    padding: spacing.md,
+    alignItems: 'center',
     gap: spacing.xs,
   },
-  resultHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  resultTitle: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    color: colors.black,
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  resultCoordinates: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[600],
-  },
-  resultPlaceholder: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[500],
-  },
-  resultMeta: {
+  loadingText: {
     fontSize: fontSize.sm,
     color: colors.neutral[600],
   },

@@ -18,6 +18,7 @@ import React, {
 } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { asPointFeature, asPolygonFeature } from '../../utils/geoUtils';
+import { STYLE_URL } from '../../constants';
 
 type PointFeature = {
   lat: number;
@@ -91,8 +92,6 @@ const styles = StyleSheet.create({
 });
 
 type NativeProps = DengueMapProps;
-
-const styleUrl = 'https://tiles.openfreemap.org/styles/liberty';
 
 const NativeDengueMap: React.FC<NativeProps> = ({
   points,
@@ -265,7 +264,7 @@ const NativeDengueMap: React.FC<NativeProps> = ({
     <View style={[styles.container, { height }]}>
       <MapView
         style={{ flex: 1 }}
-        mapStyle={styleUrl}
+        mapStyle={STYLE_URL}
         onDidFinishLoadingStyle={() => setMapReady(true)}
         onPress={() => {
           if (selectedUid) setSelectedUid(null);
