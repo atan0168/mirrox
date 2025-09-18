@@ -1,25 +1,18 @@
 import React, { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import * as Location from 'expo-location';
 import { ChevronRight, MapPin } from 'lucide-react-native';
 
 import { RootStackParamList } from '../../App';
 import { UserLocationDetails } from '../models/User';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { Button } from './ui';
-import { placemarkToUserLocation } from '../utils/locationHelpers';
 
 interface LocationQuestionProps {
   label: string;
   description?: string;
+  icon?: React.ComponentType<{ size: number; color: string }>;
   value: UserLocationDetails | null;
   onChange: (value: UserLocationDetails | null) => void;
   allowCurrentLocation?: boolean;
@@ -33,15 +26,18 @@ type LocationPickerNavigation = StackNavigationProp<
 >;
 
 export const LocationQuestion: React.FC<LocationQuestionProps> = ({
+  label,
   description,
   value,
+  icon,
   onChange,
   allowCurrentLocation = true,
 }) => {
   const navigation = useNavigation<LocationPickerNavigation>();
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+
+  const Icon = icon || MapPin;
 
   const handleNavigate = useCallback(() => {
     setStatus(null);
@@ -57,49 +53,6 @@ export const LocationQuestion: React.FC<LocationQuestionProps> = ({
     });
   }, [allowCurrentLocation, navigation, onChange, value]);
 
-  const ensurePermission = useCallback(async () => {
-    const { status: permissionStatus } =
-      await Location.requestForegroundPermissionsAsync();
-
-    if (permissionStatus !== Location.PermissionStatus.GRANTED) {
-      throw new Error('Location permission is required.');
-    }
-  }, []);
-
-  const handleUseCurrentLocation = useCallback(async () => {
-    try {
-      setLoading(true);
-      setStatus('Fetching your current location…');
-      setError(null);
-
-      await ensurePermission();
-
-      const position = await Location.getCurrentPositionAsync({});
-      const placemarks = await Location.reverseGeocodeAsync({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-      });
-
-      const normalized = placemarkToUserLocation(
-        position.coords,
-        placemarks[0] ?? null
-      );
-
-      onChange(normalized);
-      setStatus('Current location set');
-    } catch (locationError) {
-      console.error('Failed to fetch current location', locationError);
-      setStatus(null);
-      setError(
-        locationError instanceof Error
-          ? locationError.message
-          : 'Unable to fetch your current location.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [ensurePermission, onChange]);
-
   const handleClear = useCallback(() => {
     onChange(null);
     setStatus('Location cleared');
@@ -108,17 +61,15 @@ export const LocationQuestion: React.FC<LocationQuestionProps> = ({
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        {value ? (
-          <Button
-            size="sm"
-            variant="ghost"
-            onPress={handleClear}
-            disabled={loading}
-          >
-            Clear
-          </Button>
-        ) : null}
+      <View style={styles.headerRow}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={styles.header}>
+          {value ? (
+            <Button size="sm" variant="primary" onPress={handleClear}>
+              Clear
+            </Button>
+          ) : null}
+        </View>
       </View>
       {description ? (
         <Text style={styles.description}>{description}</Text>
@@ -130,7 +81,7 @@ export const LocationQuestion: React.FC<LocationQuestionProps> = ({
         onPress={handleNavigate}
       >
         <View style={styles.summaryIcon}>
-          <MapPin size={18} color={colors.neutral[600]} />
+          <Icon size={18} color={colors.neutral[600]} />
         </View>
         <View style={styles.summaryContent}>
           <Text style={styles.summaryTitle}>
@@ -150,34 +101,6 @@ export const LocationQuestion: React.FC<LocationQuestionProps> = ({
         <ChevronRight size={20} color={colors.neutral[400]} />
       </TouchableOpacity>
 
-      <View style={styles.actionsRow}>
-        {allowCurrentLocation ? (
-          <Button
-            size="sm"
-            variant="secondary"
-            onPress={handleUseCurrentLocation}
-            disabled={loading}
-          >
-            Use Current Location
-          </Button>
-        ) : null}
-        <Button
-          size="sm"
-          variant="outline"
-          onPress={handleNavigate}
-          disabled={loading}
-        >
-          Open Location Picker
-        </Button>
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color={colors.neutral[600]} />
-          <Text style={styles.loadingText}>Updating…</Text>
-        </View>
-      ) : null}
-
       {status ? <Text style={styles.statusText}>{status}</Text> : null}
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
@@ -194,15 +117,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   label: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.black,
+    fontWeight: '500',
+    color: colors.neutral[600],
     flexShrink: 1,
   },
   description: {
     fontSize: fontSize.sm,
     color: colors.neutral[600],
+    marginBottom: spacing.sm,
   },
   summaryCard: {
     flexDirection: 'row',
@@ -238,20 +167,6 @@ const styles = StyleSheet.create({
   summaryPlaceholder: {
     fontSize: fontSize.sm,
     color: colors.neutral[500],
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  loadingText: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[600],
   },
   statusText: {
     fontSize: fontSize.xs,

@@ -7,7 +7,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
-import { MapPin } from 'lucide-react-native';
+import { BriefcaseBusiness, MapPin, MapPinHouse } from 'lucide-react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { CommutePicker } from '../components/CommutePicker';
 import { SleepSlider } from '../components/SleepSlider';
@@ -184,6 +184,16 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
           )}
 
           <Card style={styles.formCard}>
+            <Controller
+              control={control}
+              name="gender"
+              render={({ field: { value, onChange } }) => (
+                <GenderPicker selectedValue={value} onValueChange={onChange} />
+              )}
+            />
+            <View style={styles.separator} />
+
+            <Text style={styles.label}>Body Measurements</Text>
             <View style={styles.inputStack}>
               <Controller
                 control={control}
@@ -237,16 +247,6 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
                 )}
               />
             </View>
-          </Card>
-
-          <Card style={styles.formCard}>
-            <Controller
-              control={control}
-              name="gender"
-              render={({ field: { value, onChange } }) => (
-                <GenderPicker selectedValue={value} onValueChange={onChange} />
-              )}
-            />
             <View style={styles.separator} />
             <Controller
               control={control}
@@ -277,13 +277,15 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
           </Card>
 
           <Card style={styles.formCard}>
+            <Text style={styles.label}>Location</Text>
             <Controller
               control={control}
               name="homeLocation"
               render={({ field: { value, onChange } }) => (
                 <LocationQuestion
-                  label="Where is your home base? (optional)"
-                  description="We use this to personalize weather, traffic, and local alerts."
+                  label="Home (optional)"
+                  description="Used to personalize weather, traffic, and local alerts."
+                  icon={MapPinHouse}
                   value={value}
                   onChange={onChange}
                 />
@@ -297,8 +299,9 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
               name="workLocation"
               render={({ field: { value, onChange } }) => (
                 <LocationQuestion
-                  label="Where do you usually work? (optional)"
-                  description="Helps us compare your commute and daytime environment."
+                  label="Work (optional)"
+                  description="Helps to compare your commute and daytime environment."
+                  icon={BriefcaseBusiness}
                   value={value}
                   onChange={onChange}
                 />
@@ -374,6 +377,11 @@ const styles = StyleSheet.create({
     color: colors.neutral[600],
     lineHeight: 24,
   },
+  label: {
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    color: colors.black,
+  },
   locationNotice: {
     padding: spacing.md,
   },
@@ -403,7 +411,6 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: colors.neutral[200],
-    marginVertical: spacing.lg,
   },
   smallSeparator: {
     height: spacing.md,
