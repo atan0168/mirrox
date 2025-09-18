@@ -42,7 +42,7 @@ export function computeEnergy(steps: number, sleepMinutes: number) {
 export function getTierForSleepMinutes(
   sleepMinutes: number | null | undefined
 ): InsightTier | null {
-  if (typeof sleepMinutes !== 'number') return null;
+  if (typeof sleepMinutes !== 'number' || sleepMinutes <= 0) return null;
   if (sleepMinutes < 5 * 60) return 1;
   if (sleepMinutes < 6.5 * 60) return 2;
   if (sleepMinutes < 7.5 * 60) return 3;

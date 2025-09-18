@@ -61,16 +61,52 @@ const AlertDetails: React.FC<{
   );
 };
 
+const AlertHeader: React.FC<{
+  tab: 'active' | 'dismissed';
+  setTab: (tab: 'active' | 'dismissed') => void;
+}> = ({ tab, setTab }) => {
+  return (
+    <View style={styles.tabsRow}>
+      <TouchableOpacity
+        style={[styles.tabBtn, tab === 'active' && styles.tabBtnActive]}
+        onPress={() => setTab('active')}
+        accessibilityRole="button"
+      >
+        <Text
+          style={[styles.tabText, tab === 'active' && styles.tabTextActive]}
+        >
+          Active
+        </Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.tabBtn, tab === 'dismissed' && styles.tabBtnActive]}
+        onPress={() => setTab('dismissed')}
+        accessibilityRole="button"
+      >
+        <Text
+          style={[styles.tabText, tab === 'dismissed' && styles.tabTextActive]}
+        >
+          Dismissed Today
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 const AlertsScreen: React.FC = () => {
   const { alerts, refresh } = useAlerts();
-  const { alerts: dismissedToday, refresh: refreshDismissed } = useDismissedAlertsToday();
+  const { alerts: dismissedToday, refresh: refreshDismissed } =
+    useDismissedAlertsToday();
   const [tab, setTab] = useState<'active' | 'dismissed'>('active');
   const route = useRoute<RouteProp<RootStackParamList, 'Alerts'>>();
   const targetId = route.params?.alertId;
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const data = useMemo(() => (tab === 'active' ? alerts : dismissedToday), [alerts, dismissedToday, tab]);
+  const data = useMemo(
+    () => (tab === 'active' ? alerts : dismissedToday),
+    [alerts, dismissedToday, tab]
+  );
 
   const onRefreshBoth = async () => {
     await Promise.all([refresh(), refreshDismissed()]);
@@ -78,33 +114,21 @@ const AlertsScreen: React.FC = () => {
 
   if (!data.length) {
     return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyTitle}>No active alerts</Text>
-        <Text style={styles.emptySubtitle}>
-          You’re all caught up. Check back later.
-        </Text>
-      </View>
+      <>
+        <AlertHeader tab={tab} setTab={setTab} />
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>No active alerts</Text>
+          <Text style={styles.emptySubtitle}>
+            You’re all caught up. Check back later.
+          </Text>
+        </View>
+      </>
     );
   }
 
   return (
     <>
-      <View style={styles.tabsRow}>
-        <TouchableOpacity
-          style={[styles.tabBtn, tab === 'active' && styles.tabBtnActive]}
-          onPress={() => setTab('active')}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.tabText, tab === 'active' && styles.tabTextActive]}>Active</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabBtn, tab === 'dismissed' && styles.tabBtnActive]}
-          onPress={() => setTab('dismissed')}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.tabText, tab === 'dismissed' && styles.tabTextActive]}>Dismissed Today</Text>
-        </TouchableOpacity>
-      </View>
+      <AlertHeader tab={tab} setTab={setTab} />
       <FlatList
         contentContainerStyle={{ padding: spacing.lg }}
         data={data}
@@ -124,13 +148,15 @@ const AlertsScreen: React.FC = () => {
             >
               <TouchableOpacity
                 style={styles.dismissBtn}
-               onPress={async () => {
-                 await AlertsService.dismiss(item.id);
-                 await onRefreshBoth();
-               }}
+                onPress={async () => {
+                  await AlertsService.dismiss(item.id);
+                  await onRefreshBoth();
+                }}
                 accessibilityLabel="Dismiss"
               >
-                <X size={16} color={colors.neutral[700]} />
+                {tab === 'active' ? (
+                  <X size={16} color={colors.neutral[700]} />
+                ) : null}
               </TouchableOpacity>
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.body}>{item.shortBody}</Text>

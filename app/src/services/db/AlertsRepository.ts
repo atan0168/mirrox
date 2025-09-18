@@ -43,6 +43,8 @@ export const AlertsRepository = {
       dataNote: string | null;
       severity: string;
       dismissed: number;
+      dismissedAt: string | null;
+      dedupeKey: string | null;
     }>(
       `SELECT id, type, createdAt, title, shortBody, longBody, sourceName, sourceUrl, tier, dataNote, severity, dismissed, dismissedAt, dedupeKey
        FROM alerts ${where} ORDER BY datetime(createdAt) DESC LIMIT ?`,
@@ -61,7 +63,7 @@ export const AlertsRepository = {
       dataNote: r.dataNote ?? undefined,
       severity: r.severity as AlertSeverity,
       dismissed: !!r.dismissed,
-      dedupeKey: (r as any).dedupeKey ?? undefined,
+      dedupeKey: r.dedupeKey ?? undefined,
     }));
   },
 

@@ -98,6 +98,10 @@ export const ProactiveInsightsNotifier = {
       const latest = history.snapshots[history.snapshots.length - 1];
       const today = latest?.date ?? todayKey();
 
+      if (latest.date !== today) {
+        return null;
+      }
+
       // Steps encouragement
       if (latest?.steps != null) {
         const steps = latest.steps;
@@ -263,7 +267,10 @@ export const ProactiveInsightsNotifier = {
         const lastDate = map[c.id];
         const minGap = MIN_DAYS_BETWEEN[c.type] ?? 1;
         if (lastDate) {
-          const diff = differenceInCalendarDays(new Date(`${todayStr}T00:00:00`), new Date(`${lastDate}T00:00:00`));
+          const diff = differenceInCalendarDays(
+            new Date(`${todayStr}T00:00:00`),
+            new Date(`${lastDate}T00:00:00`)
+          );
           if (diff < minGap) continue;
         }
         // okay to send; record and store
