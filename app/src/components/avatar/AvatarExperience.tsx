@@ -70,6 +70,8 @@ interface AvatarExperienceProps {
     aqi?: number | null;
     pm25?: number | null;
     pm10?: number | null;
+    temperature?: number | null;
+    humidity?: number | null;
   } | null;
   // Optional environment context
   weather?: 'sunny' | 'cloudy' | 'rainy' | null;
@@ -177,6 +179,33 @@ function AvatarExperience({
     () => weatherPreset as 'sunny' | 'cloudy' | 'rainy' | 'night',
     [weatherPreset]
   );
+
+  const isSweatyWeather = useMemo(() => {
+    const temp = airQualityData?.temperature ?? null;
+    const humidity = airQualityData?.humidity ?? null;
+    const effectiveWeather = overrideWeather ?? weather ?? null;
+    const rainy =
+      effectiveWeather === 'rainy' || mappedLightingPreset === 'rainy';
+
+    if (rainy) {
+      return false;
+    }
+
+    if (typeof temp === 'number') {
+      if (temp >= 32) return true;
+      if (temp >= 28 && typeof humidity === 'number' && humidity >= 70) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [
+    airQualityData?.humidity,
+    airQualityData?.temperature,
+    mappedLightingPreset,
+    overrideWeather,
+    weather,
+  ]);
 
   // Calculate stress effects from HRV-based health signals
   const stressEffects = useMemo(() => {
@@ -492,6 +521,18 @@ function AvatarExperience({
           '🚨 High HRV stress detected - triggering stress animation'
         );
         setActiveAnimation('M_Standing_Expressions_007'); // Cough animation for high stress
+      } else if (
+        isSweatyWeather &&
+        stressEffects.stressLevel === 'none' &&
+        !shouldPreserveSleepDeprivedIdle &&
+        (!aqiAnimationRecommendation || recommendedAnimation === null)
+      ) {
+        if (activeAnimation !== 'wiping_sweat') {
+          console.log(
+            '🔥 Hot weather detected - triggering wiping_sweat animation'
+          );
+        }
+        setActiveAnimation('wiping_sweat');
       } else if (aqiAnimationRecommendation) {
         if (
           shouldOverrideAnimation(
@@ -506,24 +547,35 @@ function AvatarExperience({
           );
           setActiveAnimation(recommendedAnimation);
 
-          // For moderate air quality (breathing) + sleep deprivation, cycle with yawn
+          // For moderate air quality (breathing), cycle through contextual clips
           if (
             aqi &&
             aqi > 50 &&
             aqi <= 100 &&
-            isSleepDeprived &&
             aqiAnimationRecommendation.animation === 'breathing'
           ) {
-            const cycleAnimations = ['breathing', 'yawn'];
-            let currentIndex = 0;
-            animationCycleRef.current = setInterval(() => {
-              currentIndex = (currentIndex + 1) % cycleAnimations.length;
-              const nextAnimation = cycleAnimations[currentIndex];
-              console.log(
-                `🔄 Cycling to animation: ${nextAnimation} (moderate AQI + sleep deprivation)`
-              );
-              setActiveAnimation(nextAnimation);
-            }, 10000);
+            const cycleSet = new Set<string>(['breathing']);
+            if (isSweatyWeather) {
+              cycleSet.add('wiping_sweat');
+            }
+            if (isSleepDeprived) {
+              cycleSet.add('yawn');
+            }
+
+            const cycleAnimations = Array.from(cycleSet);
+            if (cycleAnimations.length > 1) {
+              let currentIndex = 0;
+              animationCycleRef.current = setInterval(() => {
+                currentIndex = (currentIndex + 1) % cycleAnimations.length;
+                const nextAnimation = cycleAnimations[currentIndex];
+                console.log(
+                  `🔄 Cycling to animation: ${nextAnimation} (moderate AQI${
+                    isSweatyWeather ? ' + heat' : ''
+                  }${isSleepDeprived ? ' + sleep deprivation' : ''})`
+                );
+                setActiveAnimation(nextAnimation);
+              }, 10000);
+            }
           }
 
           // For unhealthy air quality, set up animation cycling
@@ -543,6 +595,10 @@ function AvatarExperience({
             // Add yawn to cycle if sleep deprived
             if (isSleepDeprived && !cycleAnimations.includes('yawn')) {
               cycleAnimations.push('yawn');
+            }
+
+            if (isSweatyWeather && !cycleAnimations.includes('wiping_sweat')) {
+              cycleAnimations.push('wiping_sweat');
             }
 
             // Add swat bugs when dengue risk is nearby unless sleeping
@@ -598,6 +654,8 @@ function AvatarExperience({
     isSleepDeprived,
     sleepMode,
     hasNearbyDengueRisk,
+    isSweatyWeather,
+    recommendedAnimation,
   ]);
 
   // Independent sleep deprivation posture animation (slump) if:

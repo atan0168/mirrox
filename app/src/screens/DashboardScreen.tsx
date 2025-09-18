@@ -11,6 +11,7 @@ import {
   Switch,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import * as Location from 'expo-location';
 import AvatarExperience from '../components/avatar/AvatarExperience';
 import { EffectsList, EffectData, Button } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
@@ -37,6 +38,8 @@ import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { useUIStore } from '../store/uiStore';
 import { useHydrationStore } from '../store/hydrationStore';
 import { hydrationService } from '../services/HydrationService';
+import { Coordinates } from '../models/User';
+import { isWithinRadiusKm } from '../utils/geoUtils';
 
 const DashboardScreen: React.FC = () => {
   const isFocused = useIsFocused();
@@ -45,6 +48,13 @@ const DashboardScreen: React.FC = () => {
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [scene, setScene] = useState<SceneOption>('home');
+  const [sceneManuallyOverridden, setSceneManuallyOverridden] =
+    useState(false);
+  const [autoScene, setAutoScene] = useState<SceneOption>('home');
+  const [locationPermissionStatus, setLocationPermissionStatus] =
+    useState<Location.PermissionStatus | null>(null);
+  const [currentLocation, setCurrentLocation] =
+    useState<Coordinates | null>(null);
   const manualExpression = useAvatarStore(s => s.manualFacialExpression);
   const setManualExpression = useAvatarStore(s => s.setManualFacialExpression);
   const clearManualExpression = useAvatarStore(
@@ -107,6 +117,134 @@ const DashboardScreen: React.FC = () => {
   const hasNearbyDengueRisk =
     (dengueNearby?.hotspotCount ?? 0) > 0 ||
     (dengueNearby?.outbreakCount ?? 0) > 0;
+
+  useEffect(() => {
+    let isMounted = true;
+    let subscription: Location.LocationSubscription | null = null;
+
+    const syncLocation = async () => {
+      try {
+        const existing = await Location.getForegroundPermissionsAsync();
+        let status = existing.status;
+
+        if (status === Location.PermissionStatus.UNDETERMINED) {
+          const requested = await Location.requestForegroundPermissionsAsync();
+          status = requested.status;
+        }
+
+        if (!isMounted) return;
+
+        setLocationPermissionStatus(status);
+
+        if (status !== Location.PermissionStatus.GRANTED) {
+          setCurrentLocation(null);
+          return;
+        }
+
+        const initialPosition = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        if (isMounted) {
+          setCurrentLocation({
+            latitude: initialPosition.coords.latitude,
+            longitude: initialPosition.coords.longitude,
+          });
+        }
+
+        subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 250,
+          },
+          position => {
+            if (!isMounted) return;
+            setCurrentLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          }
+        );
+      } catch (err) {
+        console.warn('Unable to retrieve location for scene selection', err);
+        if (isMounted) {
+          setCurrentLocation(null);
+        }
+      }
+    };
+
+    if (isFocused) {
+      syncLocation();
+    }
+
+    return () => {
+      isMounted = false;
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, [isFocused]);
+
+  useEffect(() => {
+    if (!userProfile) {
+      if (autoScene !== 'home') {
+        setAutoScene('home');
+      }
+      return;
+    }
+
+    if (
+      locationPermissionStatus !== Location.PermissionStatus.GRANTED ||
+      !currentLocation
+    ) {
+      if (autoScene !== 'home') {
+        setAutoScene('home');
+      }
+      return;
+    }
+
+    const homeLocation = userProfile.homeLocation || null;
+    const workLocation = userProfile.workLocation || null;
+
+    const nearHome =
+      !!homeLocation &&
+      isWithinRadiusKm(currentLocation, homeLocation.coordinates, 1);
+    const nearWork =
+      !!workLocation &&
+      isWithinRadiusKm(currentLocation, workLocation.coordinates, 1);
+
+    let nextScene: SceneOption = 'home';
+    if (nearHome) {
+      nextScene = 'home';
+    } else if (nearWork) {
+      nextScene = 'city';
+    }
+
+    if (nextScene !== autoScene) {
+      setAutoScene(nextScene);
+    }
+  }, [
+    autoScene,
+    currentLocation,
+    locationPermissionStatus,
+    userProfile,
+  ]);
+
+  useEffect(() => {
+    if (sceneManuallyOverridden) {
+      return;
+    }
+
+    if (scene !== autoScene) {
+      setScene(autoScene);
+    }
+  }, [autoScene, scene, sceneManuallyOverridden]);
+
+  useEffect(() => {
+    if (!developerControlsEnabled && sceneManuallyOverridden) {
+      setSceneManuallyOverridden(false);
+    }
+  }, [developerControlsEnabled, sceneManuallyOverridden]);
 
   // Track hydration of persisted store to avoid flicker
   useEffect(() => {
@@ -368,7 +506,13 @@ const DashboardScreen: React.FC = () => {
           {developerControlsEnabled && (
             <View style={styles.controlsContainer}>
               <Text style={styles.controlsTitle}>Avatar Customization</Text>
-              <SceneSwitcher value={scene} onChange={setScene} />
+              <SceneSwitcher
+                value={scene}
+                onChange={value => {
+                  setScene(value);
+                  setSceneManuallyOverridden(value !== autoScene);
+                }}
+              />
               <SkinToneButton
                 skinToneAdjustment={manualSkinToneAdjustment}
                 onSkinToneChange={setManualSkinToneAdjustment}
