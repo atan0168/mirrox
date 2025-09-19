@@ -119,7 +119,7 @@ export class AirQualityController {
               other: cacheStats.size - aqicnKeys.length - openaqKeys.length,
             },
           },
-          rateLimit: openaqStatus.rateLimit,
+          ...(openaqStatus.rateLimit && { rateLimit: openaqStatus.rateLimit }),
           uptime: process.uptime(),
           timestamp: new Date().toISOString(),
           services: {
@@ -141,7 +141,6 @@ export class AirQualityController {
             keys: [],
             breakdown: { aqicn: 0, openaq: 0, other: 0 },
           },
-          rateLimit: null,
           uptime: process.uptime(),
           timestamp: new Date().toISOString(),
           services: {
@@ -324,7 +323,7 @@ export class AirQualityController {
         `Searching AQICN stations for coordinates: ${lat}, ${lon}, radius: ${radiusKm}km`
       );
 
-      const stations = await aqicnService.searchStations(lat, lon, radiusKm);
+      const stations = await aqicnService.searchStations(lat, lon);
 
       res.json({
         success: true,

@@ -302,7 +302,7 @@ class ApiService {
    */
   public getServiceStatus(): {
     cache: { size: number; keys: string[] };
-    rateLimit: RateLimitStatus;
+    rateLimit: RateLimitStatus | null;
   } {
     return {
       cache: cacheService.getStats(),

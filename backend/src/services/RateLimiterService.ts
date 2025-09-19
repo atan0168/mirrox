@@ -1,3 +1,5 @@
+import { RateLimitStatus } from '../models/AirQuality';
+
 /**
  * Rate limiter service to manage API request rates and handle OpenAQ rate limits
  * Tracks rate limit headers and implements delays when approaching limits
@@ -145,7 +147,7 @@ class RateLimiterService {
   /**
    * Get current rate limit status
    */
-  getRateLimitStatus(): RateLimitInfo | null {
+  getRateLimitStatus(): RateLimitStatus | null {
     if (!this.rateLimitInfo) {
       return null;
     }
@@ -156,7 +158,16 @@ class RateLimiterService {
       return null;
     }
 
-    return { ...this.rateLimitInfo };
+    const now = Date.now();
+    const timeUntilReset = Math.max(0, this.rateLimitInfo.reset - now);
+
+    return {
+      requestCount: this.rateLimitInfo.used,
+      limit: this.rateLimitInfo.limit,
+      remaining: this.rateLimitInfo.remaining,
+      resetTime: this.rateLimitInfo.reset,
+      timeUntilReset,
+    };
   }
 
   /**
@@ -166,7 +177,7 @@ class RateLimiterService {
     const status = this.getRateLimitStatus();
     if (!status) return false;
 
-    return status.remaining <= 0 && Date.now() < status.reset;
+    return status.remaining <= 0 && Date.now() < status.resetTime;
   }
 
   /**
@@ -177,8 +188,7 @@ class RateLimiterService {
     const status = this.getRateLimitStatus();
     if (!status) return 0;
 
-    const timeUntilReset = status.reset - Date.now();
-    return Math.max(0, timeUntilReset);
+    return status.timeUntilReset;
   }
 
   /**

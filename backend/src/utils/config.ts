@@ -98,7 +98,12 @@ const config: Config = {
 };
 
 // Validate required environment variables
-const requiredVars = ['OPENAQ_API_KEY', 'AQICN_API_KEY', 'TOMTOM_API_KEY', 'LOCATIONIQ_API_KEY'];
+const requiredVars = [
+  'OPENAQ_API_KEY',
+  'AQICN_API_KEY',
+  'TOMTOM_API_KEY',
+  'LOCATIONIQ_API_KEY',
+];
 const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
