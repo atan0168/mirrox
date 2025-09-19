@@ -19,6 +19,7 @@ export class HydrationService {
   private static instance: HydrationService | null = null;
   private dayCheckInterval: NodeJS.Timeout | null = null;
   private hydrationAnimationTimeout: NodeJS.Timeout | null = null;
+  private previousAnimationBeforeHydration: string | null = null;
   private isInitialized = false;
 
   static getInstance(): HydrationService {
@@ -209,7 +210,12 @@ export class HydrationService {
         return;
       }
 
-      avatarState.setActiveAnimation('drinking');
+      const currentAnimation = avatarState.activeAnimation;
+      if (currentAnimation !== 'drinking') {
+        this.previousAnimationBeforeHydration = currentAnimation;
+      }
+
+      avatarState.setActiveAnimation('drinking', { manual: true });
 
       if (this.hydrationAnimationTimeout) {
         clearTimeout(this.hydrationAnimationTimeout);
@@ -218,13 +224,23 @@ export class HydrationService {
       const durationMs = this.getDrinkingAnimationDurationMs();
 
       this.hydrationAnimationTimeout = setTimeout(() => {
-        const { activeAnimation, isManualAnimation, setActiveAnimation } =
-          useAvatarStore.getState();
+        const {
+          activeAnimation,
+          setActiveAnimation,
+          clearManualAnimation,
+        } = useAvatarStore.getState();
 
-        if (activeAnimation === 'drinking' && !isManualAnimation) {
-          setActiveAnimation(null);
+        if (activeAnimation === 'drinking') {
+          clearManualAnimation();
+
+          if (this.previousAnimationBeforeHydration) {
+            setActiveAnimation(this.previousAnimationBeforeHydration);
+          } else {
+            setActiveAnimation(null);
+          }
         }
 
+        this.previousAnimationBeforeHydration = null;
         this.hydrationAnimationTimeout = null;
       }, durationMs);
     } catch (error) {
