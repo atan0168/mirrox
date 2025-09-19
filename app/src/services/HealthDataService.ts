@@ -15,6 +15,9 @@ import { healthProvider } from './health';
 
 export class HealthDataService {
   private listeners: Set<(snapshot: HealthSnapshot) => void> = new Set();
+  private sandboxEnabled = false;
+  private sandboxSnapshot: HealthSnapshot | null = null;
+  private sandboxHistory: HealthHistory | null = null;
 
   onUpdate(listener: (snapshot: HealthSnapshot) => void): () => void {
     this.listeners.add(listener);
@@ -31,11 +34,23 @@ export class HealthDataService {
     }
   }
   async requestPermissions(): Promise<boolean> {
+    if (this.sandboxEnabled) {
+      return true;
+    }
     const status = await healthProvider.requestPermissions();
     return status === 'granted';
   }
 
   async syncLatest(now: Date = new Date()): Promise<HealthSnapshot> {
+    if (this.sandboxEnabled && this.sandboxSnapshot) {
+      const snapshot: HealthSnapshot = {
+        ...this.sandboxSnapshot,
+        timestamp: new Date().toISOString(),
+      };
+      this.sandboxSnapshot = snapshot;
+      this.notifyUpdate(snapshot);
+      return snapshot;
+    }
     const platform: HealthPlatform =
       Platform.OS === 'ios'
         ? 'ios'
@@ -107,6 +122,9 @@ export class HealthDataService {
     maxDays: number = 30,
     now: Date = new Date()
   ): Promise<HealthSnapshot> {
+    if (this.sandboxEnabled && this.sandboxSnapshot) {
+      return this.sandboxSnapshot;
+    }
     const timeZone = getDeviceTimeZone();
     const todayStr = yyyymmddInTimeZone(now, timeZone);
 
@@ -226,21 +244,92 @@ export class HealthDataService {
   }
 
   private async saveLatest(snapshot: HealthSnapshot) {
+    if (this.sandboxEnabled) {
+      this.sandboxSnapshot = snapshot;
+      return;
+    }
     // Store in SQLCipher DB (upsert by date)
     await HealthHistoryRepository.upsert(snapshot);
   }
 
   async getLatest(): Promise<HealthSnapshot | null> {
+    if (this.sandboxEnabled) {
+      return this.sandboxSnapshot;
+    }
     return await HealthHistoryRepository.getLatest();
   }
 
   private async appendHistory(snapshot: HealthSnapshot) {
+    if (this.sandboxEnabled) {
+      return;
+    }
     // Upsert into SQLite; trimming is handled when reading with a LIMIT
     await HealthHistoryRepository.upsert(snapshot);
   }
 
   async getHistory(limit = 30): Promise<HealthHistory> {
+    if (this.sandboxEnabled) {
+      if (this.sandboxHistory) {
+        return this.sandboxHistory;
+      }
+      return { snapshots: this.sandboxSnapshot ? [this.sandboxSnapshot] : [] };
+    }
     return await HealthHistoryRepository.getHistory(limit);
+  }
+
+  private ensureSandboxHistory(
+    snapshot: HealthSnapshot,
+    history?: HealthHistory
+  ): HealthHistory {
+    if (history?.snapshots?.length) {
+      return history;
+    }
+    return { snapshots: [snapshot] };
+  }
+
+  public setSandboxMode(
+    enabled: boolean,
+    data?: { snapshot?: HealthSnapshot; history?: HealthHistory }
+  ) {
+    this.sandboxEnabled = enabled;
+    if (!enabled) {
+      this.sandboxSnapshot = null;
+      this.sandboxHistory = null;
+      return;
+    }
+
+    const snapshot = data?.snapshot ?? this.sandboxSnapshot;
+    if (snapshot) {
+      const updatedSnapshot: HealthSnapshot = {
+        ...snapshot,
+        timestamp: new Date().toISOString(),
+      };
+      this.sandboxSnapshot = updatedSnapshot;
+      this.sandboxHistory = this.ensureSandboxHistory(
+        updatedSnapshot,
+        data?.history ?? this.sandboxHistory ?? undefined
+      );
+      this.notifyUpdate(updatedSnapshot);
+    }
+  }
+
+  public updateSandboxData(
+    snapshot: HealthSnapshot,
+    history?: HealthHistory
+  ) {
+    const updatedSnapshot: HealthSnapshot = {
+      ...snapshot,
+      timestamp: new Date().toISOString(),
+    };
+    this.sandboxSnapshot = updatedSnapshot;
+    this.sandboxHistory = this.ensureSandboxHistory(updatedSnapshot, history);
+    if (this.sandboxEnabled) {
+      this.notifyUpdate(updatedSnapshot);
+    }
+  }
+
+  public isSandboxEnabled(): boolean {
+    return this.sandboxEnabled;
   }
 }
 

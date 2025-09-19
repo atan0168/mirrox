@@ -30,6 +30,7 @@ import SceneSwitcher, {
   SceneOption,
 } from '../components/controls/SceneSwitcher';
 import RainIntensityControls from '../components/controls/RainIntensityControls';
+import SandboxControls from '../components/controls/SandboxControls';
 import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
 import { useAvatarStore } from '../store/avatarStore';
 import { useIsFocused } from '@react-navigation/native';
@@ -48,13 +49,13 @@ const DashboardScreen: React.FC = () => {
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [scene, setScene] = useState<SceneOption>('home');
-  const [sceneManuallyOverridden, setSceneManuallyOverridden] =
-    useState(false);
+  const [sceneManuallyOverridden, setSceneManuallyOverridden] = useState(false);
   const [autoScene, setAutoScene] = useState<SceneOption>('home');
   const [locationPermissionStatus, setLocationPermissionStatus] =
     useState<Location.PermissionStatus | null>(null);
-  const [currentLocation, setCurrentLocation] =
-    useState<Coordinates | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(
+    null
+  );
   const manualExpression = useAvatarStore(s => s.manualFacialExpression);
   const setManualExpression = useAvatarStore(s => s.setManualFacialExpression);
   const clearManualExpression = useAvatarStore(
@@ -223,12 +224,7 @@ const DashboardScreen: React.FC = () => {
     if (nextScene !== autoScene) {
       setAutoScene(nextScene);
     }
-  }, [
-    autoScene,
-    currentLocation,
-    locationPermissionStatus,
-    userProfile,
-  ]);
+  }, [autoScene, currentLocation, locationPermissionStatus, userProfile]);
 
   useEffect(() => {
     if (sceneManuallyOverridden) {
@@ -481,7 +477,7 @@ const DashboardScreen: React.FC = () => {
         <View style={styles.content}>
           <View style={styles.avatarContainer}>
             <AvatarExperience
-              showAnimationButton={developerControlsEnabled}
+              showAnimationButton={false && developerControlsEnabled}
               facialExpression={manualExpression || recommendedExpression}
               skinToneAdjustment={skinEffects.totalAdjustment}
               isActive={!!isFocused}
@@ -517,6 +513,7 @@ const DashboardScreen: React.FC = () => {
                 skinToneAdjustment={manualSkinToneAdjustment}
                 onSkinToneChange={setManualSkinToneAdjustment}
               />
+              <SandboxControls location={userProfile?.location} />
               <RainIntensityControls
                 value={rainIntensity}
                 onChange={setRainIntensity}

@@ -464,6 +464,7 @@ export class LocalStorageService {
     enableDeveloperControls?: boolean;
     enableEnergyNotifications?: boolean;
     enableSleepHealthNotifications?: boolean;
+    enableSandboxMode?: boolean;
   }): Promise<void> {
     try {
       const profile = await this.getUserProfile();
@@ -490,6 +491,11 @@ export class LocalStorageService {
             preferences.enableSleepHealthNotifications ??
             profile.preferences?.enableSleepHealthNotifications ??
             true,
+          // Default sandbox mode to disabled
+          enableSandboxMode:
+            preferences.enableSandboxMode ??
+            profile.preferences?.enableSandboxMode ??
+            false,
         };
         await this.saveUserProfile(profile);
       }
@@ -515,6 +521,16 @@ export class LocalStorageService {
     } catch (error) {
       console.error('Failed to get developer controls preference:', error);
       return false; // Default to disabled on error
+    }
+  }
+
+  public async getSandboxModeEnabled(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.preferences?.enableSandboxMode ?? false;
+    } catch (error) {
+      console.error('Failed to get sandbox mode preference:', error);
+      return false;
     }
   }
 

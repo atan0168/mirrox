@@ -22,6 +22,7 @@ import {
 import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
+import { useSandboxPreference } from '../hooks/useSandboxPreference';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useHealthData } from '../hooks/useHealthData';
 import { useNavigation } from '@react-navigation/native';
@@ -62,6 +63,12 @@ export default function SettingsScreen() {
     developerControlsEnabled: enableDeveloperControls,
     updateDeveloperControlsPreference,
   } = useDeveloperControlsPreference();
+
+  const {
+    sandboxEnabled: enableSandboxMode,
+    loading: sandboxPreferenceLoading,
+    updateSandboxPreference,
+  } = useSandboxPreference();
 
   // Use the energy notifications preference hook
   const {
@@ -365,6 +372,32 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleSandboxToggle = async (value: boolean) => {
+    try {
+      setLoading(true);
+      const success = await updateSandboxPreference(value);
+      if (success) {
+        const message = value
+          ? 'Sandbox mode is now active. The app will use developer demo data sources until you disable it.'
+          : 'Sandbox mode has been disabled. Live data sources are re-enabled.';
+        Alert.alert('Sandbox Mode Updated', message, [{ text: 'OK' }]);
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to update sandbox mode. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to update sandbox mode preference:', error);
+      Alert.alert('Error', 'Failed to update sandbox mode. Please try again.', [
+        { text: 'OK' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const AuthMethodOption = ({
     method,
     title,
@@ -553,6 +586,27 @@ export default function SettingsScreen() {
                 value={enableDeveloperControls}
                 onValueChange={handleDeveloperControlsToggle}
                 disabled={loading}
+                trackColor={{
+                  false: colors.neutral[300],
+                  true: colors.black,
+                }}
+                thumbColor={colors.white}
+              />
+            </View>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Sandbox Mode</Text>
+                <Text style={styles.settingDescription}>
+                  Feed the app with scripted demo data for air quality, dengue,
+                  stress, and sleep so you can trigger full experiences on
+                  demand
+                </Text>
+              </View>
+              <Switch
+                value={enableSandboxMode}
+                onValueChange={handleSandboxToggle}
+                disabled={loading || sandboxPreferenceLoading}
                 trackColor={{
                   false: colors.neutral[300],
                   true: colors.black,

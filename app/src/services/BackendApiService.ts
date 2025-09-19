@@ -1,5 +1,6 @@
 import axios, { AxiosResponse, AxiosInstance } from 'axios';
 import { API_BASE_URL } from '../constants';
+import { useSandboxStore } from '../store/sandboxStore';
 import {
   LocationAutocompleteResponse,
   LocationSuggestion,
@@ -425,6 +426,13 @@ class BackendApiService {
     error?: string;
   }> {
     try {
+      const sandbox = useSandboxStore.getState();
+      if (sandbox.enabled) {
+        const result = sandbox.denguePrediction
+          ? JSON.parse(JSON.stringify(sandbox.denguePrediction))
+          : { success: true };
+        return result;
+      }
       const response = await this.axiosInstance.get('/dengue/predict', {
         params: { state, ...(params || {}) },
       });
@@ -444,6 +452,13 @@ class BackendApiService {
     longitude: number,
     radiusKm: number = 10
   ): Promise<ArcGISResponse<HotspotAttributes, PointGeometry>> {
+    const sandbox = useSandboxStore.getState();
+    if (sandbox.enabled) {
+      if (sandbox.dengueHotspots) {
+        return JSON.parse(JSON.stringify(sandbox.dengueHotspots));
+      }
+      return { fields: [], features: [] };
+    }
     const response = await this.axiosInstance.get('/dengue/hotspots', {
       params: { latitude, longitude, radius: radiusKm },
     });
@@ -458,6 +473,13 @@ class BackendApiService {
     longitude: number,
     radiusKm: number = 10
   ): Promise<ArcGISResponse<OutbreakAttributes, PolygonGeometry>> {
+    const sandbox = useSandboxStore.getState();
+    if (sandbox.enabled) {
+      if (sandbox.dengueOutbreaks) {
+        return JSON.parse(JSON.stringify(sandbox.dengueOutbreaks));
+      }
+      return { fields: [], features: [] };
+    }
     const response = await this.axiosInstance.get('/dengue/outbreaks', {
       params: { latitude, longitude, radius: radiusKm },
     });
