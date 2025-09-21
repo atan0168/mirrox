@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Home, BarChart3, Settings } from 'lucide-react-native';
+import { Home, BarChart3, Settings, Utensils } from 'lucide-react-native'; 
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -21,22 +21,12 @@ interface TabConfig {
   label: string;
 }
 
+
 const tabConfigs: Record<string, TabConfig> = {
-  Home: {
-    name: 'Home',
-    icon: Home,
-    label: 'Home',
-  },
-  Stats: {
-    name: 'Stats',
-    icon: BarChart3,
-    label: 'Stats',
-  },
-  Settings: {
-    name: 'Settings',
-    icon: Settings,
-    label: 'Settings',
-  },
+  Home: { name: 'Home', icon: Home, label: 'Home' },
+  Stats: { name: 'Stats', icon: BarChart3, label: 'Stats' },
+  Settings: { name: 'Settings', icon: Settings, label: 'Settings' },
+  FoodDiary: { name: 'FoodDiary', icon: Utensils, label: 'Food Diary' }, 
 };
 
 const CustomTabBar: React.FC<BottomTabBarProps> = ({
@@ -84,15 +74,16 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
   );
 
   const innerWidth = (tabBarWidth ?? screenWidth) - HORIZONTAL_PADDING * 2;
-  // Determine visible routes (those we actually render)
+
+  
   const visibleRouteIndices = state.routes
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => !!tabConfigs[r.name])
     .map(({ i }) => i);
+
   const visibleCount = visibleRouteIndices.length || 1;
   const tabWidth = innerWidth / visibleCount;
 
-  // Output ranges aligned to full route list but only positioning visible ones
   const translateXOutputRange: number[] = new Array(routeCount).fill(0);
   const pillWidthsFull: number[] = new Array(routeCount).fill(60);
 
@@ -102,13 +93,11 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     translateXOutputRange[routeIdx] = x;
     pillWidthsFull[routeIdx] = w;
   });
+
   // For any hidden routes, use the nearest previous visible position for stability
   for (let i = 0; i < routeCount; i++) {
     if (translateXOutputRange[i] === 0 && !visibleRouteIndices.includes(i)) {
-      // find previous visible or fallback to first visible
-      const prevVisible = [...visibleRouteIndices]
-        .filter(idx => idx <= i)
-        .pop();
+      const prevVisible = [...visibleRouteIndices].filter(idx => idx <= i).pop();
       const fallbackIndex = prevVisible ?? visibleRouteIndices[0] ?? 0;
       translateXOutputRange[i] = translateXOutputRange[fallbackIndex];
       pillWidthsFull[i] = pillWidthsFull[fallbackIndex];
@@ -186,17 +175,13 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               target: route.key,
               canPreventDefault: true,
             });
-
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+              navigation.navigate(route.name as never);
             }
           };
 
           const onLongPress = () => {
-            navigation.emit({
-              type: 'tabLongPress',
-              target: route.key,
-            });
+            navigation.emit({ type: 'tabLongPress', target: route.key });
           };
 
           const IconComponent = tabConfig.icon;
@@ -255,7 +240,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     opacity: 0,
     pointerEvents: 'none',
-    top: -1000, // Move far off screen
+    top: -1000,
   },
   measureText: {
     fontSize: fontSize.base,
@@ -271,7 +256,7 @@ const styles = StyleSheet.create({
   pill: {
     position: 'absolute',
     height: 40,
-    backgroundColor: colors.primary, // Dark neutral color
+    backgroundColor: colors.primary,
     borderRadius: borderRadius.full,
     top: 8,
     ...shadows.medium,

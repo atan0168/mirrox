@@ -1,7 +1,11 @@
+import 'dotenv/config';
 import app from './app';
 import config from './utils/config';
+import foodRouter from './routes/food';
 
 const PORT = config.server.port;
+
+app.use('/api/food', foodRouter);
 
 // Handle uncaught exceptions
 process.on('uncaughtException', error => {

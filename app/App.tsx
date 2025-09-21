@@ -26,6 +26,7 @@ import { initNotifications } from './src/services/notifications';
 import RootServices from './src/components/RootServices';
 import LocationPickerScreen from './src/screens/LocationPickerScreen';
 import { UserLocationDetails } from './src/models/User';
+import NutritionDetailScreen from './src/screens/NutritionDetailScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -60,6 +61,7 @@ export type RootStackParamList = {
     onSelect?: (selection: UserLocationDetails | null) => void;
     allowCurrentLocation?: boolean;
   };
+  NutritionDetail: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -181,6 +183,11 @@ export default function App() {
             options={{
               headerShown: false,
             }}
+          />
+          <Stack.Screen
+            name="NutritionDetail"
+            component={NutritionDetailScreen}
+            options={{ title: 'Nutrition Detail' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

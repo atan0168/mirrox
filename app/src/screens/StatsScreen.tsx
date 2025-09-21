@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { HeartPulse } from 'lucide-react-native';
+import { HeartPulse, TrendingUp, Wind } from 'lucide-react-native';
 import {
   EnvironmentalInfoSquares,
   EnvironmentalInfoSquaresSkeleton,
@@ -29,8 +29,12 @@ import { useHealthHistory } from '../hooks/useHealthHistory';
 import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { colors } from '../theme';
 
+// ✅ Use NutritionSummaryCard instead of NutritionCard
+import { NutritionSummaryCard } from '../components/NutritionSummaryCard';
+
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();
+
   const {
     data: airQuality,
     isLoading: isAirQualityLoading,
@@ -42,7 +46,6 @@ const StatsScreen: React.FC = () => {
     ENV_REFRESH_INTERVAL_MS
   );
 
-  // Use traffic data hook
   const {
     data: trafficData,
     loading: isTrafficLoading,
@@ -83,7 +86,6 @@ const StatsScreen: React.FC = () => {
     enabled: !!userProfile?.location && !!isMalaysia,
   });
 
-  // Health data (steps, sleep)
   const {
     data: health,
     loading: isHealthLoading,
@@ -278,42 +280,48 @@ const StatsScreen: React.FC = () => {
           />
         )}
 
-        {/* Health Info Squares */}
+        {/* Health Info Section */}
         <HealthInfoSquares
           health={health}
           isLoading={isHealthLoading}
           isError={!!healthError}
           errorMessage={healthError || undefined}
         />
+
+        {/* ✅ Nutrition summary card (always rendered, handles its own state) */}
+        <View style={styles.section}>
+          <NutritionSummaryCard />
+        </View>
+
+        {/* Other Stats Section */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <TrendingUp size={24} color="#059669" />
+            </View>
+            <Text style={styles.statValue}>7 Days</Text>
+            <Text style={styles.statLabel}>Wellness Streak</Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <View style={styles.statIcon}>
+              <Wind size={24} color="#6366F1" />
+            </View>
+            <Text style={styles.statValue}>{getAirQualityStatValue()}</Text>
+            <Text style={styles.statLabel}>Air Quality</Text>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 24,
-  },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollView: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 30 },
+  title: { fontSize: 32, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: '#6B7280', lineHeight: 24 },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -340,10 +348,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
@@ -512,6 +517,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 20,
     marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
   },
 });
 
