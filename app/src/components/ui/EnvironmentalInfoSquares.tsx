@@ -318,7 +318,7 @@ export const EnvironmentalInfoSquares: React.FC<
                   <Text
                     style={[styles.trafficLevel, { color: getTrafficColor() }]}
                   >
-                    {trafficData.stressLevel.toUpperCase()}
+                    {trafficData?.stressLevel ? trafficData.stressLevel.toUpperCase() : 'N/A'}
                   </Text>
                 </View>
                 <Text style={styles.trafficDescription}>

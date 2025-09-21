@@ -2,11 +2,18 @@ import { Router } from 'express';
 import airQualityRoutes from './airQuality';
 import trafficRoutes from './traffic';
 
+import food from './food';
+import personalization from './personalization';
+import aiRoutes from './ai';
+
 const router = Router();
 
 // API Routes
 router.use('/air-quality', airQualityRoutes);
 router.use('/traffic', trafficRoutes);
+router.use('/food', food);
+router.use('/personalization', personalization);
+router.use('/ai', aiRoutes);
 
 // General health check
 router.get('/health', (req, res) => {

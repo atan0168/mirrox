@@ -1,6 +1,7 @@
+// app/src/screens/StatsScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { TrendingUp, Clock, Wind } from 'lucide-react-native';
+import { TrendingUp, Wind } from 'lucide-react-native';
 import {
   EnvironmentalInfoSquares,
   EnvironmentalInfoSquaresSkeleton,
@@ -12,8 +13,12 @@ import { useTrafficData } from '../hooks/useTrafficData';
 import { getAQIInfo, getShortClassification } from '../utils/aqiUtils';
 import { useHealthData } from '../hooks/useHealthData';
 
+// ✅ Use NutritionSummaryCard instead of NutritionCard
+import { NutritionSummaryCard } from '../components/NutritionSummaryCard';
+
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();
+
   const {
     data: airQuality,
     isLoading: isAirQualityLoading,
@@ -24,7 +29,6 @@ const StatsScreen: React.FC = () => {
     !!userProfile
   );
 
-  // Use traffic data hook
   const {
     data: trafficData,
     loading: isTrafficLoading,
@@ -36,14 +40,11 @@ const StatsScreen: React.FC = () => {
     refreshInterval: 300000, // 5 minutes
   });
 
-  // Health data (steps, sleep)
   const {
     data: health,
     loading: isHealthLoading,
     error: healthError,
-  } = useHealthData({
-    autoSync: true,
-  });
+  } = useHealthData({ autoSync: true });
 
   const getAirQualityStatValue = () => {
     if (isAirQualityLoading) return '...';
@@ -56,18 +57,13 @@ const StatsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Your Stats</Text>
-          <Text style={styles.subtitle}>
-            Track your environmental wellness journey
-          </Text>
+          <Text style={styles.subtitle}>Track your environmental wellness journey</Text>
         </View>
 
-        {/* Environmental Info Squares */}
+        {/* Environmental Info Section */}
         {isAirQualityLoading && isTrafficLoading ? (
           <EnvironmentalInfoSquaresSkeleton />
         ) : (
@@ -78,16 +74,12 @@ const StatsScreen: React.FC = () => {
             isTrafficLoading={isTrafficLoading}
             isAirQualityError={!!airQualityError}
             isTrafficError={!!trafficError}
-            airQualityErrorMessage={
-              airQualityError?.message || 'Unable to load air quality data'
-            }
-            trafficErrorMessage={
-              trafficError?.message || 'Unable to load traffic conditions'
-            }
+            airQualityErrorMessage={airQualityError?.message || 'Unable to load air quality data'}
+            trafficErrorMessage={trafficError?.message || 'Unable to load traffic conditions'}
           />
         )}
 
-        {/* Health Info Squares */}
+        {/* Health Info Section */}
         <HealthInfoSquares
           health={health}
           isLoading={isHealthLoading}
@@ -95,6 +87,12 @@ const StatsScreen: React.FC = () => {
           errorMessage={healthError || undefined}
         />
 
+        {/* ✅ Nutrition summary card (always rendered, handles its own state) */}
+        <View style={styles.section}>
+          <NutritionSummaryCard />
+        </View>
+
+        {/* Other Stats Section */}
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <View style={styles.statIcon}>
@@ -111,47 +109,18 @@ const StatsScreen: React.FC = () => {
             <Text style={styles.statValue}>{getAirQualityStatValue()}</Text>
             <Text style={styles.statLabel}>Air Quality</Text>
           </View>
-
-          {/* Health metrics are shown above in HealthInfoSquares */}
         </View>
-
-        {/* <View style={styles.section}> */}
-        {/*   <Text style={styles.sectionTitle}>Weekly Trends</Text> */}
-        {/*   <View style={styles.placeholder}> */}
-        {/*     <Text style={styles.placeholderText}> */}
-        {/*       Historical charts and trends coming soon */}
-        {/*     </Text> */}
-        {/*   </View> */}
-        {/* </View> */}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 24,
-  },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollView: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 30 },
+  title: { fontSize: 32, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: '#6B7280', lineHeight: 24 },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -178,157 +147,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 30,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  placeholder: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderStyle: 'dashed',
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#9CA3AF',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  aqiCard: {
-    marginBottom: 20,
-    padding: 20,
-  },
-  aqiHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  aqiTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  aqiValue: {
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  aqiClassification: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  healthAdvice: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  dataTimestamp: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  pollutantsContainer: {
-    marginBottom: 20,
-  },
-  pollutantsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
-  },
-  pollutantGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
-  },
-  pollutantItem: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  pollutantLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  pollutantValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  statRowLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  statRowValue: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '600',
-    flex: 1,
-    textAlign: 'right',
-  },
-  recommendationsCard: {
-    marginBottom: 20,
-    padding: 16,
-  },
-  recommendationsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
-  },
-  recommendationItem: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
+  statValue: { fontSize: 24, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  statLabel: { fontSize: 14, color: '#6B7280', textAlign: 'center' },
+  section: { paddingHorizontal: 20, marginBottom: 30 },
 });
 
 export default StatsScreen;

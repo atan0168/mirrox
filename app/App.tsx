@@ -19,6 +19,7 @@ import MainTabNavigator from './src/navigation/MainTabNavigator';
 import AlertsScreen from './src/screens/AlertsScreen';
 import HealthPermissionScreen from './src/screens/HealthPermissionScreen';
 import DebugDatabaseScreen from './src/screens/DebugDatabaseScreen';
+import NutritionDetailScreen from './src/screens/NutritionDetailScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -48,6 +49,7 @@ export type RootStackParamList = {
   MainTabs: undefined;
   Alerts: undefined;
   DebugDB: undefined;
+  NutritionDetail: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -153,6 +155,12 @@ export default function App() {
               headerBackTitle: 'Back',
             }}
           />
+          <Stack.Screen
+            name="NutritionDetail"
+            component={NutritionDetailScreen}
+            options={{ title: 'Nutrition Detail' }}
+          />
+
         </Stack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>

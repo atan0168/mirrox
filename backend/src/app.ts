@@ -10,6 +10,10 @@ import routes from './routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { requestLogger } from './middleware/logger';
 
+import bootstrapPersonalization from './models/personalization';
+bootstrapPersonalization();
+
+
 const app = express();
 
 // Security middleware
@@ -57,6 +61,9 @@ app.use('/api', limiter);
 // API Routes
 app.use('/api', routes);
 
+
+
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
@@ -70,6 +77,9 @@ app.get('/', (req, res) => {
       serviceStatus: '/api/air-quality/status',
       traffic: '/api/traffic/congestion',
       trafficStatus: '/api/traffic/status',
+    
+      foodExtract: '/api/food/extract',
+      personalization: '/api/personalization',
     },
   });
 });
