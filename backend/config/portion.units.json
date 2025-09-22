@@ -1,0 +1,9 @@
+{
+    "bowl":  { "rice": 180, "noodle": 350, "soup": 300, "dessert": 220, "curry": 150 },
+    "cup":   { "beverage": 300, "coffee": 240 },
+    "plate": { "rice": 250, "noodle": 400 },
+    "slice": { "bread": 30,  "cake": 80 },
+    "piece": { "_use_default_portion": true },
+    "small_medium_large_factors": { "small": 0.8, "medium": 1.0, "large": 1.2 }
+  }
+  

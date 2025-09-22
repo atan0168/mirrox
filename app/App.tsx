@@ -21,11 +21,14 @@ import MainTabNavigator from './src/navigation/MainTabNavigator';
 import AlertsScreen from './src/screens/AlertsScreen';
 import HealthPermissionScreen from './src/screens/HealthPermissionScreen';
 import DebugDatabaseScreen from './src/screens/DebugDatabaseScreen';
+
+import NutritionDetailScreen from './src/screens/NutritionDetailScreen';
 import React, { useEffect } from 'react';
 import { initNotifications } from './src/services/notifications';
 import RootServices from './src/components/RootServices';
 import LocationPickerScreen from './src/screens/LocationPickerScreen';
 import { UserLocationDetails } from './src/models/User';
+
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -55,11 +58,15 @@ export type RootStackParamList = {
   MainTabs: undefined;
   Alerts: { alertId?: string } | undefined;
   DebugDB: undefined;
+
+  NutritionDetail: undefined;
+
   LocationPicker: {
     initialLocation: UserLocationDetails | null;
     onSelect?: (selection: UserLocationDetails | null) => void;
     allowCurrentLocation?: boolean;
   };
+
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -176,12 +183,20 @@ export default function App() {
             }}
           />
           <Stack.Screen
+
+            name="NutritionDetail"
+            component={NutritionDetailScreen}
+            options={{ title: 'Nutrition Detail' }}
+          />
+          <Stack.Screen
+
             name="LocationPicker"
             component={LocationPickerScreen}
             options={{
               headerShown: false,
             }}
           />
+
         </Stack.Navigator>
       </NavigationContainer>
     </QueryClientProvider>

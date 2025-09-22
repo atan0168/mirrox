@@ -4,11 +4,18 @@ import trafficRoutes from './traffic';
 import dengueRoutes from './dengue';
 import locationRoutes from './location';
 
+import food from './food';
+import personalization from './personalization';
+import aiRoutes from './ai';
+
 const router = Router();
 
 // API Routes
 router.use('/air-quality', airQualityRoutes);
 router.use('/traffic', trafficRoutes);
+router.use('/food', food);
+router.use('/personalization', personalization);
+router.use('/ai', aiRoutes);
 router.use('/dengue', dengueRoutes);
 router.use('/location', locationRoutes);
 
