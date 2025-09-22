@@ -1,7 +1,6 @@
 {
-    "high_sugar":{"meter":"sugar","delta":12},
-    "high_fat":{"meter":"fat","delta":10},
-    "low_fiber":{"meter":"fiber","delta":-8},
-    "high_sodium":{"meter":"sodium","delta":9}
-  }
-  
+  "high_sugar": { "meter": "sugar", "delta": 12 },
+  "high_fat": { "meter": "fat", "delta": 10 },
+  "low_fiber": { "meter": "fiber", "delta": -8 },
+  "high_sodium": { "meter": "sodium", "delta": 9 }
+}

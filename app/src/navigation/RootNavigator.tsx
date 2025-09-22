@@ -8,7 +8,6 @@ import NutritionDetailScreen from '../screens/NutritionDetailScreen';
 export type RootStackParamList = {
   Tabs: undefined;
   NutritionDetail: undefined;
-  
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

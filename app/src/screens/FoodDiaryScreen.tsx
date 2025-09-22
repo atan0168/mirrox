@@ -50,13 +50,19 @@ type AnalyzeData = {
   per_item?: AnalyzePerItem[];
   tags?: string[];
   tags_display?: string[];
-  avatar_effects?: { meter: 'fiber' | 'sugar' | 'fat' | 'sodium'; delta: number; reason?: string }[];
+  avatar_effects?: {
+    meter: 'fiber' | 'sugar' | 'fat' | 'sodium';
+    delta: number;
+    reason?: string;
+  }[];
   tips?: string[];
 };
 
 export default function FoodDiaryScreen() {
   const [text, setText] = useState('');
-  const [image, setImage] = useState<{ uri: string; base64?: string } | null>(null);
+  const [image, setImage] = useState<{ uri: string; base64?: string } | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<AnalyzeData | null>(null);
   const navigation = useNavigation<any>();
@@ -67,13 +73,14 @@ export default function FoodDiaryScreen() {
 
   // New store methods for step 4
   const appendFromAnalysis = useMealStore(s => s.appendFromAnalysis); // [STEP4-ADD]
-  const reloadMealItems   = useMealStore(s => s.reloadItems);         // [STEP4-ADD]
-  const finishMeal        = useMealStore(s => s.finishMeal);          // [STEP4-ADD]
+  const reloadMealItems = useMealStore(s => s.reloadItems); // [STEP4-ADD]
+  const finishMeal = useMealStore(s => s.finishMeal); // [STEP4-ADD]
 
   // --- Image picker (keeps base64 for MVP payload) ---
   async function pickImage() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return Alert.alert('Permission', 'Photo library permission is required.');
+    if (!perm.granted)
+      return Alert.alert('Permission', 'Photo library permission is required.');
     const r = await ImagePicker.launchImageLibraryAsync({
       base64: true,
       quality: 0.7,
@@ -83,7 +90,9 @@ export default function FoodDiaryScreen() {
       const asset = r.assets[0];
       setImage({
         uri: asset.uri,
-        base64: asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : undefined,
+        base64: asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : undefined,
       });
     }
   }
@@ -136,11 +145,12 @@ export default function FoodDiaryScreen() {
         }),
       });
       const extractJson = await extractRes.json();
-      if (!extractJson.ok) throw new Error(extractJson.error || 'Extract failed');
+      if (!extractJson.ok)
+        throw new Error(extractJson.error || 'Extract failed');
 
       const ai = extractJson.data;
       const hasEntity =
-        ((ai?.FOOD_ITEM?.length || 0) + (ai?.DRINK_ITEM?.length || 0)) > 0;
+        (ai?.FOOD_ITEM?.length || 0) + (ai?.DRINK_ITEM?.length || 0) > 0;
 
       // Debug logs
       console.log('[debug] extractJson:', extractJson);
@@ -154,13 +164,17 @@ export default function FoodDiaryScreen() {
         console.log('[debug] search response:', search);
 
         // Normalize possible return shapes
-        const list: any[] = Array.isArray(search) ? search : (search?.data || search?.results || []);
+        const list: any[] = Array.isArray(search)
+          ? search
+          : search?.data || search?.results || [];
         console.log('[debug] candidate list:', list);
 
         const candidate = list[0]; // Top-1 candidate for minimal UI
 
         if (candidate?.id && candidate?.name) {
-          const ok = await confirmAsync(`你说的“${text.trim()}”是指“${candidate.name}”吗？`);
+          const ok = await confirmAsync(
+            `你说的“${text.trim()}”是指“${candidate.name}”吗？`
+          );
           if (ok) {
             // Save mapping
             await fetch(`${API_BASE}/personalization/user-dict`, {
@@ -178,7 +192,10 @@ export default function FoodDiaryScreen() {
             return analyze();
           }
         } else {
-          Alert.alert('Not recognized', 'No close match found in the food database.');
+          Alert.alert(
+            'Not recognized',
+            'No close match found in the food database.'
+          );
         }
       }
 
@@ -192,13 +209,18 @@ export default function FoodDiaryScreen() {
         }),
       });
       const json = await res.json();
-      if (!json.ok) throw new Error(json.error || `Request failed with status ${res.status}`);
+      if (!json.ok)
+        throw new Error(
+          json.error || `Request failed with status ${res.status}`
+        );
 
       const data: AnalyzeData = json.data;
 
       // Guard: if nothing meaningful was recognized, inform the user and stop
       const totalEnergy = Number(data?.nutrients?.total?.energy_kcal);
-      const perItemA = Array.isArray((data as any)?.per_item) ? (data as any).per_item : [];
+      const perItemA = Array.isArray((data as any)?.per_item)
+        ? (data as any).per_item
+        : [];
       const perItemB = Array.isArray((data?.nutrients as any)?.per_item)
         ? (data?.nutrients as any).per_item
         : [];
@@ -218,7 +240,11 @@ export default function FoodDiaryScreen() {
       // Ensure a formal data source label exists (for downstream screens)
       if (!data.sources || data.sources.length === 0) {
         data.sources = [
-          { key: 'myfcd', label: 'Malaysia Food Composition Database (MyFCD)', url: 'https://myfcd.moh.gov.my' },
+          {
+            key: 'myfcd',
+            label: 'Malaysia Food Composition Database (MyFCD)',
+            url: 'https://myfcd.moh.gov.my',
+          },
         ];
       }
 
@@ -235,7 +261,9 @@ export default function FoodDiaryScreen() {
       setLastAnalysis(data);
 
       // ===== Append recognized per_item into "This meal" =====
-      const perMerged: AnalyzePerItem[] = (data.nutrients?.per_item ?? data.per_item ?? []) as AnalyzePerItem[];
+      const perMerged: AnalyzePerItem[] = (data.nutrients?.per_item ??
+        data.per_item ??
+        []) as AnalyzePerItem[];
       if (perMerged.length > 0) {
         await appendFromAnalysis(
           perMerged.map(p => ({
@@ -328,7 +356,9 @@ export default function FoodDiaryScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
-      <Text style={{ fontSize: 20, fontWeight: '700' }}>What's on your plate?</Text>
+      <Text style={{ fontSize: 20, fontWeight: '700' }}>
+        What's on your plate?
+      </Text>
 
       {/* Input */}
       <Text style={{ fontWeight: '600' }}>Input:</Text>
@@ -378,7 +408,9 @@ export default function FoodDiaryScreen() {
               alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#34C759', fontWeight: '700' }}>REMOVE IMAGE</Text>
+            <Text style={{ color: '#34C759', fontWeight: '700' }}>
+              REMOVE IMAGE
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -394,7 +426,12 @@ export default function FoodDiaryScreen() {
       {image && (
         <Image
           source={{ uri: image.uri }}
-          style={{ width: '100%', height: 220, borderRadius: 8, backgroundColor: '#f4f4f5' }}
+          style={{
+            width: '100%',
+            height: 220,
+            borderRadius: 8,
+            backgroundColor: '#f4f4f5',
+          }}
           resizeMode="cover"
         />
       )}
@@ -453,7 +490,9 @@ export default function FoodDiaryScreen() {
             backgroundColor: '#FFFFFF',
           }}
         >
-          <Text style={{ fontWeight: '700', color: '#111827' }}>Finish meal</Text>
+          <Text style={{ fontWeight: '700', color: '#111827' }}>
+            Finish meal
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -463,7 +502,9 @@ export default function FoodDiaryScreen() {
           <AnalysisCard
             energyKcal={analysis.nutrients.total.energy_kcal}
             tags={tagsForCard}
-            onPressDetails={() => navigation.navigate('NutritionDetail' as never)}
+            onPressDetails={() =>
+              navigation.navigate('NutritionDetail' as never)
+            }
           />
         </View>
       )}
@@ -482,7 +523,9 @@ export default function FoodDiaryScreen() {
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: '#34C759', fontWeight: '700', fontSize: 16 }}>CLEAR</Text>
+          <Text style={{ color: '#34C759', fontWeight: '700', fontSize: 16 }}>
+            CLEAR
+          </Text>
         </TouchableOpacity>
       )}
     </ScrollView>

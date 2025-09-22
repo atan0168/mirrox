@@ -2,7 +2,8 @@
 import db from './db';
 
 function bootstrapPersonalization() {
-  db.prepare(`
+  db.prepare(
+    `
     CREATE TABLE IF NOT EXISTS user_dict (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL,
@@ -13,11 +14,15 @@ function bootstrapPersonalization() {
       updated_at INTEGER NOT NULL,
       UNIQUE(user_id, phrase)
     )
-  `).run();
+  `
+  ).run();
 
-  db.prepare(`CREATE INDEX IF NOT EXISTS idx_user_dict_user ON user_dict(user_id)`).run();
+  db.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_user_dict_user ON user_dict(user_id)`
+  ).run();
 
-  db.prepare(`
+  db.prepare(
+    `
     CREATE TABLE IF NOT EXISTS meal_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL,
@@ -30,9 +35,12 @@ function bootstrapPersonalization() {
       source TEXT NOT NULL,
       created_at INTEGER NOT NULL
     )
-  `).run();
+  `
+  ).run();
 
-  db.prepare(`CREATE INDEX IF NOT EXISTS idx_mevents_user_dow ON meal_events(user_id, dow, ts DESC)`).run();
+  db.prepare(
+    `CREATE INDEX IF NOT EXISTS idx_mevents_user_dow ON meal_events(user_id, dow, ts DESC)`
+  ).run();
 }
 
 export default bootstrapPersonalization;

@@ -9,7 +9,7 @@ import {
   insertMealItemsBulk,
   deleteMealItem,
   listMealItems,
-} from '../db/mealsDb'; 
+} from '../db/mealsDb';
 
 /** Minimal shape of a single food item coming from analysis results */
 type PerItemLike = {
@@ -53,7 +53,11 @@ type MealState = {
   appendFromAnalysis: (perItems: PerItemLike[]) => Promise<void>;
 
   /** Manually add an item (for "+ Add item" flow) */
-  addManualItem: (name: string, energy_kcal?: number | null, qty?: number) => Promise<void>;
+  addManualItem: (
+    name: string,
+    energy_kcal?: number | null,
+    qty?: number
+  ) => Promise<void>;
 
   /** Delete a single item by id */
   removeItemById: (itemId: number) => Promise<void>;
@@ -62,7 +66,7 @@ type MealState = {
 export const useMealStore = create<MealState>((set, get) => ({
   // ===== keep your original lastAnalysis behavior =====
   lastAnalysis: undefined,
-  setLastAnalysis: (d) => set({ lastAnalysis: d }),
+  setLastAnalysis: d => set({ lastAnalysis: d }),
 
   // ===== new fields for the "current meal" feature =====
   currentMealId: null,
@@ -108,7 +112,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
 
   /** Bulk-append items coming from analysis (supports "append" behavior) */
-  appendFromAnalysis: async (perItems) => {
+  appendFromAnalysis: async perItems => {
     if (!perItems || perItems.length === 0) return;
 
     const mealId = await get().ensureMeal();
@@ -116,7 +120,7 @@ export const useMealStore = create<MealState>((set, get) => ({
     // Use bulk insert for better performance
     insertMealItemsBulk(
       mealId,
-      perItems.map((p) => ({
+      perItems.map(p => ({
         name: p.name || p.id || 'Food',
         energy: p.energy_kcal ?? null,
         qty: 1,
@@ -136,7 +140,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   },
 
   /** Delete an item and refresh the list */
-  removeItemById: async (itemId) => {
+  removeItemById: async itemId => {
     deleteMealItem(itemId);
     await get().reloadItems();
   },

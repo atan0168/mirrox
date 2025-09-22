@@ -27,6 +27,11 @@ import RootServices from './src/components/RootServices';
 import LocationPickerScreen from './src/screens/LocationPickerScreen';
 import { UserLocationDetails } from './src/models/User';
 import NutritionDetailScreen from './src/screens/NutritionDetailScreen';
+import React, { useEffect } from 'react';
+import { initNotifications } from './src/services/notifications';
+import RootServices from './src/components/RootServices';
+import LocationPickerScreen from './src/screens/LocationPickerScreen';
+import { UserLocationDetails } from './src/models/User';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -62,6 +67,11 @@ export type RootStackParamList = {
     allowCurrentLocation?: boolean;
   };
   NutritionDetail: undefined;
+  LocationPicker: {
+    initialLocation: UserLocationDetails | null;
+    onSelect?: (selection: UserLocationDetails | null) => void;
+    allowCurrentLocation?: boolean;
+  };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();

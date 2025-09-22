@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Home, BarChart3, Settings, Utensils } from 'lucide-react-native'; 
+import { Home, BarChart3, Settings, Utensils } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -21,12 +21,11 @@ interface TabConfig {
   label: string;
 }
 
-
 const tabConfigs: Record<string, TabConfig> = {
   Home: { name: 'Home', icon: Home, label: 'Home' },
   Stats: { name: 'Stats', icon: BarChart3, label: 'Stats' },
   Settings: { name: 'Settings', icon: Settings, label: 'Settings' },
-  FoodDiary: { name: 'FoodDiary', icon: Utensils, label: 'Food Diary' }, 
+  FoodDiary: { name: 'FoodDiary', icon: Utensils, label: 'Food Diary' },
 };
 
 const CustomTabBar: React.FC<BottomTabBarProps> = ({
@@ -75,7 +74,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
 
   const innerWidth = (tabBarWidth ?? screenWidth) - HORIZONTAL_PADDING * 2;
 
-  
   const visibleRouteIndices = state.routes
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => !!tabConfigs[r.name])
@@ -97,7 +95,9 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
   // For any hidden routes, use the nearest previous visible position for stability
   for (let i = 0; i < routeCount; i++) {
     if (translateXOutputRange[i] === 0 && !visibleRouteIndices.includes(i)) {
-      const prevVisible = [...visibleRouteIndices].filter(idx => idx <= i).pop();
+      const prevVisible = [...visibleRouteIndices]
+        .filter(idx => idx <= i)
+        .pop();
       const fallbackIndex = prevVisible ?? visibleRouteIndices[0] ?? 0;
       translateXOutputRange[i] = translateXOutputRange[fallbackIndex];
       pillWidthsFull[i] = pillWidthsFull[fallbackIndex];

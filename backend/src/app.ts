@@ -61,7 +61,7 @@ app.use('/api', limiter);
 app.use('/api', routes);
 
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
     message: 'Digital Twin Backend API',
     version: '1.0.0',

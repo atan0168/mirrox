@@ -11,7 +11,12 @@ const router = Router();
 router.post('/extract', async (req, res) => {
   try {
     const { text, imageBase64, imageUrl, user_id } = req.body || {};
-    const result = await extractWithDeepSeek({ text, imageBase64, imageUrl, user_id });
+    const result = await extractWithDeepSeek({
+      text,
+      imageBase64,
+      imageUrl,
+      user_id,
+    });
     res.json({ ok: true, data: result });
   } catch (err: any) {
     console.error('[AI/extract] error:', err?.message || err);

@@ -1,4 +1,4 @@
-import db from "../models/db";
+import db from '../models/db';
 
 type FoodRow = {
   id: string;
@@ -14,25 +14,31 @@ type FoodRow = {
 
 function parseJson<T>(s: string | null): T | null {
   if (!s) return null;
-  try { return JSON.parse(s) as T; } catch { return null; }
+  try {
+    return JSON.parse(s) as T;
+  } catch {
+    return null;
+  }
 }
 
 /** Search by FTS on name + aliases */
 export function searchFoods(q: string, limit = 20) {
-  return db.prepare(
-    `SELECT f.id, f.name, f.category
+  return db
+    .prepare(
+      `SELECT f.id, f.name, f.category
        FROM foods_fts fts
        JOIN foods f ON f.rowid = fts.rowid
       WHERE foods_fts MATCH ?
       LIMIT ?`
-  ).all(q, limit);
+    )
+    .all(q, limit);
 }
 
 /** Get food details by id */
 export function getFoodById(id: string) {
-  const row = db.prepare<unknown[], FoodRow>(
-    `SELECT * FROM foods WHERE id = ?`
-  ).get(id);
+  const row = db
+    .prepare<unknown[], FoodRow>(`SELECT * FROM foods WHERE id = ?`)
+    .get(id);
   if (!row) return null;
 
   return {
@@ -50,7 +56,9 @@ export function getFoodById(id: string) {
 
 /** Simple food list (optional) */
 export function listFoods(offset = 0, limit = 50) {
-  return db.prepare(
-    `SELECT id, name, category FROM foods ORDER BY name LIMIT ? OFFSET ?`
-  ).all(limit, offset);
+  return db
+    .prepare(
+      `SELECT id, name, category FROM foods ORDER BY name LIMIT ? OFFSET ?`
+    )
+    .all(limit, offset);
 }

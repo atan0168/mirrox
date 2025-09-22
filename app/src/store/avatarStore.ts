@@ -162,7 +162,6 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
     }
     set({ meters: next });
   },
-
   setMeters: partial => set({ meters: { ...get().meters, ...partial } }),
   resetMeters: (value = 50) =>
     set({ meters: { fiber: value, sugar: value, fat: value, sodium: value } }),

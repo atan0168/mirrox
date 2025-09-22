@@ -287,30 +287,6 @@ const StatsScreen: React.FC = () => {
           isError={!!healthError}
           errorMessage={healthError || undefined}
         />
-
-        {/* ✅ Nutrition summary card (always rendered, handles its own state) */}
-        <View style={styles.section}>
-          <NutritionSummaryCard />
-        </View>
-
-        {/* Other Stats Section */}
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}>
-              <TrendingUp size={24} color="#059669" />
-            </View>
-            <Text style={styles.statValue}>7 Days</Text>
-            <Text style={styles.statLabel}>Wellness Streak</Text>
-          </View>
-
-          <View style={styles.statCard}>
-            <View style={styles.statIcon}>
-              <Wind size={24} color="#6366F1" />
-            </View>
-            <Text style={styles.statValue}>{getAirQualityStatValue()}</Text>
-            <Text style={styles.statLabel}>Air Quality</Text>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -517,12 +493,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 20,
     marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
   },
 });
 
