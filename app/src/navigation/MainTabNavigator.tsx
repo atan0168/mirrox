@@ -43,7 +43,7 @@ const MainTabNavigator: React.FC = () => {
             badgeCount={alertCount}
             onPress={() => {
               const parent = navigation.getParent();
-              parent?.navigate('Alerts' as never);
+              parent?.navigate('Alerts');
             }}
           />
         ),

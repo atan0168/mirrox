@@ -133,7 +133,7 @@ export default function SettingsScreen() {
               parent?.reset?.({
                 index: 0,
                 routes: [{ name: 'Welcome' }],
-              } as never);
+              });
               if (!parent) {
                 // Fallback: navigate if reset isn't available
                 navigation.navigate('Welcome' as never);
