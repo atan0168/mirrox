@@ -3,12 +3,7 @@ import { View, StyleSheet, Text, SafeAreaView } from 'react-native';
 import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
 
 export default function AvatarCustomizationScreen() {
-  const [skinToneAdjustment, setSkinToneAdjustment] = useState(0);
-
-  const handleSkinToneChange = (value: number) => {
-    setSkinToneAdjustment(value);
-    console.log(`Skin tone adjusted to: ${value}`);
-  };
+  const [skinToneAdjustment] = useState(0);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -51,6 +51,8 @@ class ApiService {
         no2: response.data.no2,
         co: response.data.co,
         o3: response.data.o3,
+        temperature: response.data.temperature ?? null,
+        humidity: response.data.humidity ?? null,
         // Include UV data
         uvIndex: response.data.uvIndex,
         uvForecast: response.data.uvForecast,
@@ -70,8 +72,6 @@ class ApiService {
         );
       }
 
-      console.log('Air quality data:', airQualityData);
-
       return airQualityData;
     } catch (error) {
       console.error('ApiService: Failed to fetch air quality data:', error);
@@ -90,10 +90,6 @@ class ApiService {
     longitude: number
   ): Promise<AirQualityData> {
     try {
-      console.log(
-        `Fetching AQICN air quality data for ${latitude}, ${longitude}`
-      );
-
       const response: AirQualityApiResponse =
         await backendApiService.fetchAQICNAirQuality(latitude, longitude);
 
@@ -126,6 +122,10 @@ class ApiService {
         no2: response.data.no2,
         co: response.data.co,
         o3: response.data.o3,
+        temperature: response.data.temperature ?? null,
+        humidity: response.data.humidity ?? null,
+        uvIndex: response.data.uvIndex,
+        uvForecast: response.data.uvForecast,
         classification: response.data.classification,
         colorCode: response.data.colorCode,
         healthAdvice: response.data.healthAdvice,
@@ -138,8 +138,6 @@ class ApiService {
       if (response.cached) {
         console.log(`Returned cached AQICN data (age: ${response.cacheAge}ms)`);
       }
-
-      console.log('AQICN air quality data:', airQualityData);
 
       return airQualityData;
     } catch (error) {
@@ -191,6 +189,8 @@ class ApiService {
         no2: response.data.no2,
         co: response.data.co,
         o3: response.data.o3,
+        temperature: response.data.temperature ?? null,
+        humidity: response.data.humidity ?? null,
         uvIndex: response.data.uvIndex,
         uvForecast: response.data.uvForecast,
         classification: response.data.classification,
@@ -228,7 +228,7 @@ class ApiService {
   /**
    * Get service status for debugging (development only)
    */
-  public async getServiceStatus(): Promise<any> {
+  public async getServiceStatus() {
     try {
       return await backendApiService.getServiceStatus();
     } catch (error) {
@@ -261,28 +261,6 @@ class ApiService {
       console.error('Failed to clear AQICN cache:', error);
       throw error;
     }
-  }
-
-  // Legacy methods for compatibility (these now do nothing since caching is handled by backend)
-
-  /**
-   * @deprecated Cache is now handled by the backend
-   */
-  public hasCachedData(latitude: number, longitude: number): boolean {
-    console.warn(
-      'hasCachedData is deprecated - caching is now handled by the backend'
-    );
-    return false;
-  }
-
-  /**
-   * @deprecated Cache is now handled by the backend
-   */
-  public getCacheAge(latitude: number, longitude: number): number | null {
-    console.warn(
-      'getCacheAge is deprecated - caching is now handled by the backend'
-    );
-    return null;
   }
 }
 

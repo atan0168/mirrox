@@ -24,7 +24,7 @@ export interface CongestionData {
   freeFlowSpeed: number;
   currentTravelTime: number;
   freeFlowTravelTime: number;
-  stressLevel: 'none' | 'mild' | 'moderate' | 'high';
+
   confidence: number;
   roadClosure: boolean;
   timestamp: string;

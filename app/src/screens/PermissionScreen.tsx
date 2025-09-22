@@ -11,9 +11,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../components/ui';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../App';
+
+type PermissionScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'Permission'
+>;
 
 interface PermissionScreenProps {
-  navigation: any;
+  navigation: PermissionScreenNavigationProp;
 }
 
 const PermissionScreen: React.FC<PermissionScreenProps> = ({ navigation }) => {

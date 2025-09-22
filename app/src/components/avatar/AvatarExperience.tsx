@@ -11,9 +11,9 @@ import { FloatingStressIcon } from '../effects/FloatingStressIcon';
 import { AnimationControls } from '../controls/AnimationControls';
 import { LoadingState, ErrorState } from '../ui/StateComponents';
 import AvatarLoadingIndicator from '../ui/AvatarLoadingIndicator';
-import { useTrafficData } from '../../hooks/useTrafficData';
 import { useStressVisualsPreference } from '../../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../../hooks/useDeveloperControlsPreference';
+import { useStressLevel } from '../../hooks/useStressLevel';
 import { localStorageService } from '../../services/LocalStorageService';
 import { assetPreloader } from '../../services/AssetPreloader';
 import {
@@ -22,7 +22,7 @@ import {
   configureTextureLoader,
 } from '../../utils/ThreeUtils';
 import { calculateSmogEffects } from '../../utils/skinEffectsUtils';
-import { AVAILABLE_ANIMATIONS } from '../../constants';
+import { AVAILABLE_ANIMATIONS, FULL_SLEEP_MINUTES } from '../../constants';
 import {
   getAnimationForAQI,
   getAnimationCycleForAQI,
@@ -32,7 +32,7 @@ import { useState, useEffect, useRef } from 'react';
 import { StressInfoModal } from '../ui/StressInfoModal';
 import { useHealthData } from '../../hooks/useHealthData';
 import { computeEnergy } from '../../utils/healthUtils';
-import HealthBubble from '../effects/HealthBubble';
+import { healthDataService } from '../../services/HealthDataService';
 import { SceneEnvironment } from '../scene/SceneEnvironment';
 import { buildEnvironmentForContext } from '../../scene/environmentBuilder';
 import SceneZenPark from '../scene/SceneZenPark';
@@ -47,6 +47,9 @@ import { useAvatarStore } from '../../store/avatarStore';
 import RainParticles from '../effects/RainParticles';
 import SpriteClouds from '../scene/SpriteClouds';
 import Mattress from '../scene/Mattress';
+import BatteryIndicator from '../BatteryIndicator';
+import HydrationIndicator from '../HydrationIndicator';
+import { colors } from '../../theme';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -62,24 +65,25 @@ interface AvatarExperienceProps {
   skinToneAdjustment?: number;
   rainIntensity?: number; // 0..1 slider for developer to control rain density
   rainDirection?: 'vertical' | 'angled';
-  // Location for traffic data
-  latitude?: number;
-  longitude?: number;
   // Air quality props for automatic smog effects
   airQualityData?: {
     aqi?: number | null;
     pm25?: number | null;
     pm10?: number | null;
+    temperature?: number | null;
+    humidity?: number | null;
   } | null;
-  // Traffic stress configuration
-  enableTrafficStress?: boolean;
-  trafficRefreshInterval?: number;
   // Optional environment context
   weather?: 'sunny' | 'cloudy' | 'rainy' | null;
   // Notify parent when user is interacting (e.g., to disable ScrollView)
   // onInteractionChange removed (unused)
   // Scene selection
   scene?: 'zenpark' | 'city' | 'home';
+  // Whether this canvas is active/visible (used to pause rendering when not focused)
+  isActive?: boolean;
+  // Hydration progress percentage (0-100) for visual feedback
+  hydrationProgressPercentage?: number;
+  hasNearbyDengueRisk?: boolean;
 }
 
 function AvatarExperience({
@@ -91,14 +95,13 @@ function AvatarExperience({
   skinToneAdjustment = 0,
   rainIntensity = 0.6,
   rainDirection = 'vertical',
-  latitude,
-  longitude,
   airQualityData = null,
-  enableTrafficStress = true,
-  trafficRefreshInterval = 300000, // 5 minutes
   weather = null,
   // onInteractionChange removed,
   scene = 'zenpark',
+  isActive = true,
+  hydrationProgressPercentage = 50,
+  hasNearbyDengueRisk = false,
 }: AvatarExperienceProps) {
   const screenWidth = Dimensions.get('window').width;
   const effectiveWidth = width ?? screenWidth;
@@ -115,6 +118,10 @@ function AvatarExperience({
   const isAvatarLoading = useAvatarStore(s => s.isAvatarLoading);
   const loadingProgress = useAvatarStore(s => s.loadingProgress);
   const showStressInfoModal = useAvatarStore(s => s.showStressInfoModal);
+  const manualFacialExpression = useAvatarStore(s => s.manualFacialExpression);
+  const isManualFacialExpression = useAvatarStore(
+    s => s.isManualFacialExpression
+  );
 
   const setActiveAnimation = useAvatarStore(s => s.setActiveAnimation);
   const setSleepMode = useAvatarStore(s => s.setSleepMode);
@@ -126,19 +133,14 @@ function AvatarExperience({
   const canvasRef = useRef<View | null>(null);
   const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch traffic data
-  const { data: trafficData, loading: trafficLoading } = useTrafficData({
-    latitude,
-    longitude,
-    enabled: enableTrafficStress && !!latitude && !!longitude,
-    refreshInterval: trafficRefreshInterval,
-  });
-
   // Get stress visuals preference
   const { stressVisualsEnabled } = useStressVisualsPreference();
 
   // Get developer controls preference
   const { developerControlsEnabled } = useDeveloperControlsPreference();
+
+  // HRV-driven stress insights
+  const stressResult = useStressLevel();
 
   // Health data
   const { data: health } = useHealthData({ autoSync: false });
@@ -178,36 +180,39 @@ function AvatarExperience({
     [weatherPreset]
   );
 
-  // Calculate stress effects from traffic data
+  const isSweatyWeather = useMemo(() => {
+    const temp = airQualityData?.temperature ?? null;
+    const humidity = airQualityData?.humidity ?? null;
+    const effectiveWeather = overrideWeather ?? weather ?? null;
+    const rainy =
+      effectiveWeather === 'rainy' || mappedLightingPreset === 'rainy';
+
+    if (rainy) {
+      return false;
+    }
+
+    if (typeof temp === 'number') {
+      if (temp >= 32) return true;
+      if (temp >= 28 && typeof humidity === 'number' && humidity >= 70) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [
+    airQualityData?.humidity,
+    airQualityData?.temperature,
+    mappedLightingPreset,
+    overrideWeather,
+    weather,
+  ]);
+
+  // Calculate stress effects from HRV-based health signals
   const stressEffects = useMemo(() => {
-    if (!trafficData || !enableTrafficStress || !stressVisualsEnabled) {
-      return {
-        stressLevel: 'none' as const,
-        intensity: 0,
-        shouldShowIcon: false,
-        facialExpression: externalFacialExpression,
-      };
-    }
+    const result = stressResult;
+    const stressLevel = stressVisualsEnabled ? result.stressLevel : 'none';
+    const intensity = stressVisualsEnabled ? result.intensity : 0;
 
-    const { stressLevel, congestionFactor } = trafficData;
-
-    // Calculate intensity based on congestion factor
-    let intensity = 0;
-    switch (stressLevel) {
-      case 'mild':
-        intensity = 0.3;
-        break;
-      case 'moderate':
-        intensity = 0.6;
-        break;
-      case 'high':
-        intensity = 1.0;
-        break;
-      default:
-        intensity = 0;
-    }
-
-    // Determine facial expression based on stress level
     let facialExpression = externalFacialExpression;
     if (stressLevel !== 'none') {
       switch (stressLevel) {
@@ -226,31 +231,146 @@ function AvatarExperience({
     return {
       stressLevel,
       intensity,
-      shouldShowIcon: stressLevel !== 'none',
+      shouldShowIcon: stressLevel !== 'none' && stressVisualsEnabled,
       facialExpression,
-      congestionFactor,
-    };
-  }, [trafficData, enableTrafficStress, externalFacialExpression]);
+      hrvMs: result.hrvMs,
+      baselineHrvMs: result.baselineHrvMs,
+      restingHeartRateBpm: result.restingHeartRateBpm,
+      baselineRestingHeartRateBpm: result.baselineRestingHeartRateBpm,
+      reasons: result.reasons,
+    } as const;
+  }, [stressResult, stressVisualsEnabled, externalFacialExpression]);
 
-  // Use stress-modified facial expression
+  // Use stress-modified facial expression unless manually overridden via controls
   const facialExpression = stressEffects.facialExpression;
-  // If no traffic stress override, tweak facial expression based on sleep
+  // If no HRV stress override, tweak facial expression based on sleep and hydration
   const healthDrivenFacial = useMemo(() => {
     if (!health) return facialExpression;
     if (stressEffects.stressLevel !== 'none') return facialExpression;
+    // Only apply internal health tweaks when no external recommendation was provided
+    // i.e., parent baseline is neutral (no combined logic).
+    if (externalFacialExpression !== 'neutral') return facialExpression;
+
+    // Hydration takes priority over sleep if severely dehydrated
+    if (hydrationProgressPercentage < 25) {
+      return 'exhausted'; // Severe dehydration - fatigued expression
+    }
+
     const sleepH = (health.sleepMinutes || 0) / 60;
-    // Only mark tired if we have sleep data and it's under 6h
     if (sleepH > 0 && sleepH < 6) return 'tired';
     if (sleepH > 8.5) return 'calm';
+
+    // Optimal hydration (≥100%) promotes calm/happy expression
+    if (hydrationProgressPercentage >= 100) {
+      return 'calm'; // Well-hydrated - calm, content expression
+    }
+
     return facialExpression;
-  }, [health, facialExpression, stressEffects.stressLevel]);
+  }, [
+    health,
+    facialExpression,
+    stressEffects.stressLevel,
+    externalFacialExpression,
+    hydrationProgressPercentage,
+  ]);
+
+  // Final expression with full manual override (bypasses sleep/stress/health)
+  const finalFacialExpression = useMemo(() => {
+    if (isManualFacialExpression && manualFacialExpression) {
+      return manualFacialExpression;
+    }
+    return healthDrivenFacial;
+  }, [isManualFacialExpression, manualFacialExpression, healthDrivenFacial]);
 
   // Determine if user is sleep-deprived (less than 6h but greater than 0)
+  // Also drive slump animation when user had <6h sleep (only when not in sleep mode and no manual animation)
+
   const isSleepDeprived = useMemo(() => {
     if (!health) return false;
     const sleepH = (health.sleepMinutes || 0) / 60;
     return sleepH > 0 && sleepH < 6;
   }, [health]);
+
+  const contextualIdleAnimations = useMemo(() => {
+    const extras: string[] = [];
+    if (isSleepDeprived) extras.push('yawn');
+    if (hasNearbyDengueRisk && !sleepMode) extras.push('swat_bugs');
+    return Array.from(new Set(extras));
+  }, [hasNearbyDengueRisk, isSleepDeprived, sleepMode]);
+
+  // Eye-bag effect (dark circles) — auto derive from sleep when not explicitly provided
+  // If user sleeps < 7.5h (FULL_SLEEP_MINUTES), apply 0.1 intensity per
+  // consecutive day of insufficient sleep, capped at 0.6. Disable when >= 7.5h.
+  const setEyeBagsAuto = useAvatarStore(s => s.setEyeBagsAuto);
+  useEffect(() => {
+    let cancelled = false;
+    const updateEyeBags = async () => {
+      const sleepMin = health?.sleepMinutes ?? null;
+      if (sleepMin == null || sleepMin <= 0) {
+        if (!cancelled) setEyeBagsAuto(false, 0);
+        return;
+      }
+
+      if (sleepMin >= FULL_SLEEP_MINUTES) {
+        if (!cancelled) setEyeBagsAuto(false, 0);
+        return;
+      }
+
+      try {
+        const history = await healthDataService.getHistory();
+        const snapshots = history?.snapshots ?? [];
+
+        const todayDate = health?.date ?? null;
+        let streak = 1; // We've already confirmed today's sleep was insufficient
+        let previousDate: Date | null = todayDate
+          ? new Date(`${todayDate}T00:00:00`)
+          : null;
+
+        for (let i = snapshots.length - 1; i >= 0 && streak < 6; i--) {
+          const snapshot = snapshots[i];
+          if (!snapshot) continue;
+
+          // Skip today's snapshot if it's already counted via `health`
+          if (todayDate && snapshot.date === todayDate) {
+            continue;
+          }
+
+          const minutes = snapshot.sleepMinutes ?? 0;
+          if (minutes > 0 && minutes < FULL_SLEEP_MINUTES) {
+            if (snapshot.date) {
+              const currentDate = new Date(`${snapshot.date}T00:00:00`);
+              if (previousDate) {
+                const diffDays = Math.round(
+                  (previousDate.getTime() - currentDate.getTime()) /
+                    (24 * 60 * 60 * 1000)
+                );
+                if (diffDays > 1) break; // Non-consecutive day -> stop streak
+              }
+              previousDate = currentDate;
+            }
+            streak += 1;
+          } else {
+            break; // Streak broken by sufficient sleep or missing data
+          }
+        }
+
+        const enabled = streak > 0;
+        const intensity = enabled
+          ? Math.min(0.7, Math.max(0.1, streak * 0.1))
+          : 0;
+
+        if (!cancelled) setEyeBagsAuto(enabled, intensity);
+      } catch {
+        // On error, degrade gracefully to last-night-only logic
+        if (!cancelled) setEyeBagsAuto(true, 0.1);
+      }
+    };
+
+    updateEyeBags();
+    return () => {
+      cancelled = true;
+    };
+  }, [health?.sleepMinutes, health?.date, setEyeBagsAuto]);
 
   // Calculate automatic smog effects based on air quality
   const autoSmogEffects = useMemo(() => {
@@ -296,6 +416,8 @@ function AvatarExperience({
     return recommendation;
   }, [airQualityData?.aqi, stressVisualsEnabled]);
 
+  const recommendedAnimation = aqiAnimationRecommendation?.animation ?? null;
+
   // Sleep mode time window (00:00 - 08:00 local)
   useEffect(() => {
     const checkSleepWindow = () => {
@@ -314,11 +436,11 @@ function AvatarExperience({
   useEffect(() => {
     if (scene === 'home' && setHomeTime) {
       // Map derivedPhase directly (phases align names)
-      setHomeTime(derivedPhase as any);
+      setHomeTime(derivedPhase);
     }
   }, [scene, derivedPhase, setHomeTime]);
 
-  // Automatic animation control based on AQI and traffic stress (suppressed during sleepMode unless user overrides)
+  // Automatic animation control based on AQI and HRV stress (suppressed during sleepMode unless user overrides)
   // During sleep mode: if not manually overridden, cycle between sleep animations.
   const sleepCycleRef = useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
@@ -386,43 +508,74 @@ function AvatarExperience({
 
     // Only apply automatic animations if not manually set
     if (!isManualAnimation) {
-      // Traffic stress animations take priority over AQI animations, but only if stress visuals are enabled
+      const shouldPreserveSleepDeprivedIdle =
+        recommendedAnimation === null &&
+        isSleepDeprived &&
+        stressEffects.stressLevel === 'none' &&
+        !sleepMode &&
+        activeAnimation === 'slump';
+
+      // HRV stress animations take priority over AQI animations, but only if stress visuals are enabled
       if (stressEffects.stressLevel === 'high' && stressVisualsEnabled) {
         console.log(
-          '🚨 High traffic stress detected - triggering stress animation'
+          '🚨 High HRV stress detected - triggering stress animation'
         );
         setActiveAnimation('M_Standing_Expressions_007'); // Cough animation for high stress
+      } else if (
+        isSweatyWeather &&
+        stressEffects.stressLevel === 'none' &&
+        !shouldPreserveSleepDeprivedIdle &&
+        (!aqiAnimationRecommendation || recommendedAnimation === null)
+      ) {
+        if (activeAnimation !== 'wiping_sweat') {
+          console.log(
+            '🔥 Hot weather detected - triggering wiping_sweat animation'
+          );
+        }
+        setActiveAnimation('wiping_sweat');
       } else if (aqiAnimationRecommendation) {
         if (
           shouldOverrideAnimation(
             activeAnimation,
             aqiAnimationRecommendation,
             isManualAnimation
-          )
+          ) &&
+          !shouldPreserveSleepDeprivedIdle
         ) {
           console.log(
             `🌬️ AQI-based animation: ${aqiAnimationRecommendation.reason}`
           );
-          setActiveAnimation(aqiAnimationRecommendation.animation);
+          setActiveAnimation(recommendedAnimation);
 
-          // For moderate air quality (breathing) + sleep deprivation, cycle with yawn
+          // For moderate air quality (breathing), cycle through contextual clips
           if (
             aqi &&
             aqi > 50 &&
             aqi <= 100 &&
-            isSleepDeprived &&
             aqiAnimationRecommendation.animation === 'breathing'
           ) {
-            const cycleAnimations = ['breathing', 'yawn'];
-            let currentIndex = 0;
-            animationCycleRef.current = setInterval(() => {
-              currentIndex = (currentIndex + 1) % cycleAnimations.length;
-              const nextAnimation = cycleAnimations[currentIndex];
-              console.log(
-                `🔄 Cycling to animation: ${nextAnimation} (moderate AQI + sleep deprivation)`
-              );
-              setActiveAnimation(nextAnimation);
-            }, 10000);
+            const cycleSet = new Set<string>(['breathing']);
+            if (isSweatyWeather) {
+              cycleSet.add('wiping_sweat');
+            }
+            if (isSleepDeprived) {
+              cycleSet.add('yawn');
+            }
+
+            const cycleAnimations = Array.from(cycleSet);
+            if (cycleAnimations.length > 1) {
+              let currentIndex = 0;
+              animationCycleRef.current = setInterval(() => {
+                currentIndex = (currentIndex + 1) % cycleAnimations.length;
+                const nextAnimation = cycleAnimations[currentIndex];
+                console.log(
+                  `🔄 Cycling to animation: ${nextAnimation} (moderate AQI${
+                    isSweatyWeather ? ' + heat' : ''
+                  }${isSleepDeprived ? ' + sleep deprivation' : ''})`
+                );
+                setActiveAnimation(nextAnimation);
+              }, 10000);
+            }
           }
 
           // For unhealthy air quality, set up animation cycling
@@ -444,6 +597,19 @@ function AvatarExperience({
               cycleAnimations.push('yawn');
             }
 
+            if (isSweatyWeather && !cycleAnimations.includes('wiping_sweat')) {
+              cycleAnimations.push('wiping_sweat');
+            }
+
+            // Add swat bugs when dengue risk is nearby unless sleeping
+            if (
+              hasNearbyDengueRisk &&
+              !sleepMode &&
+              !cycleAnimations.includes('swat_bugs')
+            ) {
+              cycleAnimations.push('swat_bugs');
+            }
+
             if (cycleAnimations.length > 1) {
               let currentIndex = 0;
               animationCycleRef.current = setInterval(() => {
@@ -459,7 +625,7 @@ function AvatarExperience({
               console.log(
                 `🔄 Single animation remaining: ${cycleAnimations[0]} (unhealthy AQI: ${aqi})`
               );
-            } else {
+            } else if (!shouldPreserveSleepDeprivedIdle) {
               // If no animations left after filtering, use idle animations
               console.log(
                 '🔄 No animations remaining after filtering - using idle animations'
@@ -487,6 +653,42 @@ function AvatarExperience({
     stressVisualsEnabled,
     isSleepDeprived,
     sleepMode,
+    hasNearbyDengueRisk,
+    isSweatyWeather,
+    recommendedAnimation,
+  ]);
+
+  // Independent sleep deprivation posture animation (slump) if:
+  // - Not in sleep mode
+  // - Not manually overriding animation
+  // - User had <6h sleep
+  // - No high-priority stress / AQI animation currently active
+  useEffect(() => {
+    if (sleepMode || isManualAnimation) return;
+    if (!isSleepDeprived) return;
+    if (recommendedAnimation !== null) return;
+    if (stressEffects.stressLevel !== 'none') return;
+
+    const lowPriorityAnimations = [
+      null,
+      'idle_breathing',
+      'breathing',
+      'M_Standing_Idle_Variations_007',
+      'M_Standing_Idle_Variations_003',
+      'yawn',
+    ];
+    if (!lowPriorityAnimations.includes(activeAnimation)) return;
+    if (activeAnimation !== 'slump') {
+      setActiveAnimation('slump');
+    }
+  }, [
+    sleepMode,
+    isManualAnimation,
+    isSleepDeprived,
+    activeAnimation,
+    setActiveAnimation,
+    recommendedAnimation,
+    stressEffects.stressLevel,
   ]);
 
   // Load avatar
@@ -613,8 +815,11 @@ function AvatarExperience({
           gl={{
             antialias: false,
             powerPreference: 'high-performance',
-            preserveDrawingBuffer: true,
+            // Avoid preserveDrawingBuffer for perf/memory; not needed for screenshots
+            preserveDrawingBuffer: false,
           }}
+          // Pause render loop when screen is not focused to reduce GPU/CPU load
+          frameloop={isActive ? 'always' : 'never'}
           camera={{
             position: [0, 0.5, 5],
             fov: 60,
@@ -756,10 +961,8 @@ function AvatarExperience({
             windStrength={1.0}
             density={effectiveSmogDensity}
             enableTurbulence={true}
-            turbulenceStrength={[0.005, 0.005, 0.005]}
             enableWind={true}
             windDirection={[1, 0.2, 0]}
-            maxVelocity={[2, 2, 1]}
             minBounds={[-10, -3, -10]}
             maxBounds={[10, 8, 10]}
             size={[200, 200, 200]}
@@ -767,18 +970,17 @@ function AvatarExperience({
             color={new THREE.Color(0x888888)}
           />
 
-          {/* Traffic Stress Effects - only show if stress visuals are enabled */}
-          {enableTrafficStress && trafficData && stressVisualsEnabled && (
+          {/* HRV-driven stress effects */}
+          {stressVisualsEnabled && stressEffects.stressLevel !== 'none' && (
             <>
               <StressAura
                 intensity={stressEffects.intensity}
                 stressLevel={stressEffects.stressLevel}
-                congestionFactor={stressEffects.congestionFactor || 1.0}
-                enabled={stressEffects.stressLevel !== 'none'}
+                enabled={stressEffects.stressLevel !== 'mild'}
               />
               <FloatingStressIcon
                 stressLevel={stressEffects.stressLevel}
-                congestionFactor={stressEffects.congestionFactor || 1.0}
+                stressIntensity={stressEffects.intensity}
                 enabled={stressEffects.shouldShowIcon}
                 onPress={() => {
                   setShowStressInfoModal(true);
@@ -804,13 +1006,17 @@ function AvatarExperience({
               url={avatarUrl}
               activeAnimation={activeAnimation}
               facialExpression={
-                sleepMode && !isManualAnimation ? 'sleep' : healthDrivenFacial
+                isManualFacialExpression && manualFacialExpression
+                  ? manualFacialExpression
+                  : sleepMode && !isManualAnimation
+                    ? 'sleep'
+                    : finalFacialExpression
               }
               skinToneAdjustment={skinToneAdjustment}
               animationSpeedScale={energyInfo?.speedScale ?? 1}
               onLoadingChange={handleAvatarLoadingChange}
               onLoadingProgress={handleLoadingProgress}
-              additionalIdleAnimations={isSleepDeprived ? ['yawn'] : []}
+              additionalIdleAnimations={contextualIdleAnimations}
             />
           </group>
 
@@ -884,50 +1090,59 @@ function AvatarExperience({
 
       {/* Loading Indicator Overlay */}
       <AvatarLoadingIndicator
-        isLoading={isAvatarLoading || trafficLoading}
+        isLoading={isAvatarLoading}
         progress={loadingProgress}
       />
 
-      {/* Traffic Status Indicator - only show if stress visuals are enabled */}
-      {enableTrafficStress &&
-        trafficData &&
-        stressVisualsEnabled &&
-        stressEffects.stressLevel !== 'none' && (
-          <View style={styles.trafficStatus}>
-            <View
-              style={[
-                styles.statusIndicator,
-                { backgroundColor: getStatusColor(stressEffects.stressLevel) },
-              ]}
-            />
-          </View>
-        )}
+      {/* HRV stress status indicator */}
+      {stressVisualsEnabled && stressEffects.stressLevel !== 'none' && (
+        <View style={styles.stressStatus}>
+          <View
+            style={[
+              styles.statusIndicator,
+              {
+                backgroundColor: getStressIndicatorColor(
+                  stressEffects.stressLevel
+                ),
+              },
+            ]}
+          />
+          <Text style={styles.statusLabel}>HRV Stress</Text>
+        </View>
+      )}
 
       <StressInfoModal
         visible={showStressInfoModal}
         onClose={() => setShowStressInfoModal(false)}
-        stressLevel="moderate"
-        congestionFactor={2.0}
-        // stressLevel={stressEffects.stressLevel}
-        // congestionFactor={stressEffects.congestionFactor || 1.0}
+        stressLevel={stressResult.stressLevel}
+        hrvMs={stressResult.hrvMs}
+        baselineHrvMs={stressResult.baselineHrvMs}
+        restingHeartRateBpm={stressResult.restingHeartRateBpm}
+        baselineRestingHeartRateBpm={stressResult.baselineRestingHeartRateBpm}
+        reasons={stressResult.reasons}
       />
 
-      {/* Health bubble with dynamic text */}
-      <HealthBubble message={energyInfo?.message ?? null} />
+      {/* Hydration indicator overlay */}
+      <View style={styles.hydrationIndicator}>
+        <HydrationIndicator />
+      </View>
+
+      {/* Sleep battery indicator overlay */}
+      <BatteryIndicator sleepMinutes={health?.sleepMinutes} />
     </View>
   );
 }
 
-const getStatusColor = (stressLevel: string): string => {
+const getStressIndicatorColor = (stressLevel: string): string => {
   switch (stressLevel) {
     case 'mild':
-      return '#FFC107';
+      return colors.yellow[400];
     case 'moderate':
-      return '#FF9800';
+      return colors.orange[500];
     case 'high':
-      return '#F44336';
+      return colors.red[500];
     default:
-      return '#4CAF50';
+      return colors.green[500];
   }
 };
 
@@ -936,10 +1151,22 @@ const styles = StyleSheet.create({
     // Full-bleed container for canvas
     position: 'relative',
   },
-  trafficStatus: {
+  stressStatus: {
     position: 'absolute',
     top: 10,
     right: 10,
+    zIndex: 1000,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  hydrationIndicator: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
     zIndex: 1000,
   },
   statusIndicator: {
@@ -948,6 +1175,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: 'white',
+    marginRight: 6,
+  },
+  statusLabel: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

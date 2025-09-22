@@ -1,15 +1,27 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-import { MapPin } from 'lucide-react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  ActivityIndicator,
+} from 'react-native';
+import { BriefcaseBusiness, MapPin, MapPinHouse } from 'lucide-react-native';
+import { Controller, useForm } from 'react-hook-form';
 import { CommutePicker } from '../components/CommutePicker';
 import { SleepSlider } from '../components/SleepSlider';
 import { GenderPicker } from '../components/GenderPicker';
 import { SkinTonePicker, SkinTone } from '../components/SkinTonePicker';
-import { Button, Card } from '../components/ui';
+import { Button, Card, Input } from '../components/ui';
+import { LocationQuestion } from '../components/LocationQuestion';
 import { localStorageService } from '../services/LocalStorageService';
 import { useQueryClient } from '@tanstack/react-query';
-import { UserProfile } from '../models/User';
+import { UserLocationDetails, UserProfile } from '../models/User';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { calculateBaselineHydrationGoal } from '../utils/hydrationUtils';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../App';
 
 interface QuestionnaireScreenProps {
   route: {
@@ -17,8 +29,18 @@ interface QuestionnaireScreenProps {
       location: { latitude: number; longitude: number } | null;
     };
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  navigation: any;
+  navigation: StackNavigationProp<RootStackParamList, 'Questionnaire'>;
+}
+
+interface QuestionnaireFormValues {
+  commuteMode: 'car' | 'transit' | 'wfh' | 'bike' | 'walk';
+  sleepHours: number;
+  gender: 'male' | 'female';
+  skinTone: SkinTone;
+  homeLocation: UserLocationDetails | null;
+  workLocation: UserLocationDetails | null;
+  weightKg: string;
+  heightCm: string;
 }
 
 const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
@@ -27,42 +49,115 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
 }) => {
   const { location } = route.params;
   const queryClient = useQueryClient();
-  const [commuteMode, setCommuteMode] = useState<
-    'car' | 'transit' | 'wfh' | 'bike' | 'walk'
-  >('wfh');
-  const [sleepHours, setSleepHours] = useState<number>(7);
-  const [gender, setGender] = useState<'male' | 'female'>('male');
-  const [skinTone, setSkinTone] = useState<SkinTone>('medium');
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
-  const handleCompleteOnboarding = async () => {
-    // If no location was provided, use a default location (you could show a city picker here)
-    const profileLocation = location || {
-      latitude: 3.139, // Kuala Lumpur default
-      longitude: 101.6869,
-    };
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<QuestionnaireFormValues>({
+    defaultValues: {
+      commuteMode: 'wfh',
+      sleepHours: 8,
+      gender: 'male',
+      skinTone: 'medium',
+      homeLocation: null,
+      workLocation: null,
+      weightKg: '',
+      heightCm: '',
+    },
+  });
 
-    const profile: UserProfile = {
-      location: profileLocation,
-      commuteMode,
-      sleepHours,
-      gender,
-      skinTone,
-      createdAt: new Date().toISOString(),
-      schemaVersion: 1,
-    };
+  const homeLocation = watch('homeLocation');
 
-    // Persist the updated profile BEFORE navigating so GeneratingTwin uses fresh data
-    await localStorageService.saveUserProfile(profile);
+  const fallbackCoordinates = useMemo(() => {
+    if (location) {
+      return { latitude: location.latitude, longitude: location.longitude };
+    }
+    return { latitude: 3.139, longitude: 101.6869 };
+  }, [location]);
 
-    // Optimistically update / replace cached query data so next screen has latest immediately
-    queryClient.setQueryData(['userProfile'], profile);
+  const copyHomeToWork = useCallback(() => {
+    const currentHome = getValues('homeLocation');
+    if (!currentHome) return;
+    setValue(
+      'workLocation',
+      {
+        ...currentHome,
+        coordinates: { ...currentHome.coordinates },
+      },
+      { shouldDirty: true }
+    );
+  }, [getValues, setValue]);
 
-    // Invalidate to force a refetch later (keeps data fresh if storage changes elsewhere)
-    queryClient.invalidateQueries({ queryKey: ['userProfile'], exact: true });
+  const onSubmit = useCallback(
+    async (data: QuestionnaireFormValues) => {
+      setGeneralError(null);
 
-    // Navigate only after profile is stored & cache updated
-    navigation.navigate('GeneratingTwin');
-  };
+      const parsedWeight = Number.parseFloat(data.weightKg);
+      const parsedHeight = Number.parseFloat(data.heightCm);
+
+      const normalizedHome = data.homeLocation
+        ? {
+            ...data.homeLocation,
+            coordinates: { ...data.homeLocation.coordinates },
+          }
+        : null;
+
+      const normalizedWork = data.workLocation
+        ? {
+            ...data.workLocation,
+            coordinates: { ...data.workLocation.coordinates },
+          }
+        : null;
+
+      const primaryCoordinates =
+        normalizedHome?.coordinates ?? fallbackCoordinates;
+
+      // Calculate baseline hydration goal based on weight
+      const baselineHydrationMl = calculateBaselineHydrationGoal(parsedWeight);
+
+      const profile: UserProfile = {
+        location: primaryCoordinates,
+        commuteMode: data.commuteMode,
+        sleepHours: data.sleepHours,
+        gender: data.gender,
+        skinTone: data.skinTone,
+        createdAt: new Date().toISOString(),
+        schemaVersion: 1,
+        homeLocation: normalizedHome,
+        workLocation: normalizedWork,
+        weightKg: parsedWeight,
+        heightCm: parsedHeight,
+        idealSleepHours: data.sleepHours,
+        hydrationBaselineMl: baselineHydrationMl,
+        hydrationGoalMl: baselineHydrationMl,
+      };
+
+      try {
+        await localStorageService.saveUserProfile(profile);
+
+        queryClient.setQueryData(['userProfile'], profile);
+        queryClient.invalidateQueries({
+          queryKey: ['userProfile'],
+          exact: true,
+        });
+
+        navigation.navigate('GeneratingTwin');
+      } catch (error) {
+        console.error('Failed to save onboarding profile', error);
+        setGeneralError(
+          error instanceof Error
+            ? error.message
+            : 'Unable to save your profile. Please try again.'
+        );
+      }
+    },
+    [fallbackCoordinates, navigation, queryClient]
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -89,29 +184,162 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
           )}
 
           <Card style={styles.formCard}>
-            <GenderPicker selectedValue={gender} onValueChange={setGender} />
-            <View style={styles.separator} />
-            <SkinTonePicker
-              selectedValue={skinTone}
-              onValueChange={setSkinTone}
+            <Controller
+              control={control}
+              name="gender"
+              render={({ field: { value, onChange } }) => (
+                <GenderPicker selectedValue={value} onValueChange={onChange} />
+              )}
             />
             <View style={styles.separator} />
-            <CommutePicker
-              selectedValue={commuteMode}
-              onValueChange={setCommuteMode}
+
+            <Text style={styles.label}>Body Measurements</Text>
+            <View style={styles.inputStack}>
+              <Controller
+                control={control}
+                name="weightKg"
+                rules={{
+                  required: 'Enter your weight in kilograms.',
+                  validate: value => {
+                    const parsed = Number.parseFloat(value);
+                    if (!Number.isFinite(parsed) || parsed <= 0) {
+                      return 'Enter a valid weight in kilograms.';
+                    }
+                    return true;
+                  },
+                }}
+                render={({ field: { value, onChange } }) => (
+                  <Input
+                    label="Weight (kg)"
+                    keyboardType="decimal-pad"
+                    value={value}
+                    onChangeText={text => onChange(text)}
+                    placeholder="e.g. 68"
+                    error={errors.weightKg?.message}
+                  />
+                )}
+              />
+
+              <View style={styles.smallSeparator} />
+
+              <Controller
+                control={control}
+                name="heightCm"
+                rules={{
+                  required: 'Enter your height in centimeters.',
+                  validate: value => {
+                    const parsed = Number.parseFloat(value);
+                    if (!Number.isFinite(parsed) || parsed <= 0) {
+                      return 'Enter a valid height in centimeters.';
+                    }
+                    return true;
+                  },
+                }}
+                render={({ field: { value, onChange } }) => (
+                  <Input
+                    label="Height (cm)"
+                    keyboardType="decimal-pad"
+                    value={value}
+                    onChangeText={text => onChange(text)}
+                    placeholder="e.g. 172"
+                    error={errors.heightCm?.message}
+                  />
+                )}
+              />
+            </View>
+            <View style={styles.separator} />
+            <Controller
+              control={control}
+              name="skinTone"
+              render={({ field: { value, onChange } }) => (
+                <SkinTonePicker
+                  selectedValue={value}
+                  onValueChange={onChange}
+                />
+              )}
             />
             <View style={styles.separator} />
-            <SleepSlider value={sleepHours} onValueChange={setSleepHours} />
+            <Controller
+              control={control}
+              name="commuteMode"
+              render={({ field: { value, onChange } }) => (
+                <CommutePicker selectedValue={value} onValueChange={onChange} />
+              )}
+            />
+            <View style={styles.separator} />
+            <Controller
+              control={control}
+              name="sleepHours"
+              render={({ field: { value, onChange } }) => (
+                <SleepSlider value={value} onValueChange={onChange} />
+              )}
+            />
           </Card>
+
+          <Card style={styles.formCard}>
+            <Text style={styles.label}>Location</Text>
+            <Controller
+              control={control}
+              name="homeLocation"
+              render={({ field: { value, onChange } }) => (
+                <LocationQuestion
+                  label="Home (optional)"
+                  description="Used to personalize weather, traffic, and local alerts."
+                  icon={MapPinHouse}
+                  value={value}
+                  onChange={onChange}
+                />
+              )}
+            />
+
+            <View style={styles.separator} />
+
+            <Controller
+              control={control}
+              name="workLocation"
+              render={({ field: { value, onChange } }) => (
+                <LocationQuestion
+                  label="Work (optional)"
+                  description="Helps to compare your commute and daytime environment."
+                  icon={BriefcaseBusiness}
+                  value={value}
+                  onChange={onChange}
+                />
+              )}
+            />
+
+            {homeLocation ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onPress={copyHomeToWork}
+                style={styles.copyButton}
+              >
+                Copy home location to work
+              </Button>
+            ) : null}
+          </Card>
+
+          {generalError ? (
+            <Text style={styles.errorText}>{generalError}</Text>
+          ) : null}
 
           <View style={styles.buttonContainer}>
             <Button
               fullWidth
               variant="secondary"
               size="lg"
-              onPress={handleCompleteOnboarding}
+              onPress={handleSubmit(onSubmit)}
+              disabled={isSubmitting}
             >
-              Create My Twin
+              {isSubmitting ? (
+                <View style={styles.buttonSpinner}>
+                  <ActivityIndicator size="small" color={colors.neutral[200]} />
+                  <Text style={styles.buttonSpinnerText}>Saving…</Text>
+                </View>
+              ) : (
+                'Create My Twin'
+              )}
             </Button>
           </View>
         </View>
@@ -149,6 +377,11 @@ const styles = StyleSheet.create({
     color: colors.neutral[600],
     lineHeight: 24,
   },
+  label: {
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    color: colors.black,
+  },
   locationNotice: {
     padding: spacing.md,
   },
@@ -173,15 +406,42 @@ const styles = StyleSheet.create({
   },
   formCard: {
     padding: spacing.lg,
+    gap: spacing.lg,
   },
   separator: {
     height: 1,
     backgroundColor: colors.neutral[200],
-    marginVertical: spacing.lg,
+  },
+  smallSeparator: {
+    height: spacing.md,
+  },
+  inputStack: {
+    gap: spacing.xs,
+  },
+  copyButton: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
   },
   buttonContainer: {
     paddingTop: spacing.md,
     paddingBottom: spacing.xl,
+  },
+  errorText: {
+    color: colors.red[600],
+    fontSize: fontSize.sm,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  buttonSpinner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  buttonSpinnerText: {
+    color: colors.neutral[200],
+    fontWeight: '600',
+    fontSize: fontSize.base,
   },
 });
 

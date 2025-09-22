@@ -8,12 +8,19 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Button } from '../components/ui';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
 import { useHealthData } from '../hooks/useHealthData';
+import { RootStackParamList } from '../../App';
+
+type HealthPermissionScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'HealthPermission'
+>;
 
 interface HealthPermissionScreenProps {
-  navigation: any;
+  navigation: HealthPermissionScreenNavigationProp;
   route: {
     params?: {
       location?: {

@@ -75,9 +75,83 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           timestamp TEXT NOT NULL,
           platform TEXT NOT NULL,
           steps INTEGER NOT NULL,
-          sleepMinutes INTEGER NOT NULL
+          sleepMinutes INTEGER NOT NULL,
+          finalized INTEGER NOT NULL DEFAULT 0,
+          sleepStart TEXT NULL,
+          sleepEnd TEXT NULL,
+          timeInBedMinutes INTEGER NULL,
+          awakeningsCount INTEGER NULL,
+          sleepLightMinutes INTEGER NULL,
+          sleepDeepMinutes INTEGER NULL,
+          sleepRemMinutes INTEGER NULL,
+          hrvMs REAL NULL,
+          restingHeartRateBpm REAL NULL,
+          activeEnergyKcal REAL NULL,
+          mindfulMinutes REAL NULL,
+          respiratoryRateBrpm REAL NULL,
+          workoutsCount INTEGER NULL
         );
         CREATE INDEX IF NOT EXISTS idx_health_snapshots_date ON health_snapshots(date);
+      `);
+
+      // Backfill columns in case table already existed without new fields
+      // Each ALTER is attempted individually and ignored if the column exists
+      const alterStatements = [
+        'ALTER TABLE health_snapshots ADD COLUMN finalized INTEGER NOT NULL DEFAULT 0;',
+        'ALTER TABLE health_snapshots ADD COLUMN hrvMs REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN restingHeartRateBpm REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN activeEnergyKcal REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN mindfulMinutes REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN respiratoryRateBrpm REAL NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN workoutsCount INTEGER NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN sleepStart TEXT NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN sleepEnd TEXT NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN timeInBedMinutes INTEGER NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN awakeningsCount INTEGER NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN sleepLightMinutes INTEGER NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN sleepDeepMinutes INTEGER NULL;',
+        'ALTER TABLE health_snapshots ADD COLUMN sleepRemMinutes INTEGER NULL;',
+      ];
+      for (const stmt of alterStatements) {
+        try {
+          await db.execAsync(stmt);
+        } catch {
+          // ignore if column exists or operation unsupported
+        }
+      }
+
+      // Alerts table (for persisted notifications/insights)
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS alerts (
+          id TEXT PRIMARY KEY NOT NULL,
+          type TEXT NOT NULL,
+          createdAt TEXT NOT NULL,
+          title TEXT NOT NULL,
+          shortBody TEXT NOT NULL,
+          longBody TEXT NOT NULL,
+         sourceName TEXT NULL,
+         sourceUrl TEXT NULL,
+         tier INTEGER NULL,
+         dataNote TEXT NULL,
+         severity TEXT NOT NULL,
+         dismissed INTEGER NOT NULL DEFAULT 0,
+         dismissedAt TEXT NULL,
+         dedupeKey TEXT NULL
+       );
+       CREATE INDEX IF NOT EXISTS idx_alerts_createdAt ON alerts(createdAt DESC);
+       CREATE INDEX IF NOT EXISTS idx_alerts_dismissed ON alerts(dismissed);
+       CREATE INDEX IF NOT EXISTS idx_alerts_dismissedAt ON alerts(dismissedAt);
+       CREATE INDEX IF NOT EXISTS idx_alerts_dedupeKey ON alerts(dedupeKey);
+     `);
+
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS hydration_state (
+          key TEXT PRIMARY KEY NOT NULL,
+          value TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_hydration_state_updatedAt
+          ON hydration_state(updatedAt DESC);
       `);
 
       return db;

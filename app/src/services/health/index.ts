@@ -9,7 +9,7 @@ try {
   } else if (Platform.OS === 'android') {
     provider = require('./providers/HealthConnectProvider.android').default;
   }
-} catch (e) {
+} catch {
   provider = null;
 }
 

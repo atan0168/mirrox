@@ -98,6 +98,9 @@ export interface AirQualityData {
   no2?: number;
   co?: number;
   o3?: number;
+  // Local weather readings (if available)
+  temperature?: number;
+  humidity?: number;
 }
 
 // Unified air quality data structure for API responses
@@ -241,6 +244,14 @@ export interface StationSearchResult {
   aqi: number;
 }
 
+export interface RateLimitStatus {
+  requestCount: number;
+  limit: number;
+  remaining: number;
+  resetTime: number;
+  timeUntilReset: number;
+}
+
 export interface ServiceStatusResponse {
   success: boolean;
   data: {
@@ -253,7 +264,7 @@ export interface ServiceStatusResponse {
         other: number;
       };
     };
-    rateLimit: any;
+    rateLimit?: RateLimitStatus;
     uptime: number;
     timestamp: string;
     services?: {

@@ -7,7 +7,7 @@ export type EnvironmentContext = {
 };
 
 export function buildEnvironmentForContext(
-  ctx: EnvironmentContext
+  _ctx: EnvironmentContext
 ): SceneEnvironmentConfig {
   const assets: SceneAssetInstance[] = [];
 

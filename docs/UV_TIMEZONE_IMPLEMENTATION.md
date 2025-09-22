@@ -90,4 +90,3 @@ The implementation handles:
 - ✅ Missing forecast data
 - ✅ Invalid timezone formats
 - ✅ Multiple forecast days
-

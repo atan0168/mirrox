@@ -1,8 +1,10 @@
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { spacing } from '../../theme';
 
 interface FacialExpressionControlsProps {
-  currentExpression: string;
+  currentExpression: string | null;
   onExpressionChange: (expression: string) => void;
+  onReset?: () => void; // Reset to automatic (clears manual override)
 }
 
 const FACIAL_EXPRESSIONS = [
@@ -20,11 +22,32 @@ const FACIAL_EXPRESSIONS = [
 export function FacialExpressionControls({
   currentExpression,
   onExpressionChange,
+  onReset,
 }: FacialExpressionControlsProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Facial Expression</Text>
       <View style={styles.buttonContainer}>
+        {/* Auto button to clear manual override */}
+        <TouchableOpacity
+          key="auto"
+          style={[
+            styles.expressionButton,
+            currentExpression === null && styles.activeButton,
+          ]}
+          onPress={() => onReset?.()}
+        >
+          <Text style={styles.emoji}>✨</Text>
+          <Text
+            style={[
+              styles.buttonText,
+              currentExpression === null && styles.activeButtonText,
+            ]}
+          >
+            Auto
+          </Text>
+        </TouchableOpacity>
+
         {FACIAL_EXPRESSIONS.map(expression => (
           <TouchableOpacity
             key={expression.name}
@@ -54,11 +77,12 @@ export function FacialExpressionControls({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: spacing.md,
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.2)',
+    marginBottom: spacing.lg,
   },
   title: {
     color: '#1f2937',

@@ -26,3 +26,7 @@ export type { EffectData } from './EffectsModal';
 export { EnvironmentalInfoSquares } from './EnvironmentalInfoSquares';
 export { EnvironmentalInfoSquaresSkeleton } from './EnvironmentalInfoSquaresSkeleton';
 export { HealthInfoSquares } from './HealthInfoSquares';
+export { InlineBanner } from './InlineBanner';
+export { default as HistoryBarChart } from './HistoryBarChart';
+export { default as SleepStackedBarChart } from './SleepStackedBarChart';
+export { default as SleepTimesTrendChart } from './SleepTimesTrendChart';

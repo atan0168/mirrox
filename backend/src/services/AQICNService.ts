@@ -7,6 +7,7 @@ import {
   AQICNData,
   AirQualityData,
   StationSearchResult,
+  RateLimitStatus,
 } from '../models/AirQuality';
 import { cacheService } from './CacheService';
 import { aqicnRateLimiterService } from './AQICNRateLimiterService';
@@ -140,6 +141,9 @@ class AQICNService {
       co: aqicnData.iaqi.co?.v || null,
     };
 
+    const temperature = aqicnData.iaqi.t?.v ?? null;
+    const humidity = aqicnData.iaqi.h?.v ?? null;
+
     // Extract UV data from forecast if available
     const uvForecast = aqicnData.forecast?.daily?.uvi || null;
     let currentUVIndex: number | null = null;
@@ -209,7 +213,7 @@ class AQICNService {
     // Create mock measurements for compatibility
     const measurements = Object.entries(pollutants)
       .filter(([_, value]) => value !== null)
-      .map(([pollutant, value], index) => ({
+      .map(([_pollutant, value], index) => ({
         datetime: {
           utc: aqicnData.time.s,
           local: aqicnData.time.s,
@@ -233,6 +237,8 @@ class AQICNService {
       no2: pollutants.no2,
       co: pollutants.co,
       o3: pollutants.o3,
+      temperature,
+      humidity,
       // Add UV data
       uvIndex: currentUVIndex,
       uvForecast: uvForecast,
@@ -380,8 +386,7 @@ class AQICNService {
    */
   public async searchStations(
     latitude: number,
-    longitude: number,
-    radius: number = 50
+    longitude: number
   ): Promise<StationSearchResult[]> {
     try {
       // AQICN doesn't have a direct search endpoint, so we'll use the main feed
@@ -437,13 +442,7 @@ class AQICNService {
   /**
    * Get rate limit status for monitoring
    */
-  public getRateLimitStatus(): {
-    requestCount: number;
-    limit: number;
-    remaining: number;
-    resetTime: number;
-    timeUntilReset: number;
-  } {
+  public getRateLimitStatus(): RateLimitStatus {
     const status = aqicnRateLimiterService.getRateLimitStatus();
     return {
       requestCount: status.requestCount,
@@ -462,13 +461,7 @@ class AQICNService {
       aqicnEntries: number;
       totalSize: number;
     };
-    rateLimit: {
-      requestCount: number;
-      limit: number;
-      remaining: number;
-      resetTime: number;
-      timeUntilReset: number;
-    };
+    rateLimit: RateLimitStatus;
   } {
     const stats = cacheService.getStats();
     const aqicnKeys = stats.keys.filter(key => key.startsWith('aqicn_'));

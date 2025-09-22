@@ -3,6 +3,7 @@ import { Dimensions } from 'react-native';
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export const spacing = {
+  xxs: 2,
   xs: 4,
   sm: 8,
   md: 16,
@@ -23,6 +24,7 @@ export const borderRadius = {
 } as const;
 
 export const fontSize = {
+  xxs: 10,
   xs: 12,
   sm: 14,
   base: 16,

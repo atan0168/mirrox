@@ -14,7 +14,7 @@ export const Card: React.FC<CardProps> = ({
   children,
   variant = 'default',
   padding = 'md',
-  shadow = 'sm',
+  shadow = 'none',
   style,
   ...viewProps
 }) => {

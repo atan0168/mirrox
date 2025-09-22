@@ -21,25 +21,26 @@ export const SleepSlider: React.FC<SleepSliderProps> = ({
   };
 
   const getSleepDescription = (hours: number) => {
-    if (hours < 5) return 'Very Sleep Deprived';
-    if (hours < 6) return 'Sleep Deprived';
-    if (hours < 7) return 'Could Use More Sleep';
-    if (hours < 8) return 'Good Sleep';
-    if (hours < 9) return 'Great Sleep';
-    return 'Lots of Sleep';
+    if (hours < 6) return 'Below the recommended range';
+    if (hours < 7) return 'Slightly under a healthy target';
+    if (hours <= 9) return 'Within a great nightly goal';
+    if (hours <= 10) return 'Planning extra rest';
+    return 'An extended rest goal';
   };
 
   const getSleepQuality = (hours: number) => {
-    if (hours < 6) return 'Poor';
-    if (hours < 7) return 'Fair';
-    if (hours < 8) return 'Good';
-    if (hours < 9) return 'Excellent';
-    return 'Excessive';
+    if (hours < 6) return 'LOW';
+    if (hours < 7) return 'BELOW IDEAL';
+    if (hours <= 9) return 'OPTIMAL';
+    if (hours <= 10) return 'RESTFUL';
+    return 'EXTENDED';
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>How many hours do you usually sleep?</Text>
+      <Text style={styles.label}>
+        What is your ideal nightly sleep duration?
+      </Text>
 
       <View style={styles.valueContainer}>
         <View style={styles.iconContainer}>{getSleepIcon(value)}</View>

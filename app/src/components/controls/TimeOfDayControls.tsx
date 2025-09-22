@@ -13,7 +13,7 @@ import { useAvatarStore } from '../../store/avatarStore';
 const OPTIONS: Array<{
   key: ReturnType<typeof String> | null;
   label: string;
-  phase: any;
+  phase: 'morning' | 'day' | 'evening' | 'night' | null;
 }> = [
   { key: null, label: 'Auto', phase: null },
   { key: 'morning', label: 'Morning', phase: 'morning' },

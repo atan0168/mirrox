@@ -33,9 +33,6 @@ export function getPhaseForDate(date: Date): GlobalTimeOfDay {
 
 export function getNextBoundaryTimestamp(from: Date): number {
   const h = from.getHours();
-  const m = from.getMinutes();
-  const s = from.getSeconds();
-  const ms = from.getMilliseconds();
   // Search upcoming boundaries in next 24h
   const nowMs = from.getTime();
   let best: number | null = null;

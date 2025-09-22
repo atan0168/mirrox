@@ -44,7 +44,10 @@ const server = app.listen(PORT, () => {
   console.log(`📍 Environment: ${config.server.nodeEnv}`);
   console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
   console.log(`📊 Health Check: http://localhost:${PORT}/api/health`);
-  console.log(`🌬️  Air Quality: http://localhost:${PORT}/api/air-quality`);
+  console.log(`🌬️ Air Quality: http://localhost:${PORT}/api/air-quality`);
+  console.log(`🚗 Traffic: http://localhost:${PORT}/api/traffic`);
+  console.log(`🚨 Dengue: http://localhost:${PORT}/api/dengue`);
+  console.log(`🗺️ Location: http://localhost:${PORT}/api/location/`);
 
   if (config.server.nodeEnv === 'development') {
     console.log(

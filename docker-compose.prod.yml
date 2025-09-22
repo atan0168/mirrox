@@ -6,11 +6,25 @@ services:
     container_name: digital-twin-backend
     env_file:
       - ./backend/.env
+    environment:
+      - PY_PREDICT_BASE_URL=http://dengue-pred:8090
+    depends_on:
+      - dengue-pred
     ports:
       - '8080:8080'
     restart: unless-stopped
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://localhost:8080/api/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+  dengue-pred:
+    image: ghcr.io/atan0168/dengue_pred:latest
+    container_name: dengue-pred
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:8090/health']
       interval: 30s
       timeout: 5s
       retries: 3

@@ -14,10 +14,11 @@ import Loader from '../components/ui/Loader';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { readyPlayerMeApiService } from '../services/ReadyPlayerMeApiService';
 import { localStorageService } from '../services/LocalStorageService';
+import { RootStackParamList } from '../../App';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 interface GeneratingTwinScreenProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  navigation: any;
+  navigation: StackNavigationProp<RootStackParamList, 'GeneratingTwin'>;
 }
 
 const GeneratingTwinScreen: React.FC<GeneratingTwinScreenProps> = ({
