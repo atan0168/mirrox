@@ -5,7 +5,7 @@ import {
   evaluateSleepHealthInsights,
   InsightCandidate,
 } from './insights/SleepHealthInsights';
-import { differenceInCalendarDays } from 'date-fns';
+import{differenceInCalendarDays} from'date-fns';
 import { AlertsService } from './AlertsService';
 import type { AlertItem } from '../models/Alert';
 import { truncate } from '../utils/notificationUtils';
