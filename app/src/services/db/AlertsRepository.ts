@@ -108,7 +108,10 @@ export const AlertsRepository = {
 
   async dismiss(id: string): Promise<void> {
     const db = await getDatabase();
-    await db.runAsync(`UPDATE alerts SET dismissed = 1, dismissedAt = ? WHERE id = ?`, [new Date().toISOString(), id]);
+    await db.runAsync(
+      `UPDATE alerts SET dismissed = 1, dismissedAt = ? WHERE id = ?`,
+      [new Date().toISOString(), id]
+    );
   },
 
   async clear(): Promise<void> {

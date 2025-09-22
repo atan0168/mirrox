@@ -11,9 +11,13 @@
     "lint": "npm run lint:app && npm run lint:backend",
     "lint:app": "cd app && npm run lint",
     "lint:backend": "cd backend && npm run lint",
-    "install:all": "npm install && cd app && npm install && cd ../backend && npm install"
+    "install:all": "npm install && cd app && npm install && cd ../backend && npm install",
+    "prepare": "husky",
+    "build:backend": "cd backend && npm run build",
+    "build": "npm run build:backend"
   },
   "devDependencies": {
+    "husky": "^9.1.6",
     "prettier": "^3.1.0"
   }
 }

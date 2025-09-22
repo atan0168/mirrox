@@ -380,19 +380,22 @@ class BackendApiService {
     }
   ): Promise<LocationSuggestion[]> {
     try {
-      const response = await this.axiosInstance.get<LocationAutocompleteResponse>(
-        '/location/autocomplete',
-        {
-          params: {
-            q: query,
-            limit: options?.limit,
-            countrycodes: options?.countryCodes,
-          },
-        }
-      );
+      const response =
+        await this.axiosInstance.get<LocationAutocompleteResponse>(
+          '/location/autocomplete',
+          {
+            params: {
+              q: query,
+              limit: options?.limit,
+              countrycodes: options?.countryCodes,
+            },
+          }
+        );
 
       if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to fetch location matches.');
+        throw new Error(
+          response.data.error || 'Failed to fetch location matches.'
+        );
       }
 
       return response.data.data;

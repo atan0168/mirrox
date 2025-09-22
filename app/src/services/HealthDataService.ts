@@ -313,10 +313,7 @@ export class HealthDataService {
     }
   }
 
-  public updateSandboxData(
-    snapshot: HealthSnapshot,
-    history?: HealthHistory
-  ) {
+  public updateSandboxData(snapshot: HealthSnapshot, history?: HealthHistory) {
     const updatedSnapshot: HealthSnapshot = {
       ...snapshot,
       timestamp: new Date().toISOString(),

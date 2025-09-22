@@ -48,9 +48,11 @@ interface SandboxContext {
 interface DengueBundle {
   hotspots: ArcGISResponse<HotspotAttributes, PointGeometry> | null;
   outbreaks: ArcGISResponse<OutbreakAttributes, PolygonGeometry> | null;
-  prediction:
-    | { success: boolean; data?: DenguePredictResponse; error?: string }
-    | null;
+  prediction: {
+    success: boolean;
+    data?: DenguePredictResponse;
+    error?: string;
+  } | null;
 }
 
 interface SandboxState {
@@ -65,14 +67,19 @@ interface SandboxState {
   airQuality: AirQualityData | null;
   dengueHotspots: ArcGISResponse<HotspotAttributes, PointGeometry> | null;
   dengueOutbreaks: ArcGISResponse<OutbreakAttributes, PolygonGeometry> | null;
-  denguePrediction:
-    | { success: boolean; data?: DenguePredictResponse; error?: string }
-    | null;
+  denguePrediction: {
+    success: boolean;
+    data?: DenguePredictResponse;
+    error?: string;
+  } | null;
   setEnabled: (enabled: boolean, context?: SandboxContext) => void;
   setContext: (context: SandboxContext) => void;
   setStressPreset: (preset: StressPreset) => HealthSnapshot | null;
   setSleepPreset: (preset: SleepPreset) => HealthSnapshot | null;
-  regenerateHealth: () => { snapshot: HealthSnapshot; history: HealthHistory } | null;
+  regenerateHealth: () => {
+    snapshot: HealthSnapshot;
+    history: HealthHistory;
+  } | null;
   setAirQualityPreset: (
     preset: AirQualityPreset,
     contextOverride?: SandboxContext
@@ -198,12 +205,7 @@ function buildHealthData(
   for (let offset = 13; offset >= 1; offset -= 1) {
     const day = subDays(today, offset);
     historySnapshots.push(
-      createSnapshot(
-        day,
-        STRESS_PROFILES.none,
-        SLEEP_PROFILES.optimal,
-        true
-      )
+      createSnapshot(day, STRESS_PROFILES.none, SLEEP_PROFILES.optimal, true)
     );
   }
   const todaySnapshot = createSnapshot(

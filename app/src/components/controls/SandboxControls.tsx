@@ -1,11 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Switch,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet, Switch, TouchableOpacity } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSandboxPreference } from '../../hooks/useSandboxPreference';
 import { useSandboxStore } from '../../store/sandboxStore';
@@ -90,8 +84,7 @@ export function SandboxControls({ location }: SandboxControlsProps) {
         context.locality ??
         null,
       region: reverseGeo.data?.region ?? context.region ?? null,
-      countryCode:
-        reverseGeo.data?.countryCode ?? context.countryCode ?? null,
+      countryCode: reverseGeo.data?.countryCode ?? context.countryCode ?? null,
     }),
     [
       context.countryCode,
@@ -109,7 +102,13 @@ export function SandboxControls({ location }: SandboxControlsProps) {
     if (!sandboxEnabled) return;
     if (location?.latitude == null || location?.longitude == null) return;
     setContext(sandboxContext);
-  }, [sandboxEnabled, sandboxContext, setContext, location?.latitude, location?.longitude]);
+  }, [
+    sandboxEnabled,
+    sandboxContext,
+    setContext,
+    location?.latitude,
+    location?.longitude,
+  ]);
 
   const handleToggle = async (value: boolean) => {
     const success = await updateSandboxPreference(value);
@@ -147,13 +146,15 @@ export function SandboxControls({ location }: SandboxControlsProps) {
 
       queryClient.invalidateQueries({
         predicate: query =>
-          Array.isArray(query.queryKey) && query.queryKey[0] === 'denguePredict',
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'denguePredict',
       });
     } else {
       setEnabled(false, sandboxContext);
       queryClient.invalidateQueries({
         predicate: query =>
-          Array.isArray(query.queryKey) && query.queryKey[0] === 'aqicnAirQuality',
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'aqicnAirQuality',
       });
       queryClient.invalidateQueries({
         predicate: query =>
@@ -161,7 +162,8 @@ export function SandboxControls({ location }: SandboxControlsProps) {
       });
       queryClient.invalidateQueries({
         predicate: query =>
-          Array.isArray(query.queryKey) && query.queryKey[0] === 'denguePredict',
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'denguePredict',
       });
     }
   };
@@ -192,7 +194,12 @@ export function SandboxControls({ location }: SandboxControlsProps) {
     const dengue = setDenguePreset(preset, sandboxContext);
     if (location) {
       queryClient.setQueryData(
-        ['dengueNearby', location.latitude, location.longitude, DEFAULT_DENGUE_RADIUS],
+        [
+          'dengueNearby',
+          location.latitude,
+          location.longitude,
+          DEFAULT_DENGUE_RADIUS,
+        ],
         {
           hotspots: dengue.hotspots ?? { fields: [], features: [] },
           outbreaks: dengue.outbreaks ?? { fields: [], features: [] },
@@ -209,8 +216,9 @@ export function SandboxControls({ location }: SandboxControlsProps) {
 
   const applyHydrationPreset = (preset: HydrationPreset) => {
     if (!sandboxEnabled) return;
-    const multiplier = HYDRATION_OPTIONS.find(option => option.key === preset)
-      ?.multiplier;
+    const multiplier = HYDRATION_OPTIONS.find(
+      option => option.key === preset
+    )?.multiplier;
     if (multiplier == null) return;
     const goal = useHydrationStore.getState().dailyGoalMl || 2000;
     const desired = Math.max(0, Math.round(goal * multiplier));
@@ -333,16 +341,14 @@ export function SandboxControls({ location }: SandboxControlsProps) {
       <Text style={styles.sectionLabel}>Hydration</Text>
       <View style={styles.buttonRow}>
         {HYDRATION_OPTIONS.map(option =>
-          renderButton(
-            option.label,
-            activeHydrationKey === option.key,
-            () => applyHydrationPreset(option.key)
+          renderButton(option.label, activeHydrationKey === option.key, () =>
+            applyHydrationPreset(option.key)
           )
         )}
       </View>
       <Text style={styles.hintText}>
-        Daily goal: {(hydrationGoal || 2000) / 1000}L · presets update
-        progress instantly for hydration visuals.
+        Daily goal: {(hydrationGoal || 2000) / 1000}L · presets update progress
+        instantly for hydration visuals.
       </Text>
     </View>
   );

@@ -224,11 +224,8 @@ export class HydrationService {
       const durationMs = this.getDrinkingAnimationDurationMs();
 
       this.hydrationAnimationTimeout = setTimeout(() => {
-        const {
-          activeAnimation,
-          setActiveAnimation,
-          clearManualAnimation,
-        } = useAvatarStore.getState();
+        const { activeAnimation, setActiveAnimation, clearManualAnimation } =
+          useAvatarStore.getState();
 
         if (activeAnimation === 'drinking') {
           clearManualAnimation();

@@ -13,13 +13,18 @@ export function useSandboxSync() {
 
     if (!sandboxEnabled) {
       queryClient.invalidateQueries({
-        predicate: query => Array.isArray(query.queryKey) && query.queryKey[0] === 'aqicnAirQuality',
+        predicate: query =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'aqicnAirQuality',
       });
       queryClient.invalidateQueries({
-        predicate: query => Array.isArray(query.queryKey) && query.queryKey[0] === 'dengueNearby',
+        predicate: query =>
+          Array.isArray(query.queryKey) && query.queryKey[0] === 'dengueNearby',
       });
       queryClient.invalidateQueries({
-        predicate: query => Array.isArray(query.queryKey) && query.queryKey[0] === 'denguePredict',
+        predicate: query =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === 'denguePredict',
       });
     }
   }, [sandboxEnabled, queryClient]);
