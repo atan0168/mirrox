@@ -11,35 +11,39 @@ import db from '../models/db';
 // ------------------------- ENV -------------------------
 
 const BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
-const API_KEY  = process.env.DEEPSEEK_API_KEY || '';
+const API_KEY = process.env.DEEPSEEK_API_KEY || '';
 if (!API_KEY) throw new Error('Missing DEEPSEEK_API_KEY');
 
 const TEXT_MODEL = process.env.DEEPSEEK_TEXT_MODEL || 'deepseek-chat';
 
 // Optional: upload OCR image to Cloudinary to get a reproducible HTTPS URL (debug friendly)
-const CLOUDINARY_CLOUD  = process.env.CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_CLOUD = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_PRESET = process.env.CLOUDINARY_UNSIGNED_PRESET;
 
 // ------------------------- Types -------------------------
 
 export type ExtractPayload = {
-  text?: string;        // optional user text
+  text?: string; // optional user text
   imageBase64?: string; // optional base64 (with/without data URL prefix)
-  imageUrl?: string;    // optional http/https url
-  user_id?: string;     // optional user id for personalization
+  imageUrl?: string; // optional http/https url
+  user_id?: string; // optional user id for personalization
 };
 
 export type ExtractResult = {
   FOOD_ITEM: string[];
   DRINK_ITEM: string[];
-  raw: string;          // model raw output (for debugging)
-  ocr?: string;         // OCR text (for visibility)
-  image_url?: string;   // uploaded Cloudinary URL if available
+  raw: string; // model raw output (for debugging)
+  ocr?: string; // OCR text (for visibility)
+  image_url?: string; // uploaded Cloudinary URL if available
 };
 
 // ------------------------- User Dictionary (Personalization) -------------------------
 
-type DictRow = { phrase: string; canonical_food_id: string | null; canonical_food_name: string | null };
+type DictRow = {
+  phrase: string;
+  canonical_food_id: string | null;
+  canonical_food_name: string | null;
+};
 
 /** Escape regex meta characters */
 function escapeRegExp(s: string) {
@@ -50,15 +54,16 @@ function escapeRegExp(s: string) {
 function loadUserDict(user_id?: string): DictRow[] {
   if (!user_id) return [];
   return db
-    .prepare<unknown[], DictRow>(
-      `SELECT phrase, canonical_food_id, canonical_food_name FROM user_dict WHERE user_id=?`
-    )
+    .prepare<
+      unknown[],
+      DictRow
+    >(`SELECT phrase, canonical_food_id, canonical_food_name FROM user_dict WHERE user_id=?`)
     .all(user_id);
 }
 
 /** Build system prompt with mappings at highest priority */
 function buildSystemPromptWithDict(dict: DictRow[]) {
-  const lines = dict.map((e) => {
+  const lines = dict.map(e => {
     const to = e.canonical_food_name || e.canonical_food_id || 'UNKNOWN';
     return `- "${e.phrase}" => "${to}"`;
   });
@@ -104,7 +109,10 @@ function stripDataUrl(b64: string) {
 }
 
 async function httpGetBuffer(url: string): Promise<Buffer> {
-  const resp = await axios.get<ArrayBuffer>(url, { responseType: 'arraybuffer', timeout: 30_000 });
+  const resp = await axios.get<ArrayBuffer>(url, {
+    responseType: 'arraybuffer',
+    timeout: 30_000,
+  });
   return Buffer.from(resp.data);
 }
 
@@ -115,7 +123,10 @@ async function httpGetBuffer(url: string): Promise<Buffer> {
  * - resize to ~1600 max side if too small (or keep size if already large)
  * - output PNG (lossless) for better OCR quality
  */
-async function toOcrPngBuffer(input: { imageBase64?: string; imageUrl?: string }): Promise<Buffer> {
+async function toOcrPngBuffer(input: {
+  imageBase64?: string;
+  imageUrl?: string;
+}): Promise<Buffer> {
   let buf: Buffer;
 
   if (input.imageBase64) {
@@ -131,26 +142,35 @@ async function toOcrPngBuffer(input: { imageBase64?: string; imageUrl?: string }
     throw new Error('Provided data is not an image');
   }
 
-  const img  = sharp(buf, { animated: false }).rotate().grayscale().normalise();
+  const img = sharp(buf, { animated: false }).rotate().grayscale().normalise();
   const meta = await img.metadata();
-  const w = meta.width || 0, h = meta.height || 0;
+  const w = meta.width || 0,
+    h = meta.height || 0;
 
   const resized =
     Math.max(w, h) < 1200
-      ? img.resize({ width: w >= h ? 1600 : undefined, height: h > w ? 1600 : undefined })
+      ? img.resize({
+          width: w >= h ? 1600 : undefined,
+          height: h > w ? 1600 : undefined,
+        })
       : img;
 
   return await resized.png({ compressionLevel: 9 }).toBuffer();
 }
 
 /** Optional: upload processed PNG to Cloudinary for an https URL (useful for debugging) */
-async function maybeUploadToCloudinary(png: Buffer): Promise<string | undefined> {
+async function maybeUploadToCloudinary(
+  png: Buffer
+): Promise<string | undefined> {
   if (!CLOUDINARY_CLOUD || !CLOUDINARY_PRESET) return undefined;
   const form = new FormData();
   form.append('file', `data:image/png;base64,${png.toString('base64')}`);
   form.append('upload_preset', CLOUDINARY_PRESET);
-  const url  = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
-  const resp = await axios.post(url, form, { headers: form.getHeaders(), timeout: 30_000 });
+  const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
+  const resp = await axios.post(url, form, {
+    headers: form.getHeaders(),
+    timeout: 30_000,
+  });
   return resp.data?.secure_url as string | undefined;
 }
 
@@ -165,7 +185,10 @@ async function ocrImageToText(png: Buffer): Promise<string> {
 async function callChat(payload: any) {
   const url = `${BASE_URL}/chat/completions`;
   return axios.post(url, payload, {
-    headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json',
+    },
     timeout: 60_000,
   });
 }
@@ -175,9 +198,21 @@ function safeParseJSON(s: string): ExtractResult {
   const match = s.match(/\{[\s\S]*\}/);
   const jsonStr = match ? match[0] : s;
   let obj: any;
-  try { obj = JSON.parse(jsonStr); } catch { obj = { FOOD_ITEM: [], DRINK_ITEM: [] }; }
-  obj.FOOD_ITEM  = Array.from(new Set((obj.FOOD_ITEM  || []).map((x: string) => String(x).toLowerCase().trim())));
-  obj.DRINK_ITEM = Array.from(new Set((obj.DRINK_ITEM || []).map((x: string) => String(x).toLowerCase().trim())));
+  try {
+    obj = JSON.parse(jsonStr);
+  } catch {
+    obj = { FOOD_ITEM: [], DRINK_ITEM: [] };
+  }
+  obj.FOOD_ITEM = Array.from(
+    new Set(
+      (obj.FOOD_ITEM || []).map((x: string) => String(x).toLowerCase().trim())
+    )
+  );
+  obj.DRINK_ITEM = Array.from(
+    new Set(
+      (obj.DRINK_ITEM || []).map((x: string) => String(x).toLowerCase().trim())
+    )
+  );
   return { ...obj, raw: s };
 }
 
@@ -190,12 +225,17 @@ function safeParseJSON(s: string): ExtractResult {
  * - injects mappings into system prompt (highest priority)
  * - falls back to generic prompt if no dict
  */
-export async function extractWithDeepSeek(input: ExtractPayload): Promise<ExtractResult> {
+export async function extractWithDeepSeek(
+  input: ExtractPayload
+): Promise<ExtractResult> {
   const { text, imageBase64, imageUrl, user_id } = input;
 
   // Load dict and build prompts
   const dict = loadUserDict(user_id);
-  const systemPrompt = dict.length > 0 ? buildSystemPromptWithDict(dict) : buildFallbackSystemPrompt();
+  const systemPrompt =
+    dict.length > 0
+      ? buildSystemPromptWithDict(dict)
+      : buildFallbackSystemPrompt();
 
   // Expand user text by dict first (improves recall)
   const expandedUserText = expandTextByDict(text, dict);
@@ -237,6 +277,6 @@ export async function extractWithDeepSeek(input: ExtractPayload): Promise<Extrac
   });
 
   const content = resp.data?.choices?.[0]?.message?.content || '';
-  const parsed  = safeParseJSON(content);
+  const parsed = safeParseJSON(content);
   return { ...parsed, ocr: ocrText, image_url: publicUrl };
 }

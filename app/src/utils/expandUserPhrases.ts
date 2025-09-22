@@ -7,13 +7,18 @@ function escapeRegExp(s: string) {
 
 export async function expandUserPhrases(rawText: string, userId: string) {
   try {
-    const r = await fetch(`${API_BASE}/personalization/user-dict?user_id=${encodeURIComponent(userId)}`);
+    const r = await fetch(
+      `${API_BASE}/personalization/user-dict?user_id=${encodeURIComponent(userId)}`
+    );
     const j = await r.json();
 
     if (!j || !j.data) return rawText;
 
-    const entries: Array<{ phrase: string; canonical_food_id?: string | null; canonical_food_name?: string | null }> =
-      j.data || [];
+    const entries: Array<{
+      phrase: string;
+      canonical_food_id?: string | null;
+      canonical_food_name?: string | null;
+    }> = j.data || [];
 
     let text = rawText;
     for (const e of entries) {

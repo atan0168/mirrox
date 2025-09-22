@@ -3,7 +3,10 @@
 
 export type TextureKey = 'sandy_gravel' | 'laminated_wood';
 
-export const TextureRegistry: Record<TextureKey, any> = {
+// React Native static require returns a numeric module ID
+export type StaticAssetModule = number;
+
+export const TextureRegistry: Record<TextureKey, StaticAssetModule> = {
   sandy_gravel: require('../../assets/textures/sandy_gravel.jpg'),
   laminated_wood: require('../../assets/textures/laminated_wood.jpg'),
 };
@@ -18,7 +21,7 @@ export interface AssetDefaultPlacement {
 
 export const AssetRegistry: Record<
   AssetKey,
-  { module: any; defaults?: AssetDefaultPlacement }
+  { module: StaticAssetModule; defaults?: AssetDefaultPlacement }
 > = {
   low_poly_bonsai: {
     module: require('../../assets/objects/low_poly_bonsai.glb'),

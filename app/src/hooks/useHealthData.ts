@@ -27,12 +27,19 @@ export function useHealthData({
   const sync = useCallback(async () => {
     try {
       setLoading(true);
-      const snapshot = await healthDataService.syncLatest();
+      const snapshot = await healthDataService.syncNeeded(30);
       setData(snapshot);
       setError(null);
       return snapshot;
-    } catch (e: any) {
-      setError(e?.message || 'Failed to sync health data');
+    } catch (e: unknown) {
+      let message = 'Failed to sync health data';
+      if (e instanceof Error) {
+        message = e.message;
+      } else if (typeof e === 'object' && e !== null && 'message' in e) {
+        const maybeMessage = (e as Record<string, unknown>).message;
+        if (typeof maybeMessage === 'string') message = maybeMessage;
+      }
+      setError(message);
       return null;
     } finally {
       setLoading(false);
@@ -41,6 +48,10 @@ export function useHealthData({
 
   useEffect(() => {
     let mounted = true;
+    // Subscribe to live updates from background/auto syncs
+    const unsubscribe = healthDataService.onUpdate(snapshot => {
+      if (mounted) setData(snapshot);
+    });
     (async () => {
       const latest = await healthDataService.getLatest();
       if (mounted && latest) setData(latest);
@@ -50,6 +61,7 @@ export function useHealthData({
     })();
     return () => {
       mounted = false;
+      unsubscribe();
     };
   }, [autoSync, sync]);
 

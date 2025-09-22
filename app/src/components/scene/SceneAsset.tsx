@@ -26,7 +26,7 @@ export function SceneAsset(props: SceneAssetProps) {
         await new Promise<void>((resolve, reject) => {
           loader.load(
             uri,
-            (gltf: any) => {
+            gltf => {
               if (!mounted) return;
               // clone to avoid shared state when multiple instances
               const cloned = gltf.scene.clone(true);
@@ -64,8 +64,8 @@ export function SceneAsset(props: SceneAssetProps) {
     if (!scene) return;
 
     // Ensure shadows and basic material overrides
-    scene.traverse((child: any) => {
-      if (child.isMesh) {
+    scene.traverse((child: THREE.Object3D) => {
+      if (child instanceof THREE.Mesh) {
         child.castShadow = props.castShadow ?? true;
         child.receiveShadow = props.receiveShadow ?? true;
 
@@ -110,8 +110,8 @@ export function SceneAsset(props: SceneAssetProps) {
             texture.minFilter = THREE.LinearFilter;
             texture.magFilter = THREE.LinearFilter;
 
-            scene.traverse((child: any) => {
-              if (child.isMesh && child.material) {
+            scene.traverse((child: THREE.Object3D) => {
+              if (child instanceof THREE.Mesh && child.material) {
                 const mat = child.material as THREE.MeshStandardMaterial;
                 const matchesMesh =
                   meshNameContains.length === 0 ||

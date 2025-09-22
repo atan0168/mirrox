@@ -24,15 +24,6 @@ export interface ExpressionRecommendation {
 }
 
 export class FacialExpressionManager {
-  private static readonly EXPRESSION_WEIGHTS = {
-    // Health-based weights
-    airQuality: 0.3,
-    sleep: 0.25,
-    symptoms: 0.35,
-    energy: 0.2,
-    stress: 0.15,
-  };
-
   private static readonly AQI_THRESHOLDS = {
     good: 50,
     moderate: 100,
@@ -232,9 +223,9 @@ export class FacialExpressionManager {
    */
   private static generateReasoning(
     metrics: HealthMetrics,
-    expression: string
+    _expression: string
   ): string {
-    const factors = [];
+    const factors: string[] = [];
 
     if (metrics.airQualityIndex !== undefined) {
       const aqi = metrics.airQualityIndex;
@@ -293,9 +284,9 @@ export class FacialExpressionManager {
    * Blend two expressions with a weight (for smooth transitions)
    */
   static blendExpressions(
-    expression1: string,
-    expression2: string,
-    weight: number // 0 = full expression1, 1 = full expression2
+    _expression1: string,
+    _expression2: string,
+    _weight: number // 0 = full expression1, 1 = full expression2
   ): { [key: string]: number } {
     // This would require access to the FACIAL_EXPRESSIONS mapping
     // For now, return the primary expression

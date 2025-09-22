@@ -26,8 +26,15 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND",
         "android.permission.health.READ_SLEEP",
-        "android.permission.health.READ_STEPS"
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_RESPIRATORY_RATE",
+        "android.permission.health.READ_EXERCISE"
       ]
     },
     "web": {
@@ -72,7 +79,9 @@
           "background": true
         }
       ],
-      ["expo-health-connect"]
+      ["@zensein/expo-health-connect"],
+      ["@maplibre/maplibre-react-native"],
+      "expo-background-task"
     ],
     "extra": {
       "eas": {

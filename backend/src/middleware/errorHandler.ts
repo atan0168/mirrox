@@ -9,7 +9,7 @@ export const errorHandler = (
   err: CustomError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   console.error('Error:', err);
 

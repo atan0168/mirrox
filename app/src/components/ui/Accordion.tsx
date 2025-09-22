@@ -5,6 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  StyleProp,
+  ViewStyle,
 } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '../../theme';
@@ -14,7 +16,7 @@ export interface AccordionProps {
   count?: number;
   defaultExpanded?: boolean;
   children: React.ReactNode;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const Accordion: React.FC<AccordionProps> = ({

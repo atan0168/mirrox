@@ -88,7 +88,7 @@ export class TrafficController {
    */
   public async getStatus(req: Request, res: Response): Promise<void> {
     try {
-      const cacheStats = trafficService.getCacheAge(0, 0); // This will return null but won't error
+      trafficService.getCacheAge(0, 0); // This will return null but won't error
 
       res.json({
         success: true,

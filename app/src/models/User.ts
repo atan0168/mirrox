@@ -1,8 +1,21 @@
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface UserLocationDetails {
+  coordinates: Coordinates;
+  label: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  countryCode?: string | null;
+  postcode?: string | null;
+}
+
 export interface UserProfile {
-  location: {
-    latitude: number;
-    longitude: number;
-  };
+  location: Coordinates;
   commuteMode: 'car' | 'transit' | 'wfh' | 'bike' | 'walk';
   sleepHours: number;
   gender: 'male' | 'female';
@@ -22,5 +35,16 @@ export interface UserProfile {
   preferences?: {
     enableStressVisuals: boolean; // Whether to show stress animations and effects
     enableDeveloperControls: boolean; // Whether to show developer controls and UI overlays
+    enableEnergyNotifications?: boolean; // Whether to send energy low notifications
+    enableSleepHealthNotifications?: boolean; // Whether to send sleep & health insights
+    enableSandboxMode?: boolean; // Whether to use sandbox data inputs for demos
   };
+  homeLocation?: UserLocationDetails | null;
+  workLocation?: UserLocationDetails | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  idealSleepHours?: number | null;
+  // Hydration settings
+  hydrationGoalMl?: number | null; // Daily hydration goal in mL
+  hydrationBaselineMl?: number | null; // Baseline calculated from weight
 }

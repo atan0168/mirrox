@@ -1,8 +1,8 @@
 import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system';
 import { GLBAnimationLoader } from '../utils/GLBAnimationLoader';
 import { useGLTF } from '@react-three/drei/native';
 import { localStorageService } from './LocalStorageService';
+import * as THREE from 'three';
 
 export interface PreloadProgress {
   loaded: number;
@@ -17,7 +17,7 @@ export interface PreloadedAssets {
     cached: boolean;
   };
   animations: {
-    [key: string]: any; // Animation clips
+    [key: string]: THREE.AnimationClip[];
   };
   images: {
     [key: string]: string; // Local URIs
@@ -120,6 +120,10 @@ export class AssetPreloader {
           name: 'swat_bugs',
         },
         {
+          asset: require('../../assets/animations/drinking.glb'),
+          name: 'drinking',
+        },
+        {
           asset: require('../../assets/animations/yawn.glb'),
           name: 'yawn',
         },
@@ -130,6 +134,10 @@ export class AssetPreloader {
         {
           asset: require('../../assets/animations/sleeping_idle.glb'),
           name: 'sleeping_idle',
+        },
+        {
+          asset: require('../../assets/animations/slump.glb'),
+          name: 'slump',
         },
       ];
 
@@ -255,14 +263,14 @@ export class AssetPreloader {
   /**
    * Get preloaded animation clips by name
    */
-  public getPreloadedAnimation(name: string): any[] | null {
+  public getPreloadedAnimation(name: string): THREE.AnimationClip[] | null {
     return this.preloadedAssets?.animations[name] || null;
   }
 
   /**
    * Get all preloaded animations
    */
-  public getAllPreloadedAnimations(): { [key: string]: any } {
+  public getAllPreloadedAnimations(): { [key: string]: THREE.AnimationClip[] } {
     return this.preloadedAssets?.animations || {};
   }
 

@@ -1,7 +1,7 @@
 // backend/src/routes/foods_db.ts
 // Purpose: data access helpers for nutrition.db with NAMED exports.
 
-import db from "../models/db"; // ← change this path if your db connection lives elsewhere
+import db from '../models/db'; // ← change this path if your db connection lives elsewhere
 
 // Row shape in the SQLite 'foods' table
 type FoodRow = {
@@ -32,11 +32,11 @@ function parseJson<T>(s: string | null): T | null {
 function buildFtsQuery(input: string): string {
   return input
     .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fa5\s]/g, " ")
+    .replace(/[^a-z0-9\u4e00-\u9fa5\s]/g, ' ')
     .split(/\s+/)
     .filter(Boolean)
-    .map((t) => `${t}*`)
-    .join(" ");
+    .map(t => `${t}*`)
+    .join(' ');
 }
 
 /**
@@ -48,31 +48,35 @@ export function searchFoods(q: string, limit = 20) {
 
   // --- 1. Try FTS5 virtual table first ---
   try {
-    const rows = db.prepare(
-      `SELECT f.id, f.name, f.category
+    const rows = db
+      .prepare(
+        `SELECT f.id, f.name, f.category
          FROM foods_fts fts
          JOIN foods f ON f.rowid = fts.rowid
         WHERE foods_fts MATCH ?
         ORDER BY bm25(fts) ASC
         LIMIT ?`
-    ).all(ftsQuery, limit);
+      )
+      .all(ftsQuery, limit);
 
     if (rows.length > 0) {
       return rows;
     }
   } catch (e) {
-    console.error("FTS search failed:", e);
+    console.error('FTS search failed:', e);
   }
 
   // --- 2. Fallback: basic LIKE on name and aliases_json ---
   const like = `%${q.toLowerCase()}%`;
-  return db.prepare(
-    `SELECT id, name, category
+  return db
+    .prepare(
+      `SELECT id, name, category
        FROM foods
       WHERE lower(name) LIKE ?
          OR lower(ifnull(aliases_json,'')) LIKE ?
       LIMIT ?`
-  ).all(like, like, limit);
+    )
+    .all(like, like, limit);
 }
 
 /**
@@ -80,9 +84,9 @@ export function searchFoods(q: string, limit = 20) {
  * Named export.
  */
 export function getFoodById(id: string) {
-  const row = db.prepare<unknown[], FoodRow>(
-    `SELECT * FROM foods WHERE id = ?`
-  ).get(id);
+  const row = db
+    .prepare<unknown[], FoodRow>(`SELECT * FROM foods WHERE id = ?`)
+    .get(id);
 
   if (!row) return null;
 

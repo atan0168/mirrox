@@ -7,6 +7,8 @@ import { GLBAnimationLoader } from '../../utils/GLBAnimationLoader';
 import { assetPreloader } from '../../services/AssetPreloader';
 import { IDLE_ANIMATIONS, AVATAR_DEBUG } from '../../constants';
 import { buildBoneRemapper } from '../../utils/ThreeUtils';
+import { EyeBags } from './EyeBags';
+const ONE_SHOT_ANIMATION_KEYWORDS = ['drinking'];
 
 interface AvatarModelProps {
   url: string;
@@ -88,14 +90,22 @@ export function AvatarModel({
       browInnerUp: 0.2,
     },
     tired: {
-      eyeSquintLeft: 0.6,
-      eyeSquintRight: 0.6,
-      eyeBlinkLeft: 0.3,
-      eyeBlinkRight: 0.3,
-      mouthFrownLeft: 0.2,
-      mouthFrownRight: 0.2,
-      browDownLeft: 0.4,
-      browDownRight: 0.4,
+      // Heavier eyelids and downward gaze to read as sleepy
+      eyeBlinkLeft: 0.6,
+      eyeBlinkRight: 0.6,
+      eyeSquintLeft: 0.2,
+      eyeSquintRight: 0.2,
+      eyeLookDownLeft: 0.25,
+      eyeLookDownRight: 0.25,
+      // Softer brows (avoid angry look) with slight droop
+      browDownLeft: 0.25,
+      browDownRight: 0.25,
+      // Corners of mouth sag a bit
+      mouthFrownLeft: 0.15,
+      mouthFrownRight: 0.15,
+      mouthShrugLower: 0.25,
+      // Keep mouth mostly closed
+      mouthClose: 0.3,
     },
     sleep: {
       eyeBlinkLeft: 1.0,
@@ -104,14 +114,22 @@ export function AvatarModel({
       jawOpen: 0.0,
     },
     exhausted: {
-      eyeBlinkLeft: 0.7,
-      eyeBlinkRight: 0.7,
-      mouthOpen: 0.2,
-      mouthFrownLeft: 0.4,
-      mouthFrownRight: 0.4,
-      browDownLeft: 0.6,
-      browDownRight: 0.6,
-      jawOpen: 0.1,
+      // Very heavy lids with downward gaze
+      eyeBlinkLeft: 0.85,
+      eyeBlinkRight: 0.85,
+      eyeSquintLeft: 0.15,
+      eyeSquintRight: 0.15,
+      eyeLookDownLeft: 0.35,
+      eyeLookDownRight: 0.35,
+      // Stronger mouth droop and slight opening
+      mouthFrownLeft: 0.5,
+      mouthFrownRight: 0.5,
+      mouthShrugLower: 0.4,
+      mouthOpen: 0.25,
+      jawOpen: 0.15,
+      // Brows droop but not too angry
+      browDownLeft: 0.5,
+      browDownRight: 0.5,
     },
     concerned: {
       browDownLeft: 0.8,
@@ -166,6 +184,22 @@ export function AvatarModel({
       noseSneerRight: 0.4,
       mouthPressLeft: 0.3,
       mouthPressRight: 0.3,
+    },
+    upset: {
+      // Visibly displeased but not angry; between concerned and angry
+      browDownLeft: 0.55,
+      browDownRight: 0.55,
+      browInnerUp: 0.35,
+      eyeSquintLeft: 0.35,
+      eyeSquintRight: 0.35,
+      eyeBlinkLeft: 0.1,
+      eyeBlinkRight: 0.1,
+      jawOpen: 0.12,
+      mouthFrownLeft: 0.55,
+      mouthFrownRight: 0.55,
+      mouthPressLeft: 0.15,
+      mouthPressRight: 0.15,
+      mouthClose: 0.2,
     },
     sick: {
       browInnerUp: 1.0,
@@ -671,7 +705,8 @@ export function AvatarModel({
 
     // If leaving sleeping, restore the last non-sleep camera state
     if (wasSleeping && !isSleeping) {
-      const restorePos = lastNonSleepCamPosRef.current || camera.position.clone();
+      const restorePos =
+        lastNonSleepCamPosRef.current || camera.position.clone();
       const restoreLook =
         lastNonSleepCamLookAtRef.current || new THREE.Vector3(0, 0, 0);
       targetPosition.copy(restorePos);
@@ -737,77 +772,91 @@ export function AvatarModel({
   }, [headMesh, facialExpression]);
 
   // Configure materials for mobile compatibility and apply skin tone adjustments
+  // Important: apply skin tone relative to original base color to avoid cumulative darkening across re-renders
   useEffect(() => {
-    if (scene) {
-      console.log(
-        'Scene loaded. Configuring materials for mobile compatibility.'
-      );
+    if (!scene) return;
 
-      const compatibleMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        roughness: 0.5,
-        metalness: 0.1,
-      });
+    console.log(
+      'Scene loaded. Configuring materials for mobile compatibility.'
+    );
 
-      scene.traverse(child => {
-        if (child instanceof THREE.Mesh) {
-          if (
-            child.material &&
-            child.material instanceof THREE.MeshStandardMaterial
-          ) {
-            child.material.envMapIntensity = 0.5;
-            child.material.needsUpdate = true;
+    const compatibleMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.5,
+      metalness: 0.1,
+    });
 
-            // Apply skin tone adjustment to skin materials
-            if (
-              skinToneAdjustment !== 0 &&
-              (child.name.toLowerCase().includes('body') ||
-                child.name.toLowerCase().includes('head') ||
-                child.name.toLowerCase().includes('face') ||
-                child.name.toLowerCase().includes('arm') ||
-                child.name.toLowerCase().includes('leg') ||
-                child.material.name?.toLowerCase().includes('skin') ||
-                child.material.name?.toLowerCase().includes('body'))
-            ) {
-              // Create a copy of the material to avoid affecting other meshes
-              const adjustedMaterial = child.material.clone();
+    scene.traverse(child => {
+      if (!(child instanceof THREE.Mesh)) return;
 
-              // Get the current color
-              const currentColor = adjustedMaterial.color.clone();
+      if (child.userData?.__isEyeBagOverlay) {
+        return;
+      }
 
-              if (skinToneAdjustment > 0) {
-                // Lighten: lerp towards white
-                currentColor.lerp(new THREE.Color(1, 1, 1), skinToneAdjustment);
-              } else {
-                // Darken: lerp towards darker brown/black
-                currentColor.lerp(
-                  new THREE.Color(0.2, 0.15, 0.1),
-                  Math.abs(skinToneAdjustment)
-                );
-              }
+      // Ensure MeshStandardMaterial for proper PBR shading on mobile
+      if (
+        child.material &&
+        child.material instanceof THREE.MeshStandardMaterial
+      ) {
+        child.material.envMapIntensity = 0.5;
+        child.material.needsUpdate = true;
+      } else {
+        child.material = compatibleMaterial;
+      }
 
-              adjustedMaterial.color = currentColor;
-              adjustedMaterial.needsUpdate = true;
-              child.material = adjustedMaterial;
+      // Shadows (skip on Android for perf/artefacts)
+      if (Platform.OS !== 'android') {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
 
-              console.log(
-                `Applied skin tone adjustment ${skinToneAdjustment} to mesh: ${child.name}`
-              );
-            }
-          } else {
-            child.material = compatibleMaterial;
-          }
+      // Identify likely skin meshes by name/material name
+      const isSkinMesh = (() => {
+        const n = child.name?.toLowerCase?.() || '';
+        const mn = child.material?.name?.toLowerCase?.() || '';
+        return (
+          n.includes('body') ||
+          n.includes('head') ||
+          n.includes('face') ||
+          n.includes('arm') ||
+          n.includes('leg') ||
+          mn.includes('skin') ||
+          mn.includes('body')
+        );
+      })();
 
-          if (Platform.OS !== 'android') {
-            child.castShadow = true;
-            child.receiveShadow = true;
-          }
-        }
-      });
+      if (!isSkinMesh) return;
 
-      sceneRef.current = scene;
-      console.log('Model materials configured for mobile.');
-    }
+      const stdMat = child.material as THREE.MeshStandardMaterial;
+
+      // Cache the original base color and ensure we only clone the material once
+      if (!child.userData.__baseSkinColor) {
+        // Clone the material so skin adjustments are per-mesh and not shared
+        child.material = stdMat.clone();
+        child.userData.__baseSkinColor = (
+          child.material as THREE.MeshStandardMaterial
+        ).color.clone();
+      }
+
+      const baseColor: THREE.Color = child.userData.__baseSkinColor;
+
+      // Compute adjusted color from original base color (not from last adjusted value)
+      const adjusted = baseColor.clone();
+      if (skinToneAdjustment > 0) {
+        adjusted.lerp(new THREE.Color(1, 1, 1), skinToneAdjustment);
+      } else if (skinToneAdjustment < 0) {
+        adjusted.lerp(
+          new THREE.Color(0.2, 0.15, 0.1),
+          Math.abs(skinToneAdjustment)
+        );
+      }
+
+      (child.material as THREE.MeshStandardMaterial).color.copy(adjusted);
+      (child.material as THREE.MeshStandardMaterial).needsUpdate = true;
+    });
+
+    sceneRef.current = scene;
+    console.log('Model materials configured for mobile.');
   }, [scene, skinToneAdjustment]);
 
   // Load GLB animations from preloaded assets
@@ -894,6 +943,10 @@ export function AvatarModel({
           name: 'swat_bugs',
         },
         {
+          asset: require('../../../assets/animations/drinking.glb'),
+          name: 'drinking',
+        },
+        {
           asset: require('../../../assets/animations/yawn.glb'),
           name: 'yawn',
         },
@@ -904,6 +957,10 @@ export function AvatarModel({
         {
           asset: require('../../../assets/animations/sleeping_idle.glb'),
           name: 'sleeping_idle',
+        },
+        {
+          asset: require('../../../assets/animations/slump.glb'),
+          name: 'slump',
         },
       ];
 
@@ -1068,7 +1125,17 @@ export function AvatarModel({
         try {
           console.log(`Loading GLB animation ${index}: ${clip.name}`);
           const action = mixer.clipAction(clip);
-          action.setLoop(THREE.LoopRepeat, Infinity);
+          const clipNameLower = clip.name.toLowerCase();
+          const isOneShot = ONE_SHOT_ANIMATION_KEYWORDS.some(keyword =>
+            clipNameLower.includes(keyword)
+          );
+          if (isOneShot) {
+            action.setLoop(THREE.LoopOnce, 0);
+            action.clampWhenFinished = true;
+          } else {
+            action.setLoop(THREE.LoopRepeat, Infinity);
+            action.clampWhenFinished = false;
+          }
           actionsMap.set(clip.name, action);
         } catch (error) {
           console.error(`Error setting up GLB animation ${index}:`, error);
@@ -1351,6 +1418,7 @@ export function AvatarModel({
           : [0, 0, 0]
       }
     >
+      <EyeBags headMesh={headMesh} />
       <primitive object={scene} />
     </group>
   );

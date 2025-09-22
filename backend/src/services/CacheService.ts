@@ -10,7 +10,7 @@ interface CacheItem<T> {
 }
 
 class CacheService {
-  private cache: Map<string, CacheItem<any>> = new Map();
+  private cache: Map<string, CacheItem<unknown>> = new Map();
   private defaultTTL: number = 30 * 60 * 1000; // 30 minutes default
 
   /**

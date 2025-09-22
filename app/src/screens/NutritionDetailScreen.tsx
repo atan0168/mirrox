@@ -49,7 +49,7 @@ function SourceBadge({ source }: { source?: string }) {
 }
 
 export default function NutritionDetailScreen() {
-  const last = useMealStore((s) => s.lastAnalysis);
+  const last = useMealStore(s => s.lastAnalysis);
   const [showHow, setShowHow] = useState(false);
 
   // Empty state: nothing analyzed yet
@@ -79,18 +79,18 @@ export default function NutritionDetailScreen() {
   const round0 = (v?: number) =>
     v == null || Number.isNaN(v) ? 'N/A' : String(Math.round(v));
   const fmt1 = (v?: number) =>
-    v == null || Number.isNaN(v)
-      ? 'N/A'
-      : (Math.round(v * 10) / 10).toFixed(1);
+    v == null || Number.isNaN(v) ? 'N/A' : (Math.round(v * 10) / 10).toFixed(1);
 
   // Prefer display labels if provided by backend
-  const tagDisplay: string[] =
-    (last as any)?.tags_display?.length
-      ? (last as any).tags_display
-      : (last.tags ?? []).map((k) => TAG_LABEL[k] || k);
+  const tagDisplay: string[] = (last as any)?.tags_display?.length
+    ? (last as any).tags_display
+    : (last.tags ?? []).map(k => TAG_LABEL[k] || k);
 
   return (
-    <ScrollView style={{ backgroundColor: '#fff' }} contentContainerStyle={styles.container}>
+    <ScrollView
+      style={{ backgroundColor: '#fff' }}
+      contentContainerStyle={styles.container}
+    >
       <Text style={styles.h1}>Meal Nutrition</Text>
 
       {/* ===== Summary card ===== */}
@@ -162,7 +162,13 @@ export default function NutritionDetailScreen() {
 
             return (
               <View key={idx} style={{ marginBottom: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: 4,
+                  }}
+                >
                   <Text style={styles.itemName}>{label}</Text>
                   <SourceBadge source={it.source} />
                 </View>
@@ -170,10 +176,12 @@ export default function NutritionDetailScreen() {
                   Energy: {round0(it.energy_kcal)} kcal
                 </Text>
                 <Text style={styles.itemLine}>
-                  Sugar: {fmt1(it.sugar_g)} g; Fat: {fmt1(it.fat_g)} g; Sat Fat: {fmt1(it.sat_fat_g)} g
+                  Sugar: {fmt1(it.sugar_g)} g; Fat: {fmt1(it.fat_g)} g; Sat Fat:{' '}
+                  {fmt1(it.sat_fat_g)} g
                 </Text>
                 <Text style={styles.itemLine}>
-                  Protein: {fmt1(it.protein_g)} g; Fiber: {fmt1(it.fiber_g)} g; Sodium: {round0(it.sodium_mg)} mg
+                  Protein: {fmt1(it.protein_g)} g; Fiber: {fmt1(it.fiber_g)} g;
+                  Sodium: {round0(it.sodium_mg)} mg
                 </Text>
               </View>
             );
@@ -207,9 +215,9 @@ export default function NutritionDetailScreen() {
           >
             Malaysia Food Composition Database (MyFCD)
           </Text>
-          , with curated local dishes.{'\n'}
-          • We add up the nutrients of all items in your meal to estimate totals.{'\n'}
-          • Tags follow thresholds from{' '}
+          , with curated local dishes.{'\n'}• We add up the nutrients of all
+          items in your meal to estimate totals.{'\n'}• Tags follow thresholds
+          from{' '}
           <Text
             style={styles.link}
             onPress={() =>
@@ -225,8 +233,7 @@ export default function NutritionDetailScreen() {
           >
             Malaysia RNI
           </Text>
-          .{'\n'}
-          • Estimates are for awareness only, not medical advice.
+          .{'\n'}• Estimates are for awareness only, not medical advice.
         </Text>
       </InfoPopover>
     </ScrollView>
@@ -235,7 +242,12 @@ export default function NutritionDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { padding: 16 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
   h1: { fontSize: 22, fontWeight: '700', marginBottom: 12 },
 
   card: {
@@ -251,7 +263,11 @@ const styles = StyleSheet.create({
   h3: { fontSize: 14, fontWeight: '600', marginTop: 12, marginBottom: 6 },
 
   row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 
   key: { color: '#6B7280' },
   val: { fontWeight: '600' },

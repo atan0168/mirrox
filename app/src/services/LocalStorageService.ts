@@ -8,6 +8,12 @@ import {
   AVATAR_URL_KEY,
   USER_PROFILE_KEY,
 } from '../constants';
+import {
+  LAST_ENV_QUERY_KEY,
+  REVERSE_GEOCODE_CACHE_KEY,
+  MAX_REVERSE_GEOCODE_CACHE_ENTRIES,
+  REVERSE_GEOCODE_TOUCH_MIN_MS,
+} from '../constants';
 
 /**
  * LocalStorageService - Encrypted storage service using MMKV
@@ -79,7 +85,7 @@ export class LocalStorageService {
         console.log('Retrieved existing encryption key from secure storage');
         return credentials.password;
       }
-    } catch (error) {
+    } catch {
       console.log('No existing encryption key found, generating new one');
     }
 
@@ -178,6 +184,16 @@ export class LocalStorageService {
     return this.storage.getString(key);
   }
 
+  // Generic boolean flag helpers (for simple feature flags/preferences)
+  public async getFlag(key: string): Promise<boolean> {
+    const value = await this.getItem(key);
+    return value === 'true';
+  }
+
+  public async setFlag(key: string, value: boolean): Promise<void> {
+    await this.setItem(key, value ? 'true' : 'false');
+  }
+
   private async clearAll(): Promise<void> {
     await this.ready;
     this.storage.clearAll();
@@ -189,7 +205,7 @@ export class LocalStorageService {
     try {
       // MMKV supports delete by key
       this.storage.delete(key);
-    } catch (e) {
+    } catch {
       // Fallback: set empty string if delete fails
       // This ensures old values are not read back as valid JSON
       try {
@@ -198,6 +214,18 @@ export class LocalStorageService {
         // ignore
       }
     }
+  }
+
+  // Public raw string helpers for external storage adapters (e.g., Zustand persist)
+  public async getString(key: string): Promise<string | null> {
+    const v = await this.getItem(key);
+    return v ?? null;
+  }
+  public async setString(key: string, value: string): Promise<void> {
+    await this.setItem(key, value);
+  }
+  public async remove(key: string): Promise<void> {
+    await this.removeItem(key);
   }
 
   private async getCachedAvatarsData(): Promise<Record<string, CachedAvatar>> {
@@ -264,6 +292,40 @@ export class LocalStorageService {
       await this.clearAll();
     } catch (error) {
       console.error('Failed to clear storage:', error);
+    }
+  }
+
+  // ===== Environmental query bookkeeping =====
+
+  public async setLastEnvironmentalQuery(data: {
+    latitude: number;
+    longitude: number;
+    timestamp: number; // epoch millis
+  }): Promise<void> {
+    try {
+      await this.setItem(LAST_ENV_QUERY_KEY, JSON.stringify(data));
+    } catch (error) {
+      console.error('Failed to save last environmental query:', error);
+    }
+  }
+
+  public async getLastEnvironmentalQuery(): Promise<{
+    latitude: number;
+    longitude: number;
+    timestamp: number;
+  } | null> {
+    try {
+      const json = await this.getItem(LAST_ENV_QUERY_KEY);
+      return json
+        ? (JSON.parse(json) as {
+            latitude: number;
+            longitude: number;
+            timestamp: number;
+          })
+        : null;
+    } catch (error) {
+      console.error('Failed to retrieve last environmental query:', error);
+      return null;
     }
   }
 
@@ -368,7 +430,7 @@ export class LocalStorageService {
                 securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
               }
             );
-          } catch (error) {
+          } catch {
             // Fallback to software security
             await Keychain.setInternetCredentials(
               authKeyService,
@@ -400,6 +462,9 @@ export class LocalStorageService {
   public async updatePreferences(preferences: {
     enableStressVisuals?: boolean;
     enableDeveloperControls?: boolean;
+    enableEnergyNotifications?: boolean;
+    enableSleepHealthNotifications?: boolean;
+    enableSandboxMode?: boolean;
   }): Promise<void> {
     try {
       const profile = await this.getUserProfile();
@@ -415,6 +480,21 @@ export class LocalStorageService {
           enableDeveloperControls:
             preferences.enableDeveloperControls ??
             profile.preferences?.enableDeveloperControls ??
+            false,
+          // Default to enabled for notifications
+          enableEnergyNotifications:
+            preferences.enableEnergyNotifications ??
+            profile.preferences?.enableEnergyNotifications ??
+            true,
+          // Default to enabled for sleep & health notifications
+          enableSleepHealthNotifications:
+            preferences.enableSleepHealthNotifications ??
+            profile.preferences?.enableSleepHealthNotifications ??
+            true,
+          // Default sandbox mode to disabled
+          enableSandboxMode:
+            preferences.enableSandboxMode ??
+            profile.preferences?.enableSandboxMode ??
             false,
         };
         await this.saveUserProfile(profile);
@@ -441,6 +521,39 @@ export class LocalStorageService {
     } catch (error) {
       console.error('Failed to get developer controls preference:', error);
       return false; // Default to disabled on error
+    }
+  }
+
+  public async getSandboxModeEnabled(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.preferences?.enableSandboxMode ?? false;
+    } catch (error) {
+      console.error('Failed to get sandbox mode preference:', error);
+      return false;
+    }
+  }
+
+  public async getEnergyNotificationsEnabled(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.preferences?.enableEnergyNotifications ?? true; // Default to enabled
+    } catch (error) {
+      console.error('Failed to get energy notifications preference:', error);
+      return true; // Default to enabled on error
+    }
+  }
+
+  public async getSleepHealthNotificationsEnabled(): Promise<boolean> {
+    try {
+      const profile = await this.getUserProfile();
+      return profile?.preferences?.enableSleepHealthNotifications ?? true; // Default to enabled
+    } catch (error) {
+      console.error(
+        'Failed to get sleep & health notifications preference:',
+        error
+      );
+      return true; // Default to enabled on error
     }
   }
 
@@ -485,8 +598,106 @@ export class LocalStorageService {
         ENCRYPTION_KEY_SERVICE
       );
       return credentials !== false;
-    } catch (error) {
+    } catch {
       return false;
+    }
+  }
+
+  // ===== Reverse Geocode Cache =====
+
+  private async getReverseGeocodeCache(): Promise<
+    Record<
+      string,
+      {
+        label: string;
+        city?: string | null;
+        region?: string | null;
+        country?: string | null;
+        countryCode?: string | null;
+        ts?: number;
+        lastAccess?: number;
+      }
+    >
+  > {
+    const json = await this.getItem(REVERSE_GEOCODE_CACHE_KEY);
+    return json ? JSON.parse(json) : {};
+  }
+
+  private async setReverseGeocodeCache(
+    data: Record<
+      string,
+      {
+        label: string;
+        city?: string | null;
+        region?: string | null;
+        country?: string | null;
+        countryCode?: string | null;
+        ts?: number;
+        lastAccess?: number;
+      }
+    >
+  ): Promise<void> {
+    await this.setItem(REVERSE_GEOCODE_CACHE_KEY, JSON.stringify(data));
+  }
+
+  public async getCachedReverseGeocode(key: string): Promise<{
+    label: string;
+    city?: string | null;
+    region?: string | null;
+    country?: string | null;
+    countryCode?: string | null;
+    ts?: number;
+    lastAccess?: number;
+  } | null> {
+    try {
+      const cache = await this.getReverseGeocodeCache();
+      const entry = cache[key];
+      if (!entry) return null;
+      // Update lastAccess on hit with throttle to reduce writes
+      const now = Date.now();
+      const last = entry.lastAccess ?? 0;
+      if (now - last >= REVERSE_GEOCODE_TOUCH_MIN_MS) {
+        entry.lastAccess = now;
+        cache[key] = entry;
+        await this.setReverseGeocodeCache(cache);
+      }
+      return entry;
+    } catch {
+      return null;
+    }
+  }
+
+  public async setCachedReverseGeocode(
+    key: string,
+    value: {
+      label: string;
+      city?: string | null;
+      region?: string | null;
+      country?: string | null;
+      countryCode?: string | null;
+      ts?: number;
+      lastAccess?: number;
+    }
+  ): Promise<void> {
+    try {
+      const cache = await this.getReverseGeocodeCache();
+      cache[key] = { ...value, lastAccess: Date.now() };
+      // Evict if exceeding max size (LRU by lastAccess, fallback to ts)
+      const keys = Object.keys(cache);
+      if (keys.length > MAX_REVERSE_GEOCODE_CACHE_ENTRIES) {
+        const entries = keys.map(k => ({ k, v: cache[k] }));
+        entries.sort(
+          (a, b) =>
+            (a.v.lastAccess ?? a.v.ts ?? 0) - (b.v.lastAccess ?? b.v.ts ?? 0)
+        );
+        const toRemove = entries.length - MAX_REVERSE_GEOCODE_CACHE_ENTRIES;
+        for (let i = 0; i < toRemove; i++) {
+          delete cache[entries[i].k];
+        }
+      }
+      await this.setReverseGeocodeCache(cache);
+    } catch {
+      // ignore cache write failures
     }
   }
 

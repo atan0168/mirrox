@@ -23,6 +23,19 @@ interface SkinToneOption {
   value: number; // 1-5 scale for skin tone darkness
 }
 
+interface AvatarCustomizationOptions {
+  eyes?: 'tired' | 'happy';
+  body?: 'athletic';
+}
+
+interface RPMAsset {
+  id: string;
+  name: string;
+  iconUrl: string;
+  type: string;
+  gender: 'male' | 'female';
+}
+
 class ReadyPlayerMeApiService {
   private baseUrl = 'https://api.readyplayer.me';
 
@@ -209,10 +222,10 @@ class ReadyPlayerMeApiService {
 
       // Filter for skin tone assets
       const skinToneAssets = data.data.filter(
-        (asset: any) => asset.type === 'skin' && asset.gender === gender
+        (asset: RPMAsset) => asset.type === 'skin' && asset.gender === gender
       );
 
-      return skinToneAssets.map((asset: any, index: number) => ({
+      return skinToneAssets.map((asset: RPMAsset, index: number) => ({
         id: asset.id,
         name: asset.name,
         iconUrl: asset.iconUrl,
@@ -409,8 +422,10 @@ class ReadyPlayerMeApiService {
    * Get avatar customization options based on user profile
    * This can be used to further customize the avatar after creation
    */
-  getCustomizationOptions(userProfile: UserProfile): any {
-    const options: any = {};
+  getCustomizationOptions(
+    userProfile: UserProfile
+  ): AvatarCustomizationOptions {
+    const options: AvatarCustomizationOptions = {};
 
     // Map user profile to avatar customization
     if (userProfile.sleepHours < 6) {

@@ -10,9 +10,11 @@ import {
 } from 'react-native';
 import { Button, Card } from '../components/ui';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../App';
 
 interface WelcomeScreenProps {
-  navigation: any; // You can type this more strictly with NavigationProp
+  navigation: StackNavigationProp<RootStackParamList, 'Welcome'>;
 }
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {

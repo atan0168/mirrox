@@ -15,6 +15,7 @@ import {
   Copy,
   Lock,
   Unlock,
+  RotateCcw,
 } from 'lucide-react-native';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import {
@@ -23,11 +24,28 @@ import {
   getDatabase,
 } from '../services/db/sqlite';
 
-let Sharing: any = null;
-let Clipboard: any = null;
+let Sharing: {
+  isAvailableAsync: () => Promise<boolean>;
+  shareAsync: (
+    url: string,
+    options?: { dialogTitle?: string }
+  ) => Promise<void>;
+} | null = null;
+let Clipboard: {
+  setStringAsync?: (text: string) => Promise<void>;
+} | null = null;
 
 export default function DebugDatabaseScreen() {
   const [sharing, setSharing] = useState(false);
+
+  const getErrorMessage = (error: unknown): string => {
+    if (typeof error === 'string') return error;
+    if (error && typeof error === 'object') {
+      const maybe = error as { message?: unknown };
+      if (typeof maybe.message === 'string') return maybe.message;
+    }
+    return 'An unexpected error occurred.';
+  };
 
   const sqliteDir = useMemo(() => `${FileSystem.documentDirectory}SQLite/`, []);
   const dbPath = useMemo(() => `${sqliteDir}${DB_NAME}`, [sqliteDir]);
@@ -63,10 +81,10 @@ export default function DebugDatabaseScreen() {
           'Install expo-sharing to export the database file, or copy the path and retrieve it with Xcode/Files.'
         );
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       Alert.alert(
         'Share Failed',
-        e?.message ?? 'Unable to share database file.'
+        getErrorMessage(e) || 'Unable to share database file.'
       );
     } finally {
       setSharing(false);
@@ -88,6 +106,39 @@ export default function DebugDatabaseScreen() {
         'Install expo-clipboard to copy text to clipboard.'
       );
     }
+  };
+
+  const confirmResetHealthData = () => {
+    Alert.alert(
+      'Reset Health Data',
+      'This will permanently delete all saved health snapshots from the local database. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const db = await getDatabase();
+              await db.execAsync('DELETE FROM health_snapshots;');
+              try {
+                // Attempt to truncate WAL and vacuum space (best-effort)
+                await db.execAsync('PRAGMA wal_checkpoint(TRUNCATE);');
+              } catch {}
+              Alert.alert(
+                'Reset Complete',
+                'All health data has been removed.'
+              );
+            } catch (e: unknown) {
+              Alert.alert(
+                'Reset Failed',
+                getErrorMessage(e) || 'Unable to reset health data.'
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -141,6 +192,14 @@ export default function DebugDatabaseScreen() {
               Copy Path
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: '#d35400' }]}
+            onPress={confirmResetHealthData}
+          >
+            <RotateCcw size={18} color={colors.white} />
+            <Text style={styles.actionText}>Reset Health Data</Text>
+          </TouchableOpacity>
         </View>
 
         {__DEV__ && (
@@ -159,10 +218,10 @@ export default function DebugDatabaseScreen() {
                     'Deleted',
                     'Database deleted. Restart the app to recreate it.'
                   );
-                } catch (e: any) {
+                } catch (e: unknown) {
                   Alert.alert(
                     'Delete Failed',
-                    e?.message ?? 'Unable to delete database file.'
+                    getErrorMessage(e) || 'Unable to delete database file.'
                   );
                 }
               }}

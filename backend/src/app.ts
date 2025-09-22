@@ -13,7 +13,6 @@ import { requestLogger } from './middleware/logger';
 import bootstrapPersonalization from './models/personalization';
 bootstrapPersonalization();
 
-
 const app = express();
 
 // Security middleware
@@ -61,11 +60,8 @@ app.use('/api', limiter);
 // API Routes
 app.use('/api', routes);
 
-
-
-
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
     message: 'Digital Twin Backend API',
     version: '1.0.0',
@@ -77,9 +73,14 @@ app.get('/', (req, res) => {
       serviceStatus: '/api/air-quality/status',
       traffic: '/api/traffic/congestion',
       trafficStatus: '/api/traffic/status',
-    
       foodExtract: '/api/food/extract',
       personalization: '/api/personalization',
+      locationAutocomplete: '/api/location/autocomplete?q=Melbourne',
+      dengueStates: '/api/dengue/states',
+      dengueHotspots: '/api/dengue/hotspots?latitude=..&longitude=..&radius=5',
+      dengueOutbreaks:
+        '/api/dengue/outbreaks?latitude=..&longitude=..&radius=5',
+      denguePredict: '/api/dengue/predict?state=SELANGOR&live=true',
     },
   });
 });

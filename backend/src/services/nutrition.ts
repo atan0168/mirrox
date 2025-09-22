@@ -1,16 +1,22 @@
 // backend/src/services/nutrition.ts
-import fs from "fs";
-import path from "path";
+import fs from 'fs';
+import path from 'path';
 
 // Use DB helpers instead of local JSON
-import { searchFoods, getFoodById } from "../routes/foods_db";
+import { searchFoods, getFoodById } from '../routes/foods_db';
 // ⬇️ NEW: pretty display name helper
-import { prettyName } from "../services/display_name";
+import { prettyName } from '../services/display_name';
 
 /** ---------- Types ---------- */
 export type Nutrients = {
-  energy_kcal: number; carb_g: number; sugar_g: number; fat_g: number; sat_fat_g: number;
-  protein_g: number; fiber_g: number; sodium_mg: number;
+  energy_kcal: number;
+  carb_g: number;
+  sugar_g: number;
+  fat_g: number;
+  sat_fat_g: number;
+  protein_g: number;
+  fiber_g: number;
+  sodium_mg: number;
 };
 
 export type FoodEntry = {
@@ -18,10 +24,21 @@ export type FoodEntry = {
   name: string;
   aliases?: string[];
   category?: string;
-  default_portion?: { unit:"piece"|"bowl"|"cup"|"plate"|"slice"|"g"|"ml"; grams?:number; ml?:number };
+  default_portion?: {
+    unit: 'piece' | 'bowl' | 'cup' | 'plate' | 'slice' | 'g' | 'ml';
+    grams?: number;
+    ml?: number;
+  };
   nutrients_per_100g?: Partial<Nutrients> | null;
   nutrients_per_100ml?: Partial<Nutrients> | null;
-  modifiers?: Record<string, Partial<{ sugar_factor:number; volume_factor:number; grams_factor:number }>> | null;
+  modifiers?: Record<
+    string,
+    Partial<{
+      sugar_factor: number;
+      volume_factor: number;
+      grams_factor: number;
+    }>
+  > | null;
 };
 
 export type CanonicalItem = {
@@ -35,17 +52,19 @@ export type CanonicalItem = {
 };
 
 export type AnalyzeInput = { text?: string; imageBase64?: string };
-export type ExtractFn = (p: AnalyzeInput) => Promise<{ FOOD_ITEM: string[]; DRINK_ITEM: string[] }>;
+export type ExtractFn = (
+  p: AnalyzeInput
+) => Promise<{ FOOD_ITEM: string[]; DRINK_ITEM: string[] }>;
 
 /** ---------- Load configs (relative to backend root) ---------- */
 const ROOT = process.cwd();
 const j = (...p: string[]) => path.join(ROOT, ...p);
-const readJSON = (p: string) => JSON.parse(fs.readFileSync(p, "utf-8"));
+const readJSON = (p: string) => JSON.parse(fs.readFileSync(p, 'utf-8'));
 
-const UNIT  = readJSON(j("config/portion.units.json"));
-const TH    = readJSON(j("config/nutrition.thresholds.json"));
-const TIPS  = readJSON(j("config/feedback.tips.json"));
-const FBMAP = readJSON(j("config/feedback.map.json"));
+const UNIT = readJSON(j('config/portion.units.json'));
+const TH = readJSON(j('config/nutrition.thresholds.json'));
+const TIPS = readJSON(j('config/feedback.tips.json'));
+const FBMAP = readJSON(j('config/feedback.map.json'));
 
 /** ---------- Helpers ---------- */
 const norm = (s: string) => s.trim().toLowerCase();
@@ -76,18 +95,22 @@ function findFoodFromDB(raw: string): FoodEntry | undefined {
 }
 
 /** ---------- Portion & modifiers ---------- */
-const SIZE = UNIT.small_medium_large_factors || { small: 0.8, medium: 1.0, large: 1.2 };
+const SIZE = UNIT.small_medium_large_factors || {
+  small: 0.8,
+  medium: 1.0,
+  large: 1.2,
+};
 const QTY_RE = /(\d+)\s*(x|个|只|份|pieces?|pcs?)?/i;
 const UWORDS = [
-  { unit: "bowl",  re: /\b(bowl|碗|mangkuk)\b/i },
-  { unit: "cup",   re: /\b(cup|杯)\b/i },
-  { unit: "plate", re: /\b(plate|盘|碟)\b/i },
-  { unit: "slice", re: /\b(slice|片)\b/i },
-  { unit: "piece", re: /\b(piece|个|只|份)\b/i },
+  { unit: 'bowl', re: /\b(bowl|碗|mangkuk)\b/i },
+  { unit: 'cup', re: /\b(cup|杯)\b/i },
+  { unit: 'plate', re: /\b(plate|盘|碟)\b/i },
+  { unit: 'slice', re: /\b(slice|片)\b/i },
+  { unit: 'piece', re: /\b(piece|个|只|份)\b/i },
 ];
 const SWORDS = [
-  { size: "large", re: /\b(large|大杯|大份)\b/i },
-  { size: "small", re: /\b(small|小杯|小份)\b/i },
+  { size: 'large', re: /\b(large|大杯|大份)\b/i },
+  { size: 'small', re: /\b(small|小杯|小份)\b/i },
 ];
 
 /**
@@ -97,37 +120,48 @@ const SWORDS = [
  * - Container (bowl, cup, plate, slice, piece)
  * - Sugar modifiers (less sugar / no sugar / kurang manis)
  */
-function applyPortionAndModifiers(food: FoodEntry, text: string): CanonicalItem {
-  const t = (text || "").toLowerCase();
+function applyPortionAndModifiers(
+  food: FoodEntry,
+  text: string
+): CanonicalItem {
+  const t = (text || '').toLowerCase();
   const quantity = Number(QTY_RE.exec(t)?.[1] || 1);
-  const size = (SWORDS.find((x) => x.re.test(t))?.size as "small" | "large") || "medium";
+  const size =
+    (SWORDS.find(x => x.re.test(t))?.size as 'small' | 'large') || 'medium';
   const sizeFactor = SIZE[size] || 1.0;
-  const hit = (UWORDS.find((x) => x.re.test(t))?.unit as
-    | "bowl"
-    | "cup"
-    | "plate"
-    | "slice"
-    | "piece"
-    | undefined);
+  const hit = UWORDS.find(x => x.re.test(t))?.unit as
+    | 'bowl'
+    | 'cup'
+    | 'plate'
+    | 'slice'
+    | 'piece'
+    | undefined;
 
   const mods: string[] = [];
-  if (t.includes("kurang manis")) mods.push("kurang manis");
-  if (t.includes("less sugar")) mods.push("less sugar");
-  if (t.includes("no sugar")) mods.push("no sugar");
+  if (t.includes('kurang manis')) mods.push('kurang manis');
+  if (t.includes('less sugar')) mods.push('less sugar');
+  if (t.includes('no sugar')) mods.push('no sugar');
 
   let portion_g: number | undefined;
   let volume_ml: number | undefined;
 
-  if (food.nutrients_per_100g && Object.keys(food.nutrients_per_100g).length > 0) {
+  if (
+    food.nutrients_per_100g &&
+    Object.keys(food.nutrients_per_100g).length > 0
+  ) {
     // If per 100g data available → compute grams
     if (hit && UNIT[hit] && food.category && UNIT[hit][food.category]) {
       portion_g = Math.round(UNIT[hit][food.category] * sizeFactor) * quantity;
     } else if (food.default_portion?.grams) {
-      portion_g = Math.round(food.default_portion.grams * sizeFactor) * quantity;
+      portion_g =
+        Math.round(food.default_portion.grams * sizeFactor) * quantity;
     } else {
       portion_g = 100 * quantity; // fallback: 100g
     }
-  } else if (food.nutrients_per_100ml && Object.keys(food.nutrients_per_100ml).length > 0) {
+  } else if (
+    food.nutrients_per_100ml &&
+    Object.keys(food.nutrients_per_100ml).length > 0
+  ) {
     // If only per 100ml data available → compute milliliters
     if (hit && UNIT[hit] && food.category && UNIT[hit][food.category]) {
       volume_ml = Math.round(UNIT[hit][food.category] * sizeFactor) * quantity;
@@ -152,8 +186,14 @@ function applyPortionAndModifiers(food: FoodEntry, text: string): CanonicalItem 
 /** ---------- Math helpers ---------- */
 type NPart = Partial<Nutrients>;
 const zero = (): Nutrients => ({
-  energy_kcal: 0, carb_g: 0, sugar_g: 0, fat_g: 0, sat_fat_g: 0,
-  protein_g: 0, fiber_g: 0, sodium_mg: 0,
+  energy_kcal: 0,
+  carb_g: 0,
+  sugar_g: 0,
+  fat_g: 0,
+  sat_fat_g: 0,
+  protein_g: 0,
+  fiber_g: 0,
+  sodium_mg: 0,
 });
 
 const sum = (a: Nutrients, b: NPart): Nutrients => ({
@@ -196,7 +236,8 @@ function computeItemNutrients(food: FoodEntry, item: CanonicalItem): Nutrients {
   }
 
   // If energy not provided, derive from macros
-  if (!r.energy_kcal) r.energy_kcal = r.carb_g * 4 + r.protein_g * 4 + r.fat_g * 9;
+  if (!r.energy_kcal)
+    r.energy_kcal = r.carb_g * 4 + r.protein_g * 4 + r.fat_g * 9;
   return r;
 }
 
@@ -219,19 +260,28 @@ function computeAll(pairs: Array<{ food: FoodEntry; item: CanonicalItem }>) {
 /** ---------- Classification & feedback ---------- */
 function classify(total: Nutrients): string[] {
   const tags: string[] = [];
-  if (total.sugar_g >= TH.high_sugar_g) tags.push("high_sugar");
-  if (total.fat_g >= TH.high_fat_g || total.sat_fat_g >= TH.high_sat_fat_g) tags.push("high_fat");
-  if (total.fiber_g < TH.low_fiber_g) tags.push("low_fiber");
-  if (total.sodium_mg >= TH.high_sodium_mg) tags.push("high_sodium");
+  if (total.sugar_g >= TH.high_sugar_g) tags.push('high_sugar');
+  if (total.fat_g >= TH.high_fat_g || total.sat_fat_g >= TH.high_sat_fat_g)
+    tags.push('high_fat');
+  if (total.fiber_g < TH.low_fiber_g) tags.push('low_fiber');
+  if (total.sodium_mg >= TH.high_sodium_mg) tags.push('high_sodium');
 
-  const kcal = total.energy_kcal || (total.carb_g * 4 + total.protein_g * 4 + total.fat_g * 9);
+  const kcal =
+    total.energy_kcal ||
+    total.carb_g * 4 + total.protein_g * 4 + total.fat_g * 9;
   if (kcal > 0) {
-    const c = (total.carb_g * 4) / kcal * 100;
-    const f = (total.fat_g * 9) / kcal * 100;
-    const p = (total.protein_g * 4) / kcal * 100;
+    const c = ((total.carb_g * 4) / kcal) * 100;
+    const f = ((total.fat_g * 9) / kcal) * 100;
+    const p = ((total.protein_g * 4) / kcal) * 100;
     const inR = (r: [number, number], v: number) => v >= r[0] && v <= r[1];
-    if (!(inR(TH.balance_ranges.carb_pct, c) && inR(TH.balance_ranges.fat_pct, f) && inR(TH.balance_ranges.protein_pct, p))) {
-      tags.push("unbalanced");
+    if (
+      !(
+        inR(TH.balance_ranges.carb_pct, c) &&
+        inR(TH.balance_ranges.fat_pct, f) &&
+        inR(TH.balance_ranges.protein_pct, p)
+      )
+    ) {
+      tags.push('unbalanced');
     }
   }
   return tags;
@@ -239,11 +289,13 @@ function classify(total: Nutrients): string[] {
 
 /** Map tags to avatar effects */
 function tagsToEffects(tags: string[]) {
-  return tags.filter((t) => FBMAP[t]).map((t: string) => ({ ...FBMAP[t], reason: t }));
+  return tags
+    .filter(t => FBMAP[t])
+    .map((t: string) => ({ ...FBMAP[t], reason: t }));
 }
 
 /** Map tags to localized tips */
-export function tagsToTips(tags: string[], lang: "en" | "zh" = "en") {
+export function tagsToTips(tags: string[], lang: 'en' | 'zh' = 'en') {
   const out: string[] = [];
   for (const t of tags) {
     const a = TIPS[t];
@@ -263,7 +315,7 @@ export async function analyzeMeal(payload: AnalyzeInput, extractFn: ExtractFn) {
     const food = findFoodFromDB(raw);
     if (!food) continue;
 
-    const item = applyPortionAndModifiers(food, payload.text || "");
+    const item = applyPortionAndModifiers(food, payload.text || '');
     // ensure item carries a nice-looking name for UI
     item.name = item.name || prettyName(food.name, food.aliases);
     pairs.push({ food, item });
@@ -272,7 +324,7 @@ export async function analyzeMeal(payload: AnalyzeInput, extractFn: ExtractFn) {
   const nutrients = computeAll(pairs);
   const tags = classify(nutrients.total);
   const avatar_effects = tagsToEffects(tags);
-  const tips = tagsToTips(tags, "en");
+  const tips = tagsToTips(tags, 'en');
 
   return {
     canonical: pairs.map(p => ({
@@ -282,6 +334,6 @@ export async function analyzeMeal(payload: AnalyzeInput, extractFn: ExtractFn) {
     nutrients,
     tags,
     avatar_effects,
-    tips
+    tips,
   };
 }

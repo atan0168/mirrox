@@ -1,5 +1,10 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, AxiosInstance } from 'axios';
 import { API_BASE_URL } from '../constants';
+import { useSandboxStore } from '../store/sandboxStore';
+import {
+  LocationAutocompleteResponse,
+  LocationSuggestion,
+} from '../models/Location';
 
 export interface AirQualityApiResponse {
   success: boolean;
@@ -24,6 +29,8 @@ export interface AirQualityApiResponse {
     no2?: number;
     co?: number;
     o3?: number;
+    temperature?: number | null;
+    humidity?: number | null;
     // UV data from AQICN forecast
     uvIndex?: number;
     uvForecast?: Array<{ avg: number; day: string; max: number; min: number }>;
@@ -52,8 +59,79 @@ export interface StationSearchResult {
   aqi: number;
 }
 
+// Types for dengue prediction
+export interface DenguePredictResponse {
+  state: string;
+  as_of: {
+    ew_year: number;
+    ew: number;
+    week_start: string;
+    week_end: string;
+    source: string;
+  };
+  season: {
+    lags: number;
+    prob_in_season: number;
+    in_season: boolean;
+    threshold: number;
+  };
+  trend: {
+    lags: number;
+    prob_trend_increase_next_week: number;
+    trend_increase: boolean;
+    threshold: number;
+  };
+}
+
+// Minimal ArcGIS response types for dengue nearby endpoints
+export interface ArcGISField {
+  name: string;
+  type: string;
+  alias: string;
+  length?: number;
+}
+export interface ArcGISSpatialReference {
+  wkid?: number;
+  latestWkid?: number;
+}
+export interface ArcGISFeature<TAttributes, TGeometry = undefined> {
+  attributes: TAttributes;
+  geometry?: TGeometry;
+}
+export interface ArcGISResponse<TAttributes, TGeometry = undefined> {
+  fields: ArcGISField[];
+  features: Array<ArcGISFeature<TAttributes, TGeometry>>;
+  geometryType?: string;
+  spatialReference?: ArcGISSpatialReference;
+}
+export interface PointGeometry {
+  x: number;
+  y: number;
+}
+export interface PolygonGeometry {
+  rings: number[][][];
+}
+export interface HotspotAttributes {
+  'SPWD.DBO_LOKALITI_POINTS.LOKALITI': string;
+  'SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES': number;
+  'SPWD.AVT_HOTSPOTMINGGUAN.TEMPOH_WABAK'?: number;
+}
+export interface OutbreakAttributes {
+  'SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI': string;
+  'SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES': number;
+}
+
+export interface StateAttributes {
+  NEGERI: string;
+  JUMLAH_HARIAN: number;
+  JUMLAH_SPATIALHARIAN: number;
+  JUMLAH_SPATIALKUMCURR: number;
+  JUMLAH_KUMULATIF: number;
+  JUMLAH_KEMATIAN: number;
+}
+
 class BackendApiService {
-  private readonly axiosInstance;
+  private readonly axiosInstance: AxiosInstance;
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -220,7 +298,10 @@ class BackendApiService {
     error?: string;
   }> {
     try {
-      const params: any = { latitude, longitude };
+      const params: { latitude: number; longitude: number; radius?: number } = {
+        latitude,
+        longitude,
+      };
       if (radius) params.radius = radius;
 
       const response = await this.axiosInstance.get(
@@ -281,7 +362,7 @@ class BackendApiService {
    * Get service status and statistics (development only)
    * @returns Promise with service status
    */
-  async getServiceStatus(): Promise<any> {
+  async getServiceStatus() {
     try {
       const response = await this.axiosInstance.get('/air-quality/status');
       return response.data;
@@ -289,6 +370,131 @@ class BackendApiService {
       console.error('Failed to get service status:', error);
       throw error;
     }
+  }
+
+  async searchLocations(
+    query: string,
+    options?: {
+      limit?: number;
+      countryCodes?: string;
+    }
+  ): Promise<LocationSuggestion[]> {
+    try {
+      const response =
+        await this.axiosInstance.get<LocationAutocompleteResponse>(
+          '/location/autocomplete',
+          {
+            params: {
+              q: query,
+              limit: options?.limit,
+              countrycodes: options?.countryCodes,
+            },
+          }
+        );
+
+      if (!response.data.success) {
+        throw new Error(
+          response.data.error || 'Failed to fetch location matches.'
+        );
+      }
+
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to search locations:', error);
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Unable to search for locations right now.');
+    }
+  }
+
+  /** Dengue prediction via backend -> Python microservice */
+  async fetchDenguePrediction(
+    state: string,
+    params?: {
+      season_lags?: number;
+      trend_lags?: number;
+      season_threshold?: number;
+      trend_threshold?: number;
+      ref_year?: number;
+      ref_ew?: number;
+      live?: boolean;
+    }
+  ): Promise<{
+    success: boolean;
+    data?: DenguePredictResponse;
+    error?: string;
+  }> {
+    try {
+      const sandbox = useSandboxStore.getState();
+      if (sandbox.enabled) {
+        const result = sandbox.denguePrediction
+          ? JSON.parse(JSON.stringify(sandbox.denguePrediction))
+          : { success: true };
+        return result;
+      }
+      const response = await this.axiosInstance.get('/dengue/predict', {
+        params: { state, ...(params || {}) },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch dengue prediction:', error);
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      throw new Error('Unable to fetch dengue prediction.');
+    }
+  }
+
+  // Dengue nearby queries (live ArcGIS via backend)
+  async fetchDengueHotspots(
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 10
+  ): Promise<ArcGISResponse<HotspotAttributes, PointGeometry>> {
+    const sandbox = useSandboxStore.getState();
+    if (sandbox.enabled) {
+      if (sandbox.dengueHotspots) {
+        return JSON.parse(JSON.stringify(sandbox.dengueHotspots));
+      }
+      return { fields: [], features: [] };
+    }
+    const response = await this.axiosInstance.get('/dengue/hotspots', {
+      params: { latitude, longitude, radius: radiusKm },
+    });
+    return response.data.data as ArcGISResponse<
+      HotspotAttributes,
+      PointGeometry
+    >;
+  }
+
+  async fetchDengueOutbreaks(
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 10
+  ): Promise<ArcGISResponse<OutbreakAttributes, PolygonGeometry>> {
+    const sandbox = useSandboxStore.getState();
+    if (sandbox.enabled) {
+      if (sandbox.dengueOutbreaks) {
+        return JSON.parse(JSON.stringify(sandbox.dengueOutbreaks));
+      }
+      return { fields: [], features: [] };
+    }
+    const response = await this.axiosInstance.get('/dengue/outbreaks', {
+      params: { latitude, longitude, radius: radiusKm },
+    });
+    return response.data.data as ArcGISResponse<
+      OutbreakAttributes,
+      PolygonGeometry
+    >;
+  }
+
+  async fetchDengueStateStats(): Promise<ArcGISResponse<StateAttributes>> {
+    const response = await this.axiosInstance.get('/dengue/states');
+    return response.data.data as ArcGISResponse<StateAttributes>;
   }
 
   /**

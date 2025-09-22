@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,18 +17,32 @@ import {
   Code,
   RefreshCw,
   Database,
+  Bell,
 } from 'lucide-react-native';
 import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
+import { useSandboxPreference } from '../hooks/useSandboxPreference';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useHealthData } from '../hooks/useHealthData';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
+import { useEnergyNotificationsPreference } from '../hooks/useEnergyNotificationsPreference';
+import { useSleepHealthNotificationsPreference } from '../hooks/useSleepHealthNotificationsPreference';
+import {
+  cancelAllNotifications,
+  requestNotificationPermissions,
+} from '../services/notifications';
+import { SleepHealthNotifier } from '../services/SleepHealthNotifier';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { differenceInMinutes } from 'date-fns';
+import { getDeviceTimeZone, yyyymmddInTimeZone } from '../utils/datetimeUtils';
+import type { HealthSnapshot } from '../models/Health';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const queryClient = useQueryClient();
   const [requireAuth, setRequireAuth] = useState(false);
   const [authMethod, setAuthMethod] = useState<'pin' | 'biometric' | 'both'>(
     'biometric'
@@ -52,6 +66,64 @@ export default function SettingsScreen() {
     developerControlsEnabled: enableDeveloperControls,
     updateDeveloperControlsPreference,
   } = useDeveloperControlsPreference();
+
+  const {
+    sandboxEnabled: enableSandboxMode,
+    loading: sandboxPreferenceLoading,
+    updateSandboxPreference,
+  } = useSandboxPreference();
+
+  // Use the energy notifications preference hook
+  const {
+    energyNotificationsEnabled: enableEnergyNotifications,
+    updateEnergyNotificationsPreference,
+  } = useEnergyNotificationsPreference();
+
+  // Use the sleep & health notifications preference hook
+  const {
+    sleepHealthNotificationsEnabled: enableSleepHealthNotifications,
+    updateSleepHealthNotificationsPreference,
+  } = useSleepHealthNotificationsPreference();
+
+  const timeZone = useMemo(() => getDeviceTimeZone(), []);
+  const todayStr = useMemo(
+    () => yyyymmddInTimeZone(new Date(), timeZone),
+    [timeZone]
+  );
+
+  const deriveSleepMinutes = (snapshot?: HealthSnapshot | null) => {
+    if (!snapshot) return 0;
+    const minutes = snapshot.sleepMinutes ?? 0;
+    if (minutes > 0) return minutes;
+    if (snapshot.sleepStart && snapshot.sleepEnd) {
+      const start = new Date(snapshot.sleepStart);
+      const end = new Date(snapshot.sleepEnd);
+      const diff = differenceInMinutes(end, start);
+      return diff > 0 ? diff : 0;
+    }
+    return 0;
+  };
+
+  const latestStepsValue = useMemo(() => {
+    if (!health) return null;
+    if (health.date !== todayStr) return null;
+    if (typeof health.steps !== 'number') return 0;
+    return health.steps;
+  }, [health, todayStr]);
+
+  const latestSleepMinutes = useMemo(() => {
+    if (!health) return null;
+    if (health.date !== todayStr) return null;
+    return deriveSleepMinutes(health);
+  }, [health, todayStr]);
+
+  const latestStepsText =
+    latestStepsValue == null ? 'No steps data' : `${latestStepsValue} steps`;
+
+  const latestSleepText =
+    latestSleepMinutes != null && latestSleepMinutes > 0
+      ? `${(latestSleepMinutes / 60).toFixed(1)}h sleep`
+      : 'No sleep data';
 
   useEffect(() => {
     loadSecuritySettings();
@@ -104,7 +176,7 @@ export default function SettingsScreen() {
               parent?.reset?.({
                 index: 0,
                 routes: [{ name: 'Welcome' }],
-              } as never);
+              });
               if (!parent) {
                 // Fallback: navigate if reset isn't available
                 navigation.navigate('Welcome' as never);
@@ -124,15 +196,92 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleEnergyNotificationsToggle = async (value: boolean) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const success = await updateEnergyNotificationsPreference(value);
+      if (success) {
+        if (value) {
+          const granted = await requestNotificationPermissions();
+          if (!granted) {
+            Alert.alert(
+              'Permission Needed',
+              'Please allow notifications in system settings to receive alerts.'
+            );
+          }
+          Alert.alert(
+            'Notifications Enabled',
+            'You will receive an alert when your energy is predicted to drop below 30%.'
+          );
+        } else {
+          try {
+            await cancelAllNotifications();
+          } catch {}
+          Alert.alert(
+            'Notifications Disabled',
+            'Energy alerts have been turned off.'
+          );
+        }
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to update notifications setting. Please try again.'
+        );
+      }
+    } catch (e) {
+      console.error('Failed to toggle energy notifications:', e);
+      Alert.alert(
+        'Error',
+        'Failed to update notifications setting. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSleepHealthNotificationsToggle = async (value: boolean) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const success = await updateSleepHealthNotificationsPreference(value);
+      if (success) {
+        if (value) {
+          const granted = await requestNotificationPermissions();
+          if (!granted) {
+            Alert.alert(
+              'Permission Needed',
+              'Please allow notifications in system settings to receive sleep insights.'
+            );
+          }
+          Alert.alert(
+            'Sleep Insights Enabled',
+            'You may receive up to one sleep & health insight per day based on recent patterns.'
+          );
+        } else {
+          Alert.alert(
+            'Sleep Insights Disabled',
+            'Sleep & health notifications have been turned off.'
+          );
+        }
+      } else {
+        Alert.alert('Error', 'Failed to update setting. Please try again.');
+      }
+    } catch (e) {
+      console.error('Failed to toggle sleep & health notifications:', e);
+      Alert.alert('Error', 'Failed to update setting. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateSecuritySettings = async (
     newRequireAuth: boolean,
     newAuthMethod?: 'pin' | 'biometric' | 'both'
   ) => {
     try {
       setLoading(true);
-      const localStorage = localStorageService;
-
-      await localStorage.updateSecuritySettings({
+      await updateSecurityMutation.mutateAsync({
         requireAuthentication: newRequireAuth,
         authMethod: newAuthMethod || authMethod,
       });
@@ -160,6 +309,20 @@ export default function SettingsScreen() {
       setLoading(false);
     }
   };
+
+  // React Query mutation for updating security settings, keeps userProfile fresh
+  const updateSecurityMutation = useMutation({
+    mutationFn: async (settings: {
+      requireAuthentication: boolean;
+      authMethod?: 'pin' | 'biometric' | 'both';
+    }) => {
+      await localStorageService.updateSecuritySettings(settings);
+      return settings;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+    },
+  });
 
   const handleAuthToggle = async (value: boolean) => {
     if (value) {
@@ -252,6 +415,32 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleSandboxToggle = async (value: boolean) => {
+    try {
+      setLoading(true);
+      const success = await updateSandboxPreference(value);
+      if (success) {
+        const message = value
+          ? 'Sandbox mode is now active. The app will use developer demo data sources until you disable it.'
+          : 'Sandbox mode has been disabled. Live data sources are re-enabled.';
+        Alert.alert('Sandbox Mode Updated', message, [{ text: 'OK' }]);
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to update sandbox mode. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Failed to update sandbox mode preference:', error);
+      Alert.alert('Error', 'Failed to update sandbox mode. Please try again.', [
+        { text: 'OK' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const AuthMethodOption = ({
     method,
     title,
@@ -311,6 +500,45 @@ export default function SettingsScreen() {
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
+            <Bell size={24} color={colors.neutral[700]} />
+            <Text style={styles.sectionTitle}>Notifications</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Energy Alerts</Text>
+              <Text style={styles.settingDescription}>
+                Notify when your energy is predicted to drop below 30%
+              </Text>
+            </View>
+            <Switch
+              value={!!enableEnergyNotifications}
+              onValueChange={handleEnergyNotificationsToggle}
+              disabled={loading}
+              trackColor={{ false: colors.neutral[300], true: colors.black }}
+              thumbColor={colors.white}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Sleep & Health Insights</Text>
+              <Text style={styles.settingDescription}>
+                Receive one supportive, sourced insight per day based on your
+                recent sleep and health data
+              </Text>
+            </View>
+            <Switch
+              value={!!enableSleepHealthNotifications}
+              onValueChange={handleSleepHealthNotificationsToggle}
+              disabled={loading}
+              trackColor={{ false: colors.neutral[300], true: colors.black }}
+              thumbColor={colors.white}
+            />
+          </View>
+        </View>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
             <Eye size={24} color={colors.neutral[700]} />
             <Text style={styles.sectionTitle}>Display Preferences</Text>
           </View>
@@ -350,8 +578,7 @@ export default function SettingsScreen() {
               </Text>
               {!!health && (
                 <Text style={[styles.settingDescription, { marginTop: 6 }]}>
-                  Latest: {health.steps} steps,{' '}
-                  {(health.sleepMinutes / 60).toFixed(1)}h sleep
+                  Latest: {latestStepsText}, {latestSleepText}
                 </Text>
               )}
             </View>
@@ -409,6 +636,27 @@ export default function SettingsScreen() {
               />
             </View>
 
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Sandbox Mode</Text>
+                <Text style={styles.settingDescription}>
+                  Feed the app with scripted demo data for air quality, dengue,
+                  stress, and sleep so you can trigger full experiences on
+                  demand
+                </Text>
+              </View>
+              <Switch
+                value={enableSandboxMode}
+                onValueChange={handleSandboxToggle}
+                disabled={loading || sandboxPreferenceLoading}
+                trackColor={{
+                  false: colors.neutral[300],
+                  true: colors.black,
+                }}
+                thumbColor={colors.white}
+              />
+            </View>
+
             <TouchableOpacity
               style={styles.settingRow}
               onPress={() => {
@@ -425,6 +673,32 @@ export default function SettingsScreen() {
                 </Text>
               </View>
               <Database size={20} color={colors.neutral[700]} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={async () => {
+                try {
+                  await SleepHealthNotifier.sendSampleNow();
+                  Alert.alert(
+                    'Sent',
+                    'Sample sleep insight sent to notification tray.'
+                  );
+                } catch {
+                  Alert.alert('Error', 'Failed to send sample notification.');
+                }
+              }}
+            >
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>
+                  Send Sample Sleep Insight (Debug)
+                </Text>
+                <Text style={styles.settingDescription}>
+                  Triggers a preview notification without affecting frequency
+                  caps
+                </Text>
+              </View>
+              <Bell size={20} color={colors.neutral[700]} />
             </TouchableOpacity>
           </View>
         )}

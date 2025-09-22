@@ -51,7 +51,7 @@ export function NutritionCard({
           {/* Show up to 2 tags */}
           {!!topTags.length && (
             <View className="flex-row flex-wrap mt-2">
-              {topTags.map((t) => (
+              {topTags.map(t => (
                 <View
                   key={t}
                   className="px-2 py-1 mr-2 mb-2 rounded-full border border-gray-300"
@@ -64,9 +64,7 @@ export function NutritionCard({
 
           {/* Short source hint */}
           {primarySource && (
-            <Text className="text-gray-500 mt-1">
-              Source: {primarySource}
-            </Text>
+            <Text className="text-gray-500 mt-1">Source: {primarySource}</Text>
           )}
 
           {/* See details button */}

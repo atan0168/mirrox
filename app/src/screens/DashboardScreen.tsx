@@ -8,34 +8,81 @@ import {
   SafeAreaView,
   Animated,
   Easing,
+  Switch,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
+import * as Location from 'expo-location';
 import AvatarExperience from '../components/avatar/AvatarExperience';
-import { EffectsList, EffectData } from '../components/ui';
+import { EffectsList, EffectData, Button } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
 import {
   calculateCombinedEnvironmentalSkinEffects,
-  getRecommendedFacialExpression,
   calculateSmogEffects,
 } from '../utils/skinEffectsUtils';
+import { getCombinedRecommendedExpression } from '../utils/expressionUtils';
+import { useHealthData } from '../hooks/useHealthData';
+import { useDengueNearby } from '../hooks/useDengueNearby';
 import { SkinToneButton } from '../components/controls/SkinToneButton';
 import SceneSwitcher, {
   SceneOption,
 } from '../components/controls/SceneSwitcher';
 import RainIntensityControls from '../components/controls/RainIntensityControls';
+import SandboxControls from '../components/controls/SandboxControls';
+import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
+import { useAvatarStore } from '../store/avatarStore';
+import { useIsFocused } from '@react-navigation/native';
+import OnboardingOverlay from '../components/ui/OnboardingOverlay';
+import { ENV_REFRESH_INTERVAL_MS } from '../constants';
+import { useUIStore } from '../store/uiStore';
+import { useHydrationStore } from '../store/hydrationStore';
+import { hydrationService } from '../services/HydrationService';
+import { Coordinates } from '../models/User';
+import { isWithinRadiusKm } from '../utils/geoUtils';
 
 const DashboardScreen: React.FC = () => {
+  const isFocused = useIsFocused();
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [scene, setScene] = useState<SceneOption>('home');
+  const [sceneManuallyOverridden, setSceneManuallyOverridden] = useState(false);
+  const [autoScene, setAutoScene] = useState<SceneOption>('home');
+  const [locationPermissionStatus, setLocationPermissionStatus] =
+    useState<Location.PermissionStatus | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<Coordinates | null>(
+    null
+  );
+  const manualExpression = useAvatarStore(s => s.manualFacialExpression);
+  const setManualExpression = useAvatarStore(s => s.setManualFacialExpression);
+  const clearManualExpression = useAvatarStore(
+    s => s.clearManualFacialExpression
+  );
   const [rainIntensity, setRainIntensity] = useState(0.7);
   const [rainDirection, setRainDirection] = useState<'vertical' | 'angled'>(
     'vertical'
   );
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [storeHydrated, setStoreHydrated] = useState(false);
+  const dashboardOnboardingSeen = useUIStore(s => s.dashboardOnboardingSeen);
+  const markOnboardingSeen = useUIStore(s => s.markDashboardOnboardingSeen);
+  const resetOnboardingSeen = useUIStore(s => s.resetDashboardOnboarding);
+  // Eye-bags controls via store (no prop drilling)
+  const eyeBagsOverride = useAvatarStore(s => s.eyeBagsOverrideEnabled);
+  const setEyeBagsOverride = useAvatarStore(s => s.setEyeBagsOverrideEnabled);
+  const eyeBagsIntensity = useAvatarStore(s => s.eyeBagsIntensity);
+  const setEyeBagsIntensity = useAvatarStore(s => s.setEyeBagsIntensity);
+  const eyeBagsOffsetX = useAvatarStore(s => s.eyeBagsOffsetX);
+  const eyeBagsOffsetY = useAvatarStore(s => s.eyeBagsOffsetY);
+  const eyeBagsOffsetZ = useAvatarStore(s => s.eyeBagsOffsetZ);
+  const setEyeBagsOffsets = useAvatarStore(s => s.setEyeBagsOffsets);
+  const eyeBagsWidth = useAvatarStore(s => s.eyeBagsWidth);
+  const eyeBagsHeight = useAvatarStore(s => s.eyeBagsHeight);
+  const setEyeBagsSize = useAvatarStore(s => s.setEyeBagsSize);
 
   // Use developer controls preference
   const { developerControlsEnabled } = useDeveloperControlsPreference();
@@ -54,11 +101,167 @@ const DashboardScreen: React.FC = () => {
     return () => loop.stop();
   }, [skeletonAnim]);
 
-  const { data: airQuality, error: airQualityError } = useAQICNAirQuality(
+  const { data: airQuality, error: _airQualityError } = useAQICNAirQuality(
     userProfile?.location.latitude || 0,
     userProfile?.location.longitude || 0,
-    !!userProfile
+    !!userProfile,
+    ENV_REFRESH_INTERVAL_MS
   );
+
+  const { data: dengueNearby } = useDengueNearby({
+    latitude: userProfile?.location.latitude,
+    longitude: userProfile?.location.longitude,
+    radiusKm: 5,
+    enabled: !!userProfile?.location,
+  });
+
+  const hasNearbyDengueRisk =
+    (dengueNearby?.hotspotCount ?? 0) > 0 ||
+    (dengueNearby?.outbreakCount ?? 0) > 0;
+
+  useEffect(() => {
+    let isMounted = true;
+    let subscription: Location.LocationSubscription | null = null;
+
+    const syncLocation = async () => {
+      try {
+        const existing = await Location.getForegroundPermissionsAsync();
+        let status = existing.status;
+
+        if (status === Location.PermissionStatus.UNDETERMINED) {
+          const requested = await Location.requestForegroundPermissionsAsync();
+          status = requested.status;
+        }
+
+        if (!isMounted) return;
+
+        setLocationPermissionStatus(status);
+
+        if (status !== Location.PermissionStatus.GRANTED) {
+          setCurrentLocation(null);
+          return;
+        }
+
+        const initialPosition = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+
+        if (isMounted) {
+          setCurrentLocation({
+            latitude: initialPosition.coords.latitude,
+            longitude: initialPosition.coords.longitude,
+          });
+        }
+
+        subscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 250,
+          },
+          position => {
+            if (!isMounted) return;
+            setCurrentLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            });
+          }
+        );
+      } catch (err) {
+        console.warn('Unable to retrieve location for scene selection', err);
+        if (isMounted) {
+          setCurrentLocation(null);
+        }
+      }
+    };
+
+    if (isFocused) {
+      syncLocation();
+    }
+
+    return () => {
+      isMounted = false;
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, [isFocused]);
+
+  useEffect(() => {
+    if (!userProfile) {
+      if (autoScene !== 'home') {
+        setAutoScene('home');
+      }
+      return;
+    }
+
+    if (
+      locationPermissionStatus !== Location.PermissionStatus.GRANTED ||
+      !currentLocation
+    ) {
+      if (autoScene !== 'home') {
+        setAutoScene('home');
+      }
+      return;
+    }
+
+    const homeLocation = userProfile.homeLocation || null;
+    const workLocation = userProfile.workLocation || null;
+
+    const nearHome =
+      !!homeLocation &&
+      isWithinRadiusKm(currentLocation, homeLocation.coordinates, 1);
+    const nearWork =
+      !!workLocation &&
+      isWithinRadiusKm(currentLocation, workLocation.coordinates, 1);
+
+    let nextScene: SceneOption = 'home';
+    if (nearHome) {
+      nextScene = 'home';
+    } else if (nearWork) {
+      nextScene = 'city';
+    }
+
+    if (nextScene !== autoScene) {
+      setAutoScene(nextScene);
+    }
+  }, [autoScene, currentLocation, locationPermissionStatus, userProfile]);
+
+  useEffect(() => {
+    if (sceneManuallyOverridden) {
+      return;
+    }
+
+    if (scene !== autoScene) {
+      setScene(autoScene);
+    }
+  }, [autoScene, scene, sceneManuallyOverridden]);
+
+  useEffect(() => {
+    if (!developerControlsEnabled && sceneManuallyOverridden) {
+      setSceneManuallyOverridden(false);
+    }
+  }, [developerControlsEnabled, sceneManuallyOverridden]);
+
+  // Track hydration of persisted store to avoid flicker
+  useEffect(() => {
+    const hasHydrated = useUIStore.persist?.hasHydrated?.();
+    if (hasHydrated) setStoreHydrated(true);
+    const unsub = useUIStore.persist?.onFinishHydration?.(() => {
+      setStoreHydrated(true);
+    });
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, []);
+
+  // Show onboarding only after store hydration
+  useEffect(() => {
+    if (!storeHydrated) return;
+    if (!dashboardOnboardingSeen) {
+      setShowOnboarding(true);
+      setScrollEnabled(false);
+    }
+  }, [storeHydrated, dashboardOnboardingSeen]);
 
   // Calculate combined environmental skin effects (air quality + UV)
   const skinEffects = useMemo(() => {
@@ -113,11 +316,29 @@ const DashboardScreen: React.FC = () => {
     });
   }, [airQuality]);
 
-  // Auto-adjust facial expression based on air quality
+  // Health data (for sleep minutes)
+  const { data: health } = useHealthData({ autoSync: false });
+
+  // Initialize hydration service
+  useEffect(() => {
+    if (userProfile && storeHydrated) {
+      hydrationService.initialize();
+    }
+  }, [userProfile, storeHydrated]);
+
+  // Get hydration progress percentage for avatar visual feedback
+  const hydrationProgressPercentage = useHydrationStore(s =>
+    s.getProgressPercentage()
+  );
+
+  // Auto-adjust facial expression based on air quality and sleep
   const recommendedExpression = useMemo(() => {
-    if (!airQuality) return 'neutral';
-    return getRecommendedFacialExpression(airQuality.pm25, airQuality.aqi);
-  }, [airQuality]);
+    return getCombinedRecommendedExpression({
+      aqi: airQuality?.aqi ?? null,
+      pm25: airQuality?.pm25 ?? null,
+      sleepMinutes: health?.sleepMinutes ?? null,
+    });
+  }, [airQuality?.aqi, airQuality?.pm25, health?.sleepMinutes]);
 
   // Create effects data for the effects list
   const activeEffects = useMemo((): EffectData[] => {
@@ -200,15 +421,16 @@ const DashboardScreen: React.FC = () => {
       effects.push({
         id: 'facial-expression',
         title: 'Facial Expression',
-        description: `Avatar expression adjusted to "${recommendedExpression}" based on air quality conditions`,
+        description: `Avatar expression set to "${recommendedExpression}" based on air quality and sleep`,
         details: [
           `Current expression: ${recommendedExpression}`,
           `Based on AQI: ${airQuality?.aqi || 'N/A'}`,
           `PM2.5 level: ${airQuality?.pm25 || 'N/A'} μg/m³`,
-          'Expression reflects health impact of air quality',
+          `Last-night sleep: ${health?.sleepMinutes != null ? (health.sleepMinutes / 60).toFixed(1) + 'h' : 'N/A'}`,
+          'Expression reflects health impact of air quality and sleep',
         ],
         severity,
-        source: 'Air Quality Analysis',
+        source: 'Air + Sleep Analysis',
         actionRecommendations: [
           'Practice deep breathing exercises to reduce stress',
           'Take breaks from outdoor activities if feeling discomfort',
@@ -220,7 +442,13 @@ const DashboardScreen: React.FC = () => {
     }
 
     return effects;
-  }, [skinEffects, smogEffects, recommendedExpression, airQuality]);
+  }, [
+    skinEffects,
+    smogEffects,
+    recommendedExpression,
+    airQuality,
+    health?.sleepMinutes,
+  ]);
 
   if (isLoading) {
     return (
@@ -249,15 +477,12 @@ const DashboardScreen: React.FC = () => {
         <View style={styles.content}>
           <View style={styles.avatarContainer}>
             <AvatarExperience
-              showAnimationButton={developerControlsEnabled}
-              facialExpression="neutral"
+              showAnimationButton={false && developerControlsEnabled}
+              facialExpression={manualExpression || recommendedExpression}
               skinToneAdjustment={skinEffects.totalAdjustment}
+              isActive={!!isFocused}
               rainIntensity={rainIntensity}
               rainDirection={rainDirection}
-              latitude={userProfile?.location.latitude}
-              longitude={userProfile?.location.longitude}
-              enableTrafficStress={true}
-              trafficRefreshInterval={300000} // 5 minutes
               airQualityData={
                 airQuality
                   ? {
@@ -268,6 +493,8 @@ const DashboardScreen: React.FC = () => {
                   : null
               }
               scene={scene}
+              hydrationProgressPercentage={hydrationProgressPercentage}
+              hasNearbyDengueRisk={hasNearbyDengueRisk}
             />
           </View>
 
@@ -275,24 +502,168 @@ const DashboardScreen: React.FC = () => {
           {developerControlsEnabled && (
             <View style={styles.controlsContainer}>
               <Text style={styles.controlsTitle}>Avatar Customization</Text>
-              <SceneSwitcher value={scene} onChange={setScene} />
+              <SceneSwitcher
+                value={scene}
+                onChange={value => {
+                  setScene(value);
+                  setSceneManuallyOverridden(value !== autoScene);
+                }}
+              />
               <SkinToneButton
                 skinToneAdjustment={manualSkinToneAdjustment}
                 onSkinToneChange={setManualSkinToneAdjustment}
               />
+              <SandboxControls location={userProfile?.location} />
               <RainIntensityControls
                 value={rainIntensity}
                 onChange={setRainIntensity}
                 direction={rainDirection}
                 onChangeDirection={setRainDirection}
               />
+
+              {/* Eye Bags (Dark Circles) Developer Controls */}
+              <View style={styles.devCard}>
+                <View style={styles.devRow}>
+                  <Text style={styles.devLabel}>Eye Bags (Override)</Text>
+                  <Switch
+                    value={eyeBagsOverride}
+                    onValueChange={setEyeBagsOverride}
+                  />
+                </View>
+                {eyeBagsOverride && (
+                  <View style={{ marginTop: spacing.sm }}>
+                    <Text style={styles.devSubtle}>
+                      Intensity: {(eyeBagsIntensity * 100).toFixed(0)}%
+                    </Text>
+                    <Slider
+                      value={eyeBagsIntensity}
+                      onValueChange={setEyeBagsIntensity}
+                      minimumValue={0}
+                      maximumValue={1}
+                      step={0.05}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
+                    <Text style={styles.devSubtle}>
+                      Offset X: {eyeBagsOffsetX.toFixed(3)}
+                    </Text>
+                    <Slider
+                      value={eyeBagsOffsetX}
+                      onValueChange={v =>
+                        setEyeBagsOffsets(v, eyeBagsOffsetY, eyeBagsOffsetZ)
+                      }
+                      minimumValue={-0.15}
+                      maximumValue={0.15}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
+                    <Text style={styles.devSubtle}>
+                      Offset Y: {eyeBagsOffsetY.toFixed(3)}
+                    </Text>
+                    <Slider
+                      value={eyeBagsOffsetY}
+                      onValueChange={v =>
+                        setEyeBagsOffsets(eyeBagsOffsetX, v, eyeBagsOffsetZ)
+                      }
+                      minimumValue={-0.15}
+                      maximumValue={0.15}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
+                    <Text style={styles.devSubtle}>
+                      Offset Z: {eyeBagsOffsetZ.toFixed(3)}
+                    </Text>
+                    <Slider
+                      value={eyeBagsOffsetZ}
+                      onValueChange={v =>
+                        setEyeBagsOffsets(eyeBagsOffsetX, eyeBagsOffsetY, v)
+                      }
+                      minimumValue={-0.2}
+                      maximumValue={0.2}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
+                    <Text style={styles.devSubtle}>
+                      Width: {eyeBagsWidth.toFixed(3)}
+                    </Text>
+                    <Slider
+                      value={eyeBagsWidth}
+                      onValueChange={v => setEyeBagsSize(v, eyeBagsHeight)}
+                      minimumValue={0.05}
+                      maximumValue={0.25}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
+                    <Text style={styles.devSubtle}>
+                      Height: {eyeBagsHeight.toFixed(3)}
+                    </Text>
+                    <Slider
+                      value={eyeBagsHeight}
+                      onValueChange={v => setEyeBagsSize(eyeBagsWidth, v)}
+                      minimumValue={0.03}
+                      maximumValue={0.15}
+                      step={0.005}
+                      minimumTrackTintColor={colors.neutral[700]}
+                      maximumTrackTintColor={colors.neutral[300]}
+                    />
+                    <Text style={styles.devHint}>
+                      When override is off, eye bags follow sleep data.
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {/* Developer utility: Reset onboarding */}
+              <View style={{ marginTop: spacing.md }}>
+                <Button
+                  onPress={async () => {
+                    resetOnboardingSeen();
+                    setOnboardingStep(0);
+                    setShowOnboarding(true);
+                    setScrollEnabled(false);
+                  }}
+                >
+                  Show onboarding again
+                </Button>
+              </View>
             </View>
+          )}
+
+          {/* Facial Expressions */}
+          {developerControlsEnabled && (
+            <FacialExpressionControls
+              currentExpression={manualExpression}
+              onExpressionChange={setManualExpression}
+              onReset={clearManualExpression}
+            />
           )}
 
           {/* Traffic Information */}
           <EffectsList effects={activeEffects} />
         </View>
       </ScrollView>
+
+      {/* Onboarding overlay - shown once */}
+      <OnboardingOverlay
+        visible={showOnboarding}
+        step={onboardingStep}
+        onNext={() => setOnboardingStep(s => Math.min(s + 1, 2))}
+        onSkip={async () => {
+          setShowOnboarding(false);
+          setScrollEnabled(true);
+          setOnboardingStep(0);
+          markOnboardingSeen();
+        }}
+        onDone={async () => {
+          setShowOnboarding(false);
+          setScrollEnabled(true);
+          setOnboardingStep(0);
+          markOnboardingSeen();
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -489,6 +860,38 @@ const styles = StyleSheet.create({
     color: '#2C5282', // Darker blue
     lineHeight: 18,
     marginBottom: 4,
+  },
+  // Dev controls styling
+  devCard: {
+    backgroundColor: '#FFFFFF',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+    marginTop: spacing.md,
+  },
+  devRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  devLabel: {
+    fontSize: fontSize.base,
+    fontWeight: '600',
+    color: colors.neutral[800],
+  },
+  devSubtle: {
+    fontSize: fontSize.sm,
+    color: colors.neutral[600],
+    marginBottom: spacing.xs,
+  },
+  devHint: {
+    fontSize: fontSize.xs,
+    color: colors.neutral[500],
+    marginTop: spacing.xs,
   },
   // Skin effects indicator styles
   skinEffectsIndicator: {

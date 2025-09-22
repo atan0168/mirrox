@@ -9,7 +9,7 @@ export interface CongestionData {
   freeFlowSpeed: number;
   currentTravelTime: number;
   freeFlowTravelTime: number;
-  stressLevel: 'none' | 'mild' | 'moderate' | 'high';
+
   confidence: number;
   roadClosure: boolean;
   timestamp: string;
@@ -59,7 +59,6 @@ class TrafficService {
 
       console.log(`🚗 Traffic data received:`, {
         congestionFactor: response.data.data.congestionFactor,
-        stressLevel: response.data.data.stressLevel,
         cached: response.data.data.cached,
       });
 

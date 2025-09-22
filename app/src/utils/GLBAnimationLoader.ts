@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three-stdlib';
+import { GLTFLoader, GLTF } from 'three-stdlib';
 import { Asset } from 'expo-asset';
 
 /**
@@ -25,7 +25,7 @@ export class GLBAnimationLoader {
       console.log('Loading GLB animation clips from:', glbUrl);
 
       // Load the GLB file
-      const gltf = await new Promise<any>((resolve, reject) => {
+      const gltf = await new Promise<GLTF>((resolve, reject) => {
         this.loader.load(
           glbUrl,
           gltf => resolve(gltf),
@@ -55,7 +55,7 @@ export class GLBAnimationLoader {
    * @returns Promise<THREE.AnimationClip[]>
    */
   async loadGLBAnimationFromAsset(
-    assetModule: any
+    assetModule: number
   ): Promise<THREE.AnimationClip[] | null> {
     try {
       console.log('Loading GLB animation clips from local asset...');
@@ -68,7 +68,7 @@ export class GLBAnimationLoader {
       console.log('Asset URI:', assetUri);
 
       // Load the GLB file
-      const gltf = await new Promise<any>((resolve, reject) => {
+      const gltf = await new Promise<GLTF>((resolve, reject) => {
         this.loader.load(
           assetUri,
           gltf => resolve(gltf),

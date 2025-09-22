@@ -1,10 +1,11 @@
 import { useRef, useMemo } from 'react';
+import { colors } from '../../theme';
 import { useFrame, useThree } from '@react-three/fiber/native';
 import * as THREE from 'three';
 
 interface FloatingStressIconProps {
   stressLevel: 'none' | 'mild' | 'moderate' | 'high';
-  congestionFactor: number;
+  stressIntensity: number;
   enabled?: boolean;
   position?: [number, number, number];
   onPress?: () => void; // Callback for when the icon is pressed
@@ -12,7 +13,7 @@ interface FloatingStressIconProps {
 
 export function FloatingStressIcon({
   stressLevel,
-  congestionFactor,
+  stressIntensity,
   enabled = true,
   position = [0, 2.5, 0], // Above avatar's head
   onPress,
@@ -25,77 +26,38 @@ export function FloatingStressIcon({
   const { camera } = useThree();
 
   // Get visual style based on stress level
-  const { color, shouldShow, intensity } = useMemo(() => {
+  const { color, shouldShow, severityTier } = useMemo(() => {
     switch (stressLevel) {
       case 'mild':
         return {
-          color: '#FFC107', // Yellow
+          color: colors.yellow[400], // Yellow
           shouldShow: true,
-          intensity: 1,
+          severityTier: 1,
         };
       case 'moderate':
         return {
-          color: '#FF9800', // Orange
+          color: colors.orange[500], // Orange
           shouldShow: true,
-          intensity: 2,
+          severityTier: 2,
         };
       case 'high':
         return {
-          color: '#F44336', // Red
+          color: colors.red[500], // Red
           shouldShow: true,
-          intensity: 3,
+          severityTier: 3,
         };
       default:
         return {
-          color: '#4CAF50',
+          color: colors.green[500],
           shouldShow: false,
-          intensity: 0,
+          severityTier: 0,
         };
     }
   }, [stressLevel]);
 
-  // Animate the floating icon and keep it facing the camera (billboard)
-  useFrame(state => {
-    // Keep the outer container oriented toward the camera to prevent ellipse distortion
-    if (billboardRef.current) {
-      billboardRef.current.quaternion.copy(camera.quaternion);
-      // Ensure it renders last to avoid being occluded by scene geometry
-      billboardRef.current.renderOrder = 100000;
-    }
-
-    // Ensure the center symbol renders last among icon parts
-    if (iconRef.current) {
-      iconRef.current.renderOrder = 100010;
-      iconRef.current.traverse(obj => {
-        obj.renderOrder = 100010;
-      });
-    }
-
-    if (groupRef.current && shouldShow && enabled) {
-      const time = state.clock.elapsedTime;
-
-      // Floating animation
-      const floatY = Math.sin(time * 2) * 0.1;
-      groupRef.current.position.y = floatY;
-
-      // Gentle rotation for high stress
-      if (stressLevel === 'high') {
-        groupRef.current.rotation.z = Math.sin(time * 4) * 0.1;
-      }
-
-      // Scale pulsing based on congestion factor
-      const pulseScale = 1 + Math.sin(time * 3) * 0.1 * (congestionFactor - 1);
-      groupRef.current.scale.setScalar(Math.max(0.8, pulseScale));
-    }
-  });
-
-  if (!enabled || !shouldShow) {
-    return null;
-  }
-
-  // Create custom geometry for symbols
+  // Create custom geometry for symbols (helpers defined before any early returns)
   // High-stress: use white mark for strong contrast
-  const createExclamationMark = (color: number | string = '#FFFFFF') => {
+  const createExclamationMark = (color: number | string = colors.white) => {
     const group = new THREE.Group();
     group.renderOrder = 100000;
     group.frustumCulled = false;
@@ -141,7 +103,7 @@ export function FloatingStressIcon({
     const triangleMesh = new THREE.Mesh(
       triangleGeometry,
       new THREE.MeshBasicMaterial({
-        color: '#FFFFFF',
+        color: colors.white,
         transparent: true,
         opacity: 0.9,
         depthTest: false,
@@ -152,15 +114,16 @@ export function FloatingStressIcon({
     group.add(triangleMesh);
 
     // Inner exclamation
-    const innerExclamation = createExclamationMark(0xff9800);
+    const innerExclamation = createExclamationMark(colors.orange[500]);
     innerExclamation.scale.setScalar(0.6);
     group.add(innerExclamation);
 
     return group;
   };
 
+  // Decide which symbol creator to use based on intensity
   const createStressSymbol = useMemo(() => {
-    switch (intensity) {
+    switch (severityTier) {
       case 1:
         // Mild stress - simple dot
         return () => {
@@ -171,7 +134,7 @@ export function FloatingStressIcon({
           const dotMesh = new THREE.Mesh(
             dotGeometry,
             new THREE.MeshBasicMaterial({
-              color: '#FFFFFF',
+              color: colors.white,
               transparent: true,
               opacity: 1,
               depthTest: false,
@@ -191,7 +154,48 @@ export function FloatingStressIcon({
       default:
         return () => new THREE.Group();
     }
-  }, [intensity]);
+  }, [severityTier]);
+
+  // Animate the floating icon and keep it facing the camera (billboard)
+  useFrame(state => {
+    // Keep the outer container oriented toward the camera to prevent ellipse distortion
+    if (billboardRef.current) {
+      billboardRef.current.quaternion.copy(camera.quaternion);
+      // Ensure it renders last to avoid being occluded by scene geometry
+      billboardRef.current.renderOrder = 100000;
+    }
+
+    // Ensure the center symbol renders last among icon parts
+    if (iconRef.current) {
+      iconRef.current.renderOrder = 100010;
+      iconRef.current.traverse(obj => {
+        obj.renderOrder = 100010;
+      });
+    }
+
+    if (groupRef.current && shouldShow && enabled) {
+      const time = state.clock.elapsedTime;
+
+      // Floating animation
+      const floatY = Math.sin(time * 2) * 0.1;
+      groupRef.current.position.y = floatY;
+
+      // Gentle rotation for high stress
+      if (stressLevel === 'high') {
+        groupRef.current.rotation.z = Math.sin(time * 4) * 0.1;
+      }
+
+      // Scale pulsing based on HRV stress intensity (0..1)
+      const normalized = Math.min(Math.max(stressIntensity, 0), 1);
+      const pulseStrength = 0.6 + normalized * 0.6;
+      const pulseScale = 1 + Math.sin(time * 3) * 0.08 * pulseStrength;
+      groupRef.current.scale.setScalar(Math.max(0.8, pulseScale));
+    }
+  });
+
+  if (!enabled || !shouldShow) {
+    return null;
+  }
 
   return (
     <group ref={billboardRef} position={position}>
@@ -235,7 +239,7 @@ export function FloatingStressIcon({
         </mesh>
 
         {/* Subtle glow effect for higher stress levels */}
-        {intensity >= 2 && (
+        {severityTier >= 2 && (
           <mesh position={[0, 0, -0.05]}>
             <circleGeometry args={[0.25, 32]} />
             <meshBasicMaterial
@@ -250,7 +254,7 @@ export function FloatingStressIcon({
         )}
 
         {/* Additional pulsing ring for high stress */}
-        {intensity === 3 && (
+        {severityTier === 3 && (
           <mesh position={[0, 0, -0.03]}>
             <ringGeometry args={[0.3, 0.4, 32]} />
             <meshBasicMaterial
