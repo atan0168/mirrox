@@ -2,14 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { ChevronRight, Info } from 'lucide-react-native'; // Use Lucide icons instead of ASCII symbols
 
-// Mapping for nutrition tags
-const TAG_LABEL: Record<string, string> = {
-  high_sugar: 'High Sugar',
-  high_fat: 'High Fat',
-  low_fiber: 'Low Fiber',
-  high_sodium: 'High Sodium',
-  unbalanced: 'Unbalanced',
-};
+import { TAG_LABEL } from '../constants';
+
 
 type NutritionCardProps = {
   total?: {
