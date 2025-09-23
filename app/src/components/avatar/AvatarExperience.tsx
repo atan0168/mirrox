@@ -8,6 +8,7 @@ import { AvatarModel } from './AvatarModel';
 import { SmogController } from '../effects/SmogController';
 import { StressAura } from '../effects/StressAura';
 import { FloatingStressIcon } from '../effects/FloatingStressIcon';
+import { MosquitoSwarm } from '../effects/MosquitoSwarm';
 import { AnimationControls } from '../controls/AnimationControls';
 import { LoadingState, ErrorState } from '../ui/StateComponents';
 import AvatarLoadingIndicator from '../ui/AvatarLoadingIndicator';
@@ -1018,6 +1019,14 @@ function AvatarExperience({
               onLoadingProgress={handleLoadingProgress}
               additionalIdleAnimations={contextualIdleAnimations}
             />
+            {hasNearbyDengueRisk && !sleepMode && (
+              <MosquitoSwarm
+                anchor={[0, 1.15, 0.35]}
+                radius={0.55}
+                orbitSpeed={1.4}
+                height={0.05}
+              />
+            )}
           </group>
 
           <OrbitControls
