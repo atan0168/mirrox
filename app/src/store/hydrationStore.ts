@@ -17,6 +17,7 @@ export interface HydrationState {
   baselineGoalMl: number | null; // Baseline goal before climate adjustments
   currentDay: string; // YYYY-MM-DD format for the active tracking period
   intakeEntries: HydrationIntakeEntry[]; // All recorded intakes (historical)
+  processedActivityIds: string[]; // Exercise sessions already applied to hydration
 
   // Actions
   setDailyGoal: (goalMl: number) => void;
@@ -27,6 +28,11 @@ export interface HydrationState {
     timestamp?: string;
   }) => void;
   resetForNewDay: (newDay: string) => void;
+  applyHydrationDeficitFromActivity: (params: {
+    activityId: string;
+    amountMl: number;
+    timestamp?: string;
+  }) => void;
 
   // Computed getters
   getProgressPercentage: () => number;
@@ -67,6 +73,7 @@ export const useHydrationStore = create<HydrationState>()(
       baselineGoalMl: null,
       currentDay: initialDay,
       intakeEntries: [],
+      processedActivityIds: [],
 
       setDailyGoal: (goalMl: number) => {
         const safeGoal = Math.max(500, Math.min(5000, Math.round(goalMl)));
@@ -120,6 +127,28 @@ export const useHydrationStore = create<HydrationState>()(
         }));
       },
 
+      applyHydrationDeficitFromActivity: ({ activityId, amountMl }) => {
+        const safeAmount = Math.max(0, Math.round(amountMl));
+        if (!safeAmount) {
+          return;
+        }
+
+        const key = activityId || `activity-${Date.now()}`;
+
+        set(state => {
+          if (state.processedActivityIds.includes(key)) {
+            return {};
+          }
+
+          const updatedIds = [...state.processedActivityIds, key].slice(-50);
+
+          return {
+            currentHydrationMl: state.currentHydrationMl - safeAmount,
+            processedActivityIds: updatedIds,
+          };
+        });
+      },
+
       getProgressPercentage: () => {
         const { currentHydrationMl: current, dailyGoalMl: goal } = get();
         if (!Number.isFinite(goal) || goal <= 0) return 0; // avoid div-by-zero / bad input
@@ -159,6 +188,7 @@ export const useHydrationStore = create<HydrationState>()(
         baselineGoalMl: state.baselineGoalMl,
         currentDay: state.currentDay,
         intakeEntries: state.intakeEntries,
+        processedActivityIds: state.processedActivityIds,
       }),
     }
   )

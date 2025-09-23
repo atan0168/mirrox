@@ -11,6 +11,17 @@ export interface SleepDetails {
   sleepRemMinutes?: number | null;
 }
 
+export interface ExerciseSessionData {
+  id: string;
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  activityType: string;
+  metValue?: number | null;
+  source?: string | null;
+  title?: string | null;
+}
+
 export interface HealthProvider {
   getPlatform(): 'ios' | 'android' | 'mock' | 'unknown';
   isAvailable(): Promise<boolean>;
@@ -29,4 +40,5 @@ export interface HealthProvider {
   getDailyMindfulMinutes(start: Date, end: Date): Promise<number | null>;
   getDailyRespiratoryRateBrpm(start: Date, end: Date): Promise<number | null>;
   getDailyWorkoutsCount(start: Date, end: Date): Promise<number | null>;
+  getExerciseSessions?(start: Date, end: Date): Promise<ExerciseSessionData[]>;
 }

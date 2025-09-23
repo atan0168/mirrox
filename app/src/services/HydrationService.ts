@@ -7,8 +7,10 @@ import {
   calculateBaselineHydrationGoal,
   calculateHeatIndexCategory,
   adjustHydrationForClimate,
+  calculateActivityFluidLoss,
 } from '../utils/hydrationUtils';
 import { UserProfile } from '../models/User';
+import type { ExerciseSessionData } from './health/types';
 
 const DEFAULT_BASE_GOAL = 2000;
 const DAY_CHECK_INTERVAL_MS = 15 * 60 * 1000; // refresh context every 15 minutes
@@ -265,6 +267,64 @@ export class HydrationService {
       }
     } catch (error) {
       console.error('[HydrationService] Failed to log fluid intake:', error);
+    }
+  }
+
+  private metToIntensity(
+    met: number
+  ): 'low' | 'moderate' | 'high' | 'very_high' {
+    if (!Number.isFinite(met) || met <= 0) {
+      return 'low';
+    }
+    if (met < 3) return 'low';
+    if (met < 6) return 'moderate';
+    if (met < 9) return 'high';
+    return 'very_high';
+  }
+
+  applyExerciseSessionsHydrationLoss(sessions: ExerciseSessionData[]): void {
+    if (!Array.isArray(sessions) || sessions.length === 0) {
+      return;
+    }
+
+    try {
+      const { applyHydrationDeficitFromActivity } =
+        useHydrationStore.getState();
+
+      sessions.forEach(session => {
+        const duration = Math.max(0, Math.round(session.durationMinutes));
+        const met = session.metValue ?? null;
+        const activityType = session.activityType || 'default';
+
+        if (duration <= 0) {
+          return;
+        }
+
+        const intensity = this.metToIntensity(met ?? 0);
+        const deficit = calculateActivityFluidLoss(
+          activityType,
+          duration,
+          intensity
+        );
+
+        if (deficit <= 0) {
+          return;
+        }
+
+        applyHydrationDeficitFromActivity({
+          activityId: session.id,
+          amountMl: deficit,
+        });
+
+        console.log(
+          `[HydrationService] Applied ${deficit}mL hydration deficit for ${activityType} (${duration} min, MET ${met ?? 'n/a'})`
+        );
+      });
+    } catch (error) {
+      console.error(
+        '[HydrationService] Failed to apply exercise hydration loss:',
+        error
+      );
     }
   }
 

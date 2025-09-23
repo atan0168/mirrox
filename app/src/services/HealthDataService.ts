@@ -12,6 +12,8 @@ import {
 } from '../utils/datetimeUtils';
 import { HealthHistoryRepository } from './db/HealthHistoryRepository';
 import { healthProvider } from './health';
+import type { ExerciseSessionData, HealthProvider } from './health/types';
+import { hydrationService } from './HydrationService';
 
 export class HealthDataService {
   private listeners: Set<(snapshot: HealthSnapshot) => void> = new Set();
@@ -31,6 +33,32 @@ export class HealthDataService {
       } catch {
         // ignore listener errors
       }
+    }
+  }
+
+  private async fetchExerciseSessions(
+    start: Date,
+    end: Date
+  ): Promise<ExerciseSessionData[]> {
+    const providerWithSessions = healthProvider as HealthProvider & {
+      getExerciseSessions?: (
+        start: Date,
+        end: Date
+      ) => Promise<ExerciseSessionData[]>;
+    };
+
+    if (typeof providerWithSessions.getExerciseSessions !== 'function') {
+      return [];
+    }
+
+    try {
+      return await providerWithSessions.getExerciseSessions(start, end);
+    } catch (error) {
+      console.warn(
+        '[HealthDataService] Failed to fetch exercise sessions:',
+        error
+      );
+      return [];
     }
   }
   async requestPermissions(): Promise<boolean> {
@@ -81,6 +109,11 @@ export class HealthDataService {
       healthProvider.getDailyRespiratoryRateBrpm(dayStart, now),
       healthProvider.getDailyWorkoutsCount(dayStart, now),
     ]);
+
+    const exerciseSessions = await this.fetchExerciseSessions(dayStart, now);
+    if (exerciseSessions.length > 0) {
+      hydrationService.applyExerciseSessionsHydrationLoss(exerciseSessions);
+    }
 
     const snapshot: HealthSnapshot = {
       date: yyyymmddInTimeZone(now, timeZone),
@@ -169,6 +202,14 @@ export class HealthDataService {
         healthProvider.getDailyRespiratoryRateBrpm(dayStart, end),
         healthProvider.getDailyWorkoutsCount(dayStart, end),
       ]);
+
+      const exerciseSessions =
+        dateStr === todayStr
+          ? await this.fetchExerciseSessions(dayStart, end)
+          : [];
+      if (exerciseSessions.length > 0) {
+        hydrationService.applyExerciseSessionsHydrationLoss(exerciseSessions);
+      }
 
       const snapshot: HealthSnapshot = {
         date: dateStr,

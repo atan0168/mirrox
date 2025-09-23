@@ -1,6 +1,10 @@
 import { Platform } from 'react-native';
 import type { HealthPermissionStatus } from '../../../models/Health';
-import type { HealthProvider, SleepDetails } from '../types';
+import type {
+  ExerciseSessionData,
+  HealthProvider,
+  SleepDetails,
+} from '../types';
 import * as HealthKit from '@kingstinct/react-native-healthkit';
 import { lastNightWindow } from '../../../utils/datetimeUtils';
 
@@ -302,6 +306,13 @@ export class HealthKitProvider implements HealthProvider {
       return (workouts || []).length;
     } catch {}
     return null;
+  }
+
+  async getExerciseSessions(
+    _start: Date,
+    _end: Date
+  ): Promise<ExerciseSessionData[]> {
+    return [];
   }
 }
 

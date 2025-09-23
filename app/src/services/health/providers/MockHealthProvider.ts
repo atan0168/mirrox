@@ -1,5 +1,9 @@
 import type { HealthPermissionStatus } from '../../../models/Health';
-import type { HealthProvider, SleepDetails } from '../types';
+import type {
+  ExerciseSessionData,
+  HealthProvider,
+  SleepDetails,
+} from '../types';
 
 function seededRandom(seed: number) {
   const x = Math.sin(seed) * 10000;
@@ -156,6 +160,13 @@ export class MockHealthProvider implements HealthProvider {
         10
       ) + 41;
     return Math.floor(seededRandom(seed) * 2); // 0-1 workouts
+  }
+
+  async getExerciseSessions(
+    _start: Date,
+    _end: Date
+  ): Promise<ExerciseSessionData[]> {
+    return [];
   }
 }
 
