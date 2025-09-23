@@ -62,3 +62,6 @@ export const TAG_LABEL: Record<string, string> = {
   high_sodium: 'High Sodium',
   unbalanced: 'Unbalanced',
 };
+
+// API base URL from environment variables
+export const API_BASE = process.env.EXPO_PUBLIC_API_BASE!;
