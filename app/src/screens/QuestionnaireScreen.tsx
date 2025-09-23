@@ -311,7 +311,7 @@ const QuestionnaireScreen: React.FC<QuestionnaireScreenProps> = ({
             {homeLocation ? (
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onPress={copyHomeToWork}
                 style={styles.copyButton}
               >
@@ -420,7 +420,6 @@ const styles = StyleSheet.create({
   },
   copyButton: {
     alignSelf: 'flex-start',
-    marginTop: spacing.sm,
   },
   buttonContainer: {
     paddingTop: spacing.md,
