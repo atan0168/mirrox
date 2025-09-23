@@ -11,3 +11,4 @@ backend/data/usda_clean.json
 
 ml_service/data/
 ml_service/.venv/
+.venv/
