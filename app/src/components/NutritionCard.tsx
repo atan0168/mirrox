@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { ChevronRight, Info } from 'lucide-react-native'; // Use Lucide icons instead of ASCII symbols
 
 // Mapping for nutrition tags
 const TAG_LABEL: Record<string, string> = {
@@ -20,7 +21,7 @@ type NutritionCardProps = {
   };
   tags?: string[];
   sources?: { key: string; label: string; url?: string }[];
-  /** Called when user taps "See details" */
+  /** Fired when user taps "See details" */
   onPressDetails?: () => void;
 };
 
@@ -35,9 +36,12 @@ export function NutritionCard({
   // Use the first source for a short inline hint
   const primarySource = sources?.[0]?.label;
 
+  const detailsDisabled = !onPressDetails;
+
   return (
     <View className="rounded-2xl p-4 border border-gray-200 mt-12">
-      <Text className="text-lg font-semibold">Nutrition (preview)</Text>
+      {/* Title: remove "(preview)" per review comment */}
+      <Text className="text-lg font-semibold">Nutrition</Text>
 
       {!total ? (
         <Text className="text-gray-500 mt-1">No meals analyzed yet</Text>
@@ -62,20 +66,25 @@ export function NutritionCard({
             </View>
           )}
 
-          {/* Short source hint */}
+          {/* Short source hint with an info icon (optional but clearer) */}
           {primarySource && (
             <Text className="text-gray-500 mt-1">Source: {primarySource}</Text>
           )}
 
-          {/* See details button */}
+          {/* "See details" button: use Lucide ChevronRight instead of ASCII arrow */}
           <TouchableOpacity
             onPress={onPressDetails}
-            disabled={!onPressDetails}
-            style={{ marginTop: 10 }}
+            disabled={detailsDisabled}
+            style={{ marginTop: 10, opacity: detailsDisabled ? 0.5 : 1 }}
+            accessibilityRole="button"
+            accessibilityLabel="See nutrition details"
           >
-            <Text style={{ color: '#2563EB', fontWeight: '600' }}>
-              See details →
-            </Text>
+            <View className="flex-row items-center">
+              <Text style={{ color: '#2563EB', fontWeight: '600' }}>
+                See details
+              </Text>
+              <ChevronRight size={18} />
+            </View>
           </TouchableOpacity>
         </>
       )}

@@ -1,6 +1,7 @@
 // app/src/components/AnalysisCard.tsx
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { ChevronRight, Info } from 'lucide-react-native';
 
 // Use UI defaults from theme
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
@@ -25,6 +26,7 @@ export default function AnalysisCard({
   onPressDetails,
 }: Props) {
   const displayTags = tags.map(k => TAG_LABEL[k] ?? k).filter(Boolean);
+  const detailsDisabled = !onPressDetails;
 
   return (
     <View style={styles.card}>
@@ -63,9 +65,13 @@ export default function AnalysisCard({
 
       {/* CTA */}
       {onPressDetails && (
-        <Pressable onPress={onPressDetails} style={styles.ghostButton}>
+        <Pressable
+          onPress={onPressDetails}
+          style={styles.ghostButton}
+          disabled={detailsDisabled}
+        >
           <Text style={styles.ghostButtonText}>View full analysis</Text>
-          <Text style={styles.ghostButtonArrow}>→</Text>
+          <ChevronRight size={18} color={colors.primary} />
         </Pressable>
       )}
     </View>
