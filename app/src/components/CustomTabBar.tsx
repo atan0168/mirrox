@@ -10,6 +10,7 @@ import {
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Home, BarChart3, Settings, Utensils } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+import { CommonActions } from '@react-navigation/native';
 
 const { width: screenWidth } = Dimensions.get('window');
 // Measure actual tab bar width (inside horizontal padding) for accurate centering.
@@ -175,11 +176,13 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               target: route.key,
               canPreventDefault: true,
             });
+
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name as never);
+              navigation.dispatch(
+                CommonActions.navigate({ name: route.name })
+              );
             }
           };
-
           const onLongPress = () => {
             navigation.emit({ type: 'tabLongPress', target: route.key });
           };
