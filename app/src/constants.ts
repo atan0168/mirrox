@@ -33,9 +33,7 @@ export const AVATAR_CACHE_KEY = 'avatar_cache';
 export const DASHBOARD_ONBOARDING_SEEN_KEY = 'dashboard_onboarding_seen_v1';
 export const UI_PERSIST_KEY = 'ui_persist_v1';
 export const AVATAR_DEBUG = false; // Toggle verbose avatar debug logging
-export const API_BASE_URL = __DEV__
-  ? 'http://10.10.0.114:8080/api'
-  : 'https://mirrox.iceon.top/api';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 // Persisted key for the last environmental query (lat/lng + timestamp)
 export const LAST_ENV_QUERY_KEY = 'last_env_query_v1';
 // Persisted key for reverse-geocode cache (keyed by rounded lat,lng)
