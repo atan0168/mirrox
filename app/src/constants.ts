@@ -44,8 +44,6 @@ export const ENV_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 export const REVERSE_GEOCODE_ROUNDING_DECIMALS = 2; // ~1.1km granularity
 export const MAX_REVERSE_GEOCODE_CACHE_ENTRIES = 500; // LRU cap
 export const REVERSE_GEOCODE_TOUCH_MIN_MS = 10 * 60 * 1000; // 10 min between lastAccess writes
-// Persisted key for sleep health notifications
-export const SLEEP_NOTIF_LAST_KEY = 'sleep.notif.last';
 export const SLEEP_NOTIF_MIN_DAYS_BETWEEN = 1; // Frequency cap: min full days between
 // Persisted key for alerts
 export const ALERTS_KEY = 'alerts.items';

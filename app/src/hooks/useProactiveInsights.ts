@@ -1,31 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { ProactiveInsightsNotifier } from '../services/ProactiveInsightsNotifier';
-import { localStorageService } from '../services/LocalStorageService';
-
-function dayKey(d = new Date()): string {
-  return d.toDateString();
-}
+import { runNotificationRules } from '../services/NotificationOrchestrator';
 
 export function useProactiveInsights() {
-  const lastEvalDayRef = useRef<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   const evaluate = async () => {
-    const todayKey = dayKey();
-    if (lastEvalDayRef.current === todayKey) return;
-
-    lastEvalDayRef.current = todayKey;
     try {
-      const profile = await localStorageService.getUserProfile();
-      const coords = profile?.location;
-      await ProactiveInsightsNotifier.evaluateAndStoreOne({
-        latitude: coords?.latitude,
-        longitude: coords?.longitude,
+      await runNotificationRules({
+        allowedRules: ['hydration.nudge', 'dengue.cluster'],
       });
     } catch {
-      // allow retry later if failed
-      if (lastEvalDayRef.current === todayKey) lastEvalDayRef.current = null;
+      // Allow retries if we failed due to transient issues
     }
   };
 
