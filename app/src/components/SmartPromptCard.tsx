@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE } from '../constants';
 
 
-const USER_ID = 'local-user-001'; // TODO: replace with real user id
+
 const COOLDOWN_KEY = 'smart_prompt_cooldown'; // cooldown key for local storage
 
 export default function SmartPromptCard() {
