@@ -585,40 +585,42 @@ export const LocationPickerScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <MapView
-        style={styles.map}
-        mapStyle={STYLE_URL}
-        onPress={handleMapPress}
-        onDidFailLoadingMap={() => {
-          console.warn('Map failed to load');
-        }}
-      >
-        <BackButton />
-        <Camera
-          ref={cameraRef}
-          defaultSettings={{
-            centerCoordinate: [
-              selectedCoordinates?.longitude ?? INITIAL_COORDINATE.longitude,
-              selectedCoordinates?.latitude ?? INITIAL_COORDINATE.latitude,
-            ],
-            zoomLevel: selectedCoordinates ? 13 : 10,
+      <View style={styles.mapContainer}>
+        <MapView
+          style={styles.map}
+          mapStyle={STYLE_URL}
+          onPress={handleMapPress}
+          onDidFailLoadingMap={() => {
+            console.warn('Map failed to load');
           }}
-        />
-        {pinCoordinate ? (
-          <PointAnnotation
-            id="selected-pin"
-            coordinate={pinCoordinate}
-            anchor={{ x: 0.5, y: 1 }}
-          >
-            <View style={styles.pinWrapper}>
-              <View style={styles.pinIconContainer}>
-                <MapPin size={36} color={colors.sky[500]} />
+        >
+          <Camera
+            ref={cameraRef}
+            defaultSettings={{
+              centerCoordinate: [
+                selectedCoordinates?.longitude ?? INITIAL_COORDINATE.longitude,
+                selectedCoordinates?.latitude ?? INITIAL_COORDINATE.latitude,
+              ],
+              zoomLevel: selectedCoordinates ? 13 : 10,
+            }}
+          />
+          {pinCoordinate ? (
+            <PointAnnotation
+              id="selected-pin"
+              coordinate={pinCoordinate}
+              anchor={{ x: 0.5, y: 1 }}
+            >
+              <View style={styles.pinWrapper}>
+                <View style={styles.pinIconContainer}>
+                  <MapPin size={36} color={colors.sky[500]} />
+                </View>
+                <View style={styles.pinShadow} />
               </View>
-              <View style={styles.pinShadow} />
-            </View>
-          </PointAnnotation>
-        ) : null}
-      </MapView>
+            </PointAnnotation>
+          ) : null}
+        </MapView>
+        <BackButton />
+      </View>
 
       <Animated.View
         style={[
@@ -651,6 +653,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,
+  },
+  mapContainer: {
+    flex: 1,
   },
   map: {
     flex: 1,
