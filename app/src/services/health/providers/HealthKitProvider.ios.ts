@@ -46,26 +46,38 @@ export class HealthKitProvider implements HealthProvider {
   async getDailySteps(start: Date, end: Date): Promise<number> {
     if (!(await this.isAvailable())) return 0;
     try {
-      // Use queryQuantitySamples for step count
+      const stats = await HealthKit.queryStatisticsForQuantity(
+        'HKQuantityTypeIdentifierStepCount',
+        ['cumulativeSum'] as const,
+        {
+          filter: { startDate: start, endDate: end },
+          unit: 'count',
+        }
+      );
+      const total = stats?.sumQuantity?.quantity;
+      if (typeof total === 'number' && Number.isFinite(total)) {
+        return Math.max(0, Math.round(total));
+      }
+    } catch (error) {
+      console.warn(
+        '[HealthKitProvider] Falling back to quantity samples for steps:',
+        error
+      );
+    }
+    try {
       const samples = await HealthKit.queryQuantitySamples(
         'HKQuantityTypeIdentifierStepCount',
         {
           ascending: false,
-          filter: {
-            startDate: start,
-            endDate: end,
-          },
-          // Ensure we fetch the full day's samples. Some bridges default to a
-          // relatively small limit which can undercount on active days.
-          // 0 typically means "no limit" in native bridges
+          filter: { startDate: start, endDate: end },
           limit: 0,
           unit: 'count',
         }
       );
-      const total = (samples || []).reduce((sum: number, s) => {
-        const value = s?.quantity;
-        return sum + value;
-      }, 0);
+      const total = (samples || []).reduce(
+        (sum: number, s) => sum + (s?.quantity || 0),
+        0
+      );
       return Math.max(0, Math.round(total));
     } catch {}
     return 0;
@@ -194,6 +206,25 @@ export class HealthKitProvider implements HealthProvider {
   async getDailyHRVMs(start: Date, end: Date): Promise<number | null> {
     if (!(await this.isAvailable())) return null;
     try {
+      const stats = await HealthKit.queryStatisticsForQuantity(
+        'HKQuantityTypeIdentifierHeartRateVariabilitySDNN',
+        ['discreteAverage'] as const,
+        {
+          filter: { startDate: start, endDate: end },
+          unit: 'ms',
+        }
+      );
+      const avg = stats?.averageQuantity?.quantity;
+      if (typeof avg === 'number' && Number.isFinite(avg)) {
+        return Math.round(avg * 10) / 10;
+      }
+    } catch (error) {
+      console.warn(
+        '[HealthKitProvider] Falling back to quantity samples for HRV:',
+        error
+      );
+    }
+    try {
       const samples = await HealthKit.queryQuantitySamples(
         'HKQuantityTypeIdentifierHeartRateVariabilitySDNN',
         {
@@ -217,6 +248,25 @@ export class HealthKitProvider implements HealthProvider {
   ): Promise<number | null> {
     if (!(await this.isAvailable())) return null;
     try {
+      const stats = await HealthKit.queryStatisticsForQuantity(
+        'HKQuantityTypeIdentifierRestingHeartRate',
+        ['discreteAverage'] as const,
+        {
+          filter: { startDate: start, endDate: end },
+          unit: 'count/min',
+        }
+      );
+      const avg = stats?.averageQuantity?.quantity;
+      if (typeof avg === 'number' && Number.isFinite(avg)) {
+        return Math.round(avg);
+      }
+    } catch (error) {
+      console.warn(
+        '[HealthKitProvider] Falling back to quantity samples for resting HR:',
+        error
+      );
+    }
+    try {
       const samples = await HealthKit.queryQuantitySamples(
         'HKQuantityTypeIdentifierRestingHeartRate',
         {
@@ -239,6 +289,25 @@ export class HealthKitProvider implements HealthProvider {
     end: Date
   ): Promise<number | null> {
     if (!(await this.isAvailable())) return null;
+    try {
+      const stats = await HealthKit.queryStatisticsForQuantity(
+        'HKQuantityTypeIdentifierActiveEnergyBurned',
+        ['cumulativeSum'] as const,
+        {
+          filter: { startDate: start, endDate: end },
+          unit: 'kcal',
+        }
+      );
+      const total = stats?.sumQuantity?.quantity;
+      if (typeof total === 'number' && Number.isFinite(total)) {
+        return Math.round(total);
+      }
+    } catch (error) {
+      console.warn(
+        '[HealthKitProvider] Falling back to quantity samples for active energy:',
+        error
+      );
+    }
     try {
       const samples = await HealthKit.queryQuantitySamples(
         'HKQuantityTypeIdentifierActiveEnergyBurned',
@@ -278,6 +347,25 @@ export class HealthKitProvider implements HealthProvider {
     end: Date
   ): Promise<number | null> {
     if (!(await this.isAvailable())) return null;
+    try {
+      const stats = await HealthKit.queryStatisticsForQuantity(
+        'HKQuantityTypeIdentifierRespiratoryRate',
+        ['discreteAverage'] as const,
+        {
+          filter: { startDate: start, endDate: end },
+          unit: 'count/min',
+        }
+      );
+      const avg = stats?.averageQuantity?.quantity;
+      if (typeof avg === 'number' && Number.isFinite(avg)) {
+        return Math.round(avg * 10) / 10;
+      }
+    } catch (error) {
+      console.warn(
+        '[HealthKitProvider] Falling back to quantity samples for respiratory rate:',
+        error
+      );
+    }
     try {
       const samples = await HealthKit.queryQuantitySamples(
         'HKQuantityTypeIdentifierRespiratoryRate',
