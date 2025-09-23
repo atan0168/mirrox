@@ -2,4 +2,7 @@
 set -e
 
 npm run format
+
+git add --update
+
 npm run lint
