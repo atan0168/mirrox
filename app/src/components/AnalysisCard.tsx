@@ -2,6 +2,9 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 
+// Use UI defaults from theme
+import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+
 type Props = {
   energyKcal?: number | null;
   tags?: string[];
@@ -27,6 +30,7 @@ export default function AnalysisCard({
     <View style={styles.card}>
       <Text style={styles.title}>Analysis Preview</Text>
 
+      {/* Energy section */}
       {typeof energyKcal === 'number' && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Energy</Text>
@@ -43,6 +47,7 @@ export default function AnalysisCard({
         </View>
       )}
 
+      {/* Tags section */}
       {displayTags.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Tags</Text>
@@ -56,6 +61,7 @@ export default function AnalysisCard({
         </View>
       )}
 
+      {/* CTA */}
       {onPressDetails && (
         <Pressable onPress={onPressDetails} style={styles.ghostButton}>
           <Text style={styles.ghostButtonText}>View full analysis</Text>
@@ -67,68 +73,96 @@ export default function AnalysisCard({
 }
 
 const styles = StyleSheet.create({
+  // Card container
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl, // 16
+    paddingVertical: spacing.md, // 16
+    paddingHorizontal: spacing.lg, // 24
     borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.06)',
+    borderColor: colors.divider,
+    alignItems: 'center',
+    ...shadows.soft, // subtle elevation
+  },
+
+  // Title
+  title: {
+    fontSize: fontSize.lg, // 18
+    fontWeight: '700',
+    color: colors.neutral[900],
+    marginBottom: spacing.md, // 16
+  },
+
+  // Generic section wrapper
+  section: {
+    marginTop: spacing.sm, // 8
     alignItems: 'center',
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 10,
+  // Section label (caption)
+  sectionLabel: {
+    fontSize: fontSize.xs, // 12
+    color: colors.neutral[600],
+    marginBottom: spacing.xs, // 4
   },
-  section: { marginTop: 8, alignItems: 'center' },
-  sectionLabel: { fontSize: 12, color: '#6B7280', marginBottom: 4 },
+
+  // Energy value and unit
   energyValue: {
-    fontSize: 28,
+    fontSize: fontSize.xxxl, // 32 (closest token to prior 28)
     fontWeight: '800',
-    color: '#111827',
+    color: colors.neutral[900],
     textAlign: 'center',
   },
   energyUnit: {
-    marginLeft: 4,
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '600',
+    marginLeft: spacing.xs, // 4
+    fontSize: fontSize.sm, // 14
+    color: colors.neutral[600],
+    fontWeight: Platform.select({ ios: '600', android: '600' }),
   },
+
+  // Tag chips
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: 4,
+    marginTop: spacing.xs, // 4
   },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: '#F3F4F6',
+    paddingHorizontal: spacing.md, // 16
+    paddingVertical: spacing.xs, // 4
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.neutral[100],
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginHorizontal: 4,
-    marginVertical: 4,
+    borderColor: colors.divider,
+    marginHorizontal: spacing.xs, // 4
+    marginVertical: spacing.xs, // 4
   },
   chipText: {
-    fontSize: 13,
+    fontSize: fontSize.sm, // 14 (closest to prior 13)
     fontWeight: Platform.select({ ios: '600', android: '600' }),
-    color: '#111827',
+    color: colors.neutral[700],
   },
+
+  // Ghost button (link-like CTA)
   ghostButton: {
-    marginTop: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 12,
+    marginTop: spacing.md, // 16
+    paddingVertical: spacing.sm, // 8
+    paddingHorizontal: spacing.md, // 16
+    borderRadius: borderRadius.lg, // 12
     borderWidth: 1,
-    borderColor: '#DBEAFE',
-    backgroundColor: '#F8FAFF',
+    backgroundColor: colors.sky[50],
+    borderColor: colors.sky[200],
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ghostButtonText: { fontSize: 14, fontWeight: '700', color: '#2563EB' },
-  ghostButtonArrow: { fontSize: 15, marginLeft: 6, color: '#2563EB' },
+  ghostButtonText: {
+    fontSize: fontSize.sm, // 14
+    fontWeight: '700',
+    color: colors.sky[600],
+  },
+  ghostButtonArrow: {
+    fontSize: fontSize.lg, // 18
+    marginLeft: spacing.xs, // 4
+    color: colors.sky[600],
+  },
 });
