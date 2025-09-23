@@ -54,3 +54,11 @@ export const ALERT_RETENTION_DAYS = 30; // Auto-purge alerts older than this
 // Hydration tracking
 export const HYDRATION_PERSIST_KEY = 'hydration-state-v1';
 export const DEFAULT_HYDRATION_GOAL_ML = 2000; // Default 2L daily goal
+// Nutrition Tag Labels
+export const TAG_LABEL: Record<string, string> = {
+  high_sugar: 'High Sugar',
+  high_fat: 'High Fat',
+  low_fiber: 'Low Fiber',
+  high_sodium: 'High Sodium',
+  unbalanced: 'Unbalanced',
+};
