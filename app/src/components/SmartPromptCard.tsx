@@ -3,7 +3,10 @@ import { View, Text } from 'react-native';
 import { Button } from '@/components/Button'; // Use your existing Button component
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE!;
+// Import API_BASE from constants
+import { API_BASE } from '../constants';
+
+
 const USER_ID = 'local-user-001'; // TODO: replace with real user id
 const COOLDOWN_KEY = 'smart_prompt_cooldown'; // cooldown key for local storage
 
