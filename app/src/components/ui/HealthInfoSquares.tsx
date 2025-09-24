@@ -32,7 +32,7 @@ import HistoryBarChart from './HistoryBarChart';
 import SleepStackedBarChart from './SleepStackedBarChart';
 import SleepTimesTrendChart from './SleepTimesTrendChart';
 import { useHealthHistory } from '../../hooks/useHealthHistory';
-import { format, parseISO } from 'date-fns';
+import { differenceInMinutes, format, parseISO } from 'date-fns';
 import { useHydrationStore } from '../../store/hydrationStore';
 import { getHydrationStatusInfo } from '../../utils/hydrationUtils';
 
@@ -65,8 +65,6 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   >(null);
 
   const steps = health?.steps ?? 0;
-  const sleepMinutes = health?.sleepMinutes ?? 0;
-  const sleepHours = sleepMinutes / 60;
   const hrvMs = health?.hrvMs ?? null;
   const restingHeartRateBpm = health?.restingHeartRateBpm ?? null;
   const activeEnergyKcal = health?.activeEnergyKcal ?? null;
@@ -155,6 +153,56 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     error: sleepHistoryError,
   } = useHealthHistory(sleepHistoryWindow);
 
+  const deriveSleepMinutes = (snapshot?: HealthSnapshot | null) => {
+    if (!snapshot) return 0;
+    const minutes = snapshot.sleepMinutes ?? 0;
+    if (minutes > 0) return minutes;
+    if (snapshot.sleepStart && snapshot.sleepEnd) {
+      const start = new Date(snapshot.sleepStart);
+      const end = new Date(snapshot.sleepEnd);
+      const diff = differenceInMinutes(end, start);
+      return diff > 0 ? diff : 0;
+    }
+    return 0;
+  };
+
+  const sleepHistorySnapshots = useMemo(() => {
+    const snapshots = sleepHistory?.snapshots ?? [];
+    return snapshots.filter(snapshot => deriveSleepMinutes(snapshot) > 0);
+  }, [sleepHistory]);
+
+  const latestSleepEntry = useMemo(() => {
+    if (health) {
+      const minutes = deriveSleepMinutes(health);
+      if (minutes > 0) {
+        return { snapshot: health, minutes };
+      }
+    }
+
+    for (let i = sleepHistorySnapshots.length - 1; i >= 0; i -= 1) {
+      const snapshot = sleepHistorySnapshots[i];
+      const minutes = deriveSleepMinutes(snapshot);
+      if (minutes > 0) {
+        return { snapshot, minutes };
+      }
+    }
+
+    return {
+      snapshot: health ?? null,
+      minutes: deriveSleepMinutes(health),
+    };
+  }, [health, sleepHistorySnapshots]);
+
+  const latestSleepSnapshot = latestSleepEntry?.snapshot ?? null;
+  const sleepMinutes = latestSleepEntry?.minutes ?? 0;
+  const sleepHours = sleepMinutes / 60;
+  const sleepSourcePlatform = latestSleepSnapshot?.platform
+    ? latestSleepSnapshot.platform.toUpperCase()
+    : 'UNKNOWN';
+  const sleepNightLabel = latestSleepSnapshot?.date
+    ? format(parseISO(latestSleepSnapshot.date), 'MMM d')
+    : null;
+
   const StepsHistoryToggle: React.FC = () => (
     <View style={{ flexDirection: 'row' }}>
       {[7, 14, 30].map(n => {
@@ -230,9 +278,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const SleepStackedHistoryChart: React.FC = () => (
     <>
       <SleepStackedBarChart
-        data={(sleepHistory?.snapshots || []).map(s => ({
+        data={sleepHistorySnapshots.map(s => ({
           label: format(parseISO(s.date), 'MM/dd'),
-          totalMinutes: s.sleepMinutes ?? 0,
+          totalMinutes: deriveSleepMinutes(s),
           lightMinutes: s.sleepLightMinutes ?? 0,
           remMinutes: s.sleepRemMinutes ?? 0,
           deepMinutes: s.sleepDeepMinutes ?? 0,
@@ -253,7 +301,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const SleepBedWakeTrendChart: React.FC = () => (
     <>
       <SleepTimesTrendChart
-        data={(sleepHistory?.snapshots || []).map(s => ({
+        data={sleepHistorySnapshots.map(s => ({
           label: format(parseISO(s.date), 'MM/dd'),
           sleepStart: s.sleepStart ?? null,
           sleepEnd: s.sleepEnd ?? null,
@@ -292,7 +340,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
 
   const getSleepColor = () => {
     if (isError) return colors.red[500];
-    if (!health) return colors.neutral[400];
+    if (!latestSleepSnapshot || sleepMinutes <= 0) {
+      return colors.neutral[400];
+    }
     if (sleepHours >= 9) return colors.green[400];
     if (sleepHours >= 7 && sleepHours <= 9) return colors.green[500];
     if (sleepHours >= 6 && sleepHours < 7) return colors.yellow[500];
@@ -327,7 +377,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const sleepLabel = () => {
     if (isError) return 'Error';
     if (isLoading) return '...';
-    if (!health) return 'No data';
+    if (!latestSleepSnapshot || sleepMinutes <= 0) return 'No data';
     if (sleepHours >= 9) return 'Restful';
     if (sleepHours >= 7 && sleepHours <= 9) return 'Well rested';
     if (sleepHours >= 6 && sleepHours < 7) return 'Adequate';
@@ -335,6 +385,26 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     if (sleepHours > 0) return 'Sleep-deprived';
     return 'No data';
   };
+
+  const sleepStatusText = sleepLabel();
+
+  const sleepSummaryItems = useMemo(() => {
+    const items: Array<{ label: string; value: string }> = [
+      {
+        label: 'Duration',
+        value: sleepMinutes > 0 ? `${Math.round(sleepMinutes)} min` : 'No data',
+      },
+      { label: 'Recommended', value: '7–9 hours' },
+      { label: 'Quality', value: sleepStatusText },
+      { label: 'Source', value: sleepSourcePlatform },
+    ];
+
+    if (sleepNightLabel) {
+      items.splice(1, 0, { label: 'Night of', value: sleepNightLabel });
+    }
+
+    return items;
+  }, [sleepMinutes, sleepNightLabel, sleepSourcePlatform, sleepStatusText]);
 
   // HRV helpers
   const getHRVColor = () => {
@@ -643,7 +713,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
             ? `${sleepHours.toFixed(1)}h`
             : 'N/A',
       color: getSleepColor(),
-      statusText: sleepLabel(),
+      statusText: sleepStatusText,
       extra: (
         <View style={styles.metricsSection}>
           <View
@@ -700,19 +770,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           </View>
         </View>
       ),
-      summary: [
-        {
-          label: 'Duration',
-          value:
-            sleepMinutes > 0 ? `${Math.round(sleepMinutes)} min` : 'No data',
-        },
-        { label: 'Recommended', value: '7–9 hours' },
-        { label: 'Quality', value: sleepLabel() },
-        {
-          label: 'Source',
-          value: health?.platform?.toUpperCase() || 'UNKNOWN',
-        },
-      ],
+      summary: sleepSummaryItems,
     });
 
   const renderHydrationModal = () =>
@@ -943,7 +1001,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           </Text>
           <Text style={styles.squareLabel}>Sleep</Text>
           <Text style={[styles.squareStatus, { color: getSleepColor() }]}>
-            {sleepLabel()}
+            {sleepStatusText}
           </Text>
         </TouchableOpacity>
 

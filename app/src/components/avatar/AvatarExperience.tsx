@@ -24,11 +24,7 @@ import {
 } from '../../utils/ThreeUtils';
 import { calculateSmogEffects } from '../../utils/skinEffectsUtils';
 import { AVAILABLE_ANIMATIONS, FULL_SLEEP_MINUTES } from '../../constants';
-import {
-  getAnimationForAQI,
-  getAnimationCycleForAQI,
-  shouldOverrideAnimation,
-} from '../../utils/animationUtils';
+import { getAnimationForAQI } from '../../utils/animationUtils';
 import { useState, useEffect, useRef } from 'react';
 import { StressInfoModal } from '../ui/StressInfoModal';
 import { useHealthData } from '../../hooks/useHealthData';
@@ -51,6 +47,7 @@ import Mattress from '../scene/Mattress';
 import BatteryIndicator from '../BatteryIndicator';
 import HydrationIndicator from '../HydrationIndicator';
 import { colors } from '../../theme';
+import { useAvatarAnimationEngine } from '../../hooks/useAvatarAnimationEngine';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -132,7 +129,6 @@ function AvatarExperience({
   const setShowStressInfoModal = useAvatarStore(s => s.setShowStressInfoModal);
 
   const canvasRef = useRef<View | null>(null);
-  const animationCycleRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get stress visuals preference
   const { stressVisualsEnabled } = useStressVisualsPreference();
@@ -441,256 +437,47 @@ function AvatarExperience({
     }
   }, [scene, derivedPhase, setHomeTime]);
 
-  // Automatic animation control based on AQI and HRV stress (suppressed during sleepMode unless user overrides)
-  // During sleep mode: if not manually overridden, cycle between sleep animations.
-  const sleepCycleRef = useRef<NodeJS.Timeout | null>(null);
-  useEffect(() => {
-    if (sleepMode && !isManualAnimation) {
-      // Clear any non-sleep animation cycles
-      if (animationCycleRef.current) {
-        clearInterval(animationCycleRef.current);
-        animationCycleRef.current = null;
-      }
-      // Start or maintain a simple cycle between 'sleeping' and 'sleeping_idle'
-      const sleepAnimations = ['sleeping', 'sleeping_idle'] as const;
+  const animationContext = useMemo(
+    () => ({
+      activeAnimation,
+      isManualAnimation,
+      sleepMode,
+      stressLevel: stressEffects.stressLevel,
+      stressVisualsEnabled,
+      isSweatyWeather,
+      isSleepDeprived,
+      hasNearbyDengueRisk,
+      recommendedAnimation,
+      aqi: airQualityData?.aqi ?? null,
+      aqiReason:
+        aqiAnimationRecommendation?.reason ??
+        'No automatic animation recommendation',
+    }),
+    [
+      activeAnimation,
+      isManualAnimation,
+      sleepMode,
+      stressEffects.stressLevel,
+      stressVisualsEnabled,
+      isSweatyWeather,
+      isSleepDeprived,
+      hasNearbyDengueRisk,
+      recommendedAnimation,
+      airQualityData?.aqi,
+      aqiAnimationRecommendation?.reason,
+    ]
+  );
 
-      // Ensure we start on 'sleeping' to set up camera framing
-      if (
-        activeAnimation !== 'sleeping' &&
-        activeAnimation !== 'sleeping_idle'
-      ) {
-        setActiveAnimation('sleeping');
-      }
-
-      // If no cycle running, create one
-      if (!sleepCycleRef.current) {
-        let idx = 0;
-        sleepCycleRef.current = setInterval(() => {
-          idx = (idx + 1) % sleepAnimations.length;
-          setActiveAnimation(sleepAnimations[idx]);
-        }, 10000);
-      }
-
-      return; // prevent AQI/stress competition while in sleep mode
-    }
-
-    // Leaving sleep mode: clear sleep cycle and reset to idle if not manually overridden
-    if (sleepCycleRef.current) {
-      clearInterval(sleepCycleRef.current);
-      sleepCycleRef.current = null;
-    }
-
-    if (
-      !sleepMode &&
-      (activeAnimation === 'sleeping' || activeAnimation === 'sleeping_idle') &&
-      !isManualAnimation
-    ) {
-      setActiveAnimation(null);
-    }
-  }, [sleepMode, isManualAnimation, activeAnimation]);
-
-  useEffect(() => {
-    const aqi = airQualityData?.aqi;
-
-    // If auto-sleeping, suppress AQI/stress logic entirely
-    if (sleepMode && !isManualAnimation) {
-      if (animationCycleRef.current) {
-        clearInterval(animationCycleRef.current);
-        animationCycleRef.current = null;
-      }
-      return; // do not proceed further
-    }
-
-    // Clear any existing animation cycle timer
-    if (animationCycleRef.current) {
-      clearInterval(animationCycleRef.current);
-      animationCycleRef.current = null;
-    }
-
-    // Only apply automatic animations if not manually set
-    if (!isManualAnimation) {
-      const shouldPreserveSleepDeprivedIdle =
-        recommendedAnimation === null &&
-        isSleepDeprived &&
-        stressEffects.stressLevel === 'none' &&
-        !sleepMode &&
-        activeAnimation === 'slump';
-
-      // HRV stress animations take priority over AQI animations, but only if stress visuals are enabled
-      if (stressEffects.stressLevel === 'high' && stressVisualsEnabled) {
-        console.log(
-          '🚨 High HRV stress detected - triggering stress animation'
-        );
-        setActiveAnimation('M_Standing_Expressions_007'); // Cough animation for high stress
-      } else if (
-        isSweatyWeather &&
-        stressEffects.stressLevel === 'none' &&
-        !shouldPreserveSleepDeprivedIdle &&
-        (!aqiAnimationRecommendation || recommendedAnimation === null)
-      ) {
-        if (activeAnimation !== 'wiping_sweat') {
-          console.log(
-            '🔥 Hot weather detected - triggering wiping_sweat animation'
-          );
-        }
-        setActiveAnimation('wiping_sweat');
-      } else if (aqiAnimationRecommendation) {
-        if (
-          shouldOverrideAnimation(
-            activeAnimation,
-            aqiAnimationRecommendation,
-            isManualAnimation
-          ) &&
-          !shouldPreserveSleepDeprivedIdle
-        ) {
-          console.log(
-            `🌬️ AQI-based animation: ${aqiAnimationRecommendation.reason}`
-          );
-          setActiveAnimation(recommendedAnimation);
-
-          // For moderate air quality (breathing), cycle through contextual clips
-          if (
-            aqi &&
-            aqi > 50 &&
-            aqi <= 100 &&
-            aqiAnimationRecommendation.animation === 'breathing'
-          ) {
-            const cycleSet = new Set<string>(['breathing']);
-            if (isSweatyWeather) {
-              cycleSet.add('wiping_sweat');
-            }
-            if (isSleepDeprived) {
-              cycleSet.add('yawn');
-            }
-
-            const cycleAnimations = Array.from(cycleSet);
-            if (cycleAnimations.length > 1) {
-              let currentIndex = 0;
-              animationCycleRef.current = setInterval(() => {
-                currentIndex = (currentIndex + 1) % cycleAnimations.length;
-                const nextAnimation = cycleAnimations[currentIndex];
-                console.log(
-                  `🔄 Cycling to animation: ${nextAnimation} (moderate AQI${
-                    isSweatyWeather ? ' + heat' : ''
-                  }${isSleepDeprived ? ' + sleep deprivation' : ''})`
-                );
-                setActiveAnimation(nextAnimation);
-              }, 10000);
-            }
-          }
-
-          // For unhealthy air quality, set up animation cycling
-          if (aqi && aqi >= 101) {
-            let cycleAnimations = getAnimationCycleForAQI(aqi);
-
-            // If stress visuals are disabled, filter out breathing animations from cycling
-            if (!stressVisualsEnabled) {
-              cycleAnimations = cycleAnimations.filter(
-                animation => animation !== 'breathing'
-              );
-              console.log(
-                '🚫 Stress visuals disabled - filtered out breathing from animation cycle'
-              );
-            }
-
-            // Add yawn to cycle if sleep deprived
-            if (isSleepDeprived && !cycleAnimations.includes('yawn')) {
-              cycleAnimations.push('yawn');
-            }
-
-            if (isSweatyWeather && !cycleAnimations.includes('wiping_sweat')) {
-              cycleAnimations.push('wiping_sweat');
-            }
-
-            // Add swat bugs when dengue risk is nearby unless sleeping
-            if (
-              hasNearbyDengueRisk &&
-              !sleepMode &&
-              !cycleAnimations.includes('swat_bugs')
-            ) {
-              cycleAnimations.push('swat_bugs');
-            }
-
-            if (cycleAnimations.length > 1) {
-              let currentIndex = 0;
-              animationCycleRef.current = setInterval(() => {
-                currentIndex = (currentIndex + 1) % cycleAnimations.length;
-                const nextAnimation = cycleAnimations[currentIndex];
-                console.log(
-                  `🔄 Cycling to animation: ${nextAnimation} (unhealthy AQI: ${aqi}${isSleepDeprived ? ' + sleep deprivation' : ''})`
-                );
-                setActiveAnimation(nextAnimation);
-              }, 8000);
-            } else if (cycleAnimations.length === 1) {
-              // If only one animation left after filtering, just use it without cycling
-              console.log(
-                `🔄 Single animation remaining: ${cycleAnimations[0]} (unhealthy AQI: ${aqi})`
-              );
-            } else if (!shouldPreserveSleepDeprivedIdle) {
-              // If no animations left after filtering, use idle animations
-              console.log(
-                '🔄 No animations remaining after filtering - using idle animations'
-              );
-              setActiveAnimation(null);
-            }
-          }
-        }
-      }
-    }
-
-    // Cleanup function
-    return () => {
-      if (animationCycleRef.current) {
-        clearInterval(animationCycleRef.current);
-        animationCycleRef.current = null;
-      }
-    };
-  }, [
-    airQualityData?.aqi,
-    isManualAnimation,
-    aqiAnimationRecommendation,
-    activeAnimation,
-    stressEffects.stressLevel,
-    stressVisualsEnabled,
-    isSleepDeprived,
-    sleepMode,
-    hasNearbyDengueRisk,
-    isSweatyWeather,
-    recommendedAnimation,
-  ]);
-
-  // Independent sleep deprivation posture animation (slump) if:
-  // - Not in sleep mode
-  // - Not manually overriding animation
-  // - User had <6h sleep
-  // - No high-priority stress / AQI animation currently active
-  useEffect(() => {
-    if (sleepMode || isManualAnimation) return;
-    if (!isSleepDeprived) return;
-    if (recommendedAnimation !== null) return;
-    if (stressEffects.stressLevel !== 'none') return;
-
-    const lowPriorityAnimations = [
-      null,
-      'idle_breathing',
-      'breathing',
-      'M_Standing_Idle_Variations_007',
-      'M_Standing_Idle_Variations_003',
-      'yawn',
-    ];
-    if (!lowPriorityAnimations.includes(activeAnimation)) return;
-    if (activeAnimation !== 'slump') {
-      setActiveAnimation('slump');
-    }
-  }, [
-    sleepMode,
-    isManualAnimation,
-    isSleepDeprived,
-    activeAnimation,
+  const { resetEngine } = useAvatarAnimationEngine({
+    context: animationContext,
     setActiveAnimation,
-    recommendedAnimation,
-    stressEffects.stressLevel,
-  ]);
+  });
+
+  useEffect(() => {
+    return () => {
+      resetEngine();
+    };
+  }, [resetEngine]);
 
   // Load avatar
   useEffect(() => {
@@ -721,47 +508,8 @@ function AvatarExperience({
     loadAvatar();
   }, []);
 
-  // Handle stress visuals toggle - stop breathing animations immediately
-  useEffect(() => {
-    if (
-      !stressVisualsEnabled &&
-      activeAnimation === 'breathing' &&
-      !isManualAnimation
-    ) {
-      console.log('🚫 Stress visuals disabled - stopping breathing animation');
-      setActiveAnimation(null); // Switch to idle animations
-
-      // Clear any animation cycling that might include breathing
-      if (animationCycleRef.current) {
-        clearInterval(animationCycleRef.current);
-        animationCycleRef.current = null;
-      }
-    }
-  }, [stressVisualsEnabled, activeAnimation, isManualAnimation]);
-
-  // Cleanup animation cycle timer on unmount
-  useEffect(() => {
-    return () => {
-      if (animationCycleRef.current) {
-        clearInterval(animationCycleRef.current);
-        animationCycleRef.current = null;
-      }
-      if (sleepCycleRef.current) {
-        clearInterval(sleepCycleRef.current);
-        sleepCycleRef.current = null;
-      }
-    };
-  }, []);
-
   const handleAnimationToggle = (animationName: string) => {
-    if (animationCycleRef.current) {
-      clearInterval(animationCycleRef.current);
-      animationCycleRef.current = null;
-    }
-    if (sleepCycleRef.current) {
-      clearInterval(sleepCycleRef.current);
-      sleepCycleRef.current = null;
-    }
+    resetEngine();
 
     if (activeAnimation === animationName) {
       console.log(`Stopping animation: ${animationName}`);
