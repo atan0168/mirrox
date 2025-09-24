@@ -42,31 +42,19 @@ export function SandboxControls({ location }: SandboxControlsProps) {
   const hydrationGoal = useHydrationStore(state => state.dailyGoalMl);
   const hydrationCurrent = useHydrationStore(state => state.currentHydrationMl);
 
-  const {
-    setEnabled,
-    setContext,
-    setStressPreset,
-    setSleepPreset,
-    setAirQualityPreset,
-    setDenguePreset,
-    stressPreset,
-    sleepPreset,
-    airQualityPreset,
-    denguePreset,
-    context,
-  } = useSandboxStore(state => ({
-    setEnabled: state.setEnabled,
-    setContext: state.setContext,
-    setStressPreset: state.setStressPreset,
-    setSleepPreset: state.setSleepPreset,
-    setAirQualityPreset: state.setAirQualityPreset,
-    setDenguePreset: state.setDenguePreset,
-    stressPreset: state.stressPreset,
-    sleepPreset: state.sleepPreset,
-    airQualityPreset: state.airQualityPreset,
-    denguePreset: state.denguePreset,
-    context: state.context,
-  }));
+  const setEnabled = useSandboxStore(state => state.setEnabled);
+  const setContext = useSandboxStore(state => state.setContext);
+  const setStressPreset = useSandboxStore(state => state.setStressPreset);
+  const setSleepPreset = useSandboxStore(state => state.setSleepPreset);
+  const setAirQualityPreset = useSandboxStore(
+    state => state.setAirQualityPreset
+  );
+  const setDenguePreset = useSandboxStore(state => state.setDenguePreset);
+  const stressPreset = useSandboxStore(state => state.stressPreset);
+  const sleepPreset = useSandboxStore(state => state.sleepPreset);
+  const airQualityPreset = useSandboxStore(state => state.airQualityPreset);
+  const denguePreset = useSandboxStore(state => state.denguePreset);
+  const context = useSandboxStore(state => state.context);
 
   const reverseGeo = useReverseGeocode(
     location?.latitude,
