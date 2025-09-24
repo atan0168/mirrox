@@ -32,9 +32,13 @@ import HistoryBarChart from './HistoryBarChart';
 import SleepStackedBarChart from './SleepStackedBarChart';
 import SleepTimesTrendChart from './SleepTimesTrendChart';
 import { useHealthHistory } from '../../hooks/useHealthHistory';
-import { differenceInMinutes, format, parseISO } from 'date-fns';
+import { addDays, differenceInMinutes, format, parseISO } from 'date-fns';
 import { useHydrationStore } from '../../store/hydrationStore';
 import { getHydrationStatusInfo } from '../../utils/hydrationUtils';
+import {
+  getDeviceTimeZone,
+  yyyymmddInTimeZone,
+} from '../../utils/datetimeUtils';
 
 interface HealthInfoSquaresProps {
   health?: HealthSnapshot | null;
@@ -166,32 +170,61 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     return 0;
   };
 
-  const sleepHistorySnapshots = useMemo(() => {
+  const sleepHistorySeries = useMemo(() => {
     const snapshots = sleepHistory?.snapshots ?? [];
-    return snapshots.filter(snapshot => deriveSleepMinutes(snapshot) > 0);
-  }, [sleepHistory]);
+    const tz = getDeviceTimeZone();
+    const byDate = new Map(
+      snapshots.map(snapshot => [snapshot.date, snapshot])
+    );
+    const baseDate = new Date();
+    const series: Array<{
+      date: string;
+      label: string;
+      snapshot: HealthSnapshot | null;
+      minutes: number;
+    }> = [];
+    for (let offset = sleepHistoryWindow - 1; offset >= 0; offset -= 1) {
+      const day = addDays(baseDate, -offset);
+      const dayStr = yyyymmddInTimeZone(day, tz);
+      const snapshot = byDate.get(dayStr) ?? null;
+      const isoForLabel = `${dayStr}T00:00:00`;
+      let label = dayStr;
+      try {
+        label = format(parseISO(isoForLabel), 'MM/dd');
+      } catch {}
+      series.push({
+        date: dayStr,
+        label,
+        snapshot,
+        minutes: deriveSleepMinutes(snapshot ?? undefined),
+      });
+    }
+    return series;
+  }, [sleepHistory, sleepHistoryWindow]);
 
   const latestSleepEntry = useMemo(() => {
-    if (health) {
+    const tz = getDeviceTimeZone();
+    const todayStr = yyyymmddInTimeZone(new Date(), tz);
+
+    if (health?.date === todayStr) {
       const minutes = deriveSleepMinutes(health);
       if (minutes > 0) {
         return { snapshot: health, minutes };
       }
     }
 
-    for (let i = sleepHistorySnapshots.length - 1; i >= 0; i -= 1) {
-      const snapshot = sleepHistorySnapshots[i];
-      const minutes = deriveSleepMinutes(snapshot);
-      if (minutes > 0) {
-        return { snapshot, minutes };
-      }
+    const todaysHistory = sleepHistorySeries.find(
+      entry => entry.date === todayStr
+    );
+    if (todaysHistory && todaysHistory.snapshot && todaysHistory.minutes > 0) {
+      return {
+        snapshot: todaysHistory.snapshot,
+        minutes: todaysHistory.minutes,
+      };
     }
 
-    return {
-      snapshot: health ?? null,
-      minutes: deriveSleepMinutes(health),
-    };
-  }, [health, sleepHistorySnapshots]);
+    return { snapshot: null, minutes: 0 };
+  }, [health, sleepHistorySeries]);
 
   const latestSleepSnapshot = latestSleepEntry?.snapshot ?? null;
   const sleepMinutes = latestSleepEntry?.minutes ?? 0;
@@ -278,12 +311,12 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const SleepStackedHistoryChart: React.FC = () => (
     <>
       <SleepStackedBarChart
-        data={sleepHistorySnapshots.map(s => ({
-          label: format(parseISO(s.date), 'MM/dd'),
-          totalMinutes: deriveSleepMinutes(s),
-          lightMinutes: s.sleepLightMinutes ?? 0,
-          remMinutes: s.sleepRemMinutes ?? 0,
-          deepMinutes: s.sleepDeepMinutes ?? 0,
+        data={sleepHistorySeries.map(entry => ({
+          label: entry.label,
+          totalMinutes: entry.minutes,
+          lightMinutes: entry.snapshot?.sleepLightMinutes ?? 0,
+          remMinutes: entry.snapshot?.sleepRemMinutes ?? 0,
+          deepMinutes: entry.snapshot?.sleepDeepMinutes ?? 0,
         }))}
         height={200}
         showValueOnPress
@@ -301,10 +334,10 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const SleepBedWakeTrendChart: React.FC = () => (
     <>
       <SleepTimesTrendChart
-        data={sleepHistorySnapshots.map(s => ({
-          label: format(parseISO(s.date), 'MM/dd'),
-          sleepStart: s.sleepStart ?? null,
-          sleepEnd: s.sleepEnd ?? null,
+        data={sleepHistorySeries.map(entry => ({
+          label: entry.label,
+          sleepStart: entry.snapshot?.sleepStart ?? null,
+          sleepEnd: entry.snapshot?.sleepEnd ?? null,
         }))}
         height={200}
       />

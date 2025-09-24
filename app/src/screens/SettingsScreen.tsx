@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -36,6 +36,9 @@ import {
 } from '../services/notifications';
 import { SleepHealthNotifier } from '../services/SleepHealthNotifier';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { differenceInMinutes } from 'date-fns';
+import { getDeviceTimeZone, yyyymmddInTimeZone } from '../utils/datetimeUtils';
+import type { HealthSnapshot } from '../models/Health';
 
 export default function SettingsScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -81,6 +84,46 @@ export default function SettingsScreen() {
     sleepHealthNotificationsEnabled: enableSleepHealthNotifications,
     updateSleepHealthNotificationsPreference,
   } = useSleepHealthNotificationsPreference();
+
+  const timeZone = useMemo(() => getDeviceTimeZone(), []);
+  const todayStr = useMemo(
+    () => yyyymmddInTimeZone(new Date(), timeZone),
+    [timeZone]
+  );
+
+  const deriveSleepMinutes = (snapshot?: HealthSnapshot | null) => {
+    if (!snapshot) return 0;
+    const minutes = snapshot.sleepMinutes ?? 0;
+    if (minutes > 0) return minutes;
+    if (snapshot.sleepStart && snapshot.sleepEnd) {
+      const start = new Date(snapshot.sleepStart);
+      const end = new Date(snapshot.sleepEnd);
+      const diff = differenceInMinutes(end, start);
+      return diff > 0 ? diff : 0;
+    }
+    return 0;
+  };
+
+  const latestStepsValue = useMemo(() => {
+    if (!health) return null;
+    if (health.date !== todayStr) return null;
+    if (typeof health.steps !== 'number') return 0;
+    return health.steps;
+  }, [health, todayStr]);
+
+  const latestSleepMinutes = useMemo(() => {
+    if (!health) return null;
+    if (health.date !== todayStr) return null;
+    return deriveSleepMinutes(health);
+  }, [health, todayStr]);
+
+  const latestStepsText =
+    latestStepsValue == null ? 'No steps data' : `${latestStepsValue} steps`;
+
+  const latestSleepText =
+    latestSleepMinutes != null && latestSleepMinutes > 0
+      ? `${(latestSleepMinutes / 60).toFixed(1)}h sleep`
+      : 'No sleep data';
 
   useEffect(() => {
     loadSecuritySettings();
@@ -535,8 +578,7 @@ export default function SettingsScreen() {
               </Text>
               {!!health && (
                 <Text style={[styles.settingDescription, { marginTop: 6 }]}>
-                  Latest: {health.steps} steps,{' '}
-                  {(health.sleepMinutes / 60).toFixed(1)}h sleep
+                  Latest: {latestStepsText}, {latestSleepText}
                 </Text>
               )}
             </View>
