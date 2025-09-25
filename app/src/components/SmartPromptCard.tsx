@@ -3,65 +3,72 @@ import { View, Text } from 'react-native';
 import { Button } from '@/components/Button'; // Use your existing Button component
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Import API_BASE from constants
-import { API_BASE } from '../constants';
 
 
+// ✅ Use the centralized axios instance
+import { backendApiService } from '../services/BackendApiService';
 
-const COOLDOWN_KEY = 'smart_prompt_cooldown'; // cooldown key for local storage
+const COOLDOWN_KEY = 'smart_prompt_cooldown'; // Key for local cooldown storage
 
 export default function SmartPromptCard() {
   const [sug, setSug] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
-      // --- 1) Check cooldown ---
+      // --- 1) Check cooldown before making a request ---
       const cool = await AsyncStorage.getItem(COOLDOWN_KEY);
       if (cool) {
         const until = Number(cool);
         if (Date.now() < until) return; // still cooling down → skip
       }
 
-      // --- 2) Ask backend for predictive suggestion ---
+      // --- 2) Call backend for predictive suggestion ---
       const now = Date.now();
-      const j = await fetch(
-        `${API_BASE}/personalization/predict?user_id=${USER_ID}&now=${now}`
-      ).then(r => r.json());
 
-      if (j?.ok && j.ask && j.suggestion) {
-        setSug(j.suggestion); // show suggestion card
+      try {
+        // Using axios instead of fetch
+        const { data: j } = await backendApiService['axiosInstance'].get(
+          '/personalization/predict',
+          { params: { now } }
+        );
+
+        if (j?.ok && j.ask && j.suggestion) {
+          setSug(j.suggestion); // update state with suggestion
+        }
+      } catch (err) {
+        console.error('Failed to fetch suggestion:', err);
       }
     })();
   }, []);
 
-  if (!sug) return null; // no suggestion → render nothing
+  if (!sug) return null; // If no suggestion, render nothing
 
   // --- Handle user accepting the suggestion ---
   const onYes = async () => {
-    await fetch(`${API_BASE}/personalization/meal-event`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: USER_ID,
+    try {
+      // Send meal event to backend
+      await backendApiService['axiosInstance'].post('/personalization/meal-event', {
         food_id: sug.key?.startsWith('myfcd:') ? sug.key : null,
         food_name: sug.name,
         source: 'predict_yes',
-      }),
-    });
+      });
 
-    // set 24h cooldown after acceptance
-    await AsyncStorage.setItem(
-      COOLDOWN_KEY,
-      String(Date.now() + 24 * 60 * 60 * 1000)
-    );
+      // Set 24h cooldown after acceptance
+      await AsyncStorage.setItem(
+        COOLDOWN_KEY,
+        String(Date.now() + 24 * 60 * 60 * 1000)
+      );
 
-    setSug(null);
-    toast('Logged for you'); // TODO: replace with your toast system
+      setSug(null);
+      toast('Logged for you'); // TODO: replace with your toast system
+    } catch (err) {
+      console.error('Failed to log meal event:', err);
+    }
   };
 
   // --- Handle user rejecting the suggestion ---
   const onNo = async () => {
-    // set 6h cooldown after rejection
+    // Set 6h cooldown after rejection
     await AsyncStorage.setItem(
       COOLDOWN_KEY,
       String(Date.now() + 6 * 60 * 60 * 1000)
