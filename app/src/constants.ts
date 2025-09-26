@@ -21,6 +21,8 @@ export const IDLE_ANIMATIONS = [
   'idle_breathing',
 ];
 
+export const ONE_SHOT_ANIMATION_KEYWORDS = ['drinking'];
+
 export const FULL_SLEEP_MINUTES = 7.5 * 60; // 100% energy when last-night sleep >= 7.5h
 export const AWAKE_DEPLETION_PER_MIN = 100 / (24 * 60); // 24 hours to reach 0%
 export const TICK_MS = 30 * 1000; // update roughly every 30s

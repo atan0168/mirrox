@@ -21,7 +21,10 @@ export class HydrationService {
   private static instance: HydrationService | null = null;
   private dayCheckInterval: NodeJS.Timeout | null = null;
   private hydrationAnimationTimeout: NodeJS.Timeout | null = null;
-  private previousAnimationBeforeHydration: string | null = null;
+  private previousAnimationBeforeHydration: {
+    name: string | null;
+    wasManual: boolean;
+  } | null = null;
   private isInitialized = false;
 
   static getInstance(): HydrationService {
@@ -201,20 +204,19 @@ export class HydrationService {
     }
 
     // Fallback duration if we can't read clip metadata
-    return 3500;
+    return 5000;
   }
 
   private triggerDrinkingAnimation(): void {
     try {
       const avatarState = useAvatarStore.getState();
-      if (avatarState.isManualAnimation) {
-        // Respect manual overrides; don't interrupt user-selected animations
-        return;
-      }
 
       const currentAnimation = avatarState.activeAnimation;
       if (currentAnimation !== 'drinking') {
-        this.previousAnimationBeforeHydration = currentAnimation;
+        this.previousAnimationBeforeHydration = {
+          name: currentAnimation,
+          wasManual: avatarState.isManualAnimation,
+        };
       }
 
       avatarState.setActiveAnimation('drinking', { manual: true });
@@ -229,13 +231,21 @@ export class HydrationService {
         const { activeAnimation, setActiveAnimation, clearManualAnimation } =
           useAvatarStore.getState();
 
-        if (activeAnimation === 'drinking') {
-          clearManualAnimation();
+        const previousState = this.previousAnimationBeforeHydration;
 
-          if (this.previousAnimationBeforeHydration) {
-            setActiveAnimation(this.previousAnimationBeforeHydration);
+        if (activeAnimation === 'drinking') {
+          if (previousState?.wasManual) {
+            if (previousState.name) {
+              setActiveAnimation(previousState.name, { manual: true });
+            } else {
+              // No prior animation to restore, fall back to neutral state
+              setActiveAnimation(null, { manual: false });
+              clearManualAnimation();
+            }
           } else {
-            setActiveAnimation(null);
+            clearManualAnimation();
+            const nextAnimation = previousState?.name ?? null;
+            setActiveAnimation(nextAnimation, { manual: false });
           }
         }
 

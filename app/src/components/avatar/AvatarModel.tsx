@@ -5,10 +5,13 @@ import { useGLTF } from '@react-three/drei/native';
 import * as THREE from 'three';
 import { GLBAnimationLoader } from '../../utils/GLBAnimationLoader';
 import { assetPreloader } from '../../services/AssetPreloader';
-import { IDLE_ANIMATIONS, AVATAR_DEBUG } from '../../constants';
+import {
+  IDLE_ANIMATIONS,
+  AVATAR_DEBUG,
+  ONE_SHOT_ANIMATION_KEYWORDS,
+} from '../../constants';
 import { buildBoneRemapper } from '../../utils/ThreeUtils';
 import { EyeBags } from './EyeBags';
-const ONE_SHOT_ANIMATION_KEYWORDS = ['drinking'];
 
 interface AvatarModelProps {
   url: string;
