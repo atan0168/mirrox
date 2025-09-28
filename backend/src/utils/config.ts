@@ -4,6 +4,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 interface Config {
+  deepseek: {
+    baseUrl: string;
+    apiKey: string;
+    textModel: string;
+  };
+  cloudinary: {
+    cloudName?: string;
+    preset?: string;
+  };
   server: {
     port: number;
     nodeEnv: string;
@@ -47,6 +56,16 @@ interface Config {
 }
 
 const config: Config = {
+  deepseek: {
+    baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
+    apiKey: process.env.DEEPSEEK_API_KEY || '',
+    textModel: process.env.DEEPSEEK_TEXT_MODEL || 'deepseek-chat',
+  },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+    preset: process.env.CLOUDINARY_UNSIGNED_PRESET,
+  },
+
   server: {
     port: parseInt(process.env.PORT || '3000', 10),
     nodeEnv: process.env.NODE_ENV || 'development',
@@ -108,6 +127,10 @@ const missingVars = requiredVars.filter(varName => !process.env[varName]);
 
 if (missingVars.length > 0) {
   console.error('Missing required environment variables:', missingVars);
+  process.exit(1);
+}
+if (!config.deepseek.apiKey) {
+  console.error('Missing required environment variable: DEEPSEEK_API_KEY');
   process.exit(1);
 }
 

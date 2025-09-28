@@ -4,21 +4,18 @@ import sharp from 'sharp';
 import FormData from 'form-data';
 import fileType from 'file-type';
 import Tesseract from 'tesseract.js';
+import config from '../utils/config';
 
 // ✅ load SQLite to read user dictionary
 import db from '../models/db';
 
 // ------------------------- ENV -------------------------
+const BASE_URL = config.deepseek.baseUrl;
+const API_KEY = config.deepseek.apiKey;
+const TEXT_MODEL = config.deepseek.textModel;
 
-const BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
-const API_KEY = process.env.DEEPSEEK_API_KEY || '';
-if (!API_KEY) throw new Error('Missing DEEPSEEK_API_KEY');
-
-const TEXT_MODEL = process.env.DEEPSEEK_TEXT_MODEL || 'deepseek-chat';
-
-// Optional: upload OCR image to Cloudinary to get a reproducible HTTPS URL (debug friendly)
-const CLOUDINARY_CLOUD = process.env.CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_PRESET = process.env.CLOUDINARY_UNSIGNED_PRESET;
+const CLOUDINARY_CLOUD = config.cloudinary.cloudName;
+const CLOUDINARY_PRESET = config.cloudinary.preset;
 
 // ------------------------- Types -------------------------
 
