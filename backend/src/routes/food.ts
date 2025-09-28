@@ -32,28 +32,7 @@ const BodySchema = z
   });
 
 
-router.post('/extract', async (req, res) => {
-  try {
-    const body = BodySchema.parse(req.body);
-    const result = await extractWithDeepSeek(body);
-    res.json({ ok: true, data: result });
-  } catch (err: any) {
-    const status = err?.response?.status;
-    const data = err?.response?.data;
-    console.error(
-      '[extract] upstream status=',
-      status,
-      'data=',
-      data || err?.message
-    );
-    res.json({
-      ok: false,
-      error: status
-        ? `Upstream error ${status}`
-        : err?.message || 'Request failed',
-    });
-  }
-});
+
 
 /** Analyze: nutrition totals + tags + avatar_effects + tips */
 router.post('/analyze', async (req, res) => {
