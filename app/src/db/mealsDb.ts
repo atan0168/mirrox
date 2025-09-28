@@ -5,15 +5,16 @@ export type MealRow = {
   id: number;
   started_at: number; // ms
   ended_at: number | null;
+  date: string;       // YYYY-MM-DD, ensures only one meal entry per day
 };
 
 export type MealItemRow = {
   id: number;
   meal_id: number;
   name: string;
-  qty: number; // 可选：份量，默认 1
+  qty: number; 
   energy_kcal: number | null;
-  meta_json: string | null; // 保存来源、每项营养等
+  meta_json: string | null; 
 };
 
 let db: SQLite.SQLiteDatabase | null = null;
@@ -30,7 +31,8 @@ export function ensureMealsSchema() {
   CREATE TABLE IF NOT EXISTS meals(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     started_at INTEGER NOT NULL,
-    ended_at INTEGER
+    ended_at INTEGER,
+    date TEXT NOT NULL UNIQUE
   );
   CREATE TABLE IF NOT EXISTS meal_items(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,8 +50,20 @@ export function ensureMealsSchema() {
 export function createMeal(): number {
   const d = getDb();
   const started = Date.now();
-  d.runSync(`INSERT INTO meals(started_at, ended_at) VALUES(?, NULL)`, [
-    started,
+  const today = new Date().toISOString().split('T')[0];
+  //check if today's meal already exists
+  const existing = d.getFirstSync<{ id: number }>(
+    `SELECT id FROM meals WHERE date = ? LIMIT 1`,
+    [today]
+  );
+  if (existing) {
+    return existing.id;
+  }
+
+
+
+  d.runSync(`INSERT INTO meals(started_at, ended_at, date) VALUES(?, NULL, ?)`, [
+    started,today
   ]);
   const id = d.getFirstSync<{ id: number }>(
     `SELECT last_insert_rowid() AS id`
@@ -127,4 +141,14 @@ export function listMealItems(mealId: number): MealItemRow[] {
     `SELECT * FROM meal_items WHERE meal_id = ? ORDER BY id DESC`,
     [mealId]
   );
+}
+
+export function getMealForToday(): number | null {
+  const d = getDb();
+  const today = new Date().toISOString().split('T')[0];
+  const row = d.getFirstSync<{ id: number }>(
+    `SELECT id FROM meals WHERE date = ? LIMIT 1`,
+    [today]
+  );
+  return row ? row.id : null;
 }

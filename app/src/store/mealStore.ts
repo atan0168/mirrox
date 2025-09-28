@@ -9,6 +9,7 @@ import {
   insertMealItemsBulk,
   deleteMealItem,
   listMealItems,
+  getMealForToday,
 } from '../db/mealsDb';
 
 type PerItemLike = {
@@ -57,19 +58,22 @@ export const useMealStore = create<MealState>((set, get) => ({
   ensureMeal: async () => {
     ensureMealsSchema();
     let id = get().currentMealId;
+  
     if (id == null) {
-      id = createMeal();
+      id = getMealForToday();
+      if (id == null) {
+        id = createMeal();
+      }
       set({ currentMealId: id });
     }
+  
     return id;
   },
 
   finishMeal: async () => {
     const id = get().currentMealId;
-    if (id != null) {
-      closeMeal(id);
-    }
-    set({ currentMealId: null, currentItems: [] });
+    if (id != null) {}
+    set({ currentItems: [] });
     return [];
   },
 
