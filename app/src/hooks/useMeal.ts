@@ -2,6 +2,8 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useMealStore } from '../store/mealStore';
+import axios from 'axios';
+const API_BASE = process.env.EXPO_PUBLIC_API_BASE!;
 
 type AnalysisItem = {
   name: string;
@@ -65,11 +67,28 @@ export const useMeal = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meal'] }),
   });
 
+
+  const quickLog = useMutation({
+    mutationFn: async (food_id: string) => {
+      const res = await axios.post(`${API_BASE}/personalization/meal-event`, {
+        food_id,
+        ts_ms: Date.now(),
+        source: 'predict',
+      });
+      return res.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meal'] }),
+  });
+
+
+
+
   return {
     ...query,
     removeItem,
     addManual,
     finish,
     appendFromAnalysis: appendFromAnalysisMutation,
+    quickLog,
   };
 };

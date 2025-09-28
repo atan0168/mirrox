@@ -1,6 +1,7 @@
 // app/src/screens/FoodDiaryScreen.tsx
 import { useNavigation, useFocusEffect } from '@react-navigation/native'; 
 import React, { useState, useEffect } from 'react';
+import { useMeal } from '../hooks/useMeal';
 import {
   View,
   TextInput,
@@ -102,19 +103,8 @@ export default function FoodDiaryScreen() {
   function removeImage() {
     setImage(null);
   }
+  const { quickLog } = useMeal(); 
 
-
-  async function quickLog(food_id: string) {
-    await fetch(`${API_BASE}/personalization/meal-event`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        food_id,
-        ts_ms: Date.now(),
-        source: 'predict',
-      }),
-    });
-  }
 
   /**
    * Main analyze flow:
@@ -263,7 +253,7 @@ export default function FoodDiaryScreen() {
     }
   }
 
-  // Predictive suggestion (⚠️ removed USER_ID)
+  
   useEffect(() => {
     let mounted = true;
     async function checkPredictive() {
@@ -282,7 +272,7 @@ export default function FoodDiaryScreen() {
               {
                 text: 'YES',
                 onPress: async () => {
-                  await quickLog(r.food_id);
+                  quickLog.mutate(r.food_id);
                   setText(r.name);
                   await analyze();
                 },
