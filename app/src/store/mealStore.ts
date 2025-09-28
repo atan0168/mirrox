@@ -57,7 +57,7 @@ export const useMealStore = create<MealState>((set, get) => ({
   ensureMeal: async () => {
     ensureMealsSchema();
     let id = get().currentMealId;
-  
+
     if (id == null) {
       id = getMealForToday();
       if (id == null) {
@@ -65,11 +65,9 @@ export const useMealStore = create<MealState>((set, get) => ({
       }
       set({ currentMealId: id });
     }
-  
+
     return id;
   },
-
- 
 
   reloadItems: async () => {
     const id = get().currentMealId;

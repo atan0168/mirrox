@@ -5,16 +5,16 @@ export type MealRow = {
   id: number;
   started_at: number; // ms
   ended_at: number | null;
-  date: string;       // YYYY-MM-DD, ensures only one meal entry per day
+  date: string; // YYYY-MM-DD, ensures only one meal entry per day
 };
 
 export type MealItemRow = {
   id: number;
   meal_id: number;
   name: string;
-  qty: number; 
+  qty: number;
   energy_kcal: number | null;
-  meta_json: string | null; 
+  meta_json: string | null;
 };
 
 let db: SQLite.SQLiteDatabase | null = null;
@@ -60,11 +60,10 @@ export function createMeal(): number {
     return existing.id;
   }
 
-
-
-  d.runSync(`INSERT INTO meals(started_at, ended_at, date) VALUES(?, NULL, ?)`, [
-    started,today
-  ]);
+  d.runSync(
+    `INSERT INTO meals(started_at, ended_at, date) VALUES(?, NULL, ?)`,
+    [started, today]
+  );
   const id = d.getFirstSync<{ id: number }>(
     `SELECT last_insert_rowid() AS id`
   )!.id;

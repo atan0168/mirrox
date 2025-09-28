@@ -240,79 +240,92 @@ export default function NutritionDetailScreen() {
   );
 }
 
+import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+
 const styles = StyleSheet.create({
-  container: { padding: 16 },
+  container: { padding: spacing.md },
   center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: spacing.lg,
   },
-  h1: { fontSize: 22, fontWeight: '700', marginBottom: 12 },
+  h1: { fontSize: fontSize.xxl, fontWeight: '700', marginBottom: spacing.sm },
 
   card: {
-    backgroundColor: 'white',
-    borderRadius: 16,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 16,
-    marginBottom: 16,
+    borderColor: colors.divider,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    ...shadows.soft,
   },
 
-  h2: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
-  h3: { fontSize: 14, fontWeight: '600', marginTop: 12, marginBottom: 6 },
+  h2: { fontSize: fontSize.lg, fontWeight: '600', marginBottom: spacing.xs },
+  h3: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
 
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.xs,
+  },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
 
-  key: { color: '#6B7280' },
+  key: { color: colors.neutral[500] },
   val: { fontWeight: '600' },
 
-  tags: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.xs },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 9999,
+    paddingHorizontal: spacing.sm + spacing.xs,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginRight: 8,
-    marginBottom: 8,
+    borderColor: colors.divider,
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
   },
-  chipText: { fontSize: 12 },
+  chipText: { fontSize: fontSize.xs },
 
-  muted: { color: '#6B7280' },
+  muted: { color: colors.neutral[500] },
   itemName: { fontWeight: '600' },
-  itemLine: { color: '#374151', marginTop: 2 },
-  tip: { marginTop: 4, color: '#374151' },
+  itemLine: { color: colors.primary, marginTop: spacing.xs },
+  tip: { marginTop: spacing.xs, color: colors.primary },
 
-  // Help icon button in Summary card
   helpBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: spacing.lg,
+    height: spacing.lg,
+    borderRadius: borderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EEF2FF',
+    backgroundColor: colors.sky[50],
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: colors.sky[200],
   },
   helpBtnText: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     fontWeight: '800',
-    color: '#4F46E5',
+    color: colors.sky[700],
     marginTop: -1,
   },
 
-  // Popover text
-  popText: { fontSize: 14, lineHeight: 20, color: '#111827' },
+  popText: {
+    fontSize: fontSize.sm,
+    lineHeight: 20,
+    color: colors.neutral[900],
+  },
 
-  // Link style inside popover
   link: {
-    color: '#2563EB',
+    color: colors.sky[600],
     fontWeight: '600',
     textDecorationLine: 'underline',
   },

@@ -1,5 +1,5 @@
 // app/src/screens/FoodDiaryScreen.tsx
-import { useNavigation, useFocusEffect } from '@react-navigation/native'; 
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import React, { useState, useEffect } from 'react';
 import { useMeal } from '../hooks/useMeal';
 import {
@@ -23,7 +23,6 @@ import ThisMealCard from '../components/ThisMealCard';
 // Helpers
 import { expandUserPhrases } from '../utils/expandUserPhrases';
 import { confirmAsync } from '../utils/confirmAsync';
-
 
 import { colors, spacing, borderRadius, fontSize } from '../theme';
 
@@ -103,8 +102,7 @@ export default function FoodDiaryScreen() {
   function removeImage() {
     setImage(null);
   }
-  const { quickLog } = useMeal(); 
-
+  const { quickLog } = useMeal();
 
   /**
    * Main analyze flow:
@@ -189,7 +187,9 @@ export default function FoodDiaryScreen() {
       });
       const json = await res.json();
       if (!json.ok)
-        throw new Error(json.error || `Request failed with status ${res.status}`);
+        throw new Error(
+          json.error || `Request failed with status ${res.status}`
+        );
 
       const data: AnalyzeData = json.data;
 
@@ -198,7 +198,10 @@ export default function FoodDiaryScreen() {
       const perItemCount =
         (data?.per_item?.length || 0) +
         ((data?.nutrients as any)?.per_item?.length || 0);
-      if (perItemCount === 0 && (!Number.isFinite(totalEnergy) || totalEnergy <= 0)) {
+      if (
+        perItemCount === 0 &&
+        (!Number.isFinite(totalEnergy) || totalEnergy <= 0)
+      ) {
         setLoading(false);
         Alert.alert(
           'Nothing recognized',
@@ -228,8 +231,9 @@ export default function FoodDiaryScreen() {
       setLastAnalysis(data);
 
       // Append recognized items into store
-      const perMerged: AnalyzePerItem[] =
-        (data.nutrients?.per_item ?? data.per_item ?? []) as AnalyzePerItem[];
+      const perMerged: AnalyzePerItem[] = (data.nutrients?.per_item ??
+        data.per_item ??
+        []) as AnalyzePerItem[];
       if (perMerged.length > 0) {
         await appendFromAnalysis(
           perMerged.map(p => ({
@@ -253,7 +257,6 @@ export default function FoodDiaryScreen() {
     }
   }
 
-  
   useEffect(() => {
     let mounted = true;
     async function checkPredictive() {
@@ -306,11 +309,14 @@ export default function FoodDiaryScreen() {
   }
 
   const canSubmit = !!text.trim() || !!image?.base64;
-  const tagsForCard =
-    analysis?.tags_display?.length ? analysis.tags_display : (analysis?.tags ?? []);
+  const tagsForCard = analysis?.tags_display?.length
+    ? analysis.tags_display
+    : (analysis?.tags ?? []);
 
   return (
-    <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}>
+    <ScrollView
+      contentContainerStyle={{ padding: spacing.md, gap: spacing.sm }}
+    >
       <Text style={{ fontSize: fontSize.lg, fontWeight: '600' }}>
         What's on your plate?
       </Text>
@@ -345,7 +351,13 @@ export default function FoodDiaryScreen() {
             alignItems: 'center',
           }}
         >
-          <Text style={{ fontSize: fontSize.md, fontWeight: '600', color: colors.primary }}>
+          <Text
+            style={{
+              fontSize: fontSize.md,
+              fontWeight: '600',
+              color: colors.primary,
+            }}
+          >
             {image ? 'Change photo' : 'Add photo'}
           </Text>
         </TouchableOpacity>
@@ -363,7 +375,13 @@ export default function FoodDiaryScreen() {
               alignItems: 'center',
             }}
           >
-            <Text style={{ fontSize: fontSize.md, fontWeight: '600', color: colors.primary }}>
+            <Text
+              style={{
+                fontSize: fontSize.md,
+                fontWeight: '600',
+                color: colors.primary,
+              }}
+            >
               REMOVE IMAGE
             </Text>
           </TouchableOpacity>
@@ -389,14 +407,21 @@ export default function FoodDiaryScreen() {
         onPress={analyze}
         disabled={!canSubmit || loading}
         style={{
-          backgroundColor: !canSubmit || loading ? colors.neutral[300] : colors.primary,
+          backgroundColor:
+            !canSubmit || loading ? colors.neutral[300] : colors.primary,
           paddingVertical: spacing.md,
           borderRadius: borderRadius.md,
           alignItems: 'center',
           opacity: loading ? 0.8 : 1,
         }}
       >
-        <Text style={{ color: colors.white, fontWeight: '600', fontSize: fontSize.md }}>
+        <Text
+          style={{
+            color: colors.white,
+            fontWeight: '600',
+            fontSize: fontSize.md,
+          }}
+        >
           {loading ? 'Analyzing...' : 'ANALYZE'}
         </Text>
       </TouchableOpacity>
@@ -413,7 +438,9 @@ export default function FoodDiaryScreen() {
           <AnalysisCard
             energyKcal={analysis.nutrients.total.energy_kcal}
             tags={tagsForCard}
-            onPressDetails={() => navigation.navigate('NutritionDetail' as never)}
+            onPressDetails={() =>
+              navigation.navigate('NutritionDetail' as never)
+            }
           />
         </View>
       )}
@@ -432,7 +459,13 @@ export default function FoodDiaryScreen() {
             alignItems: 'center',
           }}
         >
-          <Text style={{ color: colors.primary, fontWeight: '600', fontSize: fontSize.md }}>
+          <Text
+            style={{
+              color: colors.primary,
+              fontWeight: '600',
+              fontSize: fontSize.md,
+            }}
+          >
             CLEAR
           </Text>
         </TouchableOpacity>

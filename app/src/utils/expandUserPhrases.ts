@@ -7,9 +7,7 @@ function escapeRegExp(s: string) {
 
 export async function expandUserPhrases(rawText: string, userId: string) {
   try {
-    const r = await fetch(
-      `${API_BASE}/personalization/user-dict`
-    );
+    const r = await fetch(`${API_BASE}/personalization/user-dict`);
     const j = await r.json();
 
     if (!j || !j.data) return rawText;

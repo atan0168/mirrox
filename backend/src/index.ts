@@ -2,10 +2,7 @@ import 'dotenv/config';
 import app from './app';
 import config from './utils/config';
 
-
 const PORT = config.server.port;
-
-
 
 // Handle uncaught exceptions
 process.on('uncaughtException', error => {

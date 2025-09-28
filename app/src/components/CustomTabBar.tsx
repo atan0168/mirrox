@@ -37,7 +37,9 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
 }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
   const routeCount = state.routes.length;
-  const [textWidths, setTextWidths] = useState<number[]>(Array(routeCount).fill(0));
+  const [textWidths, setTextWidths] = useState<number[]>(
+    Array(routeCount).fill(0)
+  );
   const [tabBarWidth, setTabBarWidth] = useState<number | null>(null);
 
   // Adjust text width array when route count changes
@@ -96,7 +98,9 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
   // Ensure hidden routes fallback to nearest visible tab
   for (let i = 0; i < routeCount; i++) {
     if (translateXOutputRange[i] === 0 && !visibleRouteIndices.includes(i)) {
-      const prevVisible = [...visibleRouteIndices].filter(idx => idx <= i).pop();
+      const prevVisible = [...visibleRouteIndices]
+        .filter(idx => idx <= i)
+        .pop();
       const fallbackIndex = prevVisible ?? visibleRouteIndices[0] ?? 0;
       translateXOutputRange[i] = translateXOutputRange[fallbackIndex];
       pillWidthsFull[i] = pillWidthsFull[fallbackIndex];

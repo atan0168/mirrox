@@ -69,10 +69,26 @@ const MainTabNavigator: React.FC = () => {
       })}
     >
       {/* ✅ Tab order definition */}
-      <Tab.Screen name="Home" component={DashboardScreen} options={{ tabBarLabel: 'Home' }} />
-      <Tab.Screen name="Stats" component={StatsScreen} options={{ tabBarLabel: 'Stats' }} />
-      <Tab.Screen name="FoodDiary" component={FoodDiaryScreen} options={{ tabBarLabel: 'Food Diary' }} />
-      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: 'Settings' }} />
+      <Tab.Screen
+        name="Home"
+        component={DashboardScreen}
+        options={{ tabBarLabel: 'Home' }}
+      />
+      <Tab.Screen
+        name="Stats"
+        component={StatsScreen}
+        options={{ tabBarLabel: 'Stats' }}
+      />
+      <Tab.Screen
+        name="FoodDiary"
+        component={FoodDiaryScreen}
+        options={{ tabBarLabel: 'Food Diary' }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ tabBarLabel: 'Settings' }}
+      />
     </Tab.Navigator>
   );
 };

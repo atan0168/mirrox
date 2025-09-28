@@ -57,7 +57,6 @@ export default function ThisMealCard() {
         </View>
       </View>
 
-
       <FlatList
         data={items}
         keyExtractor={item => item.id.toString()}
@@ -68,7 +67,8 @@ export default function ThisMealCard() {
               <Text style={styles.itemSub}>
                 {item.energy_kcal != null
                   ? `${Math.round(item.energy_kcal)} kcal`
-                  : 'kcal N/A'} • x{item.qty}
+                  : 'kcal N/A'}{' '}
+                • x{item.qty}
               </Text>
             </View>
             <Pressable

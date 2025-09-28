@@ -67,7 +67,6 @@ export const useMeal = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meal'] }),
   });
 
-
   const quickLog = useMutation({
     mutationFn: async (food_id: string) => {
       const res = await axios.post(`${API_BASE}/personalization/meal-event`, {
@@ -79,9 +78,6 @@ export const useMeal = () => {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meal'] }),
   });
-
-
-
 
   return {
     ...query,
