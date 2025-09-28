@@ -7,6 +7,7 @@ import { analyzeMeal, tagsToTips } from '../services/nutrition';
 
 import { searchFoods, getFoodById } from './foods_db';
 import { prettyName } from '../services/display_name';
+import { detectUiLang } from '../middleware/uiLang';
 
 const router = Router();
 
@@ -35,10 +36,10 @@ const BodySchema = z
 
 
 /** Analyze: nutrition totals + tags + avatar_effects + tips */
-router.post('/analyze', async (req, res) => {
+router.post('/analyze',detectUiLang, async (req, res) => {
   try {
     // UI language for labels/tips (default: English)
-    const uiLang = (req.query.ui_lang as 'en' | 'zh' | 'ms') || 'en';
+    const uiLang: 'en' | 'zh' | 'ms' = (req as any).uiLang;
 
     // Validate request body
     const body = BodySchema.parse(req.body);
@@ -58,7 +59,8 @@ router.post('/analyze', async (req, res) => {
     // Tips language (ms falls back to English)
     const tipLang: 'en' | 'zh' = uiLang === 'zh' ? 'zh' : 'en';
 
-    const tips = tagsToTips(data.tags, 'en');
+   
+    const tips = tagsToTips(data.tags, tipLang);
 
     const per_item = (data.nutrients?.per_item || []).map((it: any) => ({
       ...it,
