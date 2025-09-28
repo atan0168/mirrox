@@ -8,25 +8,26 @@ import {
   Dimensions,
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Home, BarChart3, Settings, Utensils } from 'lucide-react-native';
+import { Home, BarChart3, Settings, Utensils } from 'lucide-react-native'; // ✅ lucide icons
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 import { CommonActions } from '@react-navigation/native';
 
 const { width: screenWidth } = Dimensions.get('window');
-// Measure actual tab bar width (inside horizontal padding) for accurate centering.
-const HORIZONTAL_PADDING = spacing.md; // matches styles.tabBar paddingHorizontal
+const HORIZONTAL_PADDING = spacing.md; // Matches tabBar horizontal padding
 
+// Define tab configuration
 interface TabConfig {
   name: string;
   icon: React.ComponentType<{ size: number; color: string }>;
   label: string;
 }
 
+// ✅ Mapping each route to icon & label
 const tabConfigs: Record<string, TabConfig> = {
   Home: { name: 'Home', icon: Home, label: 'Home' },
   Stats: { name: 'Stats', icon: BarChart3, label: 'Stats' },
-  Settings: { name: 'Settings', icon: Settings, label: 'Settings' },
   FoodDiary: { name: 'FoodDiary', icon: Utensils, label: 'Food Diary' },
+  Settings: { name: 'Settings', icon: Settings, label: 'Settings' },
 };
 
 const CustomTabBar: React.FC<BottomTabBarProps> = ({
@@ -36,12 +37,10 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
 }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
   const routeCount = state.routes.length;
-  const [textWidths, setTextWidths] = useState<number[]>(
-    Array(routeCount).fill(0)
-  );
+  const [textWidths, setTextWidths] = useState<number[]>(Array(routeCount).fill(0));
   const [tabBarWidth, setTabBarWidth] = useState<number | null>(null);
 
-  // Ensure textWidths array length matches route count (in case of dynamic tabs)
+  // Adjust text width array when route count changes
   useEffect(() => {
     setTextWidths(prev => {
       if (prev.length === routeCount) return prev;
@@ -53,6 +52,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     });
   }, [routeCount]);
 
+  // Animate pill movement when tab changes
   useEffect(() => {
     Animated.spring(animatedValue, {
       toValue: state.index,
@@ -62,19 +62,19 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     }).start();
   }, [state.index, animatedValue]);
 
-  // Hide the custom tab bar for routes not meant to show it (e.g., Alerts)
+  // Hide tab bar on specific routes (e.g., Alerts)
   const currentRoute = state.routes[state.index];
   if (currentRoute?.name === 'Alerts') {
     return null;
   }
 
-  // Calculate pill widths based on text measurements
+  // Calculate pill widths based on text measurement
   const pillWidths = textWidths.map(textWidth =>
     textWidth > 0 ? textWidth + 56 : 60
   );
-
   const innerWidth = (tabBarWidth ?? screenWidth) - HORIZONTAL_PADDING * 2;
 
+  // Get visible tabs
   const visibleRouteIndices = state.routes
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => !!tabConfigs[r.name])
@@ -93,12 +93,10 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     pillWidthsFull[routeIdx] = w;
   });
 
-  // For any hidden routes, use the nearest previous visible position for stability
+  // Ensure hidden routes fallback to nearest visible tab
   for (let i = 0; i < routeCount; i++) {
     if (translateXOutputRange[i] === 0 && !visibleRouteIndices.includes(i)) {
-      const prevVisible = [...visibleRouteIndices]
-        .filter(idx => idx <= i)
-        .pop();
+      const prevVisible = [...visibleRouteIndices].filter(idx => idx <= i).pop();
       const fallbackIndex = prevVisible ?? visibleRouteIndices[0] ?? 0;
       translateXOutputRange[i] = translateXOutputRange[fallbackIndex];
       pillWidthsFull[i] = pillWidthsFull[fallbackIndex];
@@ -120,7 +118,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Hidden text elements for measuring */}
+      {/* Hidden text measurement */}
       <View style={styles.hiddenMeasureContainer}>
         {state.routes.map((route, index) => {
           const tabConfig = tabConfigs[route.name];
@@ -144,6 +142,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
         })}
       </View>
 
+      {/* Tab bar container */}
       <View
         style={styles.tabBar}
         onLayout={e => {
@@ -167,7 +166,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
           const tabConfig = tabConfigs[route.name];
-
           if (!tabConfig) return null;
 
           const onPress = () => {
@@ -176,13 +174,9 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               target: route.key,
               canPreventDefault: true,
             });
-
             if (!isFocused && !event.defaultPrevented) {
               navigation.dispatch(CommonActions.navigate({ name: route.name }));
             }
-          };
-          const onLongPress = () => {
-            navigation.emit({ type: 'tabLongPress', target: route.key });
           };
 
           const IconComponent = tabConfig.icon;
@@ -193,30 +187,18 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
               accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={`tab-${route.name.toLowerCase()}`}
               onPress={onPress}
-              onLongPress={onLongPress}
               style={styles.tab}
               activeOpacity={0.7}
             >
               <View style={styles.tabContent}>
+                {/* ✅ Use lucide icons */}
                 <IconComponent
                   size={24}
                   color={isFocused ? colors.white : colors.neutral[400]}
                 />
                 {isFocused && (
-                  <Animated.Text
-                    style={[
-                      styles.tabLabel,
-                      {
-                        opacity: animatedValue.interpolate({
-                          inputRange: [index - 0.5, index, index + 0.5],
-                          outputRange: [0, 1, 0],
-                          extrapolate: 'clamp',
-                        }),
-                      },
-                    ]}
-                  >
+                  <Animated.Text style={styles.tabLabel}>
                     {tabConfig.label}
                   </Animated.Text>
                 )}

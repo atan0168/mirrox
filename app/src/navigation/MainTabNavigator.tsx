@@ -1,12 +1,5 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import {
-  Home,
-  BarChart,
-  Settings,
-  Utensils,
-  Circle,
-} from 'lucide-react-native';
 
 // Import screens
 import DashboardScreen from '../screens/DashboardScreen';
@@ -14,16 +7,17 @@ import StatsScreen from '../screens/StatsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import FoodDiaryScreen from '../screens/FoodDiaryScreen';
 
-// Import custom tab bar
+// Import custom tab bar and helpers
 import CustomTabBar from '../components/CustomTabBar';
 import NotificationBell from '../components/NotificationBell';
 import { useAlertsCount } from '../hooks/useAlertsCount';
 import { colors } from '../theme';
 
+// Define navigation parameter list
 export type MainTabParamList = {
   Home: undefined;
   Stats: undefined;
-  FoodDiary: undefined;
+  FoodDiary: undefined; // FoodDiary comes before Settings
   Settings: undefined;
 };
 
@@ -36,8 +30,9 @@ const MainTabNavigator: React.FC = () => {
     <Tab.Navigator
       detachInactiveScreens
       backBehavior="initialRoute"
+      // ✅ CustomTabBar will handle icons & styles
       tabBar={props => <CustomTabBar {...props} />}
-      screenOptions={({ navigation, route }) => ({
+      screenOptions={({ navigation }) => ({
         lazy: true,
         headerShown: true,
         headerTitle: 'Digital Twin',
@@ -73,27 +68,11 @@ const MainTabNavigator: React.FC = () => {
         },
       })}
     >
-      <Tab.Screen
-        name="Home"
-        component={DashboardScreen}
-        options={{ tabBarLabel: 'Home' }}
-      />
-      <Tab.Screen
-        name="Stats"
-        component={StatsScreen}
-        options={{ tabBarLabel: 'Stats' }}
-      />
-      {/* ✅ Move FoodDiary before Settings */}
-      <Tab.Screen
-        name="FoodDiary"
-        component={FoodDiaryScreen}
-        options={{ tabBarLabel: 'Food Diary' }}
-      />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ tabBarLabel: 'Settings' }}
-      />
+      {/* ✅ Tab order definition */}
+      <Tab.Screen name="Home" component={DashboardScreen} options={{ tabBarLabel: 'Home' }} />
+      <Tab.Screen name="Stats" component={StatsScreen} options={{ tabBarLabel: 'Stats' }} />
+      <Tab.Screen name="FoodDiary" component={FoodDiaryScreen} options={{ tabBarLabel: 'Food Diary' }} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: 'Settings' }} />
     </Tab.Navigator>
   );
 };
