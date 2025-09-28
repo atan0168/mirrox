@@ -135,6 +135,14 @@ async function toOcrPngBuffer(input: {
     throw new Error('No image provided');
   }
 
+  
+  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+  if (buf.length > MAX_SIZE_BYTES) {
+    throw new Error(
+      `Image too large (${(buf.length / 1024 / 1024).toFixed(1)} MB). Limit is 5 MB.`
+    );
+  }
+
   const ft = await fileType.fromBuffer(buf);
   if (!ft || !ft.mime.startsWith('image/')) {
     throw new Error('Provided data is not an image');
@@ -146,10 +154,11 @@ async function toOcrPngBuffer(input: {
     h = meta.height || 0;
 
   const resized =
-    Math.max(w, h) < 1200
+    Math.max(w, h) > 1600
       ? img.resize({
           width: w >= h ? 1600 : undefined,
           height: h > w ? 1600 : undefined,
+          fit: 'inside',
         })
       : img;
 
