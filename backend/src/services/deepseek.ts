@@ -48,16 +48,15 @@ function escapeRegExp(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** Load user-defined mappings from SQLite */
-function loadUserDict(user_id?: string): DictRow[] {
-  if (!user_id) return [];
+/** Load global mappings from SQLite (shared by all users) */
+function loadGlobalDict(): DictRow[] {
   return db
-    .prepare<
-      unknown[],
-      DictRow
-    >(`SELECT phrase, canonical_food_id, canonical_food_name FROM user_dict WHERE user_id=?`)
-    .all(user_id);
+    .prepare<unknown[], DictRow>(
+      `SELECT phrase, canonical_food_id, canonical_food_name FROM user_dict`
+    )
+    .all();
 }
+
 
 /** Build system prompt with mappings at highest priority */
 function buildSystemPromptWithDict(dict: DictRow[]) {
@@ -234,10 +233,10 @@ function safeParseJSON(s: string): ExtractResult {
 export async function extractWithDeepSeek(
   input: ExtractPayload
 ): Promise<ExtractResult> {
-  const { text, imageBase64, imageUrl, user_id } = input;
+  const { text, imageBase64, imageUrl} = input;
 
   // Load dict and build prompts
-  const dict = loadUserDict(user_id);
+  const dict = loadGlobalDict();
   const systemPrompt =
     dict.length > 0
       ? buildSystemPromptWithDict(dict)
