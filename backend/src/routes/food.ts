@@ -31,8 +31,6 @@ const BodySchema = z
     message: 'Provide at least one of: text, imageUrl, imageBase64',
   });
 
-// Optional: quick connectivity check
-router.get('/ping', (_req, res) => res.json({ ok: true, ping: 'pong' }));
 
 router.post('/extract', async (req, res) => {
   try {
