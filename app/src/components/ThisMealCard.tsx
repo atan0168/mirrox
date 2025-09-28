@@ -1,5 +1,4 @@
-// app/src/components/ThisMealCard.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,47 +8,37 @@ import {
   TextInput,
   Platform,
 } from 'react-native';
-import { useMealStore } from '../store/mealStore';
+import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+import { useMeal } from '../hooks/useMeal';
 
 export default function ThisMealCard() {
-  // Pull data & actions from the store
-  const items = useMealStore(s => s.currentItems);
-  const removeItem = useMealStore(s => s.removeItemById);
-  const addManual = useMealStore(s => s.addManualItem);
-  const finishMeal = useMealStore(s => s.finishMeal);
-  const ensureMeal = useMealStore(s => s.ensureMeal);
-  const reloadItems = useMealStore(s => s.reloadItems);
+  const {
+    data: items = [],
+    isLoading,
+    isError,
+    removeItem,
+    addManual,
+    finish,
+  } = useMeal();
 
-  // Local state for the add-item modal
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
   const [energy, setEnergy] = useState('');
 
-  // Ensure a "current meal" exists and load items when the card mounts
-  useEffect(() => {
-    (async () => {
-      await ensureMeal();
-      await reloadItems();
-    })();
-  }, []);
-
-  // Add item handler (parse kcal safely)
   const onAdd = async () => {
     const trimmed = name.trim();
     if (!trimmed) return setShowAdd(false);
 
     const kcalNum = energy.trim() ? parseFloat(energy) : undefined;
-    const kcal = Number.isFinite(kcalNum as number)
-      ? (kcalNum as number)
-      : undefined;
+    const kcal = Number.isFinite(kcalNum as number) ? kcalNum : undefined;
 
-    await addManual(trimmed, kcal, 1);
+    addManual.mutate({ name: trimmed, kcal, qty: 1 });
+
     setName('');
     setEnergy('');
     setShowAdd(false);
   };
 
-  // Sum up kcal for a quick glance
   const totalKcal = Math.round(
     items.reduce((s, it) => s + (it.energy_kcal ?? 0) * (it.qty ?? 1), 0)
   );
@@ -62,11 +51,11 @@ export default function ThisMealCard() {
           <Text style={styles.subtle}>Approx. {totalKcal} kcal</Text>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           <Pressable onPress={() => setShowAdd(true)} style={styles.ghostBtn}>
             <Text style={styles.ghostTxt}>+ Add item</Text>
           </Pressable>
-          <Pressable onPress={finishMeal} style={styles.ghostBtn}>
+          <Pressable onPress={() => finish.mutate()} style={styles.ghostBtn}>
             <Text style={styles.ghostTxt}>Finish meal</Text>
           </Pressable>
         </View>
@@ -77,7 +66,7 @@ export default function ThisMealCard() {
           No items yet. Use “+ Add item” or run Analyze to add.
         </Text>
       ) : (
-        <View style={{ marginTop: 10 }}>
+        <View style={{ marginTop: spacing.sm }}>
           {items.map(it => (
             <View key={it.id} style={styles.row}>
               <View style={{ flex: 1 }}>
@@ -90,7 +79,7 @@ export default function ThisMealCard() {
                 </Text>
               </View>
               <Pressable
-                onPress={() => removeItem(it.id)}
+                onPress={() => removeItem.mutate(it.id)}
                 style={styles.deleteBtn}
               >
                 <Text style={styles.deleteTxt}>Remove</Text>
@@ -135,7 +124,12 @@ export default function ThisMealCard() {
               disabled={!name.trim()}
               style={[styles.pillPrimary, !name.trim() && styles.pillDisabled]}
             >
-              <Text style={{ color: '#fff', opacity: !name.trim() ? 0.6 : 1 }}>
+              <Text
+                style={{
+                  color: colors.white,
+                  opacity: !name.trim() ? 0.6 : 1,
+                }}
+              >
                 Add
               </Text>
             </Pressable>
@@ -148,50 +142,59 @@ export default function ThisMealCard() {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.divider,
+    ...shadows.soft,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { fontSize: 16, fontWeight: '700' },
-  subtle: { marginTop: 2, color: '#6B7280' },
-  muted: { marginTop: 8, color: '#6B7280' },
+  title: {
+    fontSize: fontSize.base,
+    fontWeight: '700',
+    color: colors.neutral[900],
+  },
+  subtle: { marginTop: spacing.xs, color: colors.neutral[500] },
+  muted: { marginTop: spacing.sm, color: colors.neutral[500] },
 
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: colors.divider,
   },
-  itemName: { fontWeight: '600', color: '#111827' },
-  itemSub: { color: '#6B7280', marginTop: 2, fontSize: 12 },
+  itemName: { fontWeight: '600', color: colors.neutral[900] },
+  itemSub: {
+    color: colors.neutral[500],
+    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
+  },
 
   deleteBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF2F2',
+    borderColor: colors.red[300],
+    backgroundColor: colors.red[50],
   },
-  deleteTxt: { color: '#B91C1C', fontWeight: '700' },
+  deleteTxt: { color: colors.red[700], fontWeight: '700' },
 
   ghostBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
+    borderColor: colors.divider,
+    backgroundColor: colors.white,
   },
-  ghostTxt: { fontWeight: '700', color: '#111827' },
+  ghostTxt: { fontWeight: '700', color: colors.neutral[900] },
 
   backdrop: {
     position: 'absolute',
@@ -203,39 +206,48 @@ const styles = StyleSheet.create({
   },
   modal: {
     position: 'absolute',
-    left: 18,
-    right: 18,
+    left: spacing.md,
+    right: spacing.md,
     top: '25%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.08)',
+    borderColor: colors.neutral[200],
   },
-  modalTitle: { fontWeight: '700', fontSize: 16, marginBottom: 8 },
+  modalTitle: {
+    fontWeight: '700',
+    fontSize: fontSize.base,
+    marginBottom: spacing.sm,
+    color: colors.neutral[900],
+  },
   input: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: '#fff',
+    borderColor: colors.divider,
+    borderRadius: borderRadius.lg,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.white,
   },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+  },
 
   pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#fff',
+    borderColor: colors.divider,
+    backgroundColor: colors.white,
   },
   pillPrimary: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#2563EB',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
   },
-  pillDisabled: { backgroundColor: '#93C5FD' },
+  pillDisabled: { backgroundColor: colors.sky[300] },
 });

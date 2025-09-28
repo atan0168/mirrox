@@ -178,9 +178,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
             });
 
             if (!isFocused && !event.defaultPrevented) {
-              navigation.dispatch(
-                CommonActions.navigate({ name: route.name })
-              );
+              navigation.dispatch(CommonActions.navigate({ name: route.name }));
             }
           };
           const onLongPress = () => {

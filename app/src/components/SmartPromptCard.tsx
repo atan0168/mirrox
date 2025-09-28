@@ -3,8 +3,6 @@ import { View, Text } from 'react-native';
 import { Button } from '@/components/Button'; // Use your existing Button component
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
-
 // ✅ Use the centralized axios instance
 import { backendApiService } from '../services/BackendApiService';
 
@@ -47,11 +45,14 @@ export default function SmartPromptCard() {
   const onYes = async () => {
     try {
       // Send meal event to backend
-      await backendApiService['axiosInstance'].post('/personalization/meal-event', {
-        food_id: sug.key?.startsWith('myfcd:') ? sug.key : null,
-        food_name: sug.name,
-        source: 'predict_yes',
-      });
+      await backendApiService['axiosInstance'].post(
+        '/personalization/meal-event',
+        {
+          food_id: sug.key?.startsWith('myfcd:') ? sug.key : null,
+          food_name: sug.name,
+          source: 'predict_yes',
+        }
+      );
 
       // Set 24h cooldown after acceptance
       await AsyncStorage.setItem(

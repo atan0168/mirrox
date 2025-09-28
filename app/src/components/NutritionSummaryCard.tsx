@@ -5,11 +5,9 @@ import { useMealStore } from '../store/mealStore';
 import { TAG_LABEL } from '../constants';
 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App'; 
+import type { RootStackParamList } from '../../App';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius, fontSize } from '../theme/layout';
-
-
 
 export function NutritionSummaryCard() {
   const navigation =
@@ -66,7 +64,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     marginTop: spacing.md, // ✅ from theme
   },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: { fontSize: fontSize.base, fontWeight: '600', color: colors.primary }, // ✅ from theme
   link: { color: colors.green[500], fontWeight: '600' }, // ✅ from theme
   energy: { fontSize: fontSize.xxl, fontWeight: '700', marginTop: spacing.sm }, // ✅ from theme
@@ -83,6 +85,3 @@ const styles = StyleSheet.create({
   chipText: { fontSize: fontSize.xs },
   muted: { color: colors.neutral[500] }, // ✅ from theme
 });
-
-
-

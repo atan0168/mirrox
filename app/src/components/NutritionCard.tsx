@@ -4,7 +4,6 @@ import { ChevronRight, Info } from 'lucide-react-native'; // Use Lucide icons in
 
 import { TAG_LABEL } from '../constants';
 
-
 type NutritionCardProps = {
   total?: {
     energy_kcal?: number;
