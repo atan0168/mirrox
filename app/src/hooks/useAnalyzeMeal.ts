@@ -1,7 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-
-const API = 'http://10.0.2.2:3000/api';
+import { backendApiService } from '../services/BackendApiService';
 export type AnalyzeResp = {
   nutrients: { total: any; per_item: any[] };
   tags: string[];
@@ -15,7 +13,11 @@ export type AnalyzeResp = {
 export function useAnalyzeMeal() {
   return useMutation({
     mutationFn: async (payload: { text?: string; imageBase64?: string }) => {
-      const { data } = await axios.post(`${API}/food/analyze`, payload);
+      const { data } = await backendApiService['axiosInstance'].post(
+        '/food/analyze',
+        payload
+      );
+      
       if (!data?.ok) throw new Error(data?.error || 'Analyze failed');
       return data.data as AnalyzeResp;
     },
