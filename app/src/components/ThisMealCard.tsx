@@ -6,7 +6,7 @@ import {
   Pressable,
   Modal,
   TextInput,
-  Platform,
+  FlatList,
 } from 'react-native';
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 import { useMeal } from '../hooks/useMeal';
@@ -61,34 +61,35 @@ export default function ThisMealCard() {
         </View>
       </View>
 
-      {items.length === 0 ? (
-        <Text style={styles.muted}>
-          No items yet. Use “+ Add item” or run Analyze to add.
-        </Text>
-      ) : (
-        <View style={{ marginTop: spacing.sm }}>
-          {items.map(it => (
-            <View key={it.id} style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{it.name}</Text>
-                <Text style={styles.itemSub}>
-                  {it.energy_kcal != null
-                    ? `${Math.round(it.energy_kcal)} kcal`
-                    : 'kcal N/A'}{' '}
-                  • x{it.qty}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => removeItem.mutate(it.id)}
-                style={styles.deleteBtn}
-              >
-                <Text style={styles.deleteTxt}>Remove</Text>
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      )}
 
+      <FlatList
+        data={items}
+        keyExtractor={item => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemSub}>
+                {item.energy_kcal != null
+                  ? `${Math.round(item.energy_kcal)} kcal`
+                  : 'kcal N/A'} • x{item.qty}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => removeItem.mutate(item.id)}
+              style={styles.deleteBtn}
+            >
+              <Text style={styles.deleteTxt}>Remove</Text>
+            </Pressable>
+          </View>
+        )}
+        // Empty state (when no items)
+        ListEmptyComponent={
+          <Text style={styles.muted}>
+            No items yet. Use “+ Add item” or run Analyze to add.
+          </Text>
+        }
+      />
       {/* Add item modal */}
       <Modal
         transparent
@@ -109,10 +110,7 @@ export default function ThisMealCard() {
             placeholder="Energy kcal (optional)"
             value={energy}
             onChangeText={setEnergy}
-            keyboardType={Platform.select({
-              ios: 'numbers-and-punctuation',
-              android: 'numeric',
-            })}
+            keyboardType="decimal-pad"
             style={styles.input}
           />
           <View style={styles.modalActions}>
