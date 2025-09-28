@@ -37,7 +37,6 @@ type MealState = {
   currentItems: MealItem[];
 
   ensureMeal: () => Promise<number>;
-  finishMeal: () => Promise<MealItem[]>;
   reloadItems: () => Promise<MealItem[]>;
   appendFromAnalysis: (perItems: PerItemLike[]) => Promise<MealItem[]>;
   addManualItem: (
@@ -70,12 +69,7 @@ export const useMealStore = create<MealState>((set, get) => ({
     return id;
   },
 
-  finishMeal: async () => {
-    const id = get().currentMealId;
-    if (id != null) {}
-    set({ currentItems: [] });
-    return [];
-  },
+ 
 
   reloadItems: async () => {
     const id = get().currentMealId;

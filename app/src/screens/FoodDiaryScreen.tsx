@@ -407,37 +407,6 @@ export default function FoodDiaryScreen() {
         <ThisMealCard />
       </View>
 
-      {/* Finish meal */}
-      <TouchableOpacity
-        onPress={() => {
-          Alert.alert('Finish this meal?', 'This will clear current meal items.', [
-            { text: 'Cancel' },
-            {
-              text: 'Finish',
-              style: 'destructive',
-              onPress: async () => {
-                await finishMeal();
-                setAnalysis(null);
-              },
-            },
-          ]);
-        }}
-        style={{
-          marginTop: spacing.sm,
-          alignSelf: 'flex-start',
-          paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.md,
-          borderRadius: borderRadius.md,
-          borderWidth: 1,
-          borderColor: colors.divider,
-          backgroundColor: colors.white,
-        }}
-      >
-        <Text style={{ fontWeight: '600', color: colors.neutral[900] }}>
-          Finish meal
-        </Text>
-      </TouchableOpacity>
-
       {/* Nutrition summary card */}
       {analysis?.nutrients?.total?.energy_kcal > 0 && (
         <View style={{ marginTop: spacing.md }}>

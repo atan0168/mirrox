@@ -18,7 +18,6 @@ export default function ThisMealCard() {
     isError,
     removeItem,
     addManual,
-    finish,
   } = useMeal();
 
   const [showAdd, setShowAdd] = useState(false);
@@ -54,9 +53,6 @@ export default function ThisMealCard() {
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           <Pressable onPress={() => setShowAdd(true)} style={styles.ghostBtn}>
             <Text style={styles.ghostTxt}>+ Add item</Text>
-          </Pressable>
-          <Pressable onPress={() => finish.mutate()} style={styles.ghostBtn}>
-            <Text style={styles.ghostTxt}>Finish meal</Text>
           </Pressable>
         </View>
       </View>
