@@ -17,7 +17,7 @@ export function useAnalyzeMeal() {
         '/food/analyze',
         payload
       );
-      
+
       if (!data?.ok) throw new Error(data?.error || 'Analyze failed');
       return data.data as AnalyzeResp;
     },

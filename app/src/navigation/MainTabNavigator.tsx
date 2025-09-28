@@ -1,6 +1,12 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import {
+  Home,
+  BarChart,
+  Settings,
+  Utensils,
+  Circle,
+} from 'lucide-react-native';
 
 // Import screens
 import DashboardScreen from '../screens/DashboardScreen';
@@ -17,14 +23,15 @@ import { colors } from '../theme';
 export type MainTabParamList = {
   Home: undefined;
   Stats: undefined;
+  FoodDiary: undefined;
   Settings: undefined;
-  FoodDiary: undefined; //
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 const MainTabNavigator: React.FC = () => {
   const alertCount = useAlertsCount();
+
   return (
     <Tab.Navigator
       detachInactiveScreens
@@ -51,26 +58,18 @@ const MainTabNavigator: React.FC = () => {
           />
         ),
         tabBarIcon: ({ color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap;
-
           switch (route.name) {
             case 'Home':
-              iconName = 'home-outline';
-              break;
+              return <Home size={size} color={color} />;
             case 'Stats':
-              iconName = 'stats-chart-outline';
-              break;
-            case 'Settings':
-              iconName = 'settings-outline';
-              break;
+              return <BarChart size={size} color={color} />;
             case 'FoodDiary':
-              iconName = 'restaurant-outline'; //
-              break;
+              return <Utensils size={size} color={color} />;
+            case 'Settings':
+              return <Settings size={size} color={color} />;
             default:
-              iconName = 'ellipse-outline';
+              return <Circle size={size} color={color} />;
           }
-
-          return <Ionicons name={iconName} size={size} color={color} />;
         },
       })}
     >
@@ -84,16 +83,16 @@ const MainTabNavigator: React.FC = () => {
         component={StatsScreen}
         options={{ tabBarLabel: 'Stats' }}
       />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ tabBarLabel: 'Settings' }}
-      />
-
+      {/* ✅ Move FoodDiary before Settings */}
       <Tab.Screen
         name="FoodDiary"
         component={FoodDiaryScreen}
         options={{ tabBarLabel: 'Food Diary' }}
+      />
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ tabBarLabel: 'Settings' }}
       />
     </Tab.Navigator>
   );
