@@ -5,6 +5,7 @@ import FormData from 'form-data';
 import fileType from 'file-type';
 import Tesseract from 'tesseract.js';
 import config from '../utils/config';
+import { getOcrWorker } from '../utils/ocrWorker';
 
 // ✅ load SQLite to read user dictionary
 import db from '../models/db';
@@ -173,9 +174,8 @@ async function maybeUploadToCloudinary(
 
 /** OCR to text with tesseract.js (default: English). For Chinese add 'eng+chi_sim'. */
 async function ocrImageToText(png: Buffer): Promise<string> {
-  const { data } = await Tesseract.recognize(png, 'eng', {
-    // logger: m => console.log(m),
-  });
+  const worker = await getOcrWorker('eng'); 
+  const { data } = await worker.recognize(png);
   return (data?.text || '').trim();
 }
 
