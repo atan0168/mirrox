@@ -155,7 +155,6 @@ const styles = StyleSheet.create({
   },
   subtle: { marginTop: spacing.xs, color: colors.neutral[500] },
   muted: { marginTop: spacing.sm, color: colors.neutral[500] },
-
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -169,7 +168,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     fontSize: fontSize.xs,
   },
-
   deleteBtn: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
@@ -179,7 +177,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.red[50],
   },
   deleteTxt: { color: colors.red[700], fontWeight: '700' },
-
   ghostBtn: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
@@ -189,7 +186,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   ghostTxt: { fontWeight: '700', color: colors.neutral[900] },
-
   backdrop: {
     position: 'absolute',
     left: 0,
@@ -228,7 +224,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: spacing.sm,
   },
-
   pill: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,

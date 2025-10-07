@@ -51,12 +51,12 @@ function escapeRegExp(s: string) {
 /** Load global mappings from SQLite (shared by all users) */
 function loadGlobalDict(): DictRow[] {
   return db
-    .prepare<unknown[], DictRow>(
-      `SELECT phrase, canonical_food_id, canonical_food_name FROM user_dict`
-    )
+    .prepare<
+      unknown[],
+      DictRow
+    >(`SELECT phrase, canonical_food_id, canonical_food_name FROM user_dict`)
     .all();
 }
-
 
 /** Build system prompt with mappings at highest priority */
 function buildSystemPromptWithDict(dict: DictRow[]) {
@@ -134,7 +134,6 @@ async function toOcrPngBuffer(input: {
     throw new Error('No image provided');
   }
 
-  
   const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
   if (buf.length > MAX_SIZE_BYTES) {
     throw new Error(
@@ -182,7 +181,7 @@ async function maybeUploadToCloudinary(
 
 /** OCR to text with tesseract.js (default: English). For Chinese add 'eng+chi_sim'. */
 async function ocrImageToText(png: Buffer): Promise<string> {
-  const worker = await getOcrWorker('eng'); 
+  const worker = await getOcrWorker('eng');
   const { data } = await worker.recognize(png);
   return (data?.text || '').trim();
 }
@@ -233,7 +232,7 @@ function safeParseJSON(s: string): ExtractResult {
 export async function extractWithDeepSeek(
   input: ExtractPayload
 ): Promise<ExtractResult> {
-  const { text, imageBase64, imageUrl} = input;
+  const { text, imageBase64, imageUrl } = input;
 
   // Load dict and build prompts
   const dict = loadGlobalDict();

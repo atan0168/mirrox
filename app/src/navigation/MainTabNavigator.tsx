@@ -30,7 +30,6 @@ const MainTabNavigator: React.FC = () => {
     <Tab.Navigator
       detachInactiveScreens
       backBehavior="initialRoute"
-      // ✅ CustomTabBar will handle icons & styles
       tabBar={props => <CustomTabBar {...props} />}
       screenOptions={({ navigation }) => ({
         lazy: true,
@@ -52,23 +51,8 @@ const MainTabNavigator: React.FC = () => {
             }}
           />
         ),
-        tabBarIcon: ({ color, size }) => {
-          switch (route.name) {
-            case 'Home':
-              return <Home size={size} color={color} />;
-            case 'Stats':
-              return <BarChart size={size} color={color} />;
-            case 'FoodDiary':
-              return <Utensils size={size} color={color} />;
-            case 'Settings':
-              return <Settings size={size} color={color} />;
-            default:
-              return <Circle size={size} color={color} />;
-          }
-        },
       })}
     >
-      {/* ✅ Tab order definition */}
       <Tab.Screen
         name="Home"
         component={DashboardScreen}

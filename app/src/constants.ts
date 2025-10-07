@@ -54,6 +54,7 @@ export const ALERT_RETENTION_DAYS = 30; // Auto-purge alerts older than this
 // Hydration tracking
 export const HYDRATION_PERSIST_KEY = 'hydration-state-v1';
 export const DEFAULT_HYDRATION_GOAL_ML = 2000; // Default 2L daily goal
+
 // Nutrition Tag Labels
 export const TAG_LABEL: Record<string, string> = {
   high_sugar: 'High Sugar',
@@ -63,5 +64,7 @@ export const TAG_LABEL: Record<string, string> = {
   unbalanced: 'Unbalanced',
 };
 
-// API base URL from environment variables
-export const API_BASE = process.env.EXPO_PUBLIC_API_BASE!;
+// Meal Suggestions
+export const PROMPT_COOLDOWN_KEY = 'smart_prompt_cooldown';
+export const ACCEPT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+export const REJECT_COOLDOWN_MS = 6 * 60 * 60 * 1000;

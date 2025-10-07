@@ -1,4 +1,4 @@
-import axios, { AxiosResponse, AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { API_BASE_URL } from '../constants';
 import { useSandboxStore } from '../store/sandboxStore';
 import {
@@ -59,7 +59,6 @@ export interface StationSearchResult {
   aqi: number;
 }
 
-// Types for dengue prediction
 export interface DenguePredictResponse {
   state: string;
   as_of: {
@@ -83,39 +82,45 @@ export interface DenguePredictResponse {
   };
 }
 
-// Minimal ArcGIS response types for dengue nearby endpoints
 export interface ArcGISField {
   name: string;
   type: string;
   alias: string;
   length?: number;
 }
+
 export interface ArcGISSpatialReference {
   wkid?: number;
   latestWkid?: number;
 }
+
 export interface ArcGISFeature<TAttributes, TGeometry = undefined> {
   attributes: TAttributes;
   geometry?: TGeometry;
 }
+
 export interface ArcGISResponse<TAttributes, TGeometry = undefined> {
   fields: ArcGISField[];
   features: Array<ArcGISFeature<TAttributes, TGeometry>>;
   geometryType?: string;
   spatialReference?: ArcGISSpatialReference;
 }
+
 export interface PointGeometry {
   x: number;
   y: number;
 }
+
 export interface PolygonGeometry {
   rings: number[][][];
 }
+
 export interface HotspotAttributes {
   'SPWD.DBO_LOKALITI_POINTS.LOKALITI': string;
   'SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES': number;
   'SPWD.AVT_HOTSPOTMINGGUAN.TEMPOH_WABAK'?: number;
 }
+
 export interface OutbreakAttributes {
   'SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI': string;
   'SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES': number;
@@ -130,43 +135,177 @@ export interface StateAttributes {
   JUMLAH_KEMATIAN: number;
 }
 
+export interface SmartPromptSuggestion {
+  key?: string;
+  name: string;
+}
+
+export interface SmartPromptResponse {
+  ok: boolean;
+  ask?: string;
+  suggestion?: SmartPromptSuggestion;
+  error?: string;
+}
+
+export interface SmartPromptMealEventPayload {
+  food_id?: string | null;
+  food_name: string;
+  source: string;
+}
+
+export interface ExtractMealRequestPayload {
+  text?: string;
+  imageBase64?: string;
+  imageUrl?: string;
+  user_id?: string;
+}
+
+export interface ExtractMealResponseData {
+  FOOD_ITEM: string[];
+  DRINK_ITEM: string[];
+  raw: string;
+  ocr?: string;
+  image_url?: string;
+}
+
+export interface ExtractMealApiResponse {
+  ok: boolean;
+  data?: ExtractMealResponseData;
+  error?: string;
+}
+
+export interface AnalyzeMealRequestPayload {
+  text?: string;
+  imageBase64?: string;
+}
+
+export interface ItemNutrient {
+  id?: string;
+  display_name?: string;
+  name?: string;
+  source: string;
+  energy_kcal: number;
+  sugar_g: number;
+  fiber_g: number;
+  fat_g: number;
+  sodium_mg: number;
+  sat_fat_g: number;
+  protein_g: number;
+}
+
+export interface AnalyzeMealResponseData {
+  nutrients: {
+    total: {
+      energy_kcal: number;
+      sugar_g: number;
+      fiber_g: number;
+      fat_g: number;
+      sodium_mg: number;
+      sat_fat_g: number;
+      protein_g: number;
+    };
+    per_item: Array<ItemNutrient>;
+  };
+  tags: string[];
+  avatar_effects: Array<{
+    meter: 'fiber' | 'sugar' | 'fat' | 'sodium';
+    delta: number;
+    reason?: string;
+  }>;
+  tips: string[];
+}
+
+export interface AnalyzeMealApiResponse {
+  ok: boolean;
+  data?: AnalyzeMealResponseData;
+  error?: string;
+}
+
 class BackendApiService {
-  private readonly axiosInstance: AxiosInstance;
+  private readonly client: AxiosInstance;
 
   constructor() {
-    this.axiosInstance = axios.create({
+    this.client = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 15000, // 15 second timeout
+      timeout: 15000,
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
-    // Add request interceptor for logging in development
-    this.axiosInstance.interceptors.request.use(
+    this.setupInterceptors();
+  }
+
+  private setupInterceptors(): void {
+    this.client.interceptors.request.use(
       config => {
         if (__DEV__) {
-          console.log(`Making API request to: ${config.baseURL}${config.url}`);
+          const method = config.method?.toUpperCase() ?? 'GET';
+          const base = config.baseURL ?? '';
+          const url = config.url ?? '';
+          console.log(`[BackendApiService] ${method} ${base}${url}`);
         }
         return config;
       },
-      error => {
-        return Promise.reject(error);
-      }
+      error => Promise.reject(error)
     );
 
-    // Add response interceptor for error handling
-    this.axiosInstance.interceptors.response.use(
-      (response: AxiosResponse) => {
-        return response;
-      },
+    this.client.interceptors.response.use(
+      (response: AxiosResponse) => response,
       error => {
         if (__DEV__) {
-          console.error('API request failed:', error.message);
+          console.error(
+            '[BackendApiService] API request failed:',
+            error.message
+          );
         }
         return Promise.reject(error);
       }
     );
+  }
+
+  private logError(context: string, error: unknown): void {
+    console.error(context, error);
+  }
+
+  private extractServerErrorMessage(error: unknown): string | undefined {
+    if (!axios.isAxiosError(error)) {
+      return undefined;
+    }
+
+    const data = error.response?.data as
+      | {
+          error?: string;
+          message?: string;
+        }
+      | undefined;
+
+    if (data?.error && typeof data.error === 'string') {
+      return data.error;
+    }
+
+    if (data?.message && typeof data.message === 'string') {
+      return data.message;
+    }
+
+    return undefined;
+  }
+
+  private normalizeError(error: unknown, fallbackMessage: string): Error {
+    const serverMessage = this.extractServerErrorMessage(error);
+    if (serverMessage) {
+      return new Error(serverMessage);
+    }
+
+    if (axios.isAxiosError(error) && error.message) {
+      return new Error(error.message);
+    }
+
+    if (error instanceof Error) {
+      return error;
+    }
+
+    return new Error(fallbackMessage);
   }
 
   /**
@@ -180,7 +319,7 @@ class BackendApiService {
     longitude: number
   ): Promise<AirQualityApiResponse> {
     try {
-      const response = await this.axiosInstance.get<AirQualityApiResponse>(
+      const response = await this.client.get<AirQualityApiResponse>(
         '/air-quality',
         {
           params: {
@@ -192,24 +331,26 @@ class BackendApiService {
 
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch air quality data:', error);
+      this.logError('Failed to fetch air quality data:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.error) {
           throw new Error(error.response.data.error);
-        } else if (
-          error.code === 'NETWORK_ERROR' ||
-          error.code === 'ECONNREFUSED'
-        ) {
+        }
+
+        if (error.code === 'NETWORK_ERROR' || error.code === 'ECONNREFUSED') {
           throw new Error(
             'Unable to connect to the backend service. Please check your connection.'
           );
-        } else if (error.code === 'ECONNABORTED') {
+        }
+
+        if (error.code === 'ECONNABORTED') {
           throw new Error('Request timeout. Please try again.');
         }
       }
 
-      throw new Error(
+      throw this.normalizeError(
+        error,
         'An unexpected error occurred while fetching air quality data.'
       );
     }
@@ -226,7 +367,7 @@ class BackendApiService {
     longitude: number
   ): Promise<AirQualityApiResponse> {
     try {
-      const response = await this.axiosInstance.get<AirQualityApiResponse>(
+      const response = await this.client.get<AirQualityApiResponse>(
         '/air-quality/aqicn',
         {
           params: {
@@ -238,7 +379,7 @@ class BackendApiService {
 
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch AQICN air quality data:', error);
+      this.logError('Failed to fetch AQICN air quality data:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.error) {
@@ -246,7 +387,8 @@ class BackendApiService {
         }
       }
 
-      throw new Error(
+      throw this.normalizeError(
+        error,
         'An unexpected error occurred while fetching AQICN air quality data.'
       );
     }
@@ -261,13 +403,13 @@ class BackendApiService {
     stationId: string
   ): Promise<AirQualityApiResponse> {
     try {
-      const response = await this.axiosInstance.get<AirQualityApiResponse>(
+      const response = await this.client.get<AirQualityApiResponse>(
         `/air-quality/aqicn/station/${stationId}`
       );
 
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch AQICN station data:', error);
+      this.logError('Failed to fetch AQICN station data:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.error) {
@@ -275,7 +417,8 @@ class BackendApiService {
         }
       }
 
-      throw new Error(
+      throw this.normalizeError(
+        error,
         'An unexpected error occurred while fetching AQICN station data.'
       );
     }
@@ -304,14 +447,13 @@ class BackendApiService {
       };
       if (radius) params.radius = radius;
 
-      const response = await this.axiosInstance.get(
-        '/air-quality/aqicn/search',
-        { params }
-      );
+      const response = await this.client.get('/air-quality/aqicn/search', {
+        params,
+      });
 
       return response.data;
     } catch (error) {
-      console.error('Failed to search AQICN stations:', error);
+      this.logError('Failed to search AQICN stations:', error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.data?.error) {
@@ -319,7 +461,8 @@ class BackendApiService {
         }
       }
 
-      throw new Error(
+      throw this.normalizeError(
+        error,
         'An unexpected error occurred while searching AQICN stations.'
       );
     }
@@ -330,10 +473,10 @@ class BackendApiService {
    */
   async clearAQICNCache(): Promise<void> {
     try {
-      await this.axiosInstance.post('/air-quality/aqicn/clear-cache');
+      await this.client.post('/air-quality/aqicn/clear-cache');
     } catch (error) {
-      console.error('Failed to clear AQICN cache:', error);
-      throw error;
+      this.logError('Failed to clear AQICN cache:', error);
+      throw this.normalizeError(error, 'Failed to clear AQICN cache.');
     }
   }
 
@@ -347,10 +490,10 @@ class BackendApiService {
     error?: string;
   }> {
     try {
-      const response = await this.axiosInstance.get('/health');
+      const response = await this.client.get('/health');
       return response.data;
     } catch (error) {
-      console.error('Health check failed:', error);
+      this.logError('Health check failed:', error);
       return {
         success: false,
         error: 'Backend service is not available',
@@ -364,11 +507,11 @@ class BackendApiService {
    */
   async getServiceStatus() {
     try {
-      const response = await this.axiosInstance.get('/air-quality/status');
+      const response = await this.client.get('/air-quality/status');
       return response.data;
     } catch (error) {
-      console.error('Failed to get service status:', error);
-      throw error;
+      this.logError('Failed to get service status:', error);
+      throw this.normalizeError(error, 'Failed to get service status.');
     }
   }
 
@@ -380,17 +523,16 @@ class BackendApiService {
     }
   ): Promise<LocationSuggestion[]> {
     try {
-      const response =
-        await this.axiosInstance.get<LocationAutocompleteResponse>(
-          '/location/autocomplete',
-          {
-            params: {
-              q: query,
-              limit: options?.limit,
-              countrycodes: options?.countryCodes,
-            },
-          }
-        );
+      const response = await this.client.get<LocationAutocompleteResponse>(
+        '/location/autocomplete',
+        {
+          params: {
+            q: query,
+            limit: options?.limit,
+            countrycodes: options?.countryCodes,
+          },
+        }
+      );
 
       if (!response.data.success) {
         throw new Error(
@@ -400,14 +542,17 @@ class BackendApiService {
 
       return response.data.data;
     } catch (error) {
-      console.error('Failed to search locations:', error);
+      this.logError('Failed to search locations:', error);
       if (axios.isAxiosError(error) && error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
       if (error instanceof Error) {
         throw error;
       }
-      throw new Error('Unable to search for locations right now.');
+      throw this.normalizeError(
+        error,
+        'Unable to search for locations right now.'
+      );
     }
   }
 
@@ -436,16 +581,16 @@ class BackendApiService {
           : { success: true };
         return result;
       }
-      const response = await this.axiosInstance.get('/dengue/predict', {
+      const response = await this.client.get('/dengue/predict', {
         params: { state, ...(params || {}) },
       });
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch dengue prediction:', error);
+      this.logError('Failed to fetch dengue prediction:', error);
       if (axios.isAxiosError(error) && error.response?.data?.error) {
         throw new Error(error.response.data.error);
       }
-      throw new Error('Unable to fetch dengue prediction.');
+      throw this.normalizeError(error, 'Unable to fetch dengue prediction.');
     }
   }
 
@@ -462,13 +607,19 @@ class BackendApiService {
       }
       return { fields: [], features: [] };
     }
-    const response = await this.axiosInstance.get('/dengue/hotspots', {
-      params: { latitude, longitude, radius: radiusKm },
-    });
-    return response.data.data as ArcGISResponse<
-      HotspotAttributes,
-      PointGeometry
-    >;
+
+    try {
+      const response = await this.client.get('/dengue/hotspots', {
+        params: { latitude, longitude, radius: radiusKm },
+      });
+      return response.data.data as ArcGISResponse<
+        HotspotAttributes,
+        PointGeometry
+      >;
+    } catch (error) {
+      this.logError('Failed to fetch dengue hotspots:', error);
+      throw this.normalizeError(error, 'Unable to fetch dengue hotspots.');
+    }
   }
 
   async fetchDengueOutbreaks(
@@ -483,18 +634,29 @@ class BackendApiService {
       }
       return { fields: [], features: [] };
     }
-    const response = await this.axiosInstance.get('/dengue/outbreaks', {
-      params: { latitude, longitude, radius: radiusKm },
-    });
-    return response.data.data as ArcGISResponse<
-      OutbreakAttributes,
-      PolygonGeometry
-    >;
+
+    try {
+      const response = await this.client.get('/dengue/outbreaks', {
+        params: { latitude, longitude, radius: radiusKm },
+      });
+      return response.data.data as ArcGISResponse<
+        OutbreakAttributes,
+        PolygonGeometry
+      >;
+    } catch (error) {
+      this.logError('Failed to fetch dengue outbreaks:', error);
+      throw this.normalizeError(error, 'Unable to fetch dengue outbreaks.');
+    }
   }
 
   async fetchDengueStateStats(): Promise<ArcGISResponse<StateAttributes>> {
-    const response = await this.axiosInstance.get('/dengue/states');
-    return response.data.data as ArcGISResponse<StateAttributes>;
+    try {
+      const response = await this.client.get('/dengue/states');
+      return response.data.data as ArcGISResponse<StateAttributes>;
+    } catch (error) {
+      this.logError('Failed to fetch dengue state stats:', error);
+      throw this.normalizeError(error, 'Unable to fetch dengue state stats.');
+    }
   }
 
   /**
@@ -502,10 +664,94 @@ class BackendApiService {
    */
   async clearCache(): Promise<void> {
     try {
-      await this.axiosInstance.post('/air-quality/clear-cache');
+      await this.client.post('/air-quality/clear-cache');
     } catch (error) {
-      console.error('Failed to clear cache:', error);
-      throw error;
+      this.logError('Failed to clear cache:', error);
+      throw this.normalizeError(error, 'Failed to clear cache.');
+    }
+  }
+
+  async fetchSmartPromptSuggestion(
+    now: number = Date.now()
+  ): Promise<SmartPromptSuggestion | null> {
+    try {
+      const { data } = await this.client.get<SmartPromptResponse>(
+        '/personalization/predict',
+        {
+          params: { now },
+        }
+      );
+
+      if (!data?.ok) {
+        if (data?.ask) {
+          return null;
+        }
+        throw new Error(
+          data?.error || 'Smart prompt suggestion not available at the moment.'
+        );
+      }
+
+      return data.suggestion ?? null;
+    } catch (error) {
+      this.logError('Failed to fetch smart prompt suggestion:', error);
+      throw this.normalizeError(
+        error,
+        'Unable to fetch smart prompt suggestion right now.'
+      );
+    }
+  }
+
+  async logSmartPromptMealEvent(
+    payload: SmartPromptMealEventPayload
+  ): Promise<void> {
+    try {
+      await this.client.post('/personalization/meal-event', payload);
+    } catch (error) {
+      this.logError('Failed to log smart prompt meal event:', error);
+      throw this.normalizeError(
+        error,
+        'Unable to log smart prompt meal event right now.'
+      );
+    }
+  }
+
+  async extractMeal(
+    payload: ExtractMealRequestPayload
+  ): Promise<ExtractMealResponseData> {
+    try {
+      const { data } = await this.client.post<ExtractMealApiResponse>(
+        '/ai/extract',
+        payload
+      );
+
+      if (!data?.ok || !data?.data) {
+        throw new Error(data?.error || 'Meal extraction failed.');
+      }
+
+      return data.data;
+    } catch (error) {
+      this.logError('Failed to extract meal:', error);
+      throw this.normalizeError(error, 'Unable to extract meal right now.');
+    }
+  }
+
+  async analyzeMeal(
+    payload: AnalyzeMealRequestPayload
+  ): Promise<AnalyzeMealResponseData> {
+    try {
+      const { data } = await this.client.post<AnalyzeMealApiResponse>(
+        '/food/analyze',
+        payload
+      );
+
+      if (!data?.ok || !data?.data) {
+        throw new Error(data?.error || 'Analyze failed');
+      }
+
+      return data.data;
+    } catch (error) {
+      this.logError('Failed to analyze meal:', error);
+      throw this.normalizeError(error, 'Unable to analyze meal right now.');
     }
   }
 }

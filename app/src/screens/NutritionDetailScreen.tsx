@@ -1,35 +1,27 @@
-// app/src/screens/NutritionDetailScreen.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  ScrollView,
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Pressable,
   Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { useMealStore } from '../store/mealStore';
 import InfoPopover from '../components/InfoPopover';
+import { TAG_LABEL } from '../constants';
+import { useMealStore } from '../store/mealStore';
+import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 
-// Fallback labels if tags_display is not provided by backend
-const TAG_LABEL: Record<string, string> = {
-  high_sugar: 'High Sugar',
-  high_fat: 'High Fat',
-  low_fiber: 'Low Fiber',
-  high_sodium: 'High Sodium',
-  unbalanced: 'Unbalanced',
-};
-
-// Small badge for per-item data source
-function SourceBadge({ source }: { source?: string }) {
-  const map: Record<string, { bg: string; fg: string; label: string }> = {
+const BADGE_MAPPING: Record<string, { bg: string; fg: string; label: string }> =
+  {
     usda: { bg: '#DBEAFE', fg: '#1D4ED8', label: 'USDA' },
     myfcd: { bg: '#CCFBF1', fg: '#0F766E', label: 'MyFCD' },
     local: { bg: '#FEF3C7', fg: '#B45309', label: 'curated' },
   };
+
+function SourceBadge({ source }: { source?: string }) {
   const key = (source || 'local').toLowerCase();
-  const s = map[key] || map.local;
+  const s = BADGE_MAPPING[key] || BADGE_MAPPING.local;
 
   return (
     <View
@@ -65,15 +57,7 @@ export default function NutritionDetailScreen() {
 
   // Totals and per-item list
   const total = last.nutrients?.total || {};
-  const items: any[] = last.nutrients?.per_item ?? (last as any).per_item ?? [];
-
-  // Optional canonical naming map
-  const nameMap: Record<string, string> = Object.fromEntries(
-    (last as any)?.canonical?.map?.((c: any) => [
-      c.id,
-      c.display_name || c.name || c.id,
-    ]) ?? []
-  );
+  const items = last.nutrients?.per_item ?? [];
 
   // Number helpers
   const round0 = (v?: number) =>
@@ -82,9 +66,7 @@ export default function NutritionDetailScreen() {
     v == null || Number.isNaN(v) ? 'N/A' : (Math.round(v * 10) / 10).toFixed(1);
 
   // Prefer display labels if provided by backend
-  const tagDisplay: string[] = (last as any)?.tags_display?.length
-    ? (last as any).tags_display
-    : (last.tags ?? []).map(k => TAG_LABEL[k] || k);
+  const tagDisplay: string[] = (last.tags ?? []).map(k => TAG_LABEL[k] || k);
 
   return (
     <ScrollView
@@ -93,11 +75,9 @@ export default function NutritionDetailScreen() {
     >
       <Text style={styles.h1}>Meal Nutrition</Text>
 
-      {/* ===== Summary card ===== */}
       <View style={styles.card}>
         <View style={styles.rowBetween}>
           <Text style={styles.h2}>Summary</Text>
-          {/* Help icon (opens methodology popover) */}
           <Pressable style={styles.helpBtn} onPress={() => setShowHow(true)}>
             <Text style={styles.helpBtnText}>?</Text>
           </Pressable>
@@ -117,11 +97,11 @@ export default function NutritionDetailScreen() {
         </View>
         <View style={styles.row}>
           <Text style={styles.key}>Saturated Fat</Text>
-          <Text style={styles.val}>{fmt1((total as any).sat_fat_g)} g</Text>
+          <Text style={styles.val}>{fmt1(total.sat_fat_g)} g</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.key}>Protein</Text>
-          <Text style={styles.val}>{fmt1((total as any).protein_g)} g</Text>
+          <Text style={styles.val}>{fmt1(total.protein_g)} g</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.key}>Fiber</Text>
@@ -152,13 +132,9 @@ export default function NutritionDetailScreen() {
         {items.length === 0 ? (
           <Text style={styles.muted}>No items detected.</Text>
         ) : (
-          items.map((it: any, idx: number) => {
+          items.map((it, idx: number) => {
             const label =
-              it.display_name ||
-              nameMap[it.id] ||
-              it.name ||
-              it.id ||
-              `Item ${idx + 1}`;
+              it.display_name || it.name || it.id || `Item ${idx + 1}`;
 
             return (
               <View key={idx} style={{ marginBottom: 12 }}>
@@ -201,7 +177,6 @@ export default function NutritionDetailScreen() {
         </View>
       )}
 
-      {/* ===== Popover: How it's calculated (with official links) ===== */}
       <InfoPopover
         visible={showHow}
         onClose={() => setShowHow(false)}
@@ -239,8 +214,6 @@ export default function NutritionDetailScreen() {
     </ScrollView>
   );
 }
-
-import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 
 const styles = StyleSheet.create({
   container: { padding: spacing.md },

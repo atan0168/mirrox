@@ -1,15 +1,5 @@
-// app/src/components/InfoPopover.tsx
 import React from 'react';
-import {
-  Modal,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Platform,
-} from 'react-native';
-
-// NEW: use design tokens from theme
+import { Modal, View, Text, Pressable, StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 
 type Props = {
@@ -62,58 +52,50 @@ export default function InfoPopover({
 }
 
 const styles = StyleSheet.create({
-  // CHANGED: use theme overlay color instead of raw rgba
   backdrop: {
     position: 'absolute',
     left: 0,
     right: 0,
     top: 0,
     bottom: 0,
-    backgroundColor: colors.overlay.medium, // NEW
+    backgroundColor: colors.overlay.medium,
   },
-
-  // CHANGED: replace hard-coded sizes/colors with tokens
   card: {
     position: 'absolute',
-    left: spacing.md, // 16
-    right: spacing.md, // 16
+    left: spacing.md,
+    right: spacing.md,
     top: '22%',
-    backgroundColor: colors.white, // NEW
-    borderRadius: borderRadius.xl, // 16
-    padding: spacing.md, // 16
-    borderWidth: 1,
-    borderColor: colors.divider, // NEW
-    ...shadows.medium, // NEW: unified shadow
-  },
-
-  // CHANGED: tokenized typography
-  title: {
-    fontSize: fontSize.base, // 16
-    fontWeight: Platform.select({ ios: '700', android: '700' }),
-    color: colors.neutral[900], // NEW
-  },
-
-  body: {
-    marginTop: spacing.xs, // 4
-  },
-
-  // CHANGED: tokenized button styles
-  actionBtn: {
-    alignSelf: 'flex-end',
-    marginTop: spacing.sm, // 8
-    paddingVertical: spacing.sm, // 8
-    paddingHorizontal: spacing.md, // 16
-    borderRadius: borderRadius.lg, // 12
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.divider,
-    backgroundColor: colors.neutral[50], // subtle background from palette
+    ...shadows.medium,
+  },
+  title: {
+    fontSize: fontSize.base,
+    fontWeight: '700',
+    color: colors.neutral[900],
+  },
+  body: {
+    marginTop: spacing.xs,
+  },
+  actionBtn: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.divider,
+    backgroundColor: colors.neutral[50],
   },
   actionBtnPressed: {
     opacity: 0.85,
   },
   actionText: {
-    fontSize: fontSize.sm, // 14
-    fontWeight: Platform.select({ ios: '700', android: '700' }),
+    fontSize: fontSize.sm,
+    fontWeight: '700',
     color: colors.neutral[900],
   },
 });

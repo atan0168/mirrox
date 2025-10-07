@@ -1,23 +1,12 @@
-// app/src/components/AnalysisCard.tsx
-import React from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
-import { ChevronRight, Info } from 'lucide-react-native';
-
-// Use UI defaults from theme
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+import { TAG_LABEL } from '../constants';
 
 type Props = {
   energyKcal?: number | null;
   tags?: string[];
   onPressDetails?: () => void;
-};
-
-const TAG_LABEL: Record<string, string> = {
-  high_sugar: 'High Sugar',
-  high_fat: 'High Fat',
-  low_fiber: 'Low Fiber',
-  high_sodium: 'High Sodium',
-  unbalanced: 'Unbalanced',
 };
 
 export default function AnalysisCard({
@@ -79,81 +68,69 @@ export default function AnalysisCard({
 }
 
 const styles = StyleSheet.create({
-  // Card container
   card: {
     backgroundColor: colors.white,
-    borderRadius: borderRadius.xl, // 16
-    paddingVertical: spacing.md, // 16
-    paddingHorizontal: spacing.lg, // 24
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderWidth: 1,
     borderColor: colors.divider,
     alignItems: 'center',
-    ...shadows.soft, // subtle elevation
+    ...shadows.soft,
   },
-
-  // Title
   title: {
-    fontSize: fontSize.lg, // 18
+    fontSize: fontSize.lg,
     fontWeight: '700',
     color: colors.neutral[900],
-    marginBottom: spacing.md, // 16
+    marginBottom: spacing.md,
   },
-
-  // Generic section wrapper
   section: {
-    marginTop: spacing.sm, // 8
+    marginTop: spacing.sm,
     alignItems: 'center',
   },
-  // Section label (caption)
   sectionLabel: {
-    fontSize: fontSize.xs, // 12
+    fontSize: fontSize.xs,
     color: colors.neutral[600],
-    marginBottom: spacing.xs, // 4
+    marginBottom: spacing.xs,
   },
-
-  // Energy value and unit
   energyValue: {
-    fontSize: fontSize.xxxl, // 32 (closest token to prior 28)
+    fontSize: fontSize.xxxl,
     fontWeight: '800',
     color: colors.neutral[900],
     textAlign: 'center',
   },
   energyUnit: {
-    marginLeft: spacing.xs, // 4
-    fontSize: fontSize.sm, // 14
+    marginLeft: spacing.xs,
+    fontSize: fontSize.sm,
     color: colors.neutral[600],
-    fontWeight: Platform.select({ ios: '600', android: '600' }),
+    fontWeight: '600',
   },
-
-  // Tag chips
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    marginTop: spacing.xs, // 4
+    marginTop: spacing.xs,
   },
   chip: {
-    paddingHorizontal: spacing.md, // 16
-    paddingVertical: spacing.xs, // 4
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     backgroundColor: colors.neutral[100],
     borderWidth: 1,
     borderColor: colors.divider,
-    marginHorizontal: spacing.xs, // 4
-    marginVertical: spacing.xs, // 4
+    marginHorizontal: spacing.xs,
+    marginVertical: spacing.xs,
   },
   chipText: {
-    fontSize: fontSize.sm, // 14 (closest to prior 13)
-    fontWeight: Platform.select({ ios: '600', android: '600' }),
+    fontSize: fontSize.sm,
+    fontWeight: '600',
     color: colors.neutral[700],
   },
-
-  // Ghost button (link-like CTA)
   ghostButton: {
-    marginTop: spacing.md, // 16
-    paddingVertical: spacing.sm, // 8
-    paddingHorizontal: spacing.md, // 16
-    borderRadius: borderRadius.lg, // 12
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
     backgroundColor: colors.sky[50],
     borderColor: colors.sky[200],
@@ -162,13 +139,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ghostButtonText: {
-    fontSize: fontSize.sm, // 14
+    fontSize: fontSize.sm,
     fontWeight: '700',
     color: colors.sky[600],
   },
   ghostButtonArrow: {
-    fontSize: fontSize.lg, // 18
-    marginLeft: spacing.xs, // 4
+    fontSize: fontSize.lg,
+    marginLeft: spacing.xs,
     color: colors.sky[600],
   },
 });

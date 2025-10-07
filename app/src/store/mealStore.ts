@@ -1,23 +1,12 @@
-// app/src/store/mealStore.ts
 import { create } from 'zustand';
-import type { AnalyzeResp } from '../hooks/useAnalyzeMeal';
-import {
-  ensureMealsSchema,
-  createMeal,
-  closeMeal,
-  insertMealItem,
-  insertMealItemsBulk,
-  deleteMealItem,
-  listMealItems,
-  getMealForToday,
-} from '../db/mealsDb';
+import { AnalyzeMealResponseData } from '../services/BackendApiService';
+import { MealsRepository } from '../services/db/MealRepository';
 
 type PerItemLike = {
   id?: string;
   name: string;
   energy_kcal?: number | null;
   source?: string;
-  [k: string]: any;
 };
 
 type MealItem = {
@@ -30,8 +19,8 @@ type MealItem = {
 };
 
 type MealState = {
-  lastAnalysis?: AnalyzeResp;
-  setLastAnalysis: (d?: AnalyzeResp) => void;
+  lastAnalysis?: AnalyzeMealResponseData;
+  setLastAnalysis: (d?: AnalyzeMealResponseData) => void;
 
   currentMealId: number | null;
   currentItems: MealItem[];
@@ -55,14 +44,10 @@ export const useMealStore = create<MealState>((set, get) => ({
   currentItems: [],
 
   ensureMeal: async () => {
-    ensureMealsSchema();
     let id = get().currentMealId;
 
     if (id == null) {
-      id = getMealForToday();
-      if (id == null) {
-        id = createMeal();
-      }
+      id = await MealsRepository.ensureMealForToday();
       set({ currentMealId: id });
     }
 
@@ -75,8 +60,8 @@ export const useMealStore = create<MealState>((set, get) => ({
       set({ currentItems: [] });
       return [];
     }
-    const rows = listMealItems(id);
-    const items: MealItem[] = rows.map((r: any) => ({
+    const rows = await MealsRepository.listMealItems(id);
+    const items: MealItem[] = rows.map(r => ({
       id: r.id,
       meal_id: r.meal_id,
       name: r.name,
@@ -93,7 +78,7 @@ export const useMealStore = create<MealState>((set, get) => ({
 
     const mealId = await get().ensureMeal();
 
-    insertMealItemsBulk(
+    await MealsRepository.addMealItemsBulk(
       mealId,
       perItems.map(p => ({
         name: p.name || p.id || 'Food',
@@ -109,12 +94,14 @@ export const useMealStore = create<MealState>((set, get) => ({
   addManualItem: async (name, energy_kcal = null, qty = 1) => {
     if (!name || !name.trim()) return get().currentItems;
     const mealId = await get().ensureMeal();
-    insertMealItem(mealId, name.trim(), energy_kcal, qty, { manual: true });
+    await MealsRepository.addMealItem(mealId, name.trim(), energy_kcal, qty, {
+      manual: true,
+    });
     return await get().reloadItems();
   },
 
   removeItemById: async itemId => {
-    deleteMealItem(itemId);
+    await MealsRepository.deleteMealItem(itemId);
     return await get().reloadItems();
   },
 }));

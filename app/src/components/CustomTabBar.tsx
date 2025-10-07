@@ -1,32 +1,30 @@
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { CommonActions } from '@react-navigation/native';
+import { BarChart3, Home, Settings, Utensils } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
   Animated,
   Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Home, BarChart3, Settings, Utensils } from 'lucide-react-native'; // ✅ lucide icons
-import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
-import { CommonActions } from '@react-navigation/native';
+import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
-const HORIZONTAL_PADDING = spacing.md; // Matches tabBar horizontal padding
+const HORIZONTAL_PADDING = spacing.md;
 
-// Define tab configuration
 interface TabConfig {
   name: string;
   icon: React.ComponentType<{ size: number; color: string }>;
   label: string;
 }
 
-// ✅ Mapping each route to icon & label
 const tabConfigs: Record<string, TabConfig> = {
   Home: { name: 'Home', icon: Home, label: 'Home' },
   Stats: { name: 'Stats', icon: BarChart3, label: 'Stats' },
-  FoodDiary: { name: 'FoodDiary', icon: Utensils, label: 'Food Diary' },
+  FoodDiary: { name: 'FoodDiary', icon: Utensils, label: 'Food' },
   Settings: { name: 'Settings', icon: Settings, label: 'Settings' },
 };
 
@@ -54,7 +52,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     });
   }, [routeCount]);
 
-  // Animate pill movement when tab changes
   useEffect(() => {
     Animated.spring(animatedValue, {
       toValue: state.index,
@@ -64,19 +61,16 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     }).start();
   }, [state.index, animatedValue]);
 
-  // Hide tab bar on specific routes (e.g., Alerts)
   const currentRoute = state.routes[state.index];
   if (currentRoute?.name === 'Alerts') {
     return null;
   }
 
-  // Calculate pill widths based on text measurement
   const pillWidths = textWidths.map(textWidth =>
     textWidth > 0 ? textWidth + 56 : 60
   );
   const innerWidth = (tabBarWidth ?? screenWidth) - HORIZONTAL_PADDING * 2;
 
-  // Get visible tabs
   const visibleRouteIndices = state.routes
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => !!tabConfigs[r.name])
@@ -95,7 +89,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     pillWidthsFull[routeIdx] = w;
   });
 
-  // Ensure hidden routes fallback to nearest visible tab
   for (let i = 0; i < routeCount; i++) {
     if (translateXOutputRange[i] === 0 && !visibleRouteIndices.includes(i)) {
       const prevVisible = [...visibleRouteIndices]
@@ -196,7 +189,6 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               activeOpacity={0.7}
             >
               <View style={styles.tabContent}>
-                {/* ✅ Use lucide icons */}
                 <IconComponent
                   size={24}
                   color={isFocused ? colors.white : colors.neutral[400]}

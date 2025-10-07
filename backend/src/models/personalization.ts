@@ -16,7 +16,6 @@ function bootstrapPersonalization() {
   `
   ).run();
 
-
   db.prepare(
     `
     CREATE TABLE IF NOT EXISTS meal_events (
@@ -32,8 +31,6 @@ function bootstrapPersonalization() {
     )
   `
   ).run();
-
- 
 }
 
 export default bootstrapPersonalization;

@@ -1,93 +1,125 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text } from 'react-native';
-import { Button } from '@/components/Button'; // Use your existing Button component
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// ✅ Use the centralized axios instance
-import { backendApiService } from '../services/BackendApiService';
-
-const COOLDOWN_KEY = 'smart_prompt_cooldown'; // Key for local cooldown storage
+import { useEffect, useState } from 'react';
+import { Alert, StyleSheet, Text, View } from 'react-native';
+import {
+  ACCEPT_COOLDOWN_MS,
+  PROMPT_COOLDOWN_KEY,
+  REJECT_COOLDOWN_MS,
+} from '../constants';
+import {
+  backendApiService,
+  SmartPromptSuggestion,
+} from '../services/BackendApiService';
+import { localStorageService } from '../services/LocalStorageService';
+import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
+import { Button } from './ui';
 
 export default function SmartPromptCard() {
-  const [sug, setSug] = useState<any>(null);
+  const [suggestion, setSuggestion] = useState<SmartPromptSuggestion | null>(
+    null
+  );
 
   useEffect(() => {
-    (async () => {
-      // --- 1) Check cooldown before making a request ---
-      const cool = await AsyncStorage.getItem(COOLDOWN_KEY);
-      if (cool) {
-        const until = Number(cool);
-        if (Date.now() < until) return; // still cooling down → skip
-      }
-
-      // --- 2) Call backend for predictive suggestion ---
-      const now = Date.now();
-
+    const fetchSuggestion = async () => {
       try {
-        // Using axios instead of fetch
-        const { data: j } = await backendApiService['axiosInstance'].get(
-          '/personalization/predict',
-          { params: { now } }
-        );
-
-        if (j?.ok && j.ask && j.suggestion) {
-          setSug(j.suggestion); // update state with suggestion
+        const cooldownRaw =
+          await localStorageService.getString(PROMPT_COOLDOWN_KEY);
+        if (cooldownRaw) {
+          const cooldownUntil = Number.parseInt(cooldownRaw, 10);
+          if (Number.isFinite(cooldownUntil) && Date.now() < cooldownUntil) {
+            return;
+          }
         }
-      } catch (err) {
-        console.error('Failed to fetch suggestion:', err);
+
+        const smartPrompt =
+          await backendApiService.fetchSmartPromptSuggestion();
+
+        if (smartPrompt) {
+          setSuggestion(smartPrompt);
+        }
+      } catch (error) {
+        console.error('Failed to fetch suggestion:', error);
       }
-    })();
+    };
+
+    void fetchSuggestion();
   }, []);
 
-  if (!sug) return null; // If no suggestion, render nothing
+  if (!suggestion) return null;
 
-  // --- Handle user accepting the suggestion ---
-  const onYes = async () => {
+  const handleAccept = async () => {
+    if (!suggestion) return;
+
     try {
-      // Send meal event to backend
-      await backendApiService['axiosInstance'].post(
-        '/personalization/meal-event',
-        {
-          food_id: sug.key?.startsWith('myfcd:') ? sug.key : null,
-          food_name: sug.name,
-          source: 'predict_yes',
-        }
+      await backendApiService.logSmartPromptMealEvent({
+        food_id: suggestion.key?.startsWith('myfcd:') ? suggestion.key : null,
+        food_name: suggestion.name,
+        source: 'predict_yes',
+      });
+
+      await localStorageService.setString(
+        PROMPT_COOLDOWN_KEY,
+        String(Date.now() + ACCEPT_COOLDOWN_MS)
       );
 
-      // Set 24h cooldown after acceptance
-      await AsyncStorage.setItem(
-        COOLDOWN_KEY,
-        String(Date.now() + 24 * 60 * 60 * 1000)
+      setSuggestion(null);
+      Alert.alert(
+        'Meal logged',
+        'Thanks! We have recorded this suggestion for you.'
       );
-
-      setSug(null);
-      toast('Logged for you'); // TODO: replace with your toast system
-    } catch (err) {
-      console.error('Failed to log meal event:', err);
+    } catch (error) {
+      console.error('Failed to log meal event:', error);
     }
   };
 
-  // --- Handle user rejecting the suggestion ---
-  const onNo = async () => {
-    // Set 6h cooldown after rejection
-    await AsyncStorage.setItem(
-      COOLDOWN_KEY,
-      String(Date.now() + 6 * 60 * 60 * 1000)
-    );
-    setSug(null);
+  const handleReject = async () => {
+    try {
+      await localStorageService.setString(
+        PROMPT_COOLDOWN_KEY,
+        String(Date.now() + REJECT_COOLDOWN_MS)
+      );
+    } catch (error) {
+      console.error('Failed to update cooldown after rejection:', error);
+    } finally {
+      setSuggestion(null);
+    }
   };
 
   return (
-    <View className="bg-white rounded-2xl p-4 shadow">
-      <Text className="text-lg font-medium">
-        Good morning! Same {sug.name} today?
+    <View style={styles.card}>
+      <Text style={styles.title}>
+        Good morning! Same {suggestion.name} today?
       </Text>
-      <View className="flex-row gap-3 mt-3">
-        <Button onPress={onYes}>Yes</Button>
-        <Button variant="outline" onPress={onNo}>
+      <View style={styles.actions}>
+        <Button onPress={handleAccept}>Yes</Button>
+        <Button
+          variant="outline"
+          onPress={handleReject}
+          style={styles.actionButtonSpacing}
+        >
           No
         </Button>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
+    ...shadows.soft,
+  },
+  title: {
+    fontSize: fontSize.lg,
+    fontWeight: '500',
+    color: colors.neutral[900],
+  },
+  actions: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+  },
+  actionButtonSpacing: {
+    marginLeft: spacing.md,
+  },
+});

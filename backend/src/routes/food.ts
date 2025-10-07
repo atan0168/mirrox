@@ -32,11 +32,8 @@ const BodySchema = z
     message: 'Provide at least one of: text, imageUrl, imageBase64',
   });
 
-
-
-
 /** Analyze: nutrition totals + tags + avatar_effects + tips */
-router.post('/analyze',detectUiLang, async (req, res) => {
+router.post('/analyze', detectUiLang, async (req, res) => {
   try {
     // UI language for labels/tips (default: English)
     const uiLang: 'en' | 'zh' | 'ms' = (req as any).uiLang;
@@ -59,7 +56,6 @@ router.post('/analyze',detectUiLang, async (req, res) => {
     // Tips language (ms falls back to English)
     const tipLang: 'en' | 'zh' = uiLang === 'zh' ? 'zh' : 'en';
 
-   
     const tips = tagsToTips(data.tags, tipLang);
 
     const per_item = (data.nutrients?.per_item || []).map((it: any) => ({

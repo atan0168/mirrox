@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { ChevronRight, Info } from 'lucide-react-native'; // Use Lucide icons instead of ASCII symbols
+import { View, Text, StyleSheet } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 
 import { TAG_LABEL } from '../constants';
+import { Card, Button, Badge } from './ui';
+import { colors, spacing, fontSize } from '../theme';
 
 type NutritionCardProps = {
   total?: {
@@ -14,7 +16,6 @@ type NutritionCardProps = {
   };
   tags?: string[];
   sources?: { key: string; label: string; url?: string }[];
-  /** Fired when user taps "See details" */
   onPressDetails?: () => void;
 };
 
@@ -24,63 +25,103 @@ export function NutritionCard({
   sources,
   onPressDetails,
 }: NutritionCardProps) {
-  // Limit tags to 2 for a quick glance
   const topTags = (tags ?? []).slice(0, 2);
-  // Use the first source for a short inline hint
   const primarySource = sources?.[0]?.label;
 
   const detailsDisabled = !onPressDetails;
 
   return (
-    <View className="rounded-2xl p-4 border border-gray-200 mt-12">
-      {/* Title: remove "(preview)" per review comment */}
-      <Text className="text-lg font-semibold">Nutrition</Text>
+    <Card style={styles.card} padding="md">
+      <Text style={styles.title}>Nutrition</Text>
 
       {!total ? (
-        <Text className="text-gray-500 mt-1">No meals analyzed yet</Text>
+        <Text style={styles.emptyState}>No meals analyzed yet</Text>
       ) : (
         <>
-          {/* Key metric for a quick glance */}
-          <Text className="mt-2">
+          <Text style={styles.metricText}>
             Energy: {Math.round(total.energy_kcal || 0)} kcal
           </Text>
 
-          {/* Show up to 2 tags */}
           {!!topTags.length && (
-            <View className="flex-row flex-wrap mt-2">
-              {topTags.map(t => (
-                <View
-                  key={t}
-                  className="px-2 py-1 mr-2 mb-2 rounded-full border border-gray-300"
-                >
-                  <Text>{TAG_LABEL[t] || t}</Text>
-                </View>
+            <View style={styles.tagsContainer}>
+              {topTags.map(tag => (
+                <Badge key={tag} variant="outline" size="sm" style={styles.tag}>
+                  {TAG_LABEL[tag] || tag}
+                </Badge>
               ))}
             </View>
           )}
 
-          {/* Short source hint with an info icon (optional but clearer) */}
           {primarySource && (
-            <Text className="text-gray-500 mt-1">Source: {primarySource}</Text>
+            <Text style={styles.sourceText}>Source: {primarySource}</Text>
           )}
 
-          {/* "See details" button: use Lucide ChevronRight instead of ASCII arrow */}
-          <TouchableOpacity
+          <Button
+            variant="ghost"
+            size="sm"
             onPress={onPressDetails}
             disabled={detailsDisabled}
-            style={{ marginTop: 10, opacity: detailsDisabled ? 0.5 : 1 }}
             accessibilityRole="button"
             accessibilityLabel="See nutrition details"
+            style={styles.detailsButton}
           >
-            <View className="flex-row items-center">
-              <Text style={{ color: '#2563EB', fontWeight: '600' }}>
-                See details
-              </Text>
-              <ChevronRight size={18} />
+            <View style={styles.detailsContent}>
+              <Text style={styles.detailsLabel}>See details</Text>
+              <ChevronRight size={18} color={colors.sky[600]} strokeWidth={2} />
             </View>
-          </TouchableOpacity>
+          </Button>
         </>
       )}
-    </View>
+    </Card>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    marginTop: spacing.xxl,
+  },
+  title: {
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    color: colors.neutral[900],
+  },
+  emptyState: {
+    marginTop: spacing.xs,
+    fontSize: fontSize.sm,
+    color: colors.neutral[500],
+  },
+  metricText: {
+    marginTop: spacing.sm,
+    fontSize: fontSize.base,
+    color: colors.neutral[800],
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: spacing.sm,
+  },
+  tag: {
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  sourceText: {
+    marginTop: spacing.xs,
+    fontSize: fontSize.sm,
+    color: colors.neutral[500],
+  },
+  detailsButton: {
+    marginTop: spacing.md,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+  },
+  detailsContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailsLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.sky[600],
+    marginRight: spacing.xs,
+  },
+});

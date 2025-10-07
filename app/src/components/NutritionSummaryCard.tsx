@@ -4,14 +4,18 @@ import { useNavigation } from '@react-navigation/native';
 import { useMealStore } from '../store/mealStore';
 import { TAG_LABEL } from '../constants';
 
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../App';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius, fontSize } from '../theme/layout';
+import { StackNavigationProp } from '@react-navigation/stack';
+
+type NavigationProps = StackNavigationProp<
+  RootStackParamList,
+  'NutritionDetail' | 'MainTabs'
+>;
 
 export function NutritionSummaryCard() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NavigationProps>();
   const last = useMealStore(s => s.lastAnalysis);
 
   const energyNum = Math.round(last?.nutrients?.total?.energy_kcal ?? 0);
@@ -58,20 +62,20 @@ export function NutritionSummaryCard() {
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderColor: colors.divider, // ✅ from theme
-    borderRadius: borderRadius.xl, // ✅ from theme
-    padding: spacing.md, // ✅ from theme
+    borderColor: colors.divider,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
     backgroundColor: colors.white,
-    marginTop: spacing.md, // ✅ from theme
+    marginTop: spacing.md,
   },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { fontSize: fontSize.base, fontWeight: '600', color: colors.primary }, // ✅ from theme
-  link: { color: colors.green[500], fontWeight: '600' }, // ✅ from theme
-  energy: { fontSize: fontSize.xxl, fontWeight: '700', marginTop: spacing.sm }, // ✅ from theme
+  title: { fontSize: fontSize.base, fontWeight: '600', color: colors.primary },
+  link: { color: colors.green[500], fontWeight: '600' },
+  energy: { fontSize: fontSize.xxl, fontWeight: '700', marginTop: spacing.sm },
   tagWrap: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.sm },
   chip: {
     paddingHorizontal: spacing.sm,
@@ -83,5 +87,5 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   chipText: { fontSize: fontSize.xs },
-  muted: { color: colors.neutral[500] }, // ✅ from theme
+  muted: { color: colors.neutral[500] },
 });
