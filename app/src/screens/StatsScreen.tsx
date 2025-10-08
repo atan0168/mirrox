@@ -29,12 +29,10 @@ import { useHealthHistory } from '../hooks/useHealthHistory';
 import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { colors } from '../theme';
 
-// ✅ Use NutritionSummaryCard instead of NutritionCard
 import { NutritionSummaryCard } from '../components/NutritionSummaryCard';
 
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();
-
   const {
     data: airQuality,
     isLoading: isAirQualityLoading,

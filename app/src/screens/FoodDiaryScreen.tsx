@@ -136,10 +136,10 @@ export default function FoodDiaryScreen() {
                   //         'Saved',
                   //         'We will remember this next time.'
                   //       );
-                  //       setText(canonicalName);
-                  //       setTimeout(() => {
-                  //         analyzeRef.current?.();
-                  //       }, 300);
+                  setText(canonicalName);
+                  setTimeout(() => {
+                    analyzeRef.current?.();
+                  }, 300);
                   //     },
                   //     onError: error => {
                   //       const message =

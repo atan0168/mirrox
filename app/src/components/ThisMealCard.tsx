@@ -6,7 +6,6 @@ import {
   Pressable,
   Modal,
   TextInput,
-  FlatList,
 } from 'react-native';
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 import { useMeal } from '../hooks/useMeal';
@@ -57,11 +56,13 @@ export default function ThisMealCard() {
         </View>
       </View>
 
-      <FlatList
-        data={items}
-        keyExtractor={item => item.id.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
+      {items.length === 0 ? (
+        <Text style={styles.muted}>
+          No items yet. Use “+ Add item” or run Analyze to add.
+        </Text>
+      ) : (
+        items.map(item => (
+          <View key={item.id.toString()} style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text style={styles.itemName}>{item.name}</Text>
               <Text style={styles.itemSub}>
@@ -78,14 +79,8 @@ export default function ThisMealCard() {
               <Text style={styles.deleteTxt}>Remove</Text>
             </Pressable>
           </View>
-        )}
-        // Empty state (when no items)
-        ListEmptyComponent={
-          <Text style={styles.muted}>
-            No items yet. Use “+ Add item” or run Analyze to add.
-          </Text>
-        }
-      />
+        ))
+      )}
       {/* Add item modal */}
       <Modal
         transparent

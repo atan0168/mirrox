@@ -4,6 +4,7 @@ import FormData from 'form-data';
 import fileType from 'file-type';
 import { getOcrWorker } from '../utils/ocrWorker';
 import { stripDataUrl, httpGetBuffer } from '../utils/binary';
+import config from '../utils/config';
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 

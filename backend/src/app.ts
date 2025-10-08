@@ -73,11 +73,6 @@ app.get('/', (_req, res) => {
       serviceStatus: '/api/air-quality/status',
       traffic: '/api/traffic/congestion',
       trafficStatus: '/api/traffic/status',
-<<<<<<< HEAD
-=======
-
-      personalization: '/api/personalization',
->>>>>>> ff2d1f8 (refactor: move binary helper functions to utils)
       locationAutocomplete: '/api/location/autocomplete?q=Melbourne',
       dengueStates: '/api/dengue/states',
       dengueHotspots: '/api/dengue/hotspots?latitude=..&longitude=..&radius=5',

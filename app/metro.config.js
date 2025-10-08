@@ -1,12 +1,9 @@
 // metro.config.js
 const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
 
 module.exports = (async () => {
-  const projectRoot = __dirname;
-  const workspaceRoot = path.resolve(projectRoot, '..');
   // 1. Get the default Expo configuration.
-  const defaultConfig = getDefaultConfig(projectRoot);
+  const defaultConfig = getDefaultConfig(__dirname);
 
   // 2. Destructure the default resolver configuration.
   const {
@@ -32,10 +29,6 @@ module.exports = (async () => {
       ...defaultConfig.resolver,
       assetExts: updatedAssetExts,
       sourceExts: updatedSourceExts,
-      nodeModulesPaths: [
-        path.join(projectRoot, 'node_modules'),
-        path.join(workspaceRoot, 'node_modules'),
-      ],
       // Force all Three.js imports to use the same instance
       alias: {
         three: require.resolve('three'),
@@ -53,6 +46,5 @@ module.exports = (async () => {
         return context.resolveRequest(context, moduleName, platform);
       },
     },
-    watchFolders: [workspaceRoot],
   };
 })();
