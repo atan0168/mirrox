@@ -1,64 +1,31 @@
-// app/src/screens/FoodDiaryScreen.tsx
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import React, { useState, useEffect } from 'react';
-import { useMeal } from '../hooks/useMeal';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useMutation } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View,
-  TextInput,
-  Text,
-  Image,
-  ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
+  ScrollView,
+  Text,
+  TextInput,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-
-import { useMealStore } from '../store/mealStore';
-import { useAvatarStore } from '../store/avatarStore';
-
 import AnalysisCard from '../components/AnalysisCard';
 import ThisMealCard from '../components/ThisMealCard';
+import { useAnalyzeMeal } from '../hooks/useAnalyzeMeal';
+import { useExtractMeal } from '../hooks/useExtractMeal';
+import {
+  AnalyzeMealResponseData,
+  FoodSearchItem,
+  backendApiService,
+} from '../services/BackendApiService';
+import { useAvatarStore } from '../store/avatarStore';
+import { useMealStore } from '../store/mealStore';
+import { borderRadius, colors, fontSize, spacing } from '../theme';
 
-// Helpers
-import { expandUserPhrases } from '../utils/expandUserPhrases';
-import { confirmAsync } from '../utils/confirmAsync';
-
-import { colors, spacing, borderRadius, fontSize } from '../theme';
-
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE!;
-
-// --- Local types ---
-type NutrientsTotal = {
-  energy_kcal: number;
-  carb_g: number;
-  sugar_g: number;
-  fat_g: number;
-  fiber_g: number;
-  sodium_mg: number;
-};
-type AnalyzeSource = { key: string; label: string; url?: string };
-type AnalyzePerItem = {
-  id?: string;
-  name?: string;
-  display_name?: string;
-  source?: string;
-  confidence?: number;
-  energy_kcal?: number | null;
-};
-type AnalyzeData = {
-  nutrients?: { total: NutrientsTotal; per_item?: AnalyzePerItem[] };
-  sources?: AnalyzeSource[];
-  per_item?: AnalyzePerItem[];
-  tags?: string[];
-  tags_display?: string[];
-  avatar_effects?: {
-    meter: 'fiber' | 'sugar' | 'fat' | 'sodium';
-    delta: number;
-    reason?: string;
-  }[];
-  tips?: string[];
-};
+const FOOD_SEARCH_LIMIT = 5;
 
 export default function FoodDiaryScreen() {
   const [text, setText] = useState('');
@@ -66,8 +33,11 @@ export default function FoodDiaryScreen() {
     null
   );
   const [loading, setLoading] = useState(false);
-  const [analysis, setAnalysis] = useState<AnalyzeData | null>(null);
-  const navigation = useNavigation<any>();
+  const [analysis, setAnalysis] = useState<AnalyzeMealResponseData | null>(
+    null
+  );
+  const navigation = useNavigation();
+  const analyzeRef = useRef<() => Promise<void>>(null);
 
   // Global stores
   const setLastAnalysis = useMealStore(s => s.setLastAnalysis);
@@ -76,7 +46,18 @@ export default function FoodDiaryScreen() {
   // Store methods for meal flow
   const appendFromAnalysis = useMealStore(s => s.appendFromAnalysis);
   const reloadMealItems = useMealStore(s => s.reloadItems);
-  const finishMeal = useMealStore(s => s.finishMeal);
+
+  const { mutateAsync: extractMealAsync } = useExtractMeal();
+  const { mutateAsync: analyzeMealAsync } = useAnalyzeMeal();
+
+  const { mutateAsync: searchFoodsAsync } = useMutation<
+    FoodSearchItem[],
+    Error,
+    string
+  >({
+    mutationFn: query =>
+      backendApiService.searchFoods(query, FOOD_SEARCH_LIMIT),
+  });
 
   // --- Pick image from gallery ---
   async function pickImage() {
@@ -102,107 +83,102 @@ export default function FoodDiaryScreen() {
   function removeImage() {
     setImage(null);
   }
-  const { quickLog } = useMeal();
+  // const { quickLog } = useMeal();
+  // const { mutate: quickLogMutate } = quickLog;
 
-  /**
-   * Main analyze flow:
-   * 1) Expand colloquial phrases on client
-   * 2) Call /ai/extract
-   * 3) If nothing recognized → search candidate → confirm → save to dict → re-run
-   * 4) Call /food/analyze for nutrition + avatar effects
-   * 5) Append recognized items to "This meal"
-   */
-  async function analyze() {
+  const analyze = useCallback(async () => {
+    const trimmedText = text.trim();
+    const imageBase64 = image?.base64;
+
+    if (!trimmedText && !imageBase64) {
+      Alert.alert('Input required', 'Enter text or pick an image.');
+      return;
+    }
+
+    setLoading(true);
+    setAnalysis(null);
+
     try {
-      if (!text.trim() && !image?.base64) {
-        return Alert.alert('Input required', 'Enter text or pick an image.');
-      }
-      setLoading(true);
-      setAnalysis(null);
-
-      // 1) Expand user phrases
-      const expanded = await expandUserPhrases(text.trim());
-
-      // 2) Entity extraction
-      const extractRes = await fetch(`${API_BASE}/ai/extract`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: expanded || undefined,
-          imageBase64: image?.base64 || undefined,
-        }),
+      const extraction = await extractMealAsync({
+        text: trimmedText || undefined,
+        imageBase64: imageBase64 || undefined,
       });
-      const extractJson = await extractRes.json();
-      if (!extractJson.ok)
-        throw new Error(extractJson.error || 'Extract failed');
 
-      const ai = extractJson.data;
       const hasEntity =
-        (ai?.FOOD_ITEM?.length || 0) + (ai?.DRINK_ITEM?.length || 0) > 0;
+        (extraction?.FOOD_ITEM?.length || 0) +
+          (extraction?.DRINK_ITEM?.length || 0) >
+        0;
 
-      // 3) Fallback → confirm candidate food
-      if (!hasEntity && text.trim()) {
-        const q = encodeURIComponent(text.trim());
-        const searchRes = await fetch(`${API_BASE}/food/search?q=${q}&limit=5`);
-        const search = await searchRes.json();
-
-        const list: any[] = Array.isArray(search)
-          ? search
-          : search?.data || search?.results || [];
-        const candidate = list[0];
+      if (!hasEntity && trimmedText) {
+        const results = await searchFoodsAsync(trimmedText);
+        const candidate = results?.[0];
 
         if (candidate?.id && candidate?.name) {
-          const ok = await confirmAsync(
-            `Did you mean “${candidate.name}” for “${text.trim()}”?`
-          );
-          if (ok) {
-            await fetch(`${API_BASE}/personalization/user-dict`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                phrase: text.trim().toLowerCase(),
-                canonical_food_id: candidate.id,
-                canonical_food_name: candidate.name,
-              }),
-            });
-            Alert.alert('Saved', 'We will remember this next time.');
-            return analyze();
-          }
-        } else {
+          const canonicalName = candidate.display_name ?? candidate.name;
           Alert.alert(
-            'Not recognized',
-            'No close match found in the food database.'
+            'Did you mean…',
+            `Did you mean “${canonicalName}” for “${trimmedText}”?`,
+            [
+              { text: 'No' },
+              {
+                text: 'Yes',
+                onPress: () => {
+                  // TODO: this should be stored on device instead
+                  // saveUserDictionary(
+                  //   {
+                  //     phrase: trimmedText.toLowerCase(),
+                  //     canonicalId: candidate.id,
+                  //     canonicalName,
+                  //   },
+                  //   {
+                  //     onSuccess: () => {
+                  //       Alert.alert(
+                  //         'Saved',
+                  //         'We will remember this next time.'
+                  //       );
+                  //       setText(canonicalName);
+                  //       setTimeout(() => {
+                  //         analyzeRef.current?.();
+                  //       }, 300);
+                  //     },
+                  //     onError: error => {
+                  //       const message =
+                  //         error instanceof Error
+                  //           ? error.message
+                  //           : 'Unable to save preference.';
+                  //       Alert.alert('Error', message);
+                  //     },
+                  //   }
+                  // );
+                },
+              },
+            ],
+            { cancelable: true }
           );
+          return;
         }
+
+        Alert.alert(
+          'Not recognized',
+          'No close match found in the food database.'
+        );
+        return;
       }
 
-      // 4) Nutrition + avatar effects
-      const res = await fetch(`${API_BASE}/food/analyze?ui_lang=en`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: text.trim() || undefined,
-          imageBase64: image?.base64 || undefined,
-        }),
+      const analysisData = await analyzeMealAsync({
+        text: trimmedText || undefined,
+        imageBase64: imageBase64 || undefined,
       });
-      const json = await res.json();
-      if (!json.ok)
-        throw new Error(
-          json.error || `Request failed with status ${res.status}`
-        );
 
-      const data: AnalyzeData = json.data;
+      const totalEnergy = Number(
+        analysisData?.nutrients?.total?.energy_kcal ?? 0
+      );
+      const perItemCount = analysisData?.nutrients?.per_item?.length ?? 0;
 
-      // Guard: stop if nothing recognized
-      const totalEnergy = Number(data?.nutrients?.total?.energy_kcal);
-      const perItemCount =
-        (data?.per_item?.length || 0) +
-        ((data?.nutrients as any)?.per_item?.length || 0);
       if (
         perItemCount === 0 &&
         (!Number.isFinite(totalEnergy) || totalEnergy <= 0)
       ) {
-        setLoading(false);
         Alert.alert(
           'Nothing recognized',
           'Please try clearer names (e.g., “roti canai, teh tarik”) or sharper receipt photos.'
@@ -210,89 +186,93 @@ export default function FoodDiaryScreen() {
         return;
       }
 
-      // Ensure source label exists
-      if (!data.sources || data.sources.length === 0) {
-        data.sources = [
-          {
-            key: 'myfcd',
-            label: 'Malaysia Food Composition Database (MyFCD)',
-            url: 'https://myfcd.moh.gov.my',
-          },
-        ];
-      }
+      setAnalysis(analysisData);
+      setLastAnalysis(analysisData);
 
-      // Backfill per_item
-      if (data.per_item && !data.nutrients?.per_item) {
-        data.nutrients = data.nutrients ?? ({} as any);
-        (data.nutrients as any).per_item = data.per_item;
-      }
+      const perItems =
+        (analysisData.nutrients?.per_item?.length ?? 0) > 0
+          ? analysisData.nutrients.per_item
+          : (analysisData.canonical ?? []);
 
-      setAnalysis(data);
-      setLastAnalysis(data);
-
-      // Append recognized items into store
-      const perMerged: AnalyzePerItem[] = (data.nutrients?.per_item ??
-        data.per_item ??
-        []) as AnalyzePerItem[];
-      if (perMerged.length > 0) {
+      if (perItems.length > 0) {
         await appendFromAnalysis(
-          perMerged.map(p => ({
-            name: p.display_name || p.name || p.id || 'Food',
-            energy_kcal: p.energy_kcal,
-            source: p.source,
+          perItems.map(item => ({
+            name: item.display_name || item.name || item.id || 'Food',
+            energy_kcal: item.energy_kcal,
+            source: item.source,
           }))
         );
       }
 
-      // Apply avatar effects
-      if (data.avatar_effects?.length) {
-        applyEffects(data.avatar_effects);
+      if (analysisData.avatar_effects?.length) {
+        applyEffects(analysisData.avatar_effects);
       }
 
       Alert.alert('Done', 'Meal analyzed and applied to Avatar.');
-    } catch (e: any) {
-      Alert.alert('Error', e?.message || 'Analyze failed');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Analyze failed';
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }
-  }
+  }, [
+    text,
+    image,
+    appendFromAnalysis,
+    applyEffects,
+    searchFoodsAsync,
+    analyzeMealAsync,
+    extractMealAsync,
+    setLastAnalysis,
+  ]);
 
   useEffect(() => {
-    let mounted = true;
-    async function checkPredictive() {
-      try {
-        const r = await fetch(
-          `${API_BASE}/personalization/predictive-candidate?hour=7&days=35`
-        ).then(x => x.json());
+    analyzeRef.current = analyze;
+  }, [analyze]);
 
-        if (!mounted) return;
-        if (r?.ok && r.suggest) {
-          Alert.alert(
-            'Good Morning!',
-            `Is it still ${r.name}?`,
-            [
-              { text: 'NO' },
-              {
-                text: 'YES',
-                onPress: async () => {
-                  quickLog.mutate(r.food_id);
-                  setText(r.name);
-                  await analyze();
-                },
-              },
-            ],
-            { cancelable: true }
-          );
-        }
-      } catch (err) {
-        console.log('[predictive] error', err);
-      }
-    }
-    checkPredictive();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // TODO: this should be done only on the frontend
+  // useEffect(() => {
+  //   let active = true;
+  //
+  //   const checkPredictive = async () => {
+  //     try {
+  //       const response = await fetchPredictiveCandidate();
+  //       if (!active || !response?.ok || !response.suggest) {
+  //         return;
+  //       }
+  //
+  //       const suggestionName = response.name ?? 'this meal';
+  //       Alert.alert(
+  //         'Good Morning!',
+  //         `Is it still ${suggestionName}?`,
+  //         [
+  //           { text: 'No' },
+  //           {
+  //             text: 'Yes',
+  //             onPress: () => {
+  //               if (response.food_id) {
+  //                 quickLogMutate(response.food_id);
+  //               }
+  //               setText(suggestionName);
+  //               analyzeRef.current?.();
+  //             },
+  //           },
+  //         ],
+  //         { cancelable: true }
+  //       );
+  //     } catch (error) {
+  //       if (__DEV__) {
+  //         console.log('[predictive] error', error);
+  //       }
+  //     }
+  //   };
+  //
+  //   checkPredictive();
+  //
+  //   return () => {
+  //     active = false;
+  //   };
+  // }, [fetchPredictiveCandidate, quickLogMutate]);
 
   // Refresh meal items on focus
   useFocusEffect(
@@ -353,7 +333,7 @@ export default function FoodDiaryScreen() {
         >
           <Text
             style={{
-              fontSize: fontSize.md,
+              fontSize: fontSize.base,
               fontWeight: '600',
               color: colors.primary,
             }}
@@ -377,7 +357,7 @@ export default function FoodDiaryScreen() {
           >
             <Text
               style={{
-                fontSize: fontSize.md,
+                fontSize: fontSize.base,
                 fontWeight: '600',
                 color: colors.primary,
               }}
@@ -419,7 +399,7 @@ export default function FoodDiaryScreen() {
           style={{
             color: colors.white,
             fontWeight: '600',
-            fontSize: fontSize.md,
+            fontSize: fontSize.base,
           }}
         >
           {loading ? 'Analyzing...' : 'ANALYZE'}
@@ -433,10 +413,10 @@ export default function FoodDiaryScreen() {
       </View>
 
       {/* Nutrition summary card */}
-      {analysis?.nutrients?.total?.energy_kcal > 0 && (
+      {(analysis?.nutrients?.total?.energy_kcal ?? 0) > 0 && (
         <View style={{ marginTop: spacing.md }}>
           <AnalysisCard
-            energyKcal={analysis.nutrients.total.energy_kcal}
+            energyKcal={analysis?.nutrients.total.energy_kcal}
             tags={tagsForCard}
             onPressDetails={() =>
               navigation.navigate('NutritionDetail' as never)
@@ -463,7 +443,7 @@ export default function FoodDiaryScreen() {
             style={{
               color: colors.primary,
               fontWeight: '600',
-              fontSize: fontSize.md,
+              fontSize: fontSize.base,
             }}
           >
             CLEAR

@@ -18,31 +18,32 @@ export default function SmartPromptCard() {
     null
   );
 
-  useEffect(() => {
-    const fetchSuggestion = async () => {
-      try {
-        const cooldownRaw =
-          await localStorageService.getString(PROMPT_COOLDOWN_KEY);
-        if (cooldownRaw) {
-          const cooldownUntil = Number.parseInt(cooldownRaw, 10);
-          if (Number.isFinite(cooldownUntil) && Date.now() < cooldownUntil) {
-            return;
-          }
-        }
-
-        const smartPrompt =
-          await backendApiService.fetchSmartPromptSuggestion();
-
-        if (smartPrompt) {
-          setSuggestion(smartPrompt);
-        }
-      } catch (error) {
-        console.error('Failed to fetch suggestion:', error);
-      }
-    };
-
-    void fetchSuggestion();
-  }, []);
+  // TODO: migrate this functionality to frontend
+  // useEffect(() => {
+  //   const fetchSuggestion = async () => {
+  //     try {
+  //       const cooldownRaw =
+  //         await localStorageService.getString(PROMPT_COOLDOWN_KEY);
+  //       if (cooldownRaw) {
+  //         const cooldownUntil = Number.parseInt(cooldownRaw, 10);
+  //         if (Number.isFinite(cooldownUntil) && Date.now() < cooldownUntil) {
+  //           return;
+  //         }
+  //       }
+  //
+  //       const smartPrompt =
+  //         await backendApiService.fetchSmartPromptSuggestion();
+  //
+  //       if (smartPrompt) {
+  //         setSuggestion(smartPrompt);
+  //       }
+  //     } catch (error) {
+  //       console.error('Failed to fetch suggestion:', error);
+  //     }
+  //   };
+  //
+  //   void fetchSuggestion();
+  // }, []);
 
   if (!suggestion) return null;
 
@@ -50,11 +51,12 @@ export default function SmartPromptCard() {
     if (!suggestion) return;
 
     try {
-      await backendApiService.logSmartPromptMealEvent({
-        food_id: suggestion.key?.startsWith('myfcd:') ? suggestion.key : null,
-        food_name: suggestion.name,
-        source: 'predict_yes',
-      });
+      // TODO: if we want this we should move it to the mobile app itself
+      // await backendApiService.logSmartPromptMealEvent({
+      //   food_id: suggestion.key?.startsWith('myfcd:') ? suggestion.key : null,
+      //   food_name: suggestion.name,
+      //   source: 'predict_yes',
+      // });
 
       await localStorageService.setString(
         PROMPT_COOLDOWN_KEY,

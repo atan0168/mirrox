@@ -1,23 +1,11 @@
-// backend/src/services/deepseek.ts
 import axios from 'axios';
 import sharp from 'sharp';
 import FormData from 'form-data';
 import fileType from 'file-type';
-import Tesseract from 'tesseract.js';
-import config from '../utils/config';
 import { getOcrWorker } from '../utils/ocrWorker';
 import { stripDataUrl, httpGetBuffer } from '../utils/binary';
 
-// ✅ load SQLite to read user dictionary
-import db from '../models/db';
-
-// ------------------------- ENV -------------------------
-const BASE_URL = config.deepseek.baseUrl;
-const API_KEY = config.deepseek.apiKey;
-const TEXT_MODEL = config.deepseek.textModel;
-
-const CLOUDINARY_CLOUD = config.cloudinary.cloudName;
-const CLOUDINARY_PRESET = config.cloudinary.preset;
+const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
 // ------------------------- Types -------------------------
 
@@ -36,49 +24,8 @@ export type ExtractResult = {
   image_url?: string; // uploaded Cloudinary URL if available
 };
 
-// ------------------------- User Dictionary (Personalization) -------------------------
-
-type DictRow = {
-  phrase: string;
-  canonical_food_id: string | null;
-  canonical_food_name: string | null;
-};
-
-/** Escape regex meta characters */
-function escapeRegExp(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-/** Load global mappings from SQLite (shared by all users) */
-function loadGlobalDict(): DictRow[] {
-  return db
-    .prepare<
-      unknown[],
-      DictRow
-    >(`SELECT phrase, canonical_food_id, canonical_food_name FROM user_dict`)
-    .all();
-}
-
-/** Build system prompt with mappings at highest priority */
-function buildSystemPromptWithDict(dict: DictRow[]) {
-  const lines = dict.map(e => {
-    const to = e.canonical_food_name || e.canonical_food_id || 'UNKNOWN';
-    return `- "${e.phrase}" => "${to}"`;
-  });
-
-  return [
-    'You are a food & drink extraction assistant for Malaysian context.',
-    'When interpreting colloquial inputs, APPLY user-defined mappings with the highest priority:',
-    ...lines,
-    '',
-    'Then continue normal extraction/classification.',
-    'Output JSON only: { "FOOD_ITEM": [...], "DRINK_ITEM": [...] }',
-    'Use lowercase names and deduplicate.',
-  ].join('\n');
-}
-
-/** Fallback system prompt (no user dictionary available) */
-function buildFallbackSystemPrompt() {
+/** System prompt */
+function buildSystemPrompt() {
   return [
     'You are a food & drink extraction assistant. Output JSON only:',
     '{ "FOOD_ITEM": [...], "DRINK_ITEM": [...] }',
@@ -121,7 +68,6 @@ async function toOcrPngBuffer(input: {
     throw new Error('No image provided');
   }
 
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
   if (buf.length > MAX_SIZE_BYTES) {
     throw new Error(
       `Image too large (${(buf.length / 1024 / 1024).toFixed(1)} MB). Limit is 5 MB.`
@@ -154,11 +100,12 @@ async function toOcrPngBuffer(input: {
 async function maybeUploadToCloudinary(
   png: Buffer
 ): Promise<string | undefined> {
-  if (!CLOUDINARY_CLOUD || !CLOUDINARY_PRESET) return undefined;
+  if (!config.cloudinary.cloudName || !config.cloudinary.preset)
+    return undefined;
   const form = new FormData();
   form.append('file', `data:image/png;base64,${png.toString('base64')}`);
-  form.append('upload_preset', CLOUDINARY_PRESET);
-  const url = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
+  form.append('upload_preset', config.cloudinary.preset);
+  const url = `https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/image/upload`;
   const resp = await axios.post(url, form, {
     headers: form.getHeaders(),
     timeout: 30_000,
@@ -174,10 +121,10 @@ async function ocrImageToText(png: Buffer): Promise<string> {
 }
 
 async function callChat(payload: any) {
-  const url = `${BASE_URL}/chat/completions`;
+  const url = `${config.deepseek.baseUrl}/chat/completions`;
   return axios.post(url, payload, {
     headers: {
-      Authorization: `Bearer ${API_KEY}`,
+      Authorization: `Bearer ${config.deepseek.apiKey}`,
       'Content-Type': 'application/json',
     },
     timeout: 60_000,
@@ -221,23 +168,14 @@ export async function extractWithDeepSeek(
 ): Promise<ExtractResult> {
   const { text, imageBase64, imageUrl } = input;
 
-  // Load dict and build prompts
-  const dict = loadGlobalDict();
-  const systemPrompt =
-    dict.length > 0
-      ? buildSystemPromptWithDict(dict)
-      : buildFallbackSystemPrompt();
+  const systemPrompt = buildSystemPrompt();
 
-  // Expand user text by dict first (improves recall)
-  const expandedUserText = expandTextByDict(text, dict);
-
-  // Text-only path
   if (!imageBase64 && !imageUrl) {
     const resp = await callChat({
-      model: TEXT_MODEL,
+      model: config.deepseek.textModel,
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: expandedUserText || '' },
+        { role: 'user', content: text || '' },
       ],
     });
     const content = resp.data?.choices?.[0]?.message?.content || '';
@@ -245,22 +183,23 @@ export async function extractWithDeepSeek(
   }
 
   // Image path: OCR then merge, and expand merged text by dict
-  const png = await toOcrPngBuffer({ imageBase64, imageUrl });
-  const publicUrl = await maybeUploadToCloudinary(png); // optional
+  const png = await toOcrPngBuffer({
+    ...(imageBase64 && { imageBase64 }),
+    ...(imageUrl && { imageUrl }),
+  });
+  const publicUrl = await maybeUploadToCloudinary(png);
   const ocrText = await ocrImageToText(png);
 
-  const mergedTextRaw = [
-    expandedUserText?.trim(),
+  const mergedText = [
+    text?.trim(),
     ocrText ? `OCR text:\n${ocrText}` : undefined,
     'Please extract FOOD_ITEM and DRINK_ITEM from the text above and output JSON only.',
   ]
     .filter(Boolean)
     .join('\n\n');
 
-  const mergedText = expandTextByDict(mergedTextRaw, dict);
-
   const resp = await callChat({
-    model: TEXT_MODEL,
+    model: config.deepseek.textModel,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: mergedText },
@@ -269,5 +208,9 @@ export async function extractWithDeepSeek(
 
   const content = resp.data?.choices?.[0]?.message?.content || '';
   const parsed = safeParseJSON(content);
-  return { ...parsed, ocr: ocrText, image_url: publicUrl };
+  return {
+    ...parsed,
+    ocr: ocrText,
+    ...(publicUrl && { image_url: publicUrl }),
+  };
 }

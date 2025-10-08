@@ -62,8 +62,8 @@ const config: Config = {
     textModel: process.env.DEEPSEEK_TEXT_MODEL || 'deepseek-chat',
   },
   cloudinary: {
-    cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-    preset: process.env.CLOUDINARY_UNSIGNED_PRESET,
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+    preset: process.env.CLOUDINARY_UNSIGNED_PRESET || '',
   },
 
   server: {

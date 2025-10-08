@@ -183,14 +183,20 @@ export interface ItemNutrient {
   id?: string;
   display_name?: string;
   name?: string;
-  source: string;
-  energy_kcal: number;
-  sugar_g: number;
-  fiber_g: number;
-  fat_g: number;
-  sodium_mg: number;
-  sat_fat_g: number;
-  protein_g: number;
+  source?: string;
+  energy_kcal?: number;
+  sugar_g?: number;
+  fiber_g?: number;
+  fat_g?: number;
+  sodium_mg?: number;
+  sat_fat_g?: number;
+  protein_g?: number;
+}
+
+export interface AnalyzeSource {
+  key: string;
+  label: string;
+  url?: string;
 }
 
 export interface AnalyzeMealResponseData {
@@ -207,17 +213,65 @@ export interface AnalyzeMealResponseData {
     per_item: Array<ItemNutrient>;
   };
   tags: string[];
+  tags_display?: string[];
   avatar_effects: Array<{
     meter: 'fiber' | 'sugar' | 'fat' | 'sodium';
     delta: number;
     reason?: string;
   }>;
   tips: string[];
+  canonical?: Array<ItemNutrient>;
+  sources?: AnalyzeSource[];
 }
 
 export interface AnalyzeMealApiResponse {
   ok: boolean;
   data?: AnalyzeMealResponseData;
+  error?: string;
+}
+
+export interface FoodSearchItem {
+  id: string;
+  name: string;
+  category?: string | null;
+  display_name?: string;
+}
+
+interface FoodSearchResponse {
+  success: boolean;
+  data?: FoodSearchItem[];
+  error?: string;
+}
+
+export interface UserDictionaryEntry {
+  user_id: string;
+  phrase: string;
+  canonical_food_id?: string | null;
+  canonical_food_name?: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+interface UserDictionaryResponse {
+  ok: boolean;
+  data?: UserDictionaryEntry[];
+  error?: string;
+}
+
+export interface UserDictionaryUpsertPayload {
+  userId: string;
+  phrase: string;
+  canonicalFoodId: string;
+  canonicalFoodName?: string;
+}
+
+export interface PredictiveCandidateResponse {
+  ok: boolean;
+  suggest?: boolean;
+  food_id?: string;
+  name?: string;
+  reason?: string;
+  slot?: number;
   error?: string;
 }
 
@@ -701,19 +755,56 @@ class BackendApiService {
     }
   }
 
-  async logSmartPromptMealEvent(
-    payload: SmartPromptMealEventPayload
-  ): Promise<void> {
+  async searchFoods(
+    query: string,
+    limit: number = 5
+  ): Promise<FoodSearchItem[]> {
     try {
-      await this.client.post('/personalization/meal-event', payload);
-    } catch (error) {
-      this.logError('Failed to log smart prompt meal event:', error);
-      throw this.normalizeError(
-        error,
-        'Unable to log smart prompt meal event right now.'
+      const { data } = await this.client.get<FoodSearchResponse>(
+        '/food/search',
+        {
+          params: { q: query, limit },
+        }
       );
+
+      if (!data?.success || !Array.isArray(data.data)) {
+        throw new Error(data?.error || 'Food search failed.');
+      }
+
+      return data.data;
+    } catch (error) {
+      this.logError('Failed to search foods:', error);
+      throw this.normalizeError(error, 'Unable to search foods right now.');
     }
   }
+
+  // TODO: If we want this we should move it to the mobile app itself
+  // async fetchPredictiveCandidate({
+  //   hour,
+  //   days,
+  // }: {
+  //   hour?: number;
+  //   days?: number;
+  // }): Promise<PredictiveCandidateResponse> {
+  //   try {
+  //     const { data } = await this.client.get<PredictiveCandidateResponse>(
+  //       '/personalization/predictive-candidate',
+  //       {
+  //         params: {
+  //           hour,
+  //           days,
+  //         },
+  //       }
+  //     );
+  //     return data;
+  //   } catch (error) {
+  //     this.logError('Failed to fetch predictive candidate:', error);
+  //     throw this.normalizeError(
+  //       error,
+  //       'Unable to fetch predictive candidate right now.'
+  //     );
+  //   }
+  // }
 
   async extractMeal(
     payload: ExtractMealRequestPayload

@@ -1,4 +1,3 @@
-// backend/src/routes/ai.ts
 import { Router } from 'express';
 import { extractWithDeepSeek } from '../services/deepseek';
 
@@ -10,16 +9,15 @@ const router = Router();
  */
 router.post('/extract', async (req, res) => {
   try {
-    const { text, imageBase64, imageUrl, user_id } = req.body || {};
+    const { text, imageBase64, imageUrl } = req.body || {};
     const result = await extractWithDeepSeek({
       text,
       imageBase64,
       imageUrl,
-      user_id,
     });
     res.json({ ok: true, data: result });
-  } catch (err: any) {
-    console.error('[AI/extract] error:', err?.message || err);
+  } catch (err) {
+    console.error('[AI/extract] error:', err);
     res.status(500).json({ ok: false, error: 'AI extract failed' });
   }
 });
