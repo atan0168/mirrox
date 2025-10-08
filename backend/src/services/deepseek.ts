@@ -6,6 +6,7 @@ import fileType from 'file-type';
 import Tesseract from 'tesseract.js';
 import config from '../utils/config';
 import { getOcrWorker } from '../utils/ocrWorker';
+import { stripDataUrl, httpGetBuffer } from '../utils/binary';
 
 // ✅ load SQLite to read user dictionary
 import db from '../models/db';
@@ -97,20 +98,6 @@ function expandTextByDict(text: string | undefined, dict: DictRow[]) {
     t = t.replace(re, target);
   }
   return t;
-}
-
-// ------------------------- Helpers -------------------------
-
-function stripDataUrl(b64: string) {
-  return b64.replace(/^data:[^;]+;base64,/, '');
-}
-
-async function httpGetBuffer(url: string): Promise<Buffer> {
-  const resp = await axios.get<ArrayBuffer>(url, {
-    responseType: 'arraybuffer',
-    timeout: 30_000,
-  });
-  return Buffer.from(resp.data);
 }
 
 /**
