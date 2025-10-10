@@ -7,21 +7,25 @@ import { create } from 'zustand';
 export type WeatherOption = 'sunny' | 'cloudy' | 'rainy';
 export type GlobalTimeOfDay = 'morning' | 'day' | 'evening' | 'night';
 
+type MeterKey = 'fiber' | 'sugar' | 'fat' | 'sodium';
+export type MeterState = Record<MeterKey, number>;
+const clamp = (n: number, min = 0, max = 100) =>
+  Math.max(min, Math.min(max, n));
+
 interface AvatarState {
   // Unified time-of-day override (independent of weather). Null = auto mapping.
-  // When null we derive morning/day/evening/night from local clock.
   timeOfDayOverride: GlobalTimeOfDay | null;
   // Scheduler-computed current phase (always reflects real clock unless override is applied elsewhere)
-  currentPhase: GlobalTimeOfDay; // updated by scheduler hook
+  currentPhase: GlobalTimeOfDay;
   // Animation
   activeAnimation: string | null;
-  isManualAnimation: boolean; // User explicitly selected an animation
-  sleepMode: boolean; // Time-window driven auto state
+  isManualAnimation: boolean;
+  sleepMode: boolean;
 
-  // Environment controls (developer / UI driven)
+  // Environment controls
   overrideWeather: WeatherOption | null;
 
-  // Loading state (progress for avatar assets)
+  // Loading state
   isAvatarLoading: boolean;
   loadingProgress: { loaded: number; total: number; item: string };
 
@@ -44,6 +48,8 @@ interface AvatarState {
   // Auto-derived eye-bags state (from health, etc.)
   eyeBagsAutoEnabled: boolean;
   eyeBagsAutoIntensity: number;
+  // Health meters
+  meters: MeterState;
 
   // Actions
   setActiveAnimation: (
@@ -75,6 +81,10 @@ interface AvatarState {
   setEyeBagsSize: (w: number, h: number) => void;
   setEyeBagsAspectX: (ax: number) => void;
   setEyeBagsAuto: (enabled: boolean, intensity: number) => void;
+  // Nutrition-related actions
+  applyEffects: (effects: { meter: MeterKey; delta: number }[]) => void;
+  setMeters: (partial: Partial<MeterState>) => void;
+  resetMeters: (value?: number) => void;
 }
 
 export const useAvatarStore = create<AvatarState>((set, get) => ({
@@ -101,6 +111,8 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
   eyeBagsAspectX: 1.6,
   eyeBagsAutoEnabled: false,
   eyeBagsAutoIntensity: 0.0,
+
+  meters: { fiber: 50, sugar: 50, fat: 50, sodium: 50 },
 
   setActiveAnimation: (anim, opts) =>
     set({
@@ -141,4 +153,16 @@ export const useAvatarStore = create<AvatarState>((set, get) => ({
       eyeBagsAutoEnabled: enabled,
       eyeBagsAutoIntensity: Math.max(0, Math.min(1, intensity)),
     }),
+  applyEffects: effects => {
+    if (!effects?.length) return;
+    const next = { ...get().meters };
+    for (const e of effects) {
+      if (!e || !(e.meter in next) || !Number.isFinite(e.delta)) continue;
+      next[e.meter] = clamp(next[e.meter as MeterKey] + e.delta);
+    }
+    set({ meters: next });
+  },
+  setMeters: partial => set({ meters: { ...get().meters, ...partial } }),
+  resetMeters: (value = 50) =>
+    set({ meters: { fiber: value, sugar: value, fat: value, sodium: value } }),
 }));

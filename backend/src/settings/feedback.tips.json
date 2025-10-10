@@ -1,0 +1,17 @@
+{
+  "high_sugar": [
+    { "en": "Go 'kurang manis' next time.", "zh": "下次点少糖/半糖试试。" }
+  ],
+  "low_fiber": [
+    {
+      "en": "Add veggies/fruit to boost fiber.",
+      "zh": "加一份蔬菜或水果提升纤维。"
+    }
+  ],
+  "high_fat": [
+    {
+      "en": "Swap roti canai for chapati.",
+      "zh": "试试把 roti canai 换成 chapati。"
+    }
+  ]
+}

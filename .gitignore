@@ -3,3 +3,14 @@
 .vscode/
 .env
 node_modules/
+
+ml_service/data/raw/usda/food.csv
+ml_service/data/raw/usda/food_nutrient.csv
+backend/data/usda_clean.json
+
+
+ml_service/data/
+ml_service/.venv/
+build/
+.venv/
+.env

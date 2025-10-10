@@ -3,6 +3,8 @@ import airQualityRoutes from './airQuality';
 import trafficRoutes from './traffic';
 import dengueRoutes from './dengue';
 import locationRoutes from './location';
+import aiRoutes from './ai';
+import food from './food';
 
 const router = Router();
 
@@ -11,6 +13,8 @@ router.use('/air-quality', airQualityRoutes);
 router.use('/traffic', trafficRoutes);
 router.use('/dengue', dengueRoutes);
 router.use('/location', locationRoutes);
+router.use('/ai', aiRoutes);
+router.use('/food', food);
 
 // General health check
 router.get('/health', (req, res) => {

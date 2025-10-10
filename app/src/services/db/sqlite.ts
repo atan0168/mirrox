@@ -154,6 +154,26 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           ON hydration_state(updatedAt DESC);
       `);
 
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS meals (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          started_at INTEGER NOT NULL,
+          ended_at INTEGER,
+          date TEXT NOT NULL UNIQUE
+        );
+        CREATE TABLE IF NOT EXISTS meal_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          meal_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          qty REAL NOT NULL DEFAULT 1,
+          energy_kcal REAL,
+          meta_json TEXT,
+          FOREIGN KEY (meal_id) REFERENCES meals(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_meal_items_meal_id
+          ON meal_items(meal_id, id DESC);
+      `);
+
       return db;
     })();
   }

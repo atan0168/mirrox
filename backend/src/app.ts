@@ -58,7 +58,7 @@ app.use('/api', limiter);
 app.use('/api', routes);
 
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
     message: 'Digital Twin Backend API',
     version: '1.0.0',
@@ -76,6 +76,7 @@ app.get('/', (req, res) => {
       dengueOutbreaks:
         '/api/dengue/outbreaks?latitude=..&longitude=..&radius=5',
       denguePredict: '/api/dengue/predict?state=SELANGOR&live=true',
+      foodExtract: '/api/food/extract',
     },
   });
 });

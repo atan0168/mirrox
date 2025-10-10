@@ -1,0 +1,42 @@
+{
+  "rice": {
+    "default_portion": { "unit": "bowl", "grams": 180 },
+    "basis": "per_100g"
+  },
+  "burger": {
+    "default_portion": { "unit": "piece", "grams": 230 },
+    "basis": "per_100g"
+  },
+  "flatbread": {
+    "default_portion": { "unit": "piece", "grams": 80 },
+    "basis": "per_100g"
+  },
+  "noodle": {
+    "default_portion": { "unit": "plate", "grams": 400 },
+    "basis": "per_100g"
+  },
+  "curry": {
+    "default_portion": { "unit": "bowl", "grams": 150 },
+    "basis": "per_100g"
+  },
+  "grill": {
+    "default_portion": { "unit": "piece", "grams": 35 },
+    "basis": "per_100g"
+  },
+  "sauce": {
+    "default_portion": { "unit": "g", "grams": 45 },
+    "basis": "per_100g"
+  },
+  "dessert": {
+    "default_portion": { "unit": "bowl", "grams": 220 },
+    "basis": "per_100g"
+  },
+  "beverage": {
+    "default_portion": { "unit": "cup", "ml": 300 },
+    "basis": "per_100ml"
+  },
+  "coffee": {
+    "default_portion": { "unit": "cup", "ml": 240 },
+    "basis": "per_100ml"
+  }
+}

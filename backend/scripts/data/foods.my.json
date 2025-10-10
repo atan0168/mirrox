@@ -1,0 +1,734 @@
+[
+  {
+    "id": "rice_cooked",
+    "name": "white rice (cooked)",
+    "aliases": ["rice", "nasi putih", "白饭", "一碗饭"],
+    "category": "rice",
+    "default_portion": { "unit": "bowl", "grams": 180 },
+    "nutrients_per_100g": {
+      "energy_kcal": 130,
+      "carb_g": 28,
+      "sugar_g": 0.1,
+      "fat_g": 0.3,
+      "sat_fat_g": 0.1,
+      "protein_g": 2.7,
+      "fiber_g": 0.4,
+      "sodium_mg": 0
+    }
+  },
+  {
+    "id": "burger_generic",
+    "name": "burger (generic)",
+    "aliases": ["hamburger", "汉堡", "burger"],
+    "category": "burger",
+    "default_portion": { "unit": "piece", "grams": 230 },
+    "nutrients_per_100g": {
+      "energy_kcal": 250,
+      "carb_g": 26,
+      "sugar_g": 5,
+      "fat_g": 11,
+      "sat_fat_g": 4.5,
+      "protein_g": 12,
+      "fiber_g": 1.5,
+      "sodium_mg": 480
+    }
+  },
+  {
+    "id": "roti_canai",
+    "name": "roti canai",
+    "aliases": ["roti prata", "roti canei", "roti"],
+    "category": "flatbread",
+    "default_portion": { "unit": "piece", "grams": 80 },
+    "nutrients_per_100g": {
+      "energy_kcal": 330,
+      "carb_g": 45,
+      "sugar_g": 3,
+      "fat_g": 14,
+      "sat_fat_g": 7,
+      "protein_g": 7,
+      "fiber_g": 2,
+      "sodium_mg": 320
+    }
+  },
+  {
+    "id": "teh_tarik",
+    "name": "teh tarik",
+    "aliases": ["teh tarik ais", "拉茶", "奶茶"],
+    "category": "beverage",
+    "default_portion": { "unit": "cup", "ml": 300 },
+    "nutrients_per_100ml": {
+      "energy_kcal": 70,
+      "carb_g": 11,
+      "sugar_g": 10,
+      "fat_g": 2.5,
+      "sat_fat_g": 1.6,
+      "protein_g": 1.8,
+      "fiber_g": 0,
+      "sodium_mg": 45
+    },
+    "modifiers": {
+      "kurang manis": { "sugar_factor": 0.7 },
+      "less sugar": { "sugar_factor": 0.7 },
+      "no sugar": { "sugar_factor": 0.1 }
+    }
+  },
+  {
+    "id": "nasi_lemak",
+    "name": "nasi lemak",
+    "aliases": ["椰浆饭", "nasilemak"],
+    "category": "rice",
+    "default_portion": { "unit": "plate", "grams": 400 },
+    "nutrients_per_100g": {
+      "energy_kcal": 240,
+      "carb_g": 25,
+      "sugar_g": 3,
+      "fat_g": 11,
+      "sat_fat_g": 6,
+      "protein_g": 7,
+      "fiber_g": 1.5,
+      "sodium_mg": 400
+    }
+  },
+  {
+    "id": "char_kuey_teow",
+    "name": "char kuey teow",
+    "aliases": ["炒粿条", "ckt"],
+    "category": "noodle",
+    "default_portion": { "unit": "plate", "grams": 400 },
+    "nutrients_per_100g": {
+      "energy_kcal": 210,
+      "carb_g": 30,
+      "sugar_g": 4,
+      "fat_g": 7,
+      "sat_fat_g": 2,
+      "protein_g": 6,
+      "fiber_g": 1.5,
+      "sodium_mg": 520
+    }
+  },
+  {
+    "id": "mee_goreng",
+    "name": "mee goreng",
+    "aliases": ["炒面", "印度炒面"],
+    "category": "noodle",
+    "default_portion": { "unit": "plate", "grams": 400 },
+    "nutrients_per_100g": {
+      "energy_kcal": 190,
+      "carb_g": 28,
+      "sugar_g": 4,
+      "fat_g": 6,
+      "sat_fat_g": 1.5,
+      "protein_g": 7,
+      "fiber_g": 1.8,
+      "sodium_mg": 600
+    }
+  },
+  {
+    "id": "kopi",
+    "name": "kopi (with sugar/condensed milk)",
+    "aliases": ["kopi", "咖啡", "咖啡奶"],
+    "category": "coffee",
+    "default_portion": { "unit": "cup", "ml": 240 },
+    "nutrients_per_100ml": {
+      "energy_kcal": 20,
+      "carb_g": 4,
+      "sugar_g": 4,
+      "fat_g": 0.5,
+      "sat_fat_g": 0.2,
+      "protein_g": 0.4,
+      "fiber_g": 0,
+      "sodium_mg": 5
+    },
+    "modifiers": {
+      "kurang manis": { "sugar_factor": 0.7 },
+      "less sugar": { "sugar_factor": 0.7 },
+      "no sugar": { "sugar_factor": 0.1 }
+    }
+  },
+  {
+    "id": "milo_ais",
+    "name": "milo ais",
+    "aliases": ["美禄冰", "milo ice"],
+    "category": "beverage",
+    "default_portion": { "unit": "cup", "ml": 300 },
+    "nutrients_per_100ml": {
+      "energy_kcal": 60,
+      "carb_g": 10,
+      "sugar_g": 8,
+      "fat_g": 1.8,
+      "sat_fat_g": 1.1,
+      "protein_g": 1.5,
+      "fiber_g": 0.5,
+      "sodium_mg": 40
+    },
+    "modifiers": {
+      "kurang manis": { "sugar_factor": 0.7 },
+      "less sugar": { "sugar_factor": 0.7 }
+    }
+  },
+  {
+    "id": "chapati",
+    "name": "chapati",
+    "aliases": ["恰巴蒂"],
+    "category": "flatbread",
+    "default_portion": { "unit": "piece", "grams": 60 },
+    "nutrients_per_100g": {
+      "energy_kcal": 250,
+      "carb_g": 41,
+      "sugar_g": 2,
+      "fat_g": 7,
+      "sat_fat_g": 1.5,
+      "protein_g": 8,
+      "fiber_g": 6,
+      "sodium_mg": 350
+    }
+  },
+  {
+    "id": "dhal",
+    "name": "dhal (lentil curry)",
+    "aliases": ["达尔", "豆咖喱"],
+    "category": "curry",
+    "default_portion": { "unit": "bowl", "grams": 150 },
+    "nutrients_per_100g": {
+      "energy_kcal": 110,
+      "carb_g": 16,
+      "sugar_g": 2,
+      "fat_g": 3,
+      "sat_fat_g": 0.8,
+      "protein_g": 6,
+      "fiber_g": 5,
+      "sodium_mg": 300
+    }
+  },
+  {
+    "id": "satay_chicken",
+    "name": "satay (chicken)",
+    "aliases": ["沙爹", "沙爹鸡"],
+    "category": "grill",
+    "default_portion": { "unit": "piece", "grams": 35 },
+    "nutrients_per_100g": {
+      "energy_kcal": 210,
+      "carb_g": 6,
+      "sugar_g": 3,
+      "fat_g": 12,
+      "sat_fat_g": 3,
+      "protein_g": 19,
+      "fiber_g": 1,
+      "sodium_mg": 450
+    }
+  },
+  {
+    "id": "peanut_sauce",
+    "name": "peanut sauce",
+    "aliases": ["花生酱", "沙爹酱"],
+    "category": "sauce",
+    "default_portion": { "unit": "g", "grams": 45 },
+    "nutrients_per_100g": {
+      "energy_kcal": 590,
+      "carb_g": 18,
+      "sugar_g": 9,
+      "fat_g": 51,
+      "sat_fat_g": 10,
+      "protein_g": 21,
+      "fiber_g": 6,
+      "sodium_mg": 480
+    }
+  },
+  {
+    "id": "cendol",
+    "name": "cendol",
+    "aliases": ["煎蕊", "椰糖冰"],
+    "category": "dessert",
+    "default_portion": { "unit": "bowl", "grams": 220 },
+    "nutrients_per_100g": {
+      "energy_kcal": 150,
+      "carb_g": 28,
+      "sugar_g": 18,
+      "fat_g": 3,
+      "sat_fat_g": 2,
+      "protein_g": 2,
+      "fiber_g": 0.5,
+      "sodium_mg": 90
+    },
+    "modifiers": {
+      "less sugar": { "sugar_factor": 0.7 }
+    }
+  },
+
+  {
+    "id": "nasi_goreng_kampung",
+    "name": "nasi goreng kampung",
+    "aliases": ["马来炒饭", "kampung fried rice"],
+    "category": "rice",
+    "default_portion": { "unit": "plate", "grams": 420 },
+    "nutrients_per_100g": {
+      "energy_kcal": 210,
+      "carb_g": 30,
+      "sugar_g": 2,
+      "fat_g": 7,
+      "sat_fat_g": 1.8,
+      "protein_g": 5,
+      "fiber_g": 1.5,
+      "sodium_mg": 550
+    }
+  },
+  {
+    "id": "nasi_goreng_pattaya",
+    "name": "nasi goreng pattaya",
+    "aliases": ["pattaya fried rice", "泰式裹蛋炒饭"],
+    "category": "rice",
+    "default_portion": { "unit": "plate", "grams": 450 },
+    "nutrients_per_100g": {
+      "energy_kcal": 230,
+      "carb_g": 31,
+      "sugar_g": 3,
+      "fat_g": 8,
+      "sat_fat_g": 2.2,
+      "protein_g": 6,
+      "fiber_g": 1.4,
+      "sodium_mg": 600
+    }
+  },
+  {
+    "id": "nasi_kandar",
+    "name": "nasi kandar",
+    "aliases": ["咖喱拌饭", "penang nasi kandar"],
+    "category": "rice",
+    "default_portion": { "unit": "plate", "grams": 500 },
+    "nutrients_per_100g": {
+      "energy_kcal": 240,
+      "carb_g": 26,
+      "sugar_g": 3,
+      "fat_g": 10,
+      "sat_fat_g": 4,
+      "protein_g": 8,
+      "fiber_g": 1.8,
+      "sodium_mg": 650
+    }
+  },
+  {
+    "id": "nasi_briyani",
+    "name": "nasi briyani",
+    "aliases": ["briyani rice", "印度香饭"],
+    "category": "rice",
+    "default_portion": { "unit": "plate", "grams": 450 },
+    "nutrients_per_100g": {
+      "energy_kcal": 250,
+      "carb_g": 32,
+      "sugar_g": 2,
+      "fat_g": 9,
+      "sat_fat_g": 3.5,
+      "protein_g": 6,
+      "fiber_g": 1.6,
+      "sodium_mg": 500
+    }
+  },
+  {
+    "id": "hainanese_chicken_rice",
+    "name": "hainanese chicken rice",
+    "aliases": ["海南鸡饭", "鸡饭"],
+    "category": "rice",
+    "default_portion": { "unit": "plate", "grams": 420 },
+    "nutrients_per_100g": {
+      "energy_kcal": 210,
+      "carb_g": 25,
+      "sugar_g": 1,
+      "fat_g": 8,
+      "sat_fat_g": 2,
+      "protein_g": 8,
+      "fiber_g": 0.5,
+      "sodium_mg": 420
+    }
+  },
+  {
+    "id": "penang_assam_laksa",
+    "name": "penang assam laksa",
+    "aliases": ["槟城叻沙", "asam laksa"],
+    "category": "noodle",
+    "default_portion": { "unit": "bowl", "grams": 450 },
+    "nutrients_per_100g": {
+      "energy_kcal": 120,
+      "carb_g": 20,
+      "sugar_g": 3,
+      "fat_g": 2.5,
+      "sat_fat_g": 0.7,
+      "protein_g": 4,
+      "fiber_g": 1.6,
+      "sodium_mg": 500
+    }
+  },
+  {
+    "id": "curry_laksa",
+    "name": "curry laksa",
+    "aliases": ["咖喱叻沙", "laksa lemak"],
+    "category": "noodle",
+    "default_portion": { "unit": "bowl", "grams": 500 },
+    "nutrients_per_100g": {
+      "energy_kcal": 170,
+      "carb_g": 19,
+      "sugar_g": 3,
+      "fat_g": 7,
+      "sat_fat_g": 4,
+      "protein_g": 6,
+      "fiber_g": 1.5,
+      "sodium_mg": 650
+    }
+  },
+  {
+    "id": "kl_hokkien_mee",
+    "name": "hokkien mee (KL style)",
+    "aliases": ["福建面（黑酱油）", "kl hokkien mee"],
+    "category": "noodle",
+    "default_portion": { "unit": "plate", "grams": 450 },
+    "nutrients_per_100g": {
+      "energy_kcal": 220,
+      "carb_g": 32,
+      "sugar_g": 6,
+      "fat_g": 6,
+      "sat_fat_g": 1.5,
+      "protein_g": 6,
+      "fiber_g": 1.8,
+      "sodium_mg": 700
+    }
+  },
+  {
+    "id": "penang_prawn_mee",
+    "name": "prawn mee (Penang)",
+    "aliases": ["福建虾面", "har mee"],
+    "category": "noodle",
+    "default_portion": { "unit": "bowl", "grams": 450 },
+    "nutrients_per_100g": {
+      "energy_kcal": 150,
+      "carb_g": 22,
+      "sugar_g": 3,
+      "fat_g": 3.5,
+      "sat_fat_g": 1,
+      "protein_g": 5,
+      "fiber_g": 1.4,
+      "sodium_mg": 680
+    }
+  },
+  {
+    "id": "pan_mee",
+    "name": "pan mee",
+    "aliases": ["板面", "ban mee"],
+    "category": "noodle",
+    "default_portion": { "unit": "bowl", "grams": 450 },
+    "nutrients_per_100g": {
+      "energy_kcal": 180,
+      "carb_g": 28,
+      "sugar_g": 2,
+      "fat_g": 4.5,
+      "sat_fat_g": 1.1,
+      "protein_g": 7,
+      "fiber_g": 1.8,
+      "sodium_mg": 520
+    }
+  },
+  {
+    "id": "maggi_goreng_mamak",
+    "name": "maggi goreng (mamak)",
+    "aliases": ["嘛嘛档麦记炒面", "maggi goreng"],
+    "category": "noodle",
+    "default_portion": { "unit": "plate", "grams": 400 },
+    "nutrients_per_100g": {
+      "energy_kcal": 230,
+      "carb_g": 30,
+      "sugar_g": 3,
+      "fat_g": 9,
+      "sat_fat_g": 3.8,
+      "protein_g": 6,
+      "fiber_g": 1.6,
+      "sodium_mg": 900
+    }
+  },
+  {
+    "id": "roti_telur",
+    "name": "roti telur",
+    "aliases": ["roti canai telur", "鸡蛋飞饼"],
+    "category": "flatbread",
+    "default_portion": { "unit": "piece", "grams": 120 },
+    "nutrients_per_100g": {
+      "energy_kcal": 320,
+      "carb_g": 36,
+      "sugar_g": 3,
+      "fat_g": 15,
+      "sat_fat_g": 7,
+      "protein_g": 8,
+      "fiber_g": 2,
+      "sodium_mg": 420
+    }
+  },
+  {
+    "id": "murtabak_chicken",
+    "name": "murtabak (chicken)",
+    "aliases": ["鸡肉穆塔巴", "murtabak ayam"],
+    "category": "flatbread",
+    "default_portion": { "unit": "piece", "grams": 220 },
+    "nutrients_per_100g": {
+      "energy_kcal": 280,
+      "carb_g": 26,
+      "sugar_g": 3,
+      "fat_g": 12,
+      "sat_fat_g": 4.5,
+      "protein_g": 12,
+      "fiber_g": 2,
+      "sodium_mg": 520
+    }
+  },
+  {
+    "id": "rendang_beef",
+    "name": "rendang (beef)",
+    "aliases": ["马来仁当牛肉", "beef rendang"],
+    "category": "curry",
+    "default_portion": { "unit": "serving", "grams": 180 },
+    "nutrients_per_100g": {
+      "energy_kcal": 250,
+      "carb_g": 4,
+      "sugar_g": 2,
+      "fat_g": 16,
+      "sat_fat_g": 8,
+      "protein_g": 20,
+      "fiber_g": 1.5,
+      "sodium_mg": 500
+    }
+  },
+  {
+    "id": "satay_beef",
+    "name": "satay (beef)",
+    "aliases": ["沙爹牛", "satay daging"],
+    "category": "grill",
+    "default_portion": { "unit": "piece", "grams": 35 },
+    "nutrients_per_100g": {
+      "energy_kcal": 230,
+      "carb_g": 5,
+      "sugar_g": 3,
+      "fat_g": 13,
+      "sat_fat_g": 4,
+      "protein_g": 20,
+      "fiber_g": 1,
+      "sodium_mg": 480
+    }
+  },
+  {
+    "id": "rojak_mamak_pasembur",
+    "name": "rojak mamak (pasembur)",
+    "aliases": ["马来印度罗惹", "pasembur"],
+    "category": "salad",
+    "default_portion": { "unit": "plate", "grams": 450 },
+    "nutrients_per_100g": {
+      "energy_kcal": 190,
+      "carb_g": 24,
+      "sugar_g": 10,
+      "fat_g": 7,
+      "sat_fat_g": 1.5,
+      "protein_g": 5,
+      "fiber_g": 2.2,
+      "sodium_mg": 520
+    }
+  },
+  {
+    "id": "rojak_buah",
+    "name": "rojak buah",
+    "aliases": ["水果罗惹"],
+    "category": "salad",
+    "default_portion": { "unit": "bowl", "grams": 350 },
+    "nutrients_per_100g": {
+      "energy_kcal": 110,
+      "carb_g": 25,
+      "sugar_g": 18,
+      "fat_g": 0.8,
+      "sat_fat_g": 0.2,
+      "protein_g": 1.5,
+      "fiber_g": 2.5,
+      "sodium_mg": 280
+    }
+  },
+  {
+    "id": "ais_kacang",
+    "name": "ais kacang (ABC)",
+    "aliases": ["红豆冰", "ice kacang"],
+    "category": "dessert",
+    "default_portion": { "unit": "bowl", "grams": 300 },
+    "nutrients_per_100g": {
+      "energy_kcal": 140,
+      "carb_g": 30,
+      "sugar_g": 22,
+      "fat_g": 1.5,
+      "sat_fat_g": 0.8,
+      "protein_g": 2,
+      "fiber_g": 1,
+      "sodium_mg": 60
+    }
+  },
+  {
+    "id": "kaya_toast",
+    "name": "kaya toast",
+    "aliases": ["咖椰吐司", "kaya roti"],
+    "category": "bread",
+    "default_portion": { "unit": "set", "grams": 120 },
+    "nutrients_per_100g": {
+      "energy_kcal": 330,
+      "carb_g": 45,
+      "sugar_g": 18,
+      "fat_g": 12,
+      "sat_fat_g": 7,
+      "protein_g": 7,
+      "fiber_g": 2.5,
+      "sodium_mg": 360
+    }
+  },
+  {
+    "id": "half_boiled_eggs",
+    "name": "half-boiled eggs",
+    "aliases": ["半生熟鸡蛋", "温泉蛋"],
+    "category": "egg",
+    "default_portion": { "unit": "piece", "grams": 55 },
+    "nutrients_per_100g": {
+      "energy_kcal": 150,
+      "carb_g": 1.1,
+      "sugar_g": 1.1,
+      "fat_g": 10,
+      "sat_fat_g": 3.3,
+      "protein_g": 13,
+      "fiber_g": 0,
+      "sodium_mg": 125
+    }
+  },
+  {
+    "id": "teh_o_ais_limau",
+    "name": "teh o ais limau",
+    "aliases": ["柠檬红茶冰", "lime iced tea"],
+    "category": "beverage",
+    "default_portion": { "unit": "cup", "ml": 300 },
+    "nutrients_per_100ml": {
+      "energy_kcal": 30,
+      "carb_g": 7.5,
+      "sugar_g": 7,
+      "fat_g": 0,
+      "sat_fat_g": 0,
+      "protein_g": 0,
+      "fiber_g": 0,
+      "sodium_mg": 5
+    },
+    "modifiers": {
+      "kurang manis": { "sugar_factor": 0.7 },
+      "less sugar": { "sugar_factor": 0.7 },
+      "no sugar": { "sugar_factor": 0.1 }
+    }
+  },
+  {
+    "id": "sirap_bandung",
+    "name": "sirap bandung",
+    "aliases": ["rose bandung", "玫瑰糖奶"],
+    "category": "beverage",
+    "default_portion": { "unit": "cup", "ml": 300 },
+    "nutrients_per_100ml": {
+      "energy_kcal": 90,
+      "carb_g": 15,
+      "sugar_g": 14,
+      "fat_g": 2.5,
+      "sat_fat_g": 1.6,
+      "protein_g": 1.5,
+      "fiber_g": 0,
+      "sodium_mg": 45
+    },
+    "modifiers": {
+      "kurang manis": { "sugar_factor": 0.7 },
+      "less sugar": { "sugar_factor": 0.7 }
+    }
+  },
+  {
+    "id": "barley_ais",
+    "name": "barley ais",
+    "aliases": ["薏米水冰", "iced barley drink"],
+    "category": "beverage",
+    "default_portion": { "unit": "cup", "ml": 300 },
+    "nutrients_per_100ml": {
+      "energy_kcal": 25,
+      "carb_g": 6,
+      "sugar_g": 5,
+      "fat_g": 0,
+      "sat_fat_g": 0,
+      "protein_g": 0.3,
+      "fiber_g": 0,
+      "sodium_mg": 5
+    },
+    "modifiers": {
+      "kurang manis": { "sugar_factor": 0.7 },
+      "less sugar": { "sugar_factor": 0.7 },
+      "no sugar": { "sugar_factor": 0.1 }
+    }
+  },
+  {
+    "id": "milo_dinosaur",
+    "name": "milo dinosaur",
+    "aliases": ["美禄恐龙"],
+    "category": "beverage",
+    "default_portion": { "unit": "cup", "ml": 350 },
+    "nutrients_per_100ml": {
+      "energy_kcal": 95,
+      "carb_g": 16,
+      "sugar_g": 12,
+      "fat_g": 2.6,
+      "sat_fat_g": 1.5,
+      "protein_g": 2.2,
+      "fiber_g": 0.6,
+      "sodium_mg": 45
+    },
+    "modifiers": {
+      "kurang manis": { "sugar_factor": 0.75 }
+    }
+  },
+  {
+    "id": "kopi_o_kosong",
+    "name": "kopi o kosong",
+    "aliases": ["无糖黑咖啡", "black coffee (no sugar)"],
+    "category": "coffee",
+    "default_portion": { "unit": "cup", "ml": 240 },
+    "nutrients_per_100ml": {
+      "energy_kcal": 1,
+      "carb_g": 0,
+      "sugar_g": 0,
+      "fat_g": 0,
+      "sat_fat_g": 0,
+      "protein_g": 0.2,
+      "fiber_g": 0,
+      "sodium_mg": 5
+    }
+  },
+  {
+    "id": "apam_balik",
+    "name": "apam balik",
+    "aliases": ["曼煎糕", "turnover pancake"],
+    "category": "dessert",
+    "default_portion": { "unit": "piece", "grams": 150 },
+    "nutrients_per_100g": {
+      "energy_kcal": 280,
+      "carb_g": 45,
+      "sugar_g": 20,
+      "fat_g": 7,
+      "sat_fat_g": 2.5,
+      "protein_g": 6,
+      "fiber_g": 1.8,
+      "sodium_mg": 260
+    }
+  },
+  {
+    "id": "curry_puff",
+    "name": "curry puff",
+    "aliases": ["咖喱角", "karipap"],
+    "category": "pastry",
+    "default_portion": { "unit": "piece", "grams": 80 },
+    "nutrients_per_100g": {
+      "energy_kcal": 330,
+      "carb_g": 32,
+      "sugar_g": 2,
+      "fat_g": 19,
+      "sat_fat_g": 8,
+      "protein_g": 7,
+      "fiber_g": 2,
+      "sodium_mg": 420
+    }
+  }
+]

@@ -1,6 +1,9 @@
 import 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  NavigatorScreenParams,
+} from '@react-navigation/native';
 import { navigationRef } from './src/navigation/navigationRef';
 import { createStackNavigator } from '@react-navigation/stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -17,7 +20,9 @@ import GeneratingTwinScreen from './src/screens/GeneratingTwinScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
 
 // Import tab navigator
-import MainTabNavigator from './src/navigation/MainTabNavigator';
+import MainTabNavigator, {
+  type MainTabParamList,
+} from './src/navigation/MainTabNavigator';
 import AlertsScreen from './src/screens/AlertsScreen';
 import HealthPermissionScreen from './src/screens/HealthPermissionScreen';
 import DebugDatabaseScreen from './src/screens/DebugDatabaseScreen';
@@ -26,6 +31,7 @@ import { initNotifications } from './src/services/notifications';
 import RootServices from './src/components/RootServices';
 import LocationPickerScreen from './src/screens/LocationPickerScreen';
 import { UserLocationDetails } from './src/models/User';
+import NutritionDetailScreen from './src/screens/NutritionDetailScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -52,9 +58,10 @@ export type RootStackParamList = {
     } | null;
   };
   GeneratingTwin: undefined;
-  MainTabs: undefined;
+  MainTabs: NavigatorScreenParams<MainTabParamList>;
   Alerts: { alertId?: string } | undefined;
   DebugDB: undefined;
+  NutritionDetail: undefined;
   LocationPicker: {
     initialLocation: UserLocationDetails | null;
     onSelect?: (selection: UserLocationDetails | null) => void;
@@ -181,6 +188,11 @@ export default function App() {
             options={{
               headerShown: false,
             }}
+          />
+          <Stack.Screen
+            name="NutritionDetail"
+            component={NutritionDetailScreen}
+            options={{ title: 'Nutrition Detail' }}
           />
         </Stack.Navigator>
       </NavigationContainer>

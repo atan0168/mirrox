@@ -1,19 +1,19 @@
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { CommonActions } from '@react-navigation/native';
+import { BarChart3, Home, Settings, Utensils } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
   Animated,
   Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Home, BarChart3, Settings } from 'lucide-react-native';
-import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 
 const { width: screenWidth } = Dimensions.get('window');
-// Measure actual tab bar width (inside horizontal padding) for accurate centering.
-const HORIZONTAL_PADDING = spacing.md; // matches styles.tabBar paddingHorizontal
+const HORIZONTAL_PADDING = spacing.md;
 
 interface TabConfig {
   name: string;
@@ -22,21 +22,10 @@ interface TabConfig {
 }
 
 const tabConfigs: Record<string, TabConfig> = {
-  Home: {
-    name: 'Home',
-    icon: Home,
-    label: 'Home',
-  },
-  Stats: {
-    name: 'Stats',
-    icon: BarChart3,
-    label: 'Stats',
-  },
-  Settings: {
-    name: 'Settings',
-    icon: Settings,
-    label: 'Settings',
-  },
+  Home: { name: 'Home', icon: Home, label: 'Home' },
+  Stats: { name: 'Stats', icon: BarChart3, label: 'Stats' },
+  FoodDiary: { name: 'FoodDiary', icon: Utensils, label: 'Food' },
+  Settings: { name: 'Settings', icon: Settings, label: 'Settings' },
 };
 
 const CustomTabBar: React.FC<BottomTabBarProps> = ({
@@ -51,7 +40,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
   );
   const [tabBarWidth, setTabBarWidth] = useState<number | null>(null);
 
-  // Ensure textWidths array length matches route count (in case of dynamic tabs)
+  // Adjust text width array when route count changes
   useEffect(() => {
     setTextWidths(prev => {
       if (prev.length === routeCount) return prev;
@@ -72,27 +61,24 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     }).start();
   }, [state.index, animatedValue]);
 
-  // Hide the custom tab bar for routes not meant to show it (e.g., Alerts)
   const currentRoute = state.routes[state.index];
   if (currentRoute?.name === 'Alerts') {
     return null;
   }
 
-  // Calculate pill widths based on text measurements
   const pillWidths = textWidths.map(textWidth =>
     textWidth > 0 ? textWidth + 56 : 60
   );
-
   const innerWidth = (tabBarWidth ?? screenWidth) - HORIZONTAL_PADDING * 2;
-  // Determine visible routes (those we actually render)
+
   const visibleRouteIndices = state.routes
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => !!tabConfigs[r.name])
     .map(({ i }) => i);
+
   const visibleCount = visibleRouteIndices.length || 1;
   const tabWidth = innerWidth / visibleCount;
 
-  // Output ranges aligned to full route list but only positioning visible ones
   const translateXOutputRange: number[] = new Array(routeCount).fill(0);
   const pillWidthsFull: number[] = new Array(routeCount).fill(60);
 
@@ -102,10 +88,9 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
     translateXOutputRange[routeIdx] = x;
     pillWidthsFull[routeIdx] = w;
   });
-  // For any hidden routes, use the nearest previous visible position for stability
+
   for (let i = 0; i < routeCount; i++) {
     if (translateXOutputRange[i] === 0 && !visibleRouteIndices.includes(i)) {
-      // find previous visible or fallback to first visible
       const prevVisible = [...visibleRouteIndices]
         .filter(idx => idx <= i)
         .pop();
@@ -130,7 +115,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Hidden text elements for measuring */}
+      {/* Hidden text measurement */}
       <View style={styles.hiddenMeasureContainer}>
         {state.routes.map((route, index) => {
           const tabConfig = tabConfigs[route.name];
@@ -154,6 +139,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
         })}
       </View>
 
+      {/* Tab bar container */}
       <View
         style={styles.tabBar}
         onLayout={e => {
@@ -177,8 +163,12 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
           const tabConfig = tabConfigs[route.name];
-
           if (!tabConfig) return null;
+
+          const pillWidthValue = pillWidthsFull[index];
+          const contentOffset = (tabWidth - pillWidthValue) / 2;
+          const extraWidth = Math.max(0, pillWidthValue - tabWidth) / 2;
+          const horizontalHitSlop = spacing.xs + Math.ceil(extraWidth);
 
           const onPress = () => {
             const event = navigation.emit({
@@ -186,17 +176,9 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               target: route.key,
               canPreventDefault: true,
             });
-
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+              navigation.dispatch(CommonActions.navigate({ name: route.name }));
             }
-          };
-
-          const onLongPress = () => {
-            navigation.emit({
-              type: 'tabLongPress',
-              target: route.key,
-            });
           };
 
           const IconComponent = tabConfig.icon;
@@ -207,29 +189,34 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               accessibilityRole="button"
               accessibilityState={isFocused ? { selected: true } : {}}
               accessibilityLabel={options.tabBarAccessibilityLabel}
-              testID={`tab-${route.name.toLowerCase()}`}
               onPress={onPress}
-              onLongPress={onLongPress}
               style={styles.tab}
               activeOpacity={0.7}
+              hitSlop={{
+                left: horizontalHitSlop,
+                right: horizontalHitSlop,
+                top: spacing.xs,
+                bottom: spacing.xs,
+              }}
             >
-              <View style={styles.tabContent}>
+              <View
+                style={[
+                  styles.tabContent,
+                  {
+                    width: pillWidthValue,
+                    left: contentOffset,
+                  },
+                ]}
+              >
                 <IconComponent
                   size={24}
                   color={isFocused ? colors.white : colors.neutral[400]}
                 />
                 {isFocused && (
                   <Animated.Text
-                    style={[
-                      styles.tabLabel,
-                      {
-                        opacity: animatedValue.interpolate({
-                          inputRange: [index - 0.5, index, index + 0.5],
-                          outputRange: [0, 1, 0],
-                          extrapolate: 'clamp',
-                        }),
-                      },
-                    ]}
+                    style={styles.tabLabel}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                   >
                     {tabConfig.label}
                   </Animated.Text>
@@ -255,7 +242,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     opacity: 0,
     pointerEvents: 'none',
-    top: -1000, // Move far off screen
+    top: -1000,
   },
   measureText: {
     fontSize: fontSize.base,
@@ -271,7 +258,7 @@ const styles = StyleSheet.create({
   pill: {
     position: 'absolute',
     height: 40,
-    backgroundColor: colors.primary, // Dark neutral color
+    backgroundColor: colors.primary,
     borderRadius: borderRadius.full,
     top: 8,
     ...shadows.medium,
@@ -282,19 +269,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 56,
     zIndex: 1,
+    position: 'relative',
+    overflow: 'visible',
   },
   tabContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm + spacing.xs,
     height: 40,
+    position: 'absolute',
+    top: 8,
   },
   tabLabel: {
     color: colors.white,
     fontSize: fontSize.base,
     fontWeight: '600',
     marginLeft: spacing.sm,
+    flexShrink: 1,
   },
 });
 

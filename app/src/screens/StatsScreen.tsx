@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { HeartPulse } from 'lucide-react-native';
+import { HeartPulse, TrendingUp, Wind } from 'lucide-react-native';
 import {
   EnvironmentalInfoSquares,
   EnvironmentalInfoSquaresSkeleton,
@@ -29,6 +29,8 @@ import { useHealthHistory } from '../hooks/useHealthHistory';
 import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { colors } from '../theme';
 
+import { NutritionSummaryCard } from '../components/NutritionSummaryCard';
+
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();
   const {
@@ -42,7 +44,6 @@ const StatsScreen: React.FC = () => {
     ENV_REFRESH_INTERVAL_MS
   );
 
-  // Use traffic data hook
   const {
     data: trafficData,
     loading: isTrafficLoading,
@@ -83,7 +84,6 @@ const StatsScreen: React.FC = () => {
     enabled: !!userProfile?.location && !!isMalaysia,
   });
 
-  // Health data (steps, sleep)
   const {
     data: health,
     loading: isHealthLoading,
@@ -278,7 +278,7 @@ const StatsScreen: React.FC = () => {
           />
         )}
 
-        {/* Health Info Squares */}
+        {/* Health Info Section */}
         <HealthInfoSquares
           health={health}
           isLoading={isHealthLoading}
@@ -291,29 +291,11 @@ const StatsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    lineHeight: 24,
-  },
+  container: { flex: 1, backgroundColor: '#FFFFFF' },
+  scrollView: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 30 },
+  title: { fontSize: 32, fontWeight: '700', color: '#111827', marginBottom: 8 },
+  subtitle: { fontSize: 16, color: '#6B7280', lineHeight: 24 },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -340,10 +322,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,

@@ -1,0 +1,12 @@
+{
+  "high_sugar_g": 22,
+  "high_fat_g": 18,
+  "high_sat_fat_g": 8,
+  "low_fiber_g": 3,
+  "high_sodium_mg": 700,
+  "balance_ranges": {
+    "carb_pct": [45, 65],
+    "fat_pct": [20, 35],
+    "protein_pct": [10, 35]
+  }
+}
