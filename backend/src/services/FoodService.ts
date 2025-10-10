@@ -64,7 +64,7 @@ export function searchFoods(q: string, limit = 20): FoodSummary[] {
          FROM foods_fts fts
          JOIN foods f ON f.rowid = fts.rowid
         WHERE foods_fts MATCH ?
-        ORDER BY bm25(fts) ASC
+        ORDER BY bm25(foods_fts) ASC
         LIMIT ?`
       )
       .all(ftsQuery, limit);
