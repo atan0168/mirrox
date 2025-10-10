@@ -129,7 +129,8 @@ const DEFAULT_SIZE_FACTORS: Record<PortionSizeKey, number> = {
 
 const SIZE_FACTORS: Record<PortionSizeKey, number> = {
   small: UNIT.small_medium_large_factors?.small ?? DEFAULT_SIZE_FACTORS.small,
-  medium: UNIT.small_medium_large_factors?.medium ?? DEFAULT_SIZE_FACTORS.medium,
+  medium:
+    UNIT.small_medium_large_factors?.medium ?? DEFAULT_SIZE_FACTORS.medium,
   large: UNIT.small_medium_large_factors?.large ?? DEFAULT_SIZE_FACTORS.large,
 };
 
@@ -197,7 +198,9 @@ const getUnitCategoryValue = (
   const unitEntry = UNIT[unitKey];
   if (!unitEntry) return undefined;
   const value = unitEntry[category];
-  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : undefined;
 };
 
 const getSugarFactor = (
@@ -249,17 +252,22 @@ function applyPortionAndModifiers(
 ): CanonicalItem {
   const lowered = cachedLowerText ?? text.toLowerCase();
   const quantityMatch = QTY_RE.exec(lowered);
-  const parsedQuantity = quantityMatch ? parseInt(quantityMatch[1] ?? '', 10) : NaN;
-  const quantity = Number.isFinite(parsedQuantity) && parsedQuantity > 0 ? parsedQuantity : 1;
+  const parsedQuantity = quantityMatch
+    ? parseInt(quantityMatch[1] ?? '', 10)
+    : NaN;
+  const quantity =
+    Number.isFinite(parsedQuantity) && parsedQuantity > 0 ? parsedQuantity : 1;
 
   const size =
-    (SWORDS.find(x => x.re.test(lowered))?.size as PortionSizeKey | undefined) ?? 'medium';
+    (SWORDS.find(x => x.re.test(lowered))?.size as
+      | PortionSizeKey
+      | undefined) ?? 'medium';
   const sizeFactor = SIZE_FACTORS[size] ?? DEFAULT_SIZE_FACTORS[size];
 
   const hit = UWORDS.find(x => x.re.test(lowered))?.unit;
-  const modifierKeys = SUGAR_KEYWORDS.filter(({ token }) => lowered.includes(token)).map(
-    ({ key }) => key
-  );
+  const modifierKeys = SUGAR_KEYWORDS.filter(({ token }) =>
+    lowered.includes(token)
+  ).map(({ key }) => key);
 
   let portion_g: number | undefined;
   let volume_ml: number | undefined;
@@ -269,7 +277,8 @@ function applyPortionAndModifiers(
     if (unitCategoryValue != null) {
       portion_g = Math.round(unitCategoryValue * sizeFactor) * quantity;
     } else if (food.default_portion?.grams) {
-      portion_g = Math.round(food.default_portion.grams * sizeFactor) * quantity;
+      portion_g =
+        Math.round(food.default_portion.grams * sizeFactor) * quantity;
     } else {
       portion_g = 100 * quantity;
     }
@@ -359,7 +368,8 @@ function classify(total: Nutrients): string[] {
     const carbPct = ((total.carb_g * 4) / kcal) * 100;
     const fatPct = ((total.fat_g * 9) / kcal) * 100;
     const proteinPct = ((total.protein_g * 4) / kcal) * 100;
-    const inRange = (r: MacronutrientRange, v: number) => v >= r[0] && v <= r[1];
+    const inRange = (r: MacronutrientRange, v: number) =>
+      v >= r[0] && v <= r[1];
     if (
       !(
         inRange(TH.balance_ranges.carb_pct, carbPct) &&
@@ -377,7 +387,9 @@ function tagsToEffects(tags: string[]) {
   return tags
     .map(tag => {
       const entry = FBMAP[tag];
-      return entry && typeof entry === 'object' ? { ...entry, reason: tag } : undefined;
+      return entry && typeof entry === 'object'
+        ? { ...entry, reason: tag }
+        : undefined;
     })
     .filter((entry): entry is FeedbackMapEntry & { reason: string } => !!entry);
 }
@@ -413,16 +425,15 @@ export async function analyzeMeal(payload: AnalyzeInput, extractFn: ExtractFn) {
   const sourceText = payload.text ?? '';
   const loweredText = sourceText.toLowerCase();
 
-  const pairs = uniqueNames.reduce<Array<{ food: FoodEntry; item: CanonicalItem }>>(
-    (acc, rawName) => {
-      const food = findFoodFromDB(rawName);
-      if (!food) return acc;
-      const item = applyPortionAndModifiers(food, sourceText, loweredText);
-      acc.push({ food, item });
-      return acc;
-    },
-    []
-  );
+  const pairs = uniqueNames.reduce<
+    Array<{ food: FoodEntry; item: CanonicalItem }>
+  >((acc, rawName) => {
+    const food = findFoodFromDB(rawName);
+    if (!food) return acc;
+    const item = applyPortionAndModifiers(food, sourceText, loweredText);
+    acc.push({ food, item });
+    return acc;
+  }, []);
 
   const nutrients = computeAll(pairs);
   const tags = classify(nutrients.total);

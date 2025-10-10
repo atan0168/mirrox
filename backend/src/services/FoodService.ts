@@ -73,7 +73,10 @@ export function searchFoods(q: string, limit = 20): FoodSummary[] {
       return rows;
     }
   } catch (error) {
-    console.error('[FoodService] FTS search failed, falling back to LIKE:', error);
+    console.error(
+      '[FoodService] FTS search failed, falling back to LIKE:',
+      error
+    );
   }
 
   const like = `%${q.toLowerCase()}%`;

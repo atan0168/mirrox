@@ -35,6 +35,10 @@ RUN npm ci --omit=dev --no-audit --no-fund \
 # Copy compiled app from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy read-only data and configuration assets required at runtime
+COPY --from=builder /app/src/settings ./dist/settings
+COPY nutrition.db ./nutrition.db
+
 # Use non-root user for better security
 USER node
 
@@ -46,4 +50,3 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 # Start the app
 CMD ["node", "dist/index.js"]
-
