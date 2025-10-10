@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,7 @@ import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
 import { useMeal } from '../hooks/useMeal';
 
 export default function ThisMealCard() {
-  const {
-    data: items = [],
-    isLoading,
-    isError,
-    removeItem,
-    addManual,
-  } = useMeal();
+  const { data: items = [], removeItem, addManual } = useMeal();
 
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');

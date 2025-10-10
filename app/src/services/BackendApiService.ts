@@ -252,12 +252,6 @@ export interface UserDictionaryEntry {
   updated_at: number;
 }
 
-interface UserDictionaryResponse {
-  ok: boolean;
-  data?: UserDictionaryEntry[];
-  error?: string;
-}
-
 export interface UserDictionaryUpsertPayload {
   userId: string;
   phrase: string;

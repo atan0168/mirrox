@@ -15,7 +15,7 @@ type MealItem = {
   name: string;
   qty: number;
   energy_kcal: number | null;
-  meta?: any;
+  meta?: unknown;
 };
 
 type MealState = {

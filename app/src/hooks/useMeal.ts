@@ -1,8 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
 import { useEffect } from 'react';
 import { useMealStore } from '../store/mealStore';
-import { API_BASE_URL } from '../constants';
 
 type AnalysisItem = {
   name: string;

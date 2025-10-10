@@ -11,7 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { HeartPulse, TrendingUp, Wind } from 'lucide-react-native';
+import { HeartPulse } from 'lucide-react-native';
 import {
   EnvironmentalInfoSquares,
   EnvironmentalInfoSquaresSkeleton,
@@ -28,8 +28,6 @@ import { useHealthData } from '../hooks/useHealthData';
 import { useHealthHistory } from '../hooks/useHealthHistory';
 import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { colors } from '../theme';
-
-import { NutritionSummaryCard } from '../components/NutritionSummaryCard';
 
 const StatsScreen: React.FC = () => {
   const { data: userProfile } = useUserProfile();

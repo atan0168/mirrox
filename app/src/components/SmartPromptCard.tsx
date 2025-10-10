@@ -1,14 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import {
   ACCEPT_COOLDOWN_MS,
   PROMPT_COOLDOWN_KEY,
   REJECT_COOLDOWN_MS,
 } from '../constants';
-import {
-  backendApiService,
-  SmartPromptSuggestion,
-} from '../services/BackendApiService';
+import { SmartPromptSuggestion } from '../services/BackendApiService';
 import { localStorageService } from '../services/LocalStorageService';
 import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 import { Button } from './ui';
