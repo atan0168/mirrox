@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Mirrox",
+    "name": "MirroX",
     "slug": "mirrox",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -74,8 +74,8 @@
       [
         "@kingstinct/react-native-healthkit",
         {
-          "NSHealthShareUsageDescription": "Mirrox uses your steps and sleep to personalize your avatar and wellness insights.",
-          "NSHealthUpdateUsageDescription": "Mirrox may write health data only if you enable related features.",
+          "NSHealthShareUsageDescription": "MirroX uses your steps and sleep to personalize your avatar and wellness insights.",
+          "NSHealthUpdateUsageDescription": "MirroX may write health data only if you enable related features.",
           "background": true
         }
       ],

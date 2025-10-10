@@ -33,7 +33,7 @@ const PrivacyScreen: React.FC<PrivacyScreenProps> = ({ navigation }) => {
         <Text style={styles.effectiveDate}>Effective Date: 28 Aug 2025</Text>
 
         <Text style={styles.introText}>
-          Mirrox ("we," "our," or "us") respects your privacy and is committed
+          MirroX ("we," "our," or "us") respects your privacy and is committed
           to protecting it. This Privacy Policy explains how we handle
           information when you use our mobile application (the "App"). By using
           the App, you agree to the practices described in this Privacy Policy.
@@ -205,7 +205,7 @@ const PrivacyScreen: React.FC<PrivacyScreenProps> = ({ navigation }) => {
             If you have any questions about this Privacy Policy or our privacy
             practices, you may contact us at:
           </Text>
-          <Text style={styles.contactInfo}>TM05 Mirrox</Text>
+          <Text style={styles.contactInfo}>TM05 MirroX</Text>
           <Text style={styles.contactInfo}>atan0168@student.monash.edu</Text>
         </View>
         {/* </Card> */}

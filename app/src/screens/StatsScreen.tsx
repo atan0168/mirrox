@@ -147,7 +147,7 @@ const StatsScreen: React.FC = () => {
         Alert.alert(
           'Enable Health Access',
           Platform.OS === 'ios'
-            ? 'To re-enable Health permissions, open the Health app, then go to Data Access & Devices and select Mirrox to allow access.'
+            ? 'To re-enable Health permissions, open the Health app, then go to Data Access & Devices and select MirroX to allow access.'
             : 'To re-enable health permissions, open your app settings and allow Health access.',
           [
             { text: 'Cancel', style: 'cancel' },
