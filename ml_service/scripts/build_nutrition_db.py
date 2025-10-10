@@ -68,7 +68,34 @@ def main():
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", to_row)
     print(f"✅ Inserted USDA: {len(to_row)} rows")
 
-    # 2) 再写入本地补充（若存在）
+    # 2) OpenFoodFacts
+    off_path = BUILD / "foods.openfoodfacts.json"
+    if off_path.exists():
+        with open(off_path, "r", encoding="utf-8") as f:
+            off_items = json.load(f)
+        rows = []
+        alias_rows = []
+        for it in off_items:
+            n = it.get("nutrients", {}) or {}
+            rows.append((
+                it["id"],
+                it["name"],
+                clean_name(it["name"]),
+                n.get("energy_kcal"), n.get("protein_g"), n.get("fat_g"), n.get("sat_fat_g"),
+                n.get("carb_g"), n.get("sugar_g"), n.get("fiber_g"), n.get("sodium_mg"),
+                it.get("source","OpenFoodFacts")
+            ))
+            for a in it.get("aliases", []) or []:
+                alias_rows.append((a.strip().lower(), it["id"]))
+            alias_rows.append((it["name"].strip().lower(), it["id"]))
+        cur.executemany("""INSERT OR REPLACE INTO foods
+            (id,name,short_name,energy_kcal,protein_g,fat_g,sat_fat_g,carb_g,sugar_g,fiber_g,sodium_mg,source)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", rows)
+        if alias_rows:
+            cur.executemany("INSERT OR REPLACE INTO alias(alias, food_id) VALUES(?,?)", alias_rows)
+        print(f"🌍 Inserted OpenFoodFacts: {len(rows)} rows")
+
+    # 3) 再写入本地补充（若存在）
     local_file = CUR / "local_additions.json"
     if local_file.exists():
         with open(local_file, "r", encoding="utf-8") as f:

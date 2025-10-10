@@ -229,7 +229,6 @@ async function fetchDetail(url, nameFromList) {
   const outPath = path.join(
     __dirname,
     '..',
-    'ml_service',
     'data',
     'curated',
     '_myfcd_batch.json'

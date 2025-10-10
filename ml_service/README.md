@@ -13,6 +13,9 @@ Lightweight scripts for assembling and querying a nutrition database that powers
 # install project dependencies (creates .venv/)
 uv sync
 
+# download the USDA dataset
+uv run python scripts/download_usda_data.py
+
 # build the USDA dataset into JSON
 uv run python scripts/usda_to_json.py
 
