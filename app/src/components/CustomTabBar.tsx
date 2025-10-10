@@ -165,6 +165,11 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
           const tabConfig = tabConfigs[route.name];
           if (!tabConfig) return null;
 
+          const pillWidthValue = pillWidthsFull[index];
+          const contentOffset = (tabWidth - pillWidthValue) / 2;
+          const extraWidth = Math.max(0, pillWidthValue - tabWidth) / 2;
+          const horizontalHitSlop = spacing.xs + Math.ceil(extraWidth);
+
           const onPress = () => {
             const event = navigation.emit({
               type: 'tabPress',
@@ -187,14 +192,32 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({
               onPress={onPress}
               style={styles.tab}
               activeOpacity={0.7}
+              hitSlop={{
+                left: horizontalHitSlop,
+                right: horizontalHitSlop,
+                top: spacing.xs,
+                bottom: spacing.xs,
+              }}
             >
-              <View style={styles.tabContent}>
+              <View
+                style={[
+                  styles.tabContent,
+                  {
+                    width: pillWidthValue,
+                    left: contentOffset,
+                  },
+                ]}
+              >
                 <IconComponent
                   size={24}
                   color={isFocused ? colors.white : colors.neutral[400]}
                 />
                 {isFocused && (
-                  <Animated.Text style={styles.tabLabel}>
+                  <Animated.Text
+                    style={styles.tabLabel}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
                     {tabConfig.label}
                   </Animated.Text>
                 )}
@@ -246,19 +269,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 56,
     zIndex: 1,
+    position: 'relative',
+    overflow: 'visible',
   },
   tabContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm + spacing.xs,
     height: 40,
+    position: 'absolute',
+    top: 8,
   },
   tabLabel: {
     color: colors.white,
     fontSize: fontSize.base,
     fontWeight: '600',
     marginLeft: spacing.sm,
+    flexShrink: 1,
   },
 });
 
