@@ -1,10 +1,6 @@
-// backend/src/routes/foods_db.ts
-// Purpose: data access helpers for nutrition.db with NAMED exports.
+import db from '../models/db';
 
-import db from '../models/db'; // ← change this path if your db connection lives elsewhere
-
-// Row shape in the SQLite 'foods' table
-type FoodRow = {
+export type FoodRow = {
   id: string;
   source: string | null;
   name: string;
@@ -16,7 +12,6 @@ type FoodRow = {
   modifiers_json: string | null;
 };
 
-// Safe JSON parser
 function parseJson<T>(s: string | null): T | null {
   if (!s) return null;
   try {
@@ -26,30 +21,45 @@ function parseJson<T>(s: string | null): T | null {
   }
 }
 
-/**
- * Build FTS query string: lowercase, clean, split words, add * for prefix search
- */
 function buildFtsQuery(input: string): string {
   return input
     .toLowerCase()
     .replace(/[^a-z0-9\u4e00-\u9fa5\s]/g, ' ')
     .split(/\s+/)
     .filter(Boolean)
-    .map(t => `${t}*`)
+    .map(token => `${token}*`)
     .join(' ');
 }
 
-/**
- * Search foods using FTS (foods_fts) if available; fallback to LIKE.
- * Named export.
- */
-export function searchFoods(q: string, limit = 20) {
+export type FoodSummary = {
+  id: string;
+  name: string;
+  category: string | null;
+};
+
+export type FoodDetails = {
+  id: string;
+  source?: string;
+  name: string;
+  category?: string;
+  aliases: string[];
+  default_portion: {
+    unit: string;
+    grams?: number;
+    ml?: number;
+  } | null;
+  nutrients_per_100g: Record<string, number> | null;
+  nutrients_per_100ml: Record<string, number> | null;
+  modifiers: Record<string, unknown> | null;
+};
+
+/** Search the foods catalogue with FTS (fallbacks to LIKE on failure). */
+export function searchFoods(q: string, limit = 20): FoodSummary[] {
   const ftsQuery = buildFtsQuery(q);
 
-  // --- 1. Try FTS5 virtual table first ---
   try {
     const rows = db
-      .prepare(
+      .prepare<unknown[], FoodSummary>(
         `SELECT f.id, f.name, f.category
          FROM foods_fts fts
          JOIN foods f ON f.rowid = fts.rowid
@@ -62,39 +72,35 @@ export function searchFoods(q: string, limit = 20) {
     if (rows.length > 0) {
       return rows;
     }
-  } catch (e) {
-    console.error('FTS search failed:', e);
+  } catch (error) {
+    console.error('[FoodService] FTS search failed, falling back to LIKE:', error);
   }
 
-  // --- 2. Fallback: basic LIKE on name and aliases_json ---
   const like = `%${q.toLowerCase()}%`;
+
   return db
-    .prepare(
+    .prepare<unknown[], FoodSummary>(
       `SELECT id, name, category
        FROM foods
       WHERE lower(name) LIKE ?
-         OR lower(ifnull(aliases_json,'')) LIKE ?
+         OR lower(ifnull(aliases_json, '')) LIKE ?
+      ORDER BY name
       LIMIT ?`
     )
     .all(like, like, limit);
 }
 
-/**
- * Get one food by id; expand JSON columns.
- * Named export.
- */
-export function getFoodById(id: string) {
+/** Get food details by id (parses JSON columns). */
+export function getFoodById(id: string): FoodDetails | null {
   const row = db
     .prepare<unknown[], FoodRow>(`SELECT * FROM foods WHERE id = ?`)
     .get(id);
 
   if (!row) return null;
 
-  return {
+  const details: FoodDetails = {
     id: row.id,
-    source: row.source ?? undefined,
     name: row.name,
-    category: row.category ?? undefined,
     aliases: parseJson<string[]>(row.aliases_json) ?? [],
     default_portion:
       parseJson<{ unit: string; grams?: number; ml?: number }>(
@@ -106,4 +112,30 @@ export function getFoodById(id: string) {
       parseJson<Record<string, number>>(row.nutrients_per_100ml_json) ?? null,
     modifiers: parseJson<Record<string, unknown>>(row.modifiers_json) ?? null,
   };
+
+  if (row.source) {
+    details.source = row.source;
+  }
+
+  if (row.category) {
+    details.category = row.category;
+  }
+
+  return details;
+}
+
+/** Simple paginated food list. */
+export function listFoods(
+  offset = 0,
+  limit = 50
+): Array<Pick<FoodSummary, 'id' | 'name' | 'category'>> {
+  return db
+    .prepare<unknown[], FoodSummary>(
+      `SELECT id, name, category
+       FROM foods
+       ORDER BY name
+       LIMIT ?
+       OFFSET ?`
+    )
+    .all(limit, offset);
 }

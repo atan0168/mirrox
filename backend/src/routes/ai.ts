@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { extractWithDeepSeek } from '../services/deepseek';
+import { extractWithDeepSeek } from '../services/DeepseekService';
 
 const router = Router();
 

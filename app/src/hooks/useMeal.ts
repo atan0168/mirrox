@@ -51,26 +51,27 @@ export const useMeal = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meal'] }),
   });
 
-  const quickLog = useMutation({
-    mutationFn: async (food_id: string) => {
-      const res = await axios.post(
-        `${API_BASE_URL}/personalization/meal-event`,
-        {
-          food_id,
-          ts_ms: Date.now(),
-          source: 'predict',
-        }
-      );
-      return res.data;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meal'] }),
-  });
+  // TODO: this should be moved to the frontend
+  // const quickLog = useMutation({
+  //   mutationFn: async (food_id: string) => {
+  //     const res = await axios.post(
+  //       `${API_BASE_URL}/personalization/meal-event`,
+  //       {
+  //         food_id,
+  //         ts_ms: Date.now(),
+  //         source: 'predict',
+  //       }
+  //     );
+  //     return res.data;
+  //   },
+  //   onSuccess: () => queryClient.invalidateQueries({ queryKey: ['meal'] }),
+  // });
 
   return {
     ...query,
     removeItem,
     addManual,
     appendFromAnalysis: appendFromAnalysisMutation,
-    quickLog,
+    // quickLog,
   };
 };

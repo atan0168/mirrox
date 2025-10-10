@@ -8,8 +8,6 @@ import config from '../utils/config';
 
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
-// ------------------------- Types -------------------------
-
 export type ExtractPayload = {
   text?: string; // optional user text
   imageBase64?: string; // optional base64 (with/without data URL prefix)
@@ -32,20 +30,6 @@ function buildSystemPrompt() {
     '{ "FOOD_ITEM": [...], "DRINK_ITEM": [...] }',
     'No extra text. Use lowercase names and deduplicate.',
   ].join('\n');
-}
-
-/** Expand user text by dict BEFORE sending to the model */
-function expandTextByDict(text: string | undefined, dict: DictRow[]) {
-  if (!text || dict.length === 0) return text || '';
-  let t = text;
-  for (const e of dict) {
-    if (!e.phrase) continue;
-    const target = e.canonical_food_name || e.canonical_food_id;
-    if (!target) continue;
-    const re = new RegExp(`\\b${escapeRegExp(e.phrase)}\\b`, 'ig');
-    t = t.replace(re, target);
-  }
-  return t;
 }
 
 /**
@@ -121,7 +105,10 @@ async function ocrImageToText(png: Buffer): Promise<string> {
   return (data?.text || '').trim();
 }
 
-async function callChat(payload: any) {
+async function callChat(payload: {
+  model: string;
+  messages: Array<{ role: string; content: string }>;
+}) {
   const url = `${config.deepseek.baseUrl}/chat/completions`;
   return axios.post(url, payload, {
     headers: {
@@ -136,7 +123,7 @@ async function callChat(payload: any) {
 function safeParseJSON(s: string): ExtractResult {
   const match = s.match(/\{[\s\S]*\}/);
   const jsonStr = match ? match[0] : s;
-  let obj: any;
+  let obj;
   try {
     obj = JSON.parse(jsonStr);
   } catch {
@@ -155,14 +142,10 @@ function safeParseJSON(s: string): ExtractResult {
   return { ...obj, raw: s };
 }
 
-// ------------------------- Public API (Personalized) -------------------------
-
 /**
- * Personalized extractor:
- * - loads user dictionary from SQLite
+ * Food Item extractor:
  * - expands user text (and OCR text) with mappings first
- * - injects mappings into system prompt (highest priority)
- * - falls back to generic prompt if no dict
+ * - injects mappings into system prompt
  */
 export async function extractWithDeepSeek(
   input: ExtractPayload
@@ -183,7 +166,7 @@ export async function extractWithDeepSeek(
     return safeParseJSON(content);
   }
 
-  // Image path: OCR then merge, and expand merged text by dict
+  // Image path: OCR then merge
   const png = await toOcrPngBuffer({
     ...(imageBase64 && { imageBase64 }),
     ...(imageUrl && { imageUrl }),

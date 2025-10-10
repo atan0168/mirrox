@@ -3,60 +3,59 @@ import db from '../models/db';
 
 const router = Router();
 
-/** Helper: convert hour into a coarse time slot */
-function hourToSlot(h: number) {
-  if (h >= 5 && h < 8) return 0;
-  if (h >= 8 && h < 11) return 1;
-  if (h >= 11 && h < 14) return 2;
-  if (h >= 14 && h < 17) return 3;
-  if (h >= 17 && h < 20) return 4;
-  return 5;
-}
+// function hourToSlot(h: number) {
+//   if (h >= 5 && h < 8) return 0;
+//   if (h >= 8 && h < 11) return 1;
+//   if (h >= 11 && h < 14) return 2;
+//   if (h >= 14 && h < 17) return 3;
+//   if (h >= 17 && h < 20) return 4;
+//   return 5;
+// }
 
 /** Helper: check if two hours belong to the same slot */
-function inSameSlot(hour: number, anchorHour: number) {
-  return hourToSlot(hour) === hourToSlot(anchorHour);
-}
+// function inSameSlot(hour: number, anchorHour: number) {
+//   return hourToSlot(hour) === hourToSlot(anchorHour);
+// }
 
-/** 2.3 Insert meal event (for habit learning) */
-router.post('/meal-event', (req, res) => {
-  const { user_id, ts, food_id, food_name, portion_json, source } =
-    req.body || {};
-  if (!user_id || !food_name)
-    return res
-      .status(400)
-      .json({ ok: false, error: 'user_id & food_name required' });
-  const t = ts ? Number(ts) : Date.now();
-  const local = new Date(t);
-  const dow = local.getDay();
-  const local_hour = local.getHours();
-  db.prepare(
-    `
-    INSERT INTO meal_events (user_id, ts, local_hour, dow, food_id, food_name, portion_json, source, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `
-  ).run(
-    user_id,
-    t,
-    local_hour,
-    dow,
-    food_id ?? null,
-    String(food_name),
-    portion_json ? JSON.stringify(portion_json) : null,
-    source ?? 'manual',
-    Date.now()
-  );
-  // Mirror into meal_log (non-fatal if table does not exist)
-  try {
-    db.prepare(
-      `INSERT INTO meal_log (user_id, food_id, ts_ms, source) VALUES (?, ?, ?, ?)`
-    ).run(user_id, food_id ?? null, t, source ?? 'manual');
-  } catch {
-    // swallow if meal_log table is not present; prediction tests can create it.
-  }
-
-  res.json({ ok: true });
-});
+/** Insert meal event (for habit learning) */
+// router.post('/meal-event', (req, res) => {
+//   const { user_id, ts, food_id, food_name, portion_json, source } =
+//     req.body || {};
+//   if (!user_id || !food_name)
+//     return res
+//       .status(400)
+//       .json({ ok: false, error: 'user_id & food_name required' });
+//   const t = ts ? Number(ts) : Date.now();
+//   const local = new Date(t);
+//   const dow = local.getDay();
+//   const local_hour = local.getHours();
+//   db.prepare(
+//     `
+//     INSERT INTO meal_events (user_id, ts, local_hour, dow, food_id, food_name, portion_json, source, created_at)
+//     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+//   `
+//   ).run(
+//     user_id,
+//     t,
+//     local_hour,
+//     dow,
+//     food_id ?? null,
+//     String(food_name),
+//     portion_json ? JSON.stringify(portion_json) : null,
+//     source ?? 'manual',
+//     Date.now()
+//   );
+//   // Mirror into meal_log (non-fatal if table does not exist)
+//   try {
+//     db.prepare(
+//       `INSERT INTO meal_log (user_id, food_id, ts_ms, source) VALUES (?, ?, ?, ?)`
+//     ).run(user_id, food_id ?? null, t, source ?? 'manual');
+//   } catch {
+//     // swallow if meal_log table is not present; prediction tests can create it.
+//   }
+//
+//   res.json({ ok: true });
+// });
 
 // @deprecated it should be implemented on the frontend
 // router.get('/predict', (req, res) => {

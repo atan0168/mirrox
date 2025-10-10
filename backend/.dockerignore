@@ -13,4 +13,5 @@ docker-compose.yml
 README.md
 ARCHITECTURE.md
 *.tsbuildinfo
-
+*.db-shm
+*.db-wal

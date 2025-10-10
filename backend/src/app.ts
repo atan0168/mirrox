@@ -10,9 +10,6 @@ import routes from './routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { requestLogger } from './middleware/logger';
 
-import bootstrapPersonalization from './models/personalization';
-bootstrapPersonalization();
-
 const app = express();
 
 // Security middleware
@@ -80,7 +77,6 @@ app.get('/', (_req, res) => {
         '/api/dengue/outbreaks?latitude=..&longitude=..&radius=5',
       denguePredict: '/api/dengue/predict?state=SELANGOR&live=true',
       foodExtract: '/api/food/extract',
-      personalization: '/api/personalization',
     },
   });
 });

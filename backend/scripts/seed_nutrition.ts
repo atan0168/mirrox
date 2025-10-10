@@ -21,8 +21,8 @@ type Food = {
 
 // ---------- utils ----------
 const root = path.join(__dirname, '..');
+const dataDir = path.join(__dirname, './data');
 const dbPath = path.join(root, 'nutrition.db');
-const dataDir = path.join(root, 'data');
 const pCurated = path.join(dataDir, 'foods.my.json'); // your curated Malaysia data
 const pMyFcd = path.join(dataDir, 'myfcd_clean.json'); // your MyFCD Malaysia data
 

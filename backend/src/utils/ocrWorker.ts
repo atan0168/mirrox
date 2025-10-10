@@ -1,4 +1,3 @@
-// backend/src/utils/ocrWorker.ts
 import { createWorker, Worker } from 'tesseract.js';
 
 let worker: Worker | null = null;
