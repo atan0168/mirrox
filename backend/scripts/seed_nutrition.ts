@@ -8,16 +8,30 @@ type Food = {
   name: string;
   aliases?: string[];
   category?: string | null;
-  default_portion?: any | null;
-  nutrients_per_100g?: any | null;
-  nutrients_per_100ml?: any | null;
-  modifiers?: any | null;
+  default_portion?: unknown | null;
+  nutrients_per_100g?: NutrientSet | null;
+  nutrients_per_100ml?: NutrientSet | null;
+  modifiers?: unknown | null;
   // Keep source union for clarity
   source?: 'CURATED' | 'MyFCD';
   // Keep optional legacy fields (harmless if present)
   basis?: string | null;
-  nutrients?: any | null;
+  nutrients?: unknown | null;
 };
+
+const nutrientFields = [
+  'energy_kcal',
+  'carb_g',
+  'sugar_g',
+  'fat_g',
+  'sat_fat_g',
+  'protein_g',
+  'fiber_g',
+  'sodium_mg',
+] as const;
+
+type NutrientKey = (typeof nutrientFields)[number];
+type NutrientSet = Partial<Record<NutrientKey, number | null>>;
 
 // ---------- utils ----------
 const root = path.join(__dirname, '..');
@@ -29,7 +43,7 @@ const pMyFcd = path.join(dataDir, 'myfcd_clean.json'); // your MyFCD Malaysia da
 function readJson(p: string) {
   return JSON.parse(fs.readFileSync(p, 'utf-8'));
 }
-function J(x: any) {
+function J(x: unknown) {
   return x == null ? null : JSON.stringify(x);
 }
 function keyName(s: string) {
@@ -38,110 +52,108 @@ function keyName(s: string) {
     .replace(/[^a-z0-9]+/g, '');
 }
 
-// Normalize nutrients: convert NaN -> null, coerce number-like strings, drop undefined
-function sanitizeNutrients(n: any) {
-  if (!n) return null;
-  const out: any = {};
-  for (const k of [
-    'energy_kcal',
-    'carb_g',
-    'sugar_g',
-    'fat_g',
-    'sat_fat_g',
-    'protein_g',
-    'fiber_g',
-    'sodium_mg',
-  ]) {
-    const v = n[k];
-    out[k] =
-      typeof v === 'number' && Number.isFinite(v)
-        ? v
-        : v == null
-          ? null
-          : Number.isFinite(Number(v))
-            ? Number(v)
-            : null;
-  }
-  return out;
-}
+const coerceNumeric = (value: unknown) => {
+  const candidate =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number(value)
+        : NaN;
+  return Number.isFinite(candidate) ? Number(candidate) : null;
+};
+
+const sanitizeNutrients = (n: unknown): NutrientSet | null =>
+  n
+    ? (() => {
+        const source = n as Record<NutrientKey, unknown>;
+        const entries = nutrientFields
+          .map(key => [key, coerceNumeric(source[key])] as const)
+          .filter((entry): entry is [NutrientKey, number] => entry[1] != null);
+        return entries.length
+          ? (Object.fromEntries(entries) as NutrientSet)
+          : null;
+      })()
+    : null;
 
 // ---------- load two sources (CURATED + MyFCD only) ----------
 function loadCurated(): Food[] {
-  if (!fs.existsSync(pCurated)) return [];
-  const arr: Food[] = readJson(pCurated);
-  return arr.map(x => ({
-    ...x,
-    source: 'CURATED',
-    nutrients_per_100g: sanitizeNutrients(x.nutrients_per_100g),
-    nutrients_per_100ml: sanitizeNutrients(x.nutrients_per_100ml),
-  }));
+  return fs.existsSync(pCurated)
+    ? (readJson(pCurated) as Food[]).map(x => ({
+        ...x,
+        source: 'CURATED',
+        nutrients_per_100g: sanitizeNutrients(x.nutrients_per_100g),
+        nutrients_per_100ml: sanitizeNutrients(x.nutrients_per_100ml),
+      }))
+    : [];
 }
 
 function loadMyFcd(): Food[] {
-  if (!fs.existsSync(pMyFcd)) return [];
-  const arr: Food[] = readJson(pMyFcd);
-  return arr.map(x => ({
-    ...x,
-    // Avoid id collision: ensure MyFCD ids are prefixed
-    id: x.id?.startsWith('myfcd-') ? x.id : `myfcd-${x.id}`,
-    source: 'MyFCD',
-    nutrients_per_100g: sanitizeNutrients(x.nutrients_per_100g),
-    nutrients_per_100ml: sanitizeNutrients(x.nutrients_per_100ml),
-  }));
+  return fs.existsSync(pMyFcd)
+    ? (readJson(pMyFcd) as Food[]).map(x => ({
+        ...x,
+        // Avoid id collision: ensure MyFCD ids are prefixed
+        id: x.id?.startsWith('myfcd-') ? x.id : `myfcd-${x.id}`,
+        source: 'MyFCD',
+        nutrients_per_100g: sanitizeNutrients(x.nutrients_per_100g),
+        nutrients_per_100ml: sanitizeNutrients(x.nutrients_per_100ml),
+      }))
+    : [];
 }
+
+const selectDefined = <T>(
+  primary: T | null | undefined,
+  fallback: T | null | undefined
+) => primary ?? fallback ?? null;
+
+const mergeNutrients = (
+  primary: NutrientSet | null | undefined,
+  fallback: NutrientSet | null | undefined
+) => {
+  const merged: NutrientSet = { ...(primary ?? {}) };
+  nutrientFields.forEach(key => {
+    merged[key] = merged[key] ?? fallback?.[key] ?? null;
+  });
+  return Object.values(merged).some(v => v != null) ? merged : null;
+};
+
+const mergeFoods = (primary: Food, candidate: Food): Food => {
+  const aliasSet = new Set([
+    ...(primary.aliases ?? []),
+    ...(candidate.aliases ?? []),
+  ]);
+  return {
+    ...primary,
+    aliases: aliasSet.size ? Array.from(aliasSet) : undefined,
+    category: selectDefined(primary.category, candidate.category),
+    default_portion: selectDefined(
+      primary.default_portion,
+      candidate.default_portion
+    ),
+    nutrients_per_100g: mergeNutrients(
+      primary.nutrients_per_100g,
+      candidate.nutrients_per_100g
+    ),
+    nutrients_per_100ml: mergeNutrients(
+      primary.nutrients_per_100ml,
+      candidate.nutrients_per_100ml
+    ),
+    modifiers: selectDefined(primary.modifiers, candidate.modifiers),
+  };
+};
 
 // ---------- merge with priority: CURATED > MyFCD ----------
 function mergeAll(curated: Food[], myfcd: Food[]) {
-  // Key by normalized name, so "Nasi Lemak" and "nasi-lemak" collapse
   const best = new Map<string, Food>();
 
-  const apply = (list: Food[]) => {
-    for (const r of list) {
-      const k = keyName(r.name);
-      const prev = best.get(k);
-      if (!prev) {
-        best.set(k, r);
-      } else {
-        // Lower priority entries only fill missing fields on the existing record
-        const merged: Food = { ...prev };
-        // merge aliases
-        const a = new Set([...(prev.aliases || []), ...(r.aliases || [])]);
-        merged.aliases = Array.from(a);
-        // fill missing category / default_portion
-        if (!merged.category && r.category) merged.category = r.category;
-        if (!merged.default_portion && r.default_portion)
-          merged.default_portion = r.default_portion;
-        // fill missing nutrient keys (per 100g and per 100ml)
-        const n100g = merged.nutrients_per_100g || {};
-        const n2 = r.nutrients_per_100g || {};
-        const n100ml = merged.nutrients_per_100ml || {};
-        const n2ml = r.nutrients_per_100ml || {};
-        const KEYS = [
-          'energy_kcal',
-          'carb_g',
-          'sugar_g',
-          'fat_g',
-          'sat_fat_g',
-          'protein_g',
-          'fiber_g',
-          'sodium_mg',
-        ] as const;
-        for (const key of KEYS)
-          if (n100g[key] == null && n2[key] != null) n100g[key] = n2[key];
-        for (const key of KEYS)
-          if (n100ml[key] == null && n2ml[key] != null) n100ml[key] = n2ml[key];
-        merged.nutrients_per_100g = Object.keys(n100g).length ? n100g : null;
-        merged.nutrients_per_100ml = Object.keys(n100ml).length ? n100ml : null;
-        // fill modifiers if missing
-        if (!merged.modifiers && r.modifiers) merged.modifiers = r.modifiers;
+  const apply = (list: Food[]) =>
+    list.forEach(record => {
+      const key = keyName(record.name);
+      const existing = best.get(key);
+      best.set(key, existing ? mergeFoods(existing, record) : record);
+    });
 
-        best.set(k, merged);
-      }
-    }
-  };
-
-  apply(curated); // highest priority
-  apply(myfcd); // fill gaps
+  apply(curated);
+  apply(myfcd);
 
   return Array.from(best.values());
 }
@@ -186,15 +198,15 @@ function mergeAll(curated: Food[], myfcd: Food[]) {
       });
 
       // safer rowid handling for FTS
-      const got = db
-        .prepare(`SELECT rowid AS rowid FROM foods WHERE id=?`)
-        .get(r.id) as { rowid: number } | undefined;
+      const rowid = (
+        db.prepare(`SELECT rowid AS rowid FROM foods WHERE id=?`).get(r.id) as
+          | { rowid?: number }
+          | undefined
+      )?.rowid;
 
-      if (got && typeof got.rowid === 'number') {
-        insFts.run(got.rowid, r.name, (r.aliases || []).join(' '));
-      } else {
-        console.warn(`⚠️ WARN: rowid not found for id=${r.id}`);
-      }
+      typeof rowid === 'number'
+        ? insFts.run(rowid, r.name, (r.aliases || []).join(' '))
+        : console.warn(`⚠️ WARN: rowid not found for id=${r.id}`);
     }
   });
 
