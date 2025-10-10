@@ -471,6 +471,7 @@ function AvatarExperience({
   const { resetEngine } = useAvatarAnimationEngine({
     context: animationContext,
     setActiveAnimation,
+    isActive,
   });
 
   useEffect(() => {
@@ -766,6 +767,7 @@ function AvatarExperience({
               onLoadingChange={handleAvatarLoadingChange}
               onLoadingProgress={handleLoadingProgress}
               additionalIdleAnimations={contextualIdleAnimations}
+              isActive={isActive}
             />
             {hasNearbyDengueRisk && !sleepMode && (
               <MosquitoSwarm

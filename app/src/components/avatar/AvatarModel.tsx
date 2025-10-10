@@ -26,6 +26,7 @@ interface AvatarModelProps {
     item: string;
   }) => void;
   additionalIdleAnimations?: string[]; // Extra idle animations based on context (e.g., yawn when sleep-deprived)
+  isActive?: boolean;
 }
 
 export function AvatarModel({
@@ -37,6 +38,7 @@ export function AvatarModel({
   onLoadingChange,
   onLoadingProgress,
   additionalIdleAnimations = [],
+  isActive = true,
 }: AvatarModelProps) {
   const { scene, animations } = useGLTF(url);
   const { camera } = useThree();
@@ -59,6 +61,7 @@ export function AvatarModel({
   const lastNonSleepCamPosRef = useRef<THREE.Vector3 | null>(null);
   const lastNonSleepCamLookAtRef = useRef<THREE.Vector3 | null>(null);
   const prevActiveAnimationRef = useRef<string | null>(null);
+  const isActiveRef = useRef(isActive);
 
   // Update loading state
   useEffect(() => {
@@ -268,6 +271,9 @@ export function AvatarModel({
 
   // Function to cycle to next idle animation
   const cycleToNextIdleAnimation = () => {
+    if (!isActiveRef.current) {
+      return;
+    }
     const availableIdles = getAvailableIdleAnimations();
     if (availableIdles.length > 1) {
       setCurrentIdleIndex(prev => (prev + 1) % availableIdles.length);
@@ -1206,6 +1212,8 @@ export function AvatarModel({
 
   // Control animation playback
   useEffect(() => {
+    isActiveRef.current = isActive;
+
     console.log(
       `Animation state changed: activeAnimation=${activeAnimation}, available actions: ${animationActionsMap.size}`
     );
@@ -1214,6 +1222,18 @@ export function AvatarModel({
     if (idleTimerRef.current) {
       clearInterval(idleTimerRef.current);
       idleTimerRef.current = null;
+    }
+
+    if (!isActive) {
+      animationActionsMap.forEach(
+        (action: THREE.AnimationAction, name: string) => {
+          if (action.isRunning()) {
+            console.log(`Stopping animation due to inactivity: ${name}`);
+            action.stop();
+          }
+        }
+      );
+      return;
     }
 
     if (animationActionsMap.size > 0) {
@@ -1240,6 +1260,9 @@ export function AvatarModel({
           const availableIdles = getAvailableIdleAnimations();
           if (availableIdles.length > 1) {
             idleTimerRef.current = setInterval(() => {
+              if (!isActiveRef.current) {
+                return;
+              }
               cycleToNextIdleAnimation();
             }, 12000); // 12 seconds between idle animation changes
             console.log(
@@ -1319,6 +1342,15 @@ export function AvatarModel({
   useEffect(() => {
     // Only cycle if we're in idle mode (no active animation specified)
     if (!activeAnimation && animationActionsMap.size > 0) {
+      if (!isActive) {
+        animationActionsMap.forEach(action => {
+          if (action.isRunning()) {
+            action.stop();
+          }
+        });
+        return;
+      }
+
       const newIdleAnimation = getCurrentIdleAnimation();
       if (newIdleAnimation && animationActionsMap.has(newIdleAnimation)) {
         // Stop current animations
@@ -1343,12 +1375,19 @@ export function AvatarModel({
           );
         }
       }
+    } else if (!isActive) {
+      animationActionsMap.forEach(action => {
+        if (action.isRunning()) {
+          action.stop();
+        }
+      });
     }
   }, [
     currentIdleIndex,
     activeAnimation,
     animationActionsMap,
     animationSpeedScale,
+    isActive,
   ]);
 
   // Cleanup timer on unmount

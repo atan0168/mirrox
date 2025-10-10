@@ -302,15 +302,18 @@ interface UseAvatarAnimationEngineParams {
     anim: string | null,
     opts?: { manual?: boolean }
   ) => void;
+  isActive?: boolean;
 }
 
 export const useAvatarAnimationEngine = ({
   context,
   setActiveAnimation,
+  isActive = true,
 }: UseAvatarAnimationEngineParams) => {
   const planRef = useRef<AnimationPlan | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const contextRef = useRef(context);
+  const isActiveRef = useRef(isActive);
 
   useEffect(() => {
     contextRef.current = context;
@@ -342,11 +345,25 @@ export const useAvatarAnimationEngine = ({
       const nextIndex = index % plan.entries.length;
       const entry = plan.entries[nextIndex];
 
+      if (!isActiveRef.current) {
+        if (contextRef.current.activeAnimation !== null) {
+          setActiveAnimation(null);
+        }
+        return;
+      }
+
       if (contextRef.current.activeAnimation !== entry.name) {
         setActiveAnimation(entry.name);
       }
 
       timerRef.current = setTimeout(() => {
+        if (!isActiveRef.current) {
+          stopCycle();
+          if (contextRef.current.activeAnimation !== null) {
+            setActiveAnimation(null);
+          }
+          return;
+        }
         playCycleEntry(plan, nextIndex + 1);
       }, entry.durationMs);
     },
@@ -354,6 +371,17 @@ export const useAvatarAnimationEngine = ({
   );
 
   useEffect(() => {
+    isActiveRef.current = isActive;
+
+    if (!isActive) {
+      stopCycle();
+      planRef.current = null;
+      if (contextRef.current.activeAnimation !== null) {
+        setActiveAnimation(null);
+      }
+      return;
+    }
+
     const plan = buildAnimationPlan(context);
 
     if (plansEqual(planRef.current, plan)) {
@@ -388,7 +416,7 @@ export const useAvatarAnimationEngine = ({
       : -1;
 
     playCycleEntry(cyclePlan, startIndex >= 0 ? startIndex : 0);
-  }, [context, playCycleEntry, setActiveAnimation, stopCycle]);
+  }, [context, isActive, playCycleEntry, setActiveAnimation, stopCycle]);
 
   useEffect(() => {
     return () => {
