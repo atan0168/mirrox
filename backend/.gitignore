@@ -101,3 +101,5 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+*.db-shm
+*.db-wal
