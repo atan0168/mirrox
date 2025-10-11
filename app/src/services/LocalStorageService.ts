@@ -174,12 +174,12 @@ export class LocalStorageService {
     }
   }
 
-  private async setItem(key: string, value: string): Promise<void> {
+  public async setItem(key: string, value: string): Promise<void> {
     await this.ready;
     this.storage.set(key, value);
   }
 
-  private async getItem(key: string): Promise<string | undefined> {
+  public async getItem(key: string): Promise<string | undefined> {
     await this.ready;
     return this.storage.getString(key);
   }

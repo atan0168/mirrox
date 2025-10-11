@@ -1,3 +1,4 @@
+import QuestList from '../components/QuestList';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -41,8 +42,119 @@ import { useHydrationStore } from '../store/hydrationStore';
 import { hydrationService } from '../services/HydrationService';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
+import ViewBadgesButton from '../components/ViewBadgesButton';
+
+// NEW: 7-day streak celebration imports
+import dayjs from 'dayjs';
+import BadgeCelebration from '../components/BadgeCelebration';
+import { useQuestStore } from '../store/useQuestStore';
+import { useBadgeStore, BADGE_DEFS } from '../store/badgeStore';
+
+// TEST: seed 6 consecutive past days; complete once today to truly award
+const seed6ThenCompleteToday = (
+  questId:
+    | 'drink_2l'
+    | 'haze_mask_today'
+    | 'nature_walk_10m'
+    | 'calm_breath_5m'
+    | 'gratitude_note'
+) => {
+  const now = dayjs();
+  const logs = Array.from({ length: 6 }).map((_, i) => {
+    const ts = now
+      .subtract(6 - i, 'day')
+      .endOf('day')
+      .valueOf(); // 6 consecutive days
+    return {
+      questId,
+      title:
+        questId === 'drink_2l'
+          ? 'Drink Water'
+          : questId === 'haze_mask_today'
+            ? 'Wear Mask'
+            : questId === 'nature_walk_10m'
+              ? 'Walk 10m'
+              : questId === 'calm_breath_5m'
+                ? 'Calm Breathing'
+                : 'Gratitude',
+      rewardPoints: 0,
+      rewardTag: 'skin' as any, // UI only
+      completedAt: ts,
+      streakCount: i + 1,
+      note: 'DEV seed 6d',
+    };
+  });
+  const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+
+  useQuestStore.setState(s => ({
+    history: [...logs, ...s.history],
+    streaks: {
+      ...s.streaks,
+      [questId]: { id: questId, count: 6, lastDate: yesterday },
+    },
+  }));
+
+  console.log(
+    '✅ Seeded 6 days for',
+    questId,
+    '—streaks preset to 6 (lastDate=yesterday). complete once today to award.'
+  );
+};
+
+// ---------------------------------------------------------------------------------------------
 
 const DashboardScreen: React.FC = () => {
+  // --------------------------------- DEV seed helpers ---------------------------------
+  // NEW: Support seeding 7-day history for ALL 5 quests to quickly test celebration UI.
+  const seed7DayHistory = (
+    questId:
+      | 'drink_2l'
+      | 'haze_mask_today'
+      | 'nature_walk_10m'
+      | 'calm_breath_5m'
+      | 'gratitude_note'
+  ) => {
+    const now = dayjs();
+    const logs = Array.from({ length: 7 }).map((_, i) => {
+      const ts = now
+        .subtract(6 - i, 'day')
+        .endOf('day')
+        .valueOf(); // 7 consecutive days
+      return {
+        questId,
+        title:
+          questId === 'drink_2l'
+            ? 'Drink 2L Water'
+            : questId === 'haze_mask_today'
+              ? 'Wear Mask on Hazy Day'
+              : questId === 'nature_walk_10m'
+                ? '10-min Nature Walk'
+                : questId === 'calm_breath_5m'
+                  ? '5-min Calm Breathing'
+                  : 'Gratitude Note',
+        rewardPoints: 0,
+        rewardTag: 'skin' as any, // UI-only; placeholder (history cards need a tag)
+        completedAt: ts,
+        streakCount: i + 1,
+        note: 'Dev Test Seed',
+      };
+    });
+
+    useQuestStore.setState(s => ({
+      history: [...logs, ...s.history], // prepend injected logs
+    }));
+
+    console.log('✅ [DEV TEST] Seeded 7-day history for:', questId);
+  };
+
+  const clearHistoryForRetest = () => {
+    useQuestStore.setState({ history: [] });
+    setCelebrateId(null);
+    setHighlightBtn(false);
+    console.log('♻️ [DEV TEST] Cleared history for re-test');
+  };
+  // -------------------------------------------------------------------------------------
+
   const isFocused = useIsFocused();
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
@@ -71,6 +183,7 @@ const DashboardScreen: React.FC = () => {
   const dashboardOnboardingSeen = useUIStore(s => s.dashboardOnboardingSeen);
   const markOnboardingSeen = useUIStore(s => s.markDashboardOnboardingSeen);
   const resetOnboardingSeen = useUIStore(s => s.resetDashboardOnboarding);
+
   // Eye-bags controls via store (no prop drilling)
   const eyeBagsOverride = useAvatarStore(s => s.eyeBagsOverrideEnabled);
   const setEyeBagsOverride = useAvatarStore(s => s.setEyeBagsOverrideEnabled);
@@ -84,10 +197,24 @@ const DashboardScreen: React.FC = () => {
   const eyeBagsHeight = useAvatarStore(s => s.eyeBagsHeight);
   const setEyeBagsSize = useAvatarStore(s => s.setEyeBagsSize);
 
-  // Use developer controls preference
+  // NEW: UI state for celebration modal & floating button highlight
+  const [celebrateId, setCelebrateId] = useState<
+    | null
+    | 'streak7_drink'
+    | 'streak7_mask'
+    | 'streak7_walk'
+    | 'streak7_breathe'
+    | 'streak7_gratitude'
+  >(null);
+  const [highlightBtn, setHighlightBtn] = useState(false);
+
+  // Read stores needed for 7-day detection (UI only)
+  const history = useQuestStore(s => s.history);
+  useBadgeStore(s => s.earned); // keep subscribed in case you want to react to new badges later
+
   const { developerControlsEnabled } = useDeveloperControlsPreference();
 
-  // Animate skeleton shimmer/pulse
+  // Skeleton shimmer
   useEffect(() => {
     const loop = Animated.loop(
       Animated.timing(skeletonAnim, {
@@ -119,6 +246,7 @@ const DashboardScreen: React.FC = () => {
     (dengueNearby?.hotspotCount ?? 0) > 0 ||
     (dengueNearby?.outbreakCount ?? 0) > 0;
 
+  // Location lifecycle
   useEffect(() => {
     let isMounted = true;
     let subscription: Location.LocationSubscription | null = null;
@@ -186,11 +314,10 @@ const DashboardScreen: React.FC = () => {
     };
   }, [isFocused]);
 
+  // Scene selection from location
   useEffect(() => {
     if (!userProfile) {
-      if (autoScene !== 'home') {
-        setAutoScene('home');
-      }
+      if (autoScene !== 'home') setAutoScene('home');
       return;
     }
 
@@ -198,9 +325,7 @@ const DashboardScreen: React.FC = () => {
       locationPermissionStatus !== Location.PermissionStatus.GRANTED ||
       !currentLocation
     ) {
-      if (autoScene !== 'home') {
-        setAutoScene('home');
-      }
+      if (autoScene !== 'home') setAutoScene('home');
       return;
     }
 
@@ -215,27 +340,19 @@ const DashboardScreen: React.FC = () => {
       isWithinRadiusKm(currentLocation, workLocation.coordinates, 1);
 
     let nextScene: SceneOption = 'home';
-    if (nearHome) {
-      nextScene = 'home';
-    } else if (nearWork) {
-      nextScene = 'city';
-    }
+    if (nearHome) nextScene = 'home';
+    else if (nearWork) nextScene = 'city';
 
-    if (nextScene !== autoScene) {
-      setAutoScene(nextScene);
-    }
+    if (nextScene !== autoScene) setAutoScene(nextScene);
   }, [autoScene, currentLocation, locationPermissionStatus, userProfile]);
 
+  // Respect manual override
   useEffect(() => {
-    if (sceneManuallyOverridden) {
-      return;
-    }
-
-    if (scene !== autoScene) {
-      setScene(autoScene);
-    }
+    if (sceneManuallyOverridden) return;
+    if (scene !== autoScene) setScene(autoScene);
   }, [autoScene, scene, sceneManuallyOverridden]);
 
+  // Disable manual override if developer controls are off
   useEffect(() => {
     if (!developerControlsEnabled && sceneManuallyOverridden) {
       setSceneManuallyOverridden(false);
@@ -263,7 +380,7 @@ const DashboardScreen: React.FC = () => {
     }
   }, [storeHydrated, dashboardOnboardingSeen]);
 
-  // Calculate combined environmental skin effects (air quality + UV)
+  // Combined environmental skin effects (AQI + UV)
   const skinEffects = useMemo(() => {
     if (!airQuality) {
       return {
@@ -277,7 +394,6 @@ const DashboardScreen: React.FC = () => {
       };
     }
 
-    // Get current UV index from forecast data (use today's average if available)
     const currentUVIndex =
       airQuality.uvIndex ||
       (airQuality.uvForecast && airQuality.uvForecast.length > 0
@@ -292,13 +408,13 @@ const DashboardScreen: React.FC = () => {
       },
       {
         uvIndex: currentUVIndex,
-        exposureHours: 2, // Assume 2 hours of outdoor exposure
+        exposureHours: 2,
       },
-      0 // Base skin tone adjustment
+      0
     );
   }, [airQuality]);
 
-  // Calculate smog effects based on air quality
+  // Smog effects
   const smogEffects = useMemo(() => {
     if (!airQuality) {
       return {
@@ -319,19 +435,19 @@ const DashboardScreen: React.FC = () => {
   // Health data (for sleep minutes)
   const { data: health } = useHealthData({ autoSync: false });
 
-  // Initialize hydration service
+  // Hydration init
   useEffect(() => {
     if (userProfile && storeHydrated) {
       hydrationService.initialize();
     }
   }, [userProfile, storeHydrated]);
 
-  // Get hydration progress percentage for avatar visual feedback
+  // Avatar hydration bar (0-200%) from store
   const hydrationProgressPercentage = useHydrationStore(s =>
     s.getProgressPercentage()
   );
 
-  // Auto-adjust facial expression based on air quality and sleep
+  // Auto facial expression
   const recommendedExpression = useMemo(() => {
     return getCombinedRecommendedExpression({
       aqi: airQuality?.aqi ?? null,
@@ -340,11 +456,11 @@ const DashboardScreen: React.FC = () => {
     });
   }, [airQuality?.aqi, airQuality?.pm25, health?.sleepMinutes]);
 
-  // Create effects data for the effects list
+  // Effects list data
   const activeEffects = useMemo((): EffectData[] => {
     const effects: EffectData[] = [];
 
-    // Skin effects
+    // Skin
     if (skinEffects.totalAdjustment !== 0) {
       const severity =
         Math.abs(skinEffects.totalAdjustment) > 0.3
@@ -377,7 +493,7 @@ const DashboardScreen: React.FC = () => {
       });
     }
 
-    // Smog/atmospheric effects
+    // Smog
     if (smogEffects.enabled) {
       const severity =
         smogEffects.intensity > 0.7
@@ -398,7 +514,7 @@ const DashboardScreen: React.FC = () => {
           'Based on PM2.5 and PM10 particulate matter levels',
         ],
         severity,
-        source: airQuality?.source?.toUpperCase() || 'Air Quality Data',
+        source: 'Air Quality Data',
         actionRecommendations: [
           'Wear an N95 or KN95 mask when outdoors',
           'Keep windows closed and use air purifiers indoors',
@@ -409,7 +525,7 @@ const DashboardScreen: React.FC = () => {
       });
     }
 
-    // Facial expression effects
+    // Expression
     if (recommendedExpression !== 'neutral') {
       const severity =
         airQuality?.aqi && airQuality.aqi > 150
@@ -426,7 +542,11 @@ const DashboardScreen: React.FC = () => {
           `Current expression: ${recommendedExpression}`,
           `Based on AQI: ${airQuality?.aqi || 'N/A'}`,
           `PM2.5 level: ${airQuality?.pm25 || 'N/A'} μg/m³`,
-          `Last-night sleep: ${health?.sleepMinutes != null ? (health.sleepMinutes / 60).toFixed(1) + 'h' : 'N/A'}`,
+          `Last-night sleep: ${
+            health?.sleepMinutes != null
+              ? (health.sleepMinutes / 60).toFixed(1) + 'h'
+              : 'N/A'
+          }`,
           'Expression reflects health impact of air quality and sleep',
         ],
         severity,
@@ -449,6 +569,63 @@ const DashboardScreen: React.FC = () => {
     airQuality,
     health?.sleepMinutes,
   ]);
+
+  // -------------------------------- 7-day streak detection (UI only) ----------------------------
+  // NEW: Generic helper — detect any 7-day consecutive streak from YYYY-MM-DD strings
+  const has7Consecutive = (days: string[]) => {
+    if ((days?.length ?? 0) < 7) return false;
+    const uniqSorted = Array.from(new Set(days)).sort();
+    let streak = 1;
+    for (let i = 1; i < uniqSorted.length; i++) {
+      if (dayjs(uniqSorted[i]).diff(dayjs(uniqSorted[i - 1]), 'day') === 1) {
+        streak++;
+        if (streak >= 7) return true;
+      } else {
+        streak = 1;
+      }
+    }
+    return false;
+  };
+
+  // NEW: Aggregate days per quest from history; compute 7-day flags (drink/mask/walk/breathe/gratitude)
+  const flags = useMemo(() => {
+    if (!history?.length)
+      return {
+        drink7: false,
+        mask7: false,
+        walk7: false,
+        breathe7: false,
+        gratitude7: false,
+      };
+
+    const map: Record<string, string[]> = {};
+    history.forEach(h => {
+      const dayKey = dayjs(h.completedAt).format('YYYY-MM-DD');
+      if (!map[h.questId]) map[h.questId] = [];
+      map[h.questId].push(dayKey);
+    });
+
+    return {
+      drink7: has7Consecutive(map['drink_2l'] ?? []),
+      mask7: has7Consecutive(map['haze_mask_today'] ?? []),
+      walk7: has7Consecutive(map['nature_walk_10m'] ?? []),
+      breathe7: has7Consecutive(map['calm_breath_5m'] ?? []),
+      gratitude7: has7Consecutive(map['gratitude_note'] ?? []),
+    };
+  }, [history]);
+
+  // NEW: Trigger a celebration modal for the first truthy flag (UI only; awarding handled in store)
+  useEffect(() => {
+    if (celebrateId) return; // avoid re-trigger while showing modal
+
+    // Priority order: drink > mask > walk > breathe > gratitude (can be adjusted)
+    if (flags.drink7) setCelebrateId('streak7_drink');
+    else if (flags.mask7) setCelebrateId('streak7_mask');
+    else if (flags.walk7) setCelebrateId('streak7_walk');
+    else if (flags.breathe7) setCelebrateId('streak7_breathe');
+    else if (flags.gratitude7) setCelebrateId('streak7_gratitude');
+  }, [flags, celebrateId]);
+  // ----------------------------------------------------------------------------------------------
 
   if (isLoading) {
     return (
@@ -498,7 +675,7 @@ const DashboardScreen: React.FC = () => {
             />
           </View>
 
-          {/* Skin Tone Controls - above facial expressions */}
+          {/* Developer controls */}
           {developerControlsEnabled && (
             <View style={styles.controlsContainer}>
               <Text style={styles.controlsTitle}>Avatar Customization</Text>
@@ -616,7 +793,8 @@ const DashboardScreen: React.FC = () => {
                   </View>
                 )}
               </View>
-              {/* Developer utility: Reset onboarding */}
+
+              {/* Developer utility: Reset onboarding and seed badges */}
               <View style={{ marginTop: spacing.md }}>
                 <Button
                   onPress={async () => {
@@ -628,11 +806,56 @@ const DashboardScreen: React.FC = () => {
                 >
                   Show onboarding again
                 </Button>
+
+                {/* NEW: Badge & Streak testing helpers for all 5 quests */}
+                <View style={{ marginTop: spacing.md, gap: 8 }}>
+                  <Button onPress={() => seed7DayHistory('drink_2l')}>
+                    🧪 DEV: Seed 7-day Hydration
+                  </Button>
+                  <Button onPress={() => seed7DayHistory('haze_mask_today')}>
+                    🧪 DEV: Seed 7-day Mask
+                  </Button>
+                  <Button onPress={() => seed7DayHistory('nature_walk_10m')}>
+                    🧪 DEV: Seed 7-day Walk
+                  </Button>
+                  <Button onPress={() => seed7DayHistory('calm_breath_5m')}>
+                    🧪 DEV: Seed 7-day Breathe
+                  </Button>
+                  <Button onPress={() => seed7DayHistory('gratitude_note')}>
+                    🧪 DEV: Seed 7-day Gratitude
+                  </Button>
+                  <Button onPress={clearHistoryForRetest}>
+                    ♻️ DEV: Clear injected history
+                  </Button>
+                  <Button onPress={() => seed6ThenCompleteToday('drink_2l')}>
+                    🧪 Seed 6d Hydration (award on today)
+                  </Button>
+                  <Button
+                    onPress={() => seed6ThenCompleteToday('haze_mask_today')}
+                  >
+                    🧪 Seed 6d Mask (award on today)
+                  </Button>
+                  <Button
+                    onPress={() => seed6ThenCompleteToday('nature_walk_10m')}
+                  >
+                    🧪 Seed 6d Walk (award on today)
+                  </Button>
+                  <Button
+                    onPress={() => seed6ThenCompleteToday('calm_breath_5m')}
+                  >
+                    🧪 Seed 6d Breathe (award on today)
+                  </Button>
+                  <Button
+                    onPress={() => seed6ThenCompleteToday('gratitude_note')}
+                  >
+                    🧪 Seed 6d Gratitude (award on today)
+                  </Button>
+                </View>
               </View>
             </View>
           )}
 
-          {/* Facial Expressions */}
+          {/* Facial Expressions (dev only) */}
           {developerControlsEnabled && (
             <FacialExpressionControls
               currentExpression={manualExpression}
@@ -641,12 +864,15 @@ const DashboardScreen: React.FC = () => {
             />
           )}
 
-          {/* Traffic Information */}
+          {/* Main quest list */}
+          <QuestList />
+
+          {/* Effects list */}
           <EffectsList effects={activeEffects} />
         </View>
       </ScrollView>
 
-      {/* Onboarding overlay - shown once */}
+      {/* Onboarding overlay */}
       <OnboardingOverlay
         visible={showOnboarding}
         step={onboardingStep}
@@ -664,6 +890,23 @@ const DashboardScreen: React.FC = () => {
           markOnboardingSeen();
         }}
       />
+
+      {/* NEW: badge celebration modal + highlight button */}
+      {celebrateId && (
+        <BadgeCelebration
+          visible
+          title={`${BADGE_DEFS[celebrateId].icon} ${BADGE_DEFS[celebrateId].title}`}
+          message={`${BADGE_DEFS[celebrateId].encouragement}\n\n+${BADGE_DEFS[celebrateId].points} pts`}
+          onClose={() => {
+            setCelebrateId(null);
+            setHighlightBtn(true); // highlight the floating button briefly
+            setTimeout(() => setHighlightBtn(false), 1800);
+          }}
+        />
+      )}
+
+      {/* Floating button to open badges page (pulses after celebration) */}
+      <ViewBadgesButton highlight={highlightBtn} />
     </SafeAreaView>
   );
 };
@@ -709,13 +952,6 @@ const styles = StyleSheet.create({
     color: colors.neutral[700],
     textAlign: 'center',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#2D3748',
-  },
   avatarContainer: {
     // Full-bleed inside a padded ScrollView: cancel horizontal padding
     marginHorizontal: -spacing.lg,
@@ -727,150 +963,34 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     marginBottom: 30,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    ...{
+      elevation: 3,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
   },
   controlsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3748',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#2D3748',
-  },
-  statsContainer: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    gap: spacing.md,
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#4A5568',
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D3748',
-  },
-  // New AQI-specific styles
-  aqiCard: {
-    padding: spacing.lg,
-    borderWidth: 2,
-  },
-  aqiHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  aqiTitle: {
     fontSize: fontSize.lg,
     fontWeight: '600',
-    color: colors.neutral[700],
-  },
-  aqiValue: {
-    fontSize: fontSize.xxl,
-    fontWeight: 'bold',
-  },
-  aqiClassification: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  healthAdvice: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[600],
-    lineHeight: 18,
-    marginBottom: spacing.sm,
-  },
-  dataTimestamp: {
-    fontSize: fontSize.xs,
-    color: colors.neutral[500],
-    fontStyle: 'italic',
-  },
-  pollutantsContainer: {
-    backgroundColor: colors.neutral[50],
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-  },
-  pollutantsTitle: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    color: colors.neutral[700],
-    marginBottom: spacing.sm,
-  },
-  pollutantGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    color: colors.neutral[800],
     marginBottom: spacing.md,
   },
-  pollutantItem: {
-    backgroundColor: colors.neutral[100],
-    padding: spacing.sm,
-    borderRadius: borderRadius.sm,
-    minWidth: '45%',
-    alignItems: 'center',
-  },
-  pollutantLabel: {
-    fontSize: fontSize.xs,
-    color: colors.neutral[600],
-    fontWeight: '500',
-  },
-  pollutantValue: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[800],
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  recommendationsCard: {
-    padding: spacing.md,
-    backgroundColor: '#EBF8FF', // Light blue
-    borderColor: '#BEE3F8', // Medium blue
-  },
-  recommendationsTitle: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    color: '#2B6CB0', // Dark blue
-    marginBottom: spacing.sm,
-  },
-  recommendationItem: {
-    fontSize: fontSize.sm,
-    color: '#2C5282', // Darker blue
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  // Dev controls styling
   devCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     padding: spacing.md,
     borderRadius: borderRadius.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    ...{
+      elevation: 2,
+      shadowColor: colors.black,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+    },
     marginTop: spacing.md,
   },
   devRow: {
@@ -892,56 +1012,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.neutral[500],
     marginTop: spacing.xs,
-  },
-  // Skin effects indicator styles
-  skinEffectsIndicator: {
-    backgroundColor: '#FFF5F5', // Light red/pink background
-    borderColor: '#FEB2B2', // Light red border
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginTop: spacing.md,
-  },
-  skinEffectsTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: '#C53030', // Dark red
-    marginBottom: spacing.xs,
-  },
-  skinEffectsDescription: {
-    fontSize: fontSize.sm,
-    color: '#744210', // Dark orange/brown
-    lineHeight: 18,
-    marginBottom: spacing.sm,
-  },
-  skinEffectsDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  skinEffectsLabel: {
-    fontSize: fontSize.xs,
-    color: '#9C4221', // Medium brown
-    fontWeight: '500',
-  },
-  skinEffectsSource: {
-    fontSize: fontSize.xs,
-    color: colors.neutral[500],
-    fontStyle: 'italic',
-  },
-  effectSection: {
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral[200],
-  },
-  effectSubtitle: {
-    fontSize: fontSize.xs,
-    fontWeight: '600',
-    color: '#B91C1C', // Darker red
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });
 

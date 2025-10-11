@@ -18,6 +18,8 @@ import CitySelectionScreen from './src/screens/CitySelectionScreen';
 import QuestionnaireScreen from './src/screens/QuestionnaireScreen';
 import GeneratingTwinScreen from './src/screens/GeneratingTwinScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
+import QuestHistoryScreen from './src/screens/QuestHistoryScreen';
+import TwinScreen from './src/screens/TwinScreen';
 
 // Import tab navigator
 import MainTabNavigator, {
@@ -67,6 +69,8 @@ export type RootStackParamList = {
     onSelect?: (selection: UserLocationDetails | null) => void;
     allowCurrentLocation?: boolean;
   };
+  QuestHistory: undefined;
+  Twin: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -193,6 +197,22 @@ export default function App() {
             name="NutritionDetail"
             component={NutritionDetailScreen}
             options={{ title: 'Nutrition Detail' }}
+          />
+          <Stack.Screen
+            name="QuestHistory"
+            component={QuestHistoryScreen}
+            options={{
+              title: 'Quest History',
+              headerBackTitle: 'Back',
+            }}
+          />
+          <Stack.Screen
+            name="Twin"
+            component={TwinScreen}
+            options={{
+              title: 'Your Twin',
+              headerBackTitle: 'Back',
+            }}
           />
         </Stack.Navigator>
       </NavigationContainer>
