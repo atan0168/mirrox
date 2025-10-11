@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react-native';
 import { TAG_LABEL } from '../constants';
 import { Card, Button, Badge } from './ui';
 import { colors, spacing, fontSize } from '../theme';
+import { resolveSourceLabel } from '../utils/nutritionUtils';
 
 type NutritionCardProps = {
   total?: {
@@ -26,7 +27,10 @@ export function NutritionCard({
   onPressDetails,
 }: NutritionCardProps) {
   const topTags = (tags ?? []).slice(0, 2);
-  const primarySource = sources?.[0]?.label;
+  const primarySourceEntry = sources?.[0];
+  const primarySource =
+    primarySourceEntry?.label?.trim() ||
+    resolveSourceLabel(primarySourceEntry?.key, sources);
 
   const detailsDisabled = !onPressDetails;
 

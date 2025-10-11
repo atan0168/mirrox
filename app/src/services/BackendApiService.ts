@@ -160,9 +160,15 @@ export interface ExtractMealRequestPayload {
   user_id?: string;
 }
 
+export interface ExtractedMealItem {
+  name: string;
+  portion?: string | null;
+  modifiers?: string[];
+}
+
 export interface ExtractMealResponseData {
-  FOOD_ITEM: string[];
-  DRINK_ITEM: string[];
+  FOOD_ITEM: ExtractedMealItem[];
+  DRINK_ITEM: ExtractedMealItem[];
   raw: string;
   ocr?: string;
   image_url?: string;
@@ -174,16 +180,20 @@ export interface ExtractMealApiResponse {
   error?: string;
 }
 
-export interface AnalyzeMealRequestPayload {
+export interface AnalyzeFoodRequestPayload {
   text?: string;
   imageBase64?: string;
+  selectedFoodId?: string;
+  skipExtraction?: boolean;
 }
 
 export interface ItemNutrient {
   id?: string;
   display_name?: string;
-  name?: string;
+  name: string;
   source?: string;
+  portion_text?: string | null;
+  modifiers?: string[];
   energy_kcal?: number;
   sugar_g?: number;
   fiber_g?: number;
@@ -199,7 +209,11 @@ export interface AnalyzeSource {
   url?: string;
 }
 
-export interface AnalyzeMealResponseData {
+export type AnalyzeMealItem = ItemNutrient & {
+  source?: string;
+};
+
+export interface AnalyzeFoodResponseData {
   nutrients: {
     total: {
       energy_kcal: number;
@@ -210,23 +224,18 @@ export interface AnalyzeMealResponseData {
       sat_fat_g: number;
       protein_g: number;
     };
-    per_item: Array<ItemNutrient>;
+    per_item: Array<AnalyzeMealItem>;
   };
   tags: string[];
   tags_display?: string[];
-  avatar_effects: Array<{
-    meter: 'fiber' | 'sugar' | 'fat' | 'sodium';
-    delta: number;
-    reason?: string;
-  }>;
   tips: string[];
-  canonical?: Array<ItemNutrient>;
+  canonical?: Array<AnalyzeMealItem>;
   sources?: AnalyzeSource[];
 }
 
 export interface AnalyzeMealApiResponse {
   ok: boolean;
-  data?: AnalyzeMealResponseData;
+  data?: AnalyzeFoodResponseData;
   error?: string;
 }
 
@@ -235,6 +244,8 @@ export interface FoodSearchItem {
   name: string;
   category?: string | null;
   display_name?: string;
+  quantity?: string | null;
+  source?: string | null;
 }
 
 interface FoodSearchResponse {
@@ -772,41 +783,17 @@ class BackendApiService {
     }
   }
 
-  // TODO: If we want this we should move it to the mobile app itself
-  // async fetchPredictiveCandidate({
-  //   hour,
-  //   days,
-  // }: {
-  //   hour?: number;
-  //   days?: number;
-  // }): Promise<PredictiveCandidateResponse> {
-  //   try {
-  //     const { data } = await this.client.get<PredictiveCandidateResponse>(
-  //       '/personalization/predictive-candidate',
-  //       {
-  //         params: {
-  //           hour,
-  //           days,
-  //         },
-  //       }
-  //     );
-  //     return data;
-  //   } catch (error) {
-  //     this.logError('Failed to fetch predictive candidate:', error);
-  //     throw this.normalizeError(
-  //       error,
-  //       'Unable to fetch predictive candidate right now.'
-  //     );
-  //   }
-  // }
-
   async extractMeal(
     payload: ExtractMealRequestPayload
   ): Promise<ExtractMealResponseData> {
     try {
       const { data } = await this.client.post<ExtractMealApiResponse>(
         '/ai/extract',
-        payload
+        payload,
+        {
+          // Set timeout to 35 seconds
+          timeout: 60_000,
+        }
       );
 
       if (!data?.ok || !data?.data) {
@@ -820,9 +807,9 @@ class BackendApiService {
     }
   }
 
-  async analyzeMeal(
-    payload: AnalyzeMealRequestPayload
-  ): Promise<AnalyzeMealResponseData> {
+  async analyzeFood(
+    payload: AnalyzeFoodRequestPayload
+  ): Promise<AnalyzeFoodResponseData> {
     try {
       const { data } = await this.client.post<AnalyzeMealApiResponse>(
         '/food/analyze',

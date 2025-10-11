@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useMealStore } from '../store/mealStore';
+import { useMeal } from '../hooks/useMeal';
 import { TAG_LABEL } from '../constants';
 
 import type { RootStackParamList } from '../../App';
@@ -16,7 +16,7 @@ type NavigationProps = StackNavigationProp<
 
 export function NutritionSummaryCard() {
   const navigation = useNavigation<NavigationProps>();
-  const last = useMealStore(s => s.lastAnalysis);
+  const { analysis: last } = useMeal();
 
   const energyNum = Math.round(last?.nutrients?.total?.energy_kcal ?? 0);
   const energy = energyNum > 0 ? `${energyNum} kcal` : 'N/A';

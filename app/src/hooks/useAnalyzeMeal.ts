@@ -1,15 +1,15 @@
 import { useMutation } from '@tanstack/react-query';
 import {
-  AnalyzeMealRequestPayload,
-  AnalyzeMealResponseData,
+  AnalyzeFoodRequestPayload,
+  AnalyzeFoodResponseData,
   backendApiService,
 } from '../services/BackendApiService';
 
-export function useAnalyzeMeal() {
+export function useAnalyzeFood() {
   return useMutation({
     mutationFn: async (
-      payload: AnalyzeMealRequestPayload
-    ): Promise<AnalyzeMealResponseData> =>
-      backendApiService.analyzeMeal(payload),
+      payload: AnalyzeFoodRequestPayload
+    ): Promise<AnalyzeFoodResponseData> =>
+      backendApiService.analyzeFood(payload),
   });
 }

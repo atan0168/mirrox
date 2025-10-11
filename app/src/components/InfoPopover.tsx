@@ -7,7 +7,6 @@ type Props = {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  confirmLabel?: string;
 };
 
 export default function InfoPopover({
@@ -15,7 +14,6 @@ export default function InfoPopover({
   onClose,
   title,
   children,
-  confirmLabel = 'Got it',
 }: Props) {
   return (
     <Modal
@@ -34,18 +32,6 @@ export default function InfoPopover({
         <View style={[styles.body, !title && { marginTop: 0 }]}>
           {children}
         </View>
-
-        <Pressable
-          onPress={onClose}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            pressed && styles.actionBtnPressed,
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={confirmLabel}
-        >
-          <Text style={styles.actionText}>{confirmLabel}</Text>
-        </Pressable>
       </View>
     </Modal>
   );
