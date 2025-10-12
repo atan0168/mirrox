@@ -14,15 +14,3 @@ ml_service/.venv/
 build/
 .venv/
 .env
-android/app/build/
-android/build/
-android/local.properties
-*.apk
-*.aab
-android/.gradle/
-android/build/
-android/app/build/
-android/app/.cxx/
-android/local.properties
-*.apk
-*.aab

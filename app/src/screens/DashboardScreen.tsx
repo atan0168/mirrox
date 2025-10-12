@@ -42,7 +42,7 @@ import { useHydrationStore } from '../store/hydrationStore';
 import { hydrationService } from '../services/HydrationService';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
-import ViewBadgesButton from '../components/ViewBadgesButton';
+import ViewAchievementButton from '../components/ViewBadgesButton';
 
 // NEW: 7-day streak celebration imports
 import dayjs from 'dayjs';
@@ -100,8 +100,6 @@ const seed6ThenCompleteToday = (
     '—streaks preset to 6 (lastDate=yesterday). complete once today to award.'
   );
 };
-
-// ---------------------------------------------------------------------------------------------
 
 const DashboardScreen: React.FC = () => {
   // --------------------------------- DEV seed helpers ---------------------------------
@@ -891,22 +889,21 @@ const DashboardScreen: React.FC = () => {
         }}
       />
 
-      {/* NEW: badge celebration modal + highlight button */}
-      {celebrateId && (
-        <BadgeCelebration
-          visible
-          title={`${BADGE_DEFS[celebrateId].icon} ${BADGE_DEFS[celebrateId].title}`}
-          message={`${BADGE_DEFS[celebrateId].encouragement}\n\n+${BADGE_DEFS[celebrateId].points} pts`}
-          onClose={() => {
-            setCelebrateId(null);
-            setHighlightBtn(true); // highlight the floating button briefly
-            setTimeout(() => setHighlightBtn(false), 1800);
-          }}
-        />
-      )}
+      {/* {celebrateId && ( */}
+      {/*   <BadgeCelebration */}
+      {/*     visible */}
+      {/*     title={`${BADGE_DEFS[celebrateId].icon} ${BADGE_DEFS[celebrateId].title}`} */}
+      {/*     // message={`${BADGE_DEFS[celebrateId].encouragement}\n\n+${BADGE_DEFS[celebrateId].points} pts`} */}
+      {/*     onClose={() => { */}
+      {/*       setCelebrateId(null); */}
+      {/*       // setHighlightBtn(true); */}
+      {/*       // setTimeout(() => setHighlightBtn(false), 1800); */}
+      {/*     }} */}
+      {/*   /> */}
+      {/* )} */}
 
       {/* Floating button to open badges page (pulses after celebration) */}
-      <ViewBadgesButton highlight={highlightBtn} />
+      <ViewAchievementButton highlight={highlightBtn} />
     </SafeAreaView>
   );
 };

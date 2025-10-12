@@ -1,8 +1,3 @@
-// src/screens/TwinScreen.tsx
-// Twin page with emotive hero + per-quest 7-slot streak bars + mini achievements summary
-
-'use client';
-
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -21,31 +16,6 @@ import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
 import type { RootStackParamList } from '../../App';
 import { resetDailyQuestsIfNewDay } from '../services/QuestService';
 
-//test
-// DEV helper: seed N-day streak for a quest
-function __seedStreak__(
-  questId: QuestId,
-  days: number,
-  tag: 'skin' | 'lung' | 'stress' | 'calm' | 'happiness' = 'calm'
-) {
-  const now = dayjs().startOf('day');
-  const recs = Array.from({ length: days }, (_, i) => ({
-    questId,
-    completedAt: now
-      .subtract(days - 1 - i, 'day')
-      .add(10, 'minute')
-      .valueOf(),
-    rewardTag: tag,
-  }));
-
-  useQuestStore.setState((s: any) => ({ history: [...s.history, ...recs] }));
-}
-
-/** ------- Change to your real History route name ------- */
-const HISTORY_ROUTE = 'QuestHistory' as const;
-/** ------------------------------------------------------ */
-
-/** --- Hook: trigger Twin visual effects within 10s of a quest (AC 6.2.2) --- */
 function useTwinVisuals() {
   const recentEffects = useQuestStore(s => s.recentEffects);
   const [activeEffect, setActiveEffect] = useState<string | null>(null);
@@ -63,7 +33,6 @@ function useTwinVisuals() {
   return activeEffect;
 }
 
-/** --- Hook: narrative text (AC 6.2.3) --- */
 function useNarrativeFeedback() {
   const history = useQuestStore(s => s.history);
   const last24h = useMemo(() => {
@@ -257,7 +226,7 @@ function TaskProgressGrid() {
 }
 
 /** --- Main Twin Screen --- */
-export default function TwinScreen() {
+export default function AchievementScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const effect = useTwinVisuals();
   const narrative = useNarrativeFeedback();
@@ -309,12 +278,11 @@ export default function TwinScreen() {
               ? colors.orange[200]
               : colors.neutral[300];
 
-  const goHistory = () => navigation.navigate(HISTORY_ROUTE as never);
+  const goHistory = () => navigation.navigate('QuestHistory');
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        {/* ---------- Twin Hero (emotive) ---------- */}
         <Animated.View
           style={[
             styles.twinHero,
@@ -342,10 +310,8 @@ export default function TwinScreen() {
           </Text>
         </Animated.View>
 
-        {/* ---------- Per-Quest Streak Grid (replaces single bar) ---------- */}
         <TaskProgressGrid />
 
-        {/* ---------- Mini Badge Summary ---------- */}
         <View style={styles.badgeSummary}>
           <Text style={styles.badgeSummaryTitle}>Achievements</Text>
           <View style={styles.badgeRow}>
@@ -395,8 +361,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.lg,
   },
-
-  /** Hero */
   twinHero: {
     width: '100%',
     backgroundColor: colors.white,
@@ -425,8 +389,6 @@ const styles = StyleSheet.create({
     color: colors.neutral[500],
     fontSize: fontSize.sm,
   },
-
-  /** Grid card */
   gridCard: {
     width: '100%',
     backgroundColor: colors.white,
@@ -496,8 +458,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     textAlign: 'center',
   },
-
-  /** Badge summary */
   badgeSummary: {
     width: '100%',
     backgroundColor: colors.white,

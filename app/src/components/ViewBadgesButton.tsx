@@ -13,20 +13,14 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
 import { colors, spacing, borderRadius, shadows, fontSize } from '../theme';
 
-type RouteName = Extract<keyof RootStackParamList, string>;
-
 type Props = {
-  highlight?: boolean; // show glow animation
-  navigateTo?: RouteName; // target route
-  size?: number; // icon square size (optional)
-  ariaLabel?: string; // accessibility label
+  highlight?: boolean;
+  size?: number;
+  ariaLabel?: string;
 };
 
-const DEFAULT_BADGE_ROUTE: RouteName = 'Twin';
-
-export default function ViewBadgesButton({
+export default function ViewAchievementButton({
   highlight = true,
-  navigateTo,
   size,
   ariaLabel = 'Open badges',
 }: Props) {
@@ -37,20 +31,13 @@ export default function ViewBadgesButton({
   const breathe = useRef(new Animated.Value(0)).current;
 
   // Theme tokens & fallbacks
-  const accent =
-    (colors as any)?.warning ??
-    (colors as any)?.yellow ??
-    (colors as any)?.accent ??
-    '#FFD54F';
-  const accentStrong =
-    (colors as any)?.amber ?? (colors as any)?.warningStrong ?? '#FFC400';
-  const txt = (colors as any)?.onSurface ?? (colors as any)?.text ?? '#FFFFFF';
+  const accent = colors.yellow[400];
+  const accentStrong = colors.warning;
+  const text = colors.black;
 
-  // ✅ FIX: access numeric-like keys with bracket syntax
-  const iconSize =
-    size ?? (fontSize as any)['2xl'] ?? (fontSize as any).xl ?? 28;
+  const iconSize = size ?? fontSize.xl;
 
-  const pad = (spacing as any)?.lg ?? 16; // halo padding
+  const pad = spacing.lg;
 
   const [box, setBox] = useState({ w: iconSize, h: iconSize });
   const onLayout = (e: LayoutChangeEvent) => {
@@ -134,17 +121,15 @@ export default function ViewBadgesButton({
   const haloH = box.h + pad * 2;
 
   const handlePress = () => {
-    const route = (navigateTo ?? DEFAULT_BADGE_ROUTE) as RouteName;
-    navigation.navigate(route);
+    navigation.navigate('Achievements');
   };
 
   return (
     <View
       pointerEvents="box-none"
       style={{
-        position: 'absolute',
-        right: (spacing as any)?.xl ?? 20,
-        bottom: (spacing as any)?.xl ?? 20,
+        right: spacing.xl,
+        bottom: spacing.xl,
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -191,27 +176,27 @@ export default function ViewBadgesButton({
           accessibilityRole="button"
           accessibilityLabel={ariaLabel}
           hitSlop={{
-            top: (spacing as any)?.xs ?? 8,
-            bottom: (spacing as any)?.xs ?? 8,
-            left: (spacing as any)?.xs ?? 8,
-            right: (spacing as any)?.xs ?? 8,
+            top: spacing.xs,
+            bottom: spacing.xs,
+            left: spacing.xs,
+            right: spacing.xs,
           }}
-          android_ripple={undefined} // keep default ripple; no hard-coded color
+          android_ripple={undefined}
           style={{
             width: iconSize,
             height: iconSize,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'transparent', // no box
-            borderRadius: (borderRadius as any)?.full ?? iconSize / 2,
-            ...(Platform.OS === 'ios' ? ((shadows as any)?.none ?? {}) : null), // no gray shadow
+            backgroundColor: 'transparent',
+            borderRadius: borderRadius.full,
+            ...(Platform.OS === 'ios' ? shadows.none : null),
           }}
         >
           {/* Medal icon; swap to Image if you have a custom asset */}
           <Text
             style={{
               fontSize: iconSize * 0.9,
-              color: txt,
+              color: text,
               includeFontPadding: false,
               textAlignVertical: 'center',
             }}
@@ -227,6 +212,5 @@ export default function ViewBadgesButton({
 const styles = StyleSheet.create({
   halo: {
     position: 'absolute',
-    // no shadow/elevation: we want pure colored glow
   },
 });

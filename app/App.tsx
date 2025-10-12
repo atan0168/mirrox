@@ -19,7 +19,7 @@ import QuestionnaireScreen from './src/screens/QuestionnaireScreen';
 import GeneratingTwinScreen from './src/screens/GeneratingTwinScreen';
 import PrivacyScreen from './src/screens/PrivacyScreen';
 import QuestHistoryScreen from './src/screens/QuestHistoryScreen';
-import TwinScreen from './src/screens/TwinScreen';
+import AchievementScreen from './src/screens/AchievementScreen';
 
 // Import tab navigator
 import MainTabNavigator, {
@@ -70,7 +70,7 @@ export type RootStackParamList = {
     allowCurrentLocation?: boolean;
   };
   QuestHistory: undefined;
-  Twin: undefined;
+  Achievements: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -207,10 +207,10 @@ export default function App() {
             }}
           />
           <Stack.Screen
-            name="Twin"
-            component={TwinScreen}
+            name="Achievements"
+            component={AchievementScreen}
             options={{
-              title: 'Your Twin',
+              title: 'Achievements',
               headerBackTitle: 'Back',
             }}
           />
