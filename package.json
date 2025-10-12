@@ -23,6 +23,8 @@
     "prettier": "^3.1.0"
   },
   "dependencies": {
+    "@react-navigation/native": "^6.1.18",
+    "@react-navigation/stack": "^6.4.1",
     "dayjs": "^1.11.18",
     "expo": "^51.0.39",
     "expo-status-bar": "~1.12.1",
