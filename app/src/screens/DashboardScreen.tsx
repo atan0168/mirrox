@@ -960,7 +960,7 @@ const DashboardScreen: React.FC = () => {
       <ConfettiCannon
         ref={confettiRef}
         count={200}
-        origin={{ x: -10, y: 0 }}
+        origin={{ x: -20, y: 0 }}
         autoStart={false}
         fadeOut
       />

@@ -11,8 +11,6 @@ import {
   Dimensions,
 } from 'react-native';
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
-import { useConfetti } from '../hooks/useConfetti';
-import { ConfettiView } from './effects/ConfettiView';
 
 type Props = {
   visible: boolean;
@@ -38,16 +36,6 @@ export default function CelebrationModal({ visible, title, onClose }: Props) {
   const medalPop = useRef(new Animated.Value(0)).current;
   const halo = useRef(new Animated.Value(0)).current;
   const rays = useRef(new Animated.Value(0)).current;
-
-  const confetti = useConfetti({
-    count: 64,
-    colors: ['#FFD54F', '#4FC3F7', '#FF8A80', '#CE93D8', '#80CBC4'],
-    shapes: ['rectangle'],
-    duration: 900,
-    fallDistance: 220,
-    startOffset: 160,
-    spread: Math.min(420, SCREEN_W - spacing.lg * 2),
-  });
 
   useEffect(() => {
     if (!visible) return;
@@ -127,14 +115,11 @@ export default function CelebrationModal({ visible, title, onClose }: Props) {
     );
     rayLoop.start();
 
-    confetti.trigger();
-
     return () => {
       haloLoop.stop();
       rayLoop.stop();
       scale.setValue(0.9);
       fade.setValue(0);
-      confetti.reset();
     };
   }, [visible]);
 
@@ -167,11 +152,8 @@ export default function CelebrationModal({ visible, title, onClose }: Props) {
           style={[
             styles.ray,
             {
-              opacity: rayOpacity as any,
-              transform: [
-                { scale: rayScale as any },
-                { rotate: `${angle}deg` as any },
-              ],
+              opacity: rayOpacity,
+              transform: [{ scale: rayScale }, { rotate: `${angle}deg` }],
             },
           ]}
         />
@@ -196,16 +178,12 @@ export default function CelebrationModal({ visible, title, onClose }: Props) {
               style={[
                 styles.halo,
                 {
-                  opacity: haloOpacity as any,
-                  transform: [{ scale: haloScale as any }],
+                  opacity: haloOpacity,
+                  transform: [{ scale: haloScale }],
                 },
               ]}
             />
             <View style={styles.raysWrap}>{renderRays()}</View>
-            <ConfettiView
-              particles={confetti.particles}
-              getParticleStyle={confetti.getParticleStyle}
-            />
             <Animated.Text style={[styles.medal, medalStyle]}>🏅</Animated.Text>
           </View>
 
