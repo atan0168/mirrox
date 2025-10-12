@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Linking,
   Pressable,
@@ -8,9 +8,17 @@ import {
   View,
 } from 'react-native';
 import InfoPopover from '../components/InfoPopover';
-import { TAG_LABEL } from '../constants';
-import { useMealStore } from '../store/mealStore';
+import { useMeal } from '../hooks/useMeal';
 import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
+import {
+  buildMealAnalysisFromItems,
+  getMealItemModifiers,
+  getMealItemNutrientTotal,
+  getMealItemPortionText,
+  getMealItemSource,
+  resolveMealItemName,
+  resolveSourceLabel,
+} from '../utils/nutritionUtils';
 
 const BADGE_MAPPING: Record<string, { bg: string; fg: string; label: string }> =
   {
@@ -19,7 +27,17 @@ const BADGE_MAPPING: Record<string, { bg: string; fg: string; label: string }> =
     local: { bg: '#FEF3C7', fg: '#B45309', label: 'curated' },
   };
 
-function SourceBadge({ source }: { source?: string }) {
+function SourceBadge({
+  source,
+  label,
+}: {
+  source?: string;
+  label?: string | null;
+}) {
+  if (!source && !label) {
+    return null;
+  }
+
   const key = (source || 'local').toLowerCase();
   const s = BADGE_MAPPING[key] || BADGE_MAPPING.local;
 
@@ -34,39 +52,83 @@ function SourceBadge({ source }: { source?: string }) {
       }}
     >
       <Text style={{ color: s.fg, fontWeight: '700', fontSize: 12 }}>
-        {s.label}
+        {label?.trim() || s.label}
       </Text>
     </View>
   );
 }
 
 export default function NutritionDetailScreen() {
-  const last = useMealStore(s => s.lastAnalysis);
+  const { data: mealItems = [], analysis } = useMeal();
   const [showHow, setShowHow] = useState(false);
 
-  // Empty state: nothing analyzed yet
-  if (!last) {
+  const derivedAnalysis = useMemo(
+    () => buildMealAnalysisFromItems(mealItems, analysis ?? undefined),
+    [mealItems, analysis]
+  );
+
+  const totals = derivedAnalysis?.nutrients?.total;
+  const sources = derivedAnalysis?.sources ?? analysis?.sources ?? [];
+  const tips = derivedAnalysis?.tips ?? [];
+
+  // Number helpers
+  const round0 = (v?: number | null) =>
+    v == null || Number.isNaN(v) ? 'N/A' : String(Math.round(v));
+  const fmt1 = (v?: number | null) =>
+    v == null || Number.isNaN(v) ? 'N/A' : (Math.round(v * 10) / 10).toFixed(1);
+
+  const displayValue = (
+    v?: number | null,
+    unit?: string,
+    decimals: '0' | '1' = '1'
+  ) => {
+    const raw = decimals === '0' ? round0(v) : fmt1(v);
+    if (raw === 'N/A') {
+      return raw;
+    }
+    return unit ? `${raw} ${unit}` : raw;
+  };
+
+  const breakdownRows = [
+    {
+      key: 'sugar_g',
+      label: 'Sugar',
+      value: displayValue(totals?.sugar_g, 'g'),
+    },
+    { key: 'fat_g', label: 'Fat', value: displayValue(totals?.fat_g, 'g') },
+    {
+      key: 'sat_fat_g',
+      label: 'Saturated Fat',
+      value: displayValue(totals?.sat_fat_g, 'g'),
+    },
+    {
+      key: 'protein_g',
+      label: 'Protein',
+      value: displayValue(totals?.protein_g, 'g'),
+    },
+    {
+      key: 'fiber_g',
+      label: 'Fiber',
+      value: displayValue(totals?.fiber_g, 'g'),
+    },
+    {
+      key: 'sodium_mg',
+      label: 'Sodium',
+      value: displayValue(totals?.sodium_mg, 'mg', '0'),
+    },
+  ].filter(row => row.value !== 'N/A');
+
+  const energyDisplay = displayValue(totals?.energy_kcal, 'kcal', '0');
+
+  if (mealItems.length === 0) {
     return (
       <View style={styles.center}>
         <Text style={styles.muted}>
-          No analysis available. Please analyze a meal first.
+          No meal items yet. Please analyze or add foods first.
         </Text>
       </View>
     );
   }
-
-  // Totals and per-item list
-  const total = last.nutrients?.total || {};
-  const items = last.nutrients?.per_item ?? [];
-
-  // Number helpers
-  const round0 = (v?: number) =>
-    v == null || Number.isNaN(v) ? 'N/A' : String(Math.round(v));
-  const fmt1 = (v?: number) =>
-    v == null || Number.isNaN(v) ? 'N/A' : (Math.round(v * 10) / 10).toFixed(1);
-
-  // Prefer display labels if provided by backend
-  const tagDisplay: string[] = (last.tags ?? []).map(k => TAG_LABEL[k] || k);
 
   return (
     <ScrollView
@@ -83,82 +145,123 @@ export default function NutritionDetailScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.key}>Energy</Text>
-          <Text style={styles.val}>{round0(total.energy_kcal)} kcal</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.key}>Sugar</Text>
-          <Text style={styles.val}>{fmt1(total.sugar_g)} g</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.key}>Fat</Text>
-          <Text style={styles.val}>{fmt1(total.fat_g)} g</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.key}>Saturated Fat</Text>
-          <Text style={styles.val}>{fmt1(total.sat_fat_g)} g</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.key}>Protein</Text>
-          <Text style={styles.val}>{fmt1(total.protein_g)} g</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.key}>Fiber</Text>
-          <Text style={styles.val}>{fmt1(total.fiber_g)} g</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.key}>Sodium</Text>
-          <Text style={styles.val}>{round0(total.sodium_mg)} mg</Text>
-        </View>
+        <Text style={styles.energyValue}>{energyDisplay}</Text>
+        <Text style={styles.energyLabel}>Total energy</Text>
 
-        <Text style={styles.h3}>Tags</Text>
-        <View style={styles.tags}>
-          {tagDisplay.length ? (
-            tagDisplay.map((t, i) => (
-              <View key={`${t}-${i}`} style={styles.chip}>
-                <Text style={styles.chipText}>{t}</Text>
+        {breakdownRows.length ? (
+          <View style={styles.breakdownGrid}>
+            {breakdownRows.map(row => (
+              <View key={row.key} style={styles.breakdownItem}>
+                <Text style={styles.breakdownLabel}>{row.label}</Text>
+                <Text style={styles.breakdownValue}>{row.value}</Text>
               </View>
-            ))
-          ) : (
-            <Text style={styles.muted}>No tags</Text>
-          )}
-        </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={[styles.muted, styles.breakdownEmpty]}>
+            No breakdown data.
+          </Text>
+        )}
       </View>
 
       {/* ===== Items card ===== */}
       <View style={styles.card}>
         <Text style={styles.h2}>Items</Text>
-        {items.length === 0 ? (
+        {mealItems.length === 0 ? (
           <Text style={styles.muted}>No items detected.</Text>
         ) : (
-          items.map((it, idx: number) => {
-            const label =
-              it.display_name || it.name || it.id || `Item ${idx + 1}`;
+          mealItems.map((item, idx) => {
+            const label = resolveMealItemName(item);
+            const portion = getMealItemPortionText(item);
+            const modifiers = getMealItemModifiers(item);
+            const modifierText = modifiers.length ? modifiers.join(', ') : null;
+            const sourceKey = getMealItemSource(item);
+            const sourceLabel = resolveSourceLabel(sourceKey, sources);
+            const nutrientMetrics = [
+              {
+                key: 'energy_kcal',
+                label: 'Energy',
+                value: displayValue(
+                  getMealItemNutrientTotal(item, 'energy_kcal'),
+                  'kcal',
+                  '0'
+                ),
+              },
+              {
+                key: 'sugar_g',
+                label: 'Sugar',
+                value: displayValue(
+                  getMealItemNutrientTotal(item, 'sugar_g'),
+                  'g'
+                ),
+              },
+              {
+                key: 'fat_g',
+                label: 'Fat',
+                value: displayValue(
+                  getMealItemNutrientTotal(item, 'fat_g'),
+                  'g'
+                ),
+              },
+              {
+                key: 'sat_fat_g',
+                label: 'Sat Fat',
+                value: displayValue(
+                  getMealItemNutrientTotal(item, 'sat_fat_g'),
+                  'g'
+                ),
+              },
+              {
+                key: 'protein_g',
+                label: 'Protein',
+                value: displayValue(
+                  getMealItemNutrientTotal(item, 'protein_g'),
+                  'g'
+                ),
+              },
+              {
+                key: 'fiber_g',
+                label: 'Fiber',
+                value: displayValue(
+                  getMealItemNutrientTotal(item, 'fiber_g'),
+                  'g'
+                ),
+              },
+              {
+                key: 'sodium_mg',
+                label: 'Sodium',
+                value: displayValue(
+                  getMealItemNutrientTotal(item, 'sodium_mg'),
+                  'mg',
+                  '0'
+                ),
+              },
+            ].filter(entry => entry.value !== 'N/A');
 
             return (
-              <View key={idx} style={{ marginBottom: 12 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginBottom: 4,
-                  }}
-                >
+              <View key={item.id ?? idx} style={styles.itemBlock}>
+                <View style={styles.itemHeader}>
                   <Text style={styles.itemName}>{label}</Text>
-                  <SourceBadge source={it.source} />
+                  <SourceBadge
+                    source={sourceKey ?? undefined}
+                    label={sourceLabel}
+                  />
                 </View>
-                <Text style={styles.itemLine}>
-                  Energy: {round0(it.energy_kcal)} kcal
-                </Text>
-                <Text style={styles.itemLine}>
-                  Sugar: {fmt1(it.sugar_g)} g; Fat: {fmt1(it.fat_g)} g; Sat Fat:{' '}
-                  {fmt1(it.sat_fat_g)} g
-                </Text>
-                <Text style={styles.itemLine}>
-                  Protein: {fmt1(it.protein_g)} g; Fiber: {fmt1(it.fiber_g)} g;
-                  Sodium: {round0(it.sodium_mg)} mg
-                </Text>
+                {portion && (
+                  <Text style={styles.itemMeta}>Portion: {portion}</Text>
+                )}
+                {modifierText && (
+                  <Text style={styles.itemMeta}>Notes: {modifierText}</Text>
+                )}
+                {!!nutrientMetrics.length && (
+                  <View style={styles.itemMetrics}>
+                    {nutrientMetrics.map(metric => (
+                      <Text key={metric.key} style={styles.itemMetric}>
+                        {metric.label} · {metric.value}
+                      </Text>
+                    ))}
+                  </View>
+                )}
               </View>
             );
           })
@@ -166,10 +269,10 @@ export default function NutritionDetailScreen() {
       </View>
 
       {/* ===== Suggestions ===== */}
-      {!!(last.tips || []).length && (
+      {!!tips.length && (
         <View style={styles.card}>
           <Text style={styles.h2}>Suggestions</Text>
-          {last.tips!.slice(0, 5).map((t, i) => (
+          {tips.slice(0, 5).map((t, i) => (
             <Text key={i} style={styles.tip}>
               • {t}
             </Text>
@@ -243,19 +346,42 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
 
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xs,
-  },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
 
-  key: { color: colors.neutral[500] },
-  val: { fontWeight: '600' },
+  energyValue: {
+    fontSize: fontSize.xl,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+    color: colors.neutral[900],
+  },
+  energyLabel: {
+    color: colors.neutral[500],
+    marginTop: 2,
+    marginBottom: spacing.sm,
+  },
+  breakdownGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: spacing.sm,
+  },
+  breakdownItem: {
+    width: '50%',
+    marginBottom: spacing.sm,
+  },
+  breakdownLabel: {
+    color: colors.neutral[500],
+    fontSize: fontSize.xs,
+  },
+  breakdownValue: {
+    color: colors.neutral[900],
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  breakdownEmpty: { marginBottom: spacing.sm },
 
   tags: { flexDirection: 'row', flexWrap: 'wrap', marginTop: spacing.xs },
   chip: {
@@ -270,8 +396,24 @@ const styles = StyleSheet.create({
   chipText: { fontSize: fontSize.xs },
 
   muted: { color: colors.neutral[500] },
-  itemName: { fontWeight: '600' },
-  itemLine: { color: colors.primary, marginTop: spacing.xs },
+  itemBlock: { marginBottom: spacing.md },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  itemName: { fontWeight: '600', color: colors.neutral[900] },
+  itemMeta: { color: colors.neutral[500], marginBottom: spacing.xs },
+  itemMetrics: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: spacing.xs,
+  },
+  itemMetric: {
+    color: colors.primary,
+    marginRight: spacing.md,
+    marginTop: spacing.xs,
+  },
   tip: { marginTop: spacing.xs, color: colors.primary },
 
   helpBtn: {

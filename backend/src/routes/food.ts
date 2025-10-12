@@ -5,7 +5,7 @@ const router = Router();
 
 /**
  * @route POST /api/food/analyze
- * @desc Analyze meal text or image and return nutrition insights
+ * @desc Analyze food text or image and return nutrition insights
  */
 router.post('/analyze', foodController.analyze.bind(foodController));
 

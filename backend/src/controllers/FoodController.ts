@@ -3,37 +3,32 @@ import { z } from 'zod';
 import { extractWithDeepSeek } from '../services/DeepseekService';
 import { getFoodById, searchFoods } from '../services/FoodService';
 import type { AnalyzeInput } from '../services/NutritionService';
-import { analyzeMeal, tagsToTips } from '../services/NutritionService';
+import { analyzeMeal } from '../services/NutritionService';
 import { prettyName } from '../utils/displayName';
 import { isError } from '../utils/error';
-
-type UiLang = 'en' | 'zh' | 'ms';
 
 const BodySchema = z
   .object({
     text: z.string().optional(),
     imageBase64: z.string().optional(),
     imageUrl: z.string().optional(),
+    selectedFoodId: z.string().min(1).optional(),
+    skipExtraction: z.boolean().optional(),
   })
   .refine(
-    payload => payload.text || payload.imageBase64 || payload.imageUrl,
-    'Provide at least one of: text, imageUrl, imageBase64'
+    payload =>
+      payload.text ||
+      payload.imageBase64 ||
+      payload.imageUrl ||
+      payload.selectedFoodId,
+    'Provide at least one of: text, imageUrl, imageBase64, selectedFoodId'
   );
-
-const TAG_I18N: Record<string, Record<UiLang, string>> = {
-  high_sugar: { en: 'High Sugar', zh: '高糖', ms: 'Gula Tinggi' },
-  low_fiber: { en: 'Low Fiber', zh: '低纤维', ms: 'Serat Rendah' },
-  high_fat: { en: 'High Fat', zh: '高脂', ms: 'Lemak Tinggi' },
-  high_sodium: { en: 'High Sodium', zh: '高钠', ms: 'Natrium Tinggi' },
-  unbalanced: { en: 'Unbalanced', zh: '营养不均', ms: 'Tidak Seimbang' },
-};
 
 class FoodController {
   private readonly bodySchema = BodySchema;
 
   async analyze(req: Request, res: Response) {
     try {
-      const uiLang = (req.query.uiLang || 'en') as UiLang;
       const parsed = this.bodySchema.safeParse(req.body);
 
       if (!parsed.success) {
@@ -54,12 +49,24 @@ class FoodController {
       if (body.imageBase64) {
         analyzePayload.imageBase64 = body.imageBase64;
       }
+      if (body.selectedFoodId) {
+        analyzePayload.selectedFoodIds = [body.selectedFoodId];
+      }
+      if (body.skipExtraction) {
+        analyzePayload.skipExtraction = true;
+      }
 
       const data = await analyzeMeal(analyzePayload, async payload => {
+        const {
+          selectedFoodIds: _selectedFoodIds,
+          skipExtraction: _skipExtraction,
+          ...rest
+        } = payload;
         const extractInput = {
-          ...payload,
+          ...rest,
           ...(body.imageUrl ? { imageUrl: body.imageUrl } : {}),
         };
+
         const result = await extractWithDeepSeek(extractInput);
 
         return {
@@ -68,16 +75,14 @@ class FoodController {
         };
       });
 
-      const tags = data.tags || [];
-      const tagsDisplay = tags.map(tag => TAG_I18N[tag]?.[uiLang] || tag);
-      const tipLang: 'en' | 'zh' = uiLang === 'zh' ? 'zh' : 'en';
-      const tips = tagsToTips(tags, tipLang);
       const perItem = (data.nutrients?.per_item || []).map(item => ({
         ...item,
+        source: item.source,
         display_name: prettyName(item.name || item.id),
       }));
       const canonical = (data.canonical || []).map(item => ({
         ...item,
+        source: item.source,
         display_name: prettyName(item.name || item.id),
       }));
 
@@ -86,10 +91,6 @@ class FoodController {
         data: {
           canonical,
           nutrients: { ...(data.nutrients || {}), per_item: perItem },
-          tags,
-          tags_display: tagsDisplay,
-          avatar_effects: data.avatar_effects,
-          tips,
         },
       });
     } catch (error) {

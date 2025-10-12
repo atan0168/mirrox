@@ -1,6 +1,7 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
-import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+import { Card, Button, Badge } from './ui';
+import { colors, spacing, fontSize } from '../theme';
 import { TAG_LABEL } from '../constants';
 
 type Props = {
@@ -18,20 +19,14 @@ export default function AnalysisCard({
   const detailsDisabled = !onPressDetails;
 
   return (
-    <View style={styles.card}>
+    <Card style={styles.card} padding="lg">
       <Text style={styles.title}>Analysis Preview</Text>
 
       {/* Energy section */}
       {typeof energyKcal === 'number' && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Energy</Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'baseline',
-            }}
-          >
+          <View style={styles.energyRow}>
             <Text style={styles.energyValue}>{Math.round(energyKcal)}</Text>
             <Text style={styles.energyUnit}>kcal</Text>
           </View>
@@ -42,11 +37,17 @@ export default function AnalysisCard({
       {displayTags.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Tags</Text>
-          <View style={styles.chipWrap}>
+          <View style={styles.tags}>
             {displayTags.map(t => (
-              <View key={t} style={styles.chip}>
-                <Text style={styles.chipText}>{t}</Text>
-              </View>
+              <Badge
+                key={t}
+                variant="outline"
+                size="sm"
+                style={styles.tagBadge}
+                textStyle={styles.tagText}
+              >
+                {t}
+              </Badge>
             ))}
           </View>
         </View>
@@ -54,29 +55,26 @@ export default function AnalysisCard({
 
       {/* CTA */}
       {onPressDetails && (
-        <Pressable
+        <Button
           onPress={onPressDetails}
-          style={styles.ghostButton}
+          variant="ghost"
+          size="sm"
+          style={styles.detailsButton}
           disabled={detailsDisabled}
         >
-          <Text style={styles.ghostButtonText}>View full analysis</Text>
-          <ChevronRight size={18} color={colors.primary} />
-        </Pressable>
+          <View style={styles.detailsContent}>
+            <Text style={styles.detailsLabel}>View full analysis</Text>
+            <ChevronRight size={18} strokeWidth={2} />
+          </View>
+        </Button>
       )}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.divider,
     alignItems: 'center',
-    ...shadows.soft,
   },
   title: {
     fontSize: fontSize.lg,
@@ -93,6 +91,11 @@ const styles = StyleSheet.create({
     color: colors.neutral[600],
     marginBottom: spacing.xs,
   },
+  energyRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'baseline',
+  },
   energyValue: {
     fontSize: fontSize.xxxl,
     fontWeight: '800',
@@ -105,47 +108,31 @@ const styles = StyleSheet.create({
     color: colors.neutral[600],
     fontWeight: '600',
   },
-  chipWrap: {
+  tags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     marginTop: spacing.xs,
   },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.neutral[100],
-    borderWidth: 1,
-    borderColor: colors.divider,
+  tagBadge: {
     marginHorizontal: spacing.xs,
     marginVertical: spacing.xs,
+    alignSelf: 'auto',
   },
-  chipText: {
-    fontSize: fontSize.sm,
+  tagText: {
     fontWeight: '600',
     color: colors.neutral[700],
   },
-  ghostButton: {
+  detailsButton: {
     marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    backgroundColor: colors.sky[50],
-    borderColor: colors.sky[200],
+  },
+  detailsContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  ghostButtonText: {
+  detailsLabel: {
     fontSize: fontSize.sm,
     fontWeight: '700',
-    color: colors.sky[600],
-  },
-  ghostButtonArrow: {
-    fontSize: fontSize.lg,
-    marginLeft: spacing.xs,
-    color: colors.sky[600],
+    marginRight: spacing.xs,
   },
 });

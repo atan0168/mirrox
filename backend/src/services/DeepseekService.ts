@@ -15,9 +15,15 @@ export type ExtractPayload = {
   user_id?: string; // optional user id for personalization
 };
 
+export type ExtractedItem = {
+  name: string;
+  portion?: string | null;
+  modifiers?: string[];
+};
+
 export type ExtractResult = {
-  FOOD_ITEM: string[];
-  DRINK_ITEM: string[];
+  FOOD_ITEM: ExtractedItem[];
+  DRINK_ITEM: ExtractedItem[];
   raw: string; // model raw output (for debugging)
   ocr?: string; // OCR text (for visibility)
   image_url?: string; // uploaded Cloudinary URL if available
@@ -26,9 +32,15 @@ export type ExtractResult = {
 /** System prompt */
 function buildSystemPrompt() {
   return [
-    'You are a food & drink extraction assistant. Output JSON only:',
-    '{ "FOOD_ITEM": [...], "DRINK_ITEM": [...] }',
-    'No extra text. Use lowercase names and deduplicate.',
+    'You are a food & drink extraction assistant.',
+    'Return JSON ONLY with the keys "FOOD_ITEM" and "DRINK_ITEM".',
+    'Each value must be an array of objects like: { "name": "item name", "portion": "text or null", "modifiers": [] }.',
+    'Rules:',
+    '- use lowercase names and trim whitespace;',
+    '- if portion is not mentioned, set it to null;',
+    '- if no modifiers are present, use an empty array;',
+    '- deduplicate by name, merging modifiers when needed;',
+    '- do not add any extra commentary.',
   ].join('\n');
 }
 
@@ -120,26 +132,89 @@ async function callChat(payload: {
 }
 
 /** Extract JSON safely even if model wraps it in prose or code fences */
+function normalizeExtractedList(input: unknown): ExtractedItem[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const deduped = new Map<string, ExtractedItem>();
+
+  for (const entry of input) {
+    let name: string | null = null;
+    let portion: string | null = null;
+    let modifiers: string[] = [];
+
+    if (typeof entry === 'string') {
+      name = entry;
+    } else if (entry && typeof entry === 'object') {
+      const rawName = (entry as Record<string, unknown>).name;
+      if (typeof rawName === 'string') {
+        name = rawName;
+      }
+      const rawPortion = (entry as Record<string, unknown>).portion;
+      if (typeof rawPortion === 'string') {
+        const trimmed = rawPortion.trim();
+        portion = trimmed.length > 0 ? trimmed : null;
+      }
+      const rawModifiers = (entry as Record<string, unknown>).modifiers;
+      if (Array.isArray(rawModifiers)) {
+        modifiers = rawModifiers
+          .filter((value): value is string => typeof value === 'string')
+          .map(value => value.trim())
+          .filter(Boolean);
+      }
+    }
+
+    if (!name) {
+      continue;
+    }
+
+    const normalizedName = name.toLowerCase().trim();
+    if (!normalizedName) continue;
+
+    const existing = deduped.get(normalizedName);
+    if (existing) {
+      if (!existing.portion && portion) {
+        existing.portion = portion;
+      }
+      if (modifiers.length) {
+        const merged = new Set([...(existing.modifiers ?? []), ...modifiers]);
+        existing.modifiers = Array.from(merged);
+      }
+      continue;
+    }
+
+    deduped.set(normalizedName, {
+      name: normalizedName,
+      portion,
+      modifiers: modifiers.length ? Array.from(new Set(modifiers)) : [],
+    });
+  }
+
+  return Array.from(deduped.values());
+}
+
 function safeParseJSON(s: string): ExtractResult {
   const match = s.match(/\{[\s\S]*\}/);
   const jsonStr = match ? match[0] : s;
-  let obj;
+  let obj: unknown;
   try {
     obj = JSON.parse(jsonStr);
   } catch {
     obj = { FOOD_ITEM: [], DRINK_ITEM: [] };
   }
-  obj.FOOD_ITEM = Array.from(
-    new Set(
-      (obj.FOOD_ITEM || []).map((x: string) => String(x).toLowerCase().trim())
-    )
-  );
-  obj.DRINK_ITEM = Array.from(
-    new Set(
-      (obj.DRINK_ITEM || []).map((x: string) => String(x).toLowerCase().trim())
-    )
-  );
-  return { ...obj, raw: s };
+
+  const asRecord =
+    obj && typeof obj === 'object' ? (obj as Record<string, unknown>) : {};
+
+  const foodItems = normalizeExtractedList(asRecord.FOOD_ITEM);
+  const drinkItems = normalizeExtractedList(asRecord.DRINK_ITEM);
+
+  return {
+    FOOD_ITEM: foodItems,
+    DRINK_ITEM: drinkItems,
+    raw: s,
+  };
 }
 
 /**
@@ -163,6 +238,8 @@ export async function extractWithDeepSeek(
       ],
     });
     const content = resp.data?.choices?.[0]?.message?.content || '';
+
+    console.log('[Deepseek] content: ', content);
     return safeParseJSON(content);
   }
 

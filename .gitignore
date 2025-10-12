@@ -4,12 +4,12 @@
 .env
 node_modules/
 
-ml_service/data/raw/usda/food.csv
-ml_service/data/raw/usda/food_nutrient.csv
+ml_service/data/raw/openfoodfacts
+__pycache__
 backend/data/usda_clean.json
 
 
-ml_service/data/
+ml_service/data/build
 ml_service/.venv/
 build/
 .venv/

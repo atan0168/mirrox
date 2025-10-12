@@ -1,21 +1,49 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Modal,
-  TextInput,
-} from 'react-native';
-import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Modal } from 'react-native';
+import { colors, spacing, borderRadius, fontSize } from '../theme';
 import { useMeal } from '../hooks/useMeal';
+import type { MealItem } from '../types/meal';
+import { Button, Card, Input } from './ui';
+import {
+  formatNutrientValue,
+  getMealItemModifiers,
+  getMealItemSource,
+  getMealItemNutrientPerItem,
+  getMealItemNutrientTotal,
+  getMealItemPortionText,
+  resolveMealItemName,
+  resolveSourceLabel,
+} from '../utils/nutritionUtils';
+import type { NutrientKey } from '../utils/nutritionUtils';
+
+const DETAIL_FIELDS = [
+  { key: 'energy_kcal', label: 'Energy', unit: 'kcal', decimals: 0 },
+  { key: 'sugar_g', label: 'Sugar', unit: 'g', decimals: 1 },
+  { key: 'fat_g', label: 'Fat', unit: 'g', decimals: 1 },
+  { key: 'sat_fat_g', label: 'Saturated Fat', unit: 'g', decimals: 1 },
+  { key: 'protein_g', label: 'Protein', unit: 'g', decimals: 1 },
+  { key: 'fiber_g', label: 'Fiber', unit: 'g', decimals: 1 },
+  { key: 'sodium_mg', label: 'Sodium', unit: 'mg', decimals: 0 },
+] as const satisfies ReadonlyArray<{
+  key: NutrientKey;
+  label: string;
+  unit: string;
+  decimals: number;
+}>;
 
 export default function ThisMealCard() {
-  const { data: items = [], removeItem, addManual } = useMeal();
+  const { data: rawItems = [], analysis, removeItem, addManual } = useMeal();
+  const items = (rawItems as MealItem[]) ?? [];
+  const analysisSources = analysis?.sources;
 
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
   const [energy, setEnergy] = useState('');
+  const [detailItem, setDetailItem] = useState<MealItem | null>(null);
+  const detailPortion = detailItem ? getMealItemPortionText(detailItem) : null;
+  const detailModifiers = detailItem ? getMealItemModifiers(detailItem) : [];
+  const detailSourceKey = detailItem ? getMealItemSource(detailItem) : null;
+  const detailSource = resolveSourceLabel(detailSourceKey, analysisSources);
 
   const onAdd = async () => {
     const trimmed = name.trim();
@@ -31,12 +59,17 @@ export default function ThisMealCard() {
     setShowAdd(false);
   };
 
+  const closeDetail = () => setDetailItem(null);
+
   const totalKcal = Math.round(
-    items.reduce((s, it) => s + (it.energy_kcal ?? 0) * (it.qty ?? 1), 0)
+    items.reduce(
+      (sum, item) => sum + (getMealItemNutrientTotal(item, 'energy_kcal') ?? 0),
+      0
+    )
   );
 
   return (
-    <View style={styles.card}>
+    <Card padding="md" shadow="sm" style={styles.card}>
       <View style={styles.headerRow}>
         <View>
           <Text style={styles.title}>This meal</Text>
@@ -44,9 +77,14 @@ export default function ThisMealCard() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-          <Pressable onPress={() => setShowAdd(true)} style={styles.ghostBtn}>
-            <Text style={styles.ghostTxt}>+ Add item</Text>
-          </Pressable>
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={() => setShowAdd(true)}
+            style={styles.add}
+          >
+            + Add item
+          </Button>
         </View>
       </View>
 
@@ -55,25 +93,51 @@ export default function ThisMealCard() {
           No items yet. Use “+ Add item” or run Analyze to add.
         </Text>
       ) : (
-        items.map(item => (
-          <View key={item.id.toString()} style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemSub}>
-                {item.energy_kcal != null
-                  ? `${Math.round(item.energy_kcal)} kcal`
-                  : 'kcal N/A'}{' '}
-                • x{item.qty}
-              </Text>
+        items.map(item => {
+          const displayName = resolveMealItemName(item);
+          const energyDisplay = formatNutrientValue(
+            getMealItemNutrientPerItem(item, 'energy_kcal'),
+            'kcal',
+            0
+          );
+          const portionText = getMealItemPortionText(item);
+          const modifiers = getMealItemModifiers(item);
+          const metaParts: string[] = [];
+          if (portionText) {
+            metaParts.push(portionText);
+          }
+          if (modifiers.length) {
+            metaParts.push(modifiers.join(', '));
+          }
+          return (
+            <View key={item.id.toString()} style={styles.row}>
+              <Pressable
+                style={styles.itemPressable}
+                onPress={() => setDetailItem(item)}
+                accessibilityRole="button"
+                accessibilityLabel={`View details for ${displayName}`}
+              >
+                <Text style={styles.itemName}>{displayName}</Text>
+                <Text style={styles.itemSub}>
+                  {energyDisplay} • x{item.qty}
+                </Text>
+                {metaParts.length > 0 ? (
+                  <Text style={styles.itemMeta}>{metaParts.join(' • ')}</Text>
+                ) : null}
+              </Pressable>
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={() => removeItem.mutate(item.id)}
+                style={styles.removeButton}
+                textStyle={styles.removeButtonText}
+                accessibilityLabel={`Remove ${displayName}`}
+              >
+                Remove
+              </Button>
             </View>
-            <Pressable
-              onPress={() => removeItem.mutate(item.id)}
-              style={styles.deleteBtn}
-            >
-              <Text style={styles.deleteTxt}>Remove</Text>
-            </Pressable>
-          </View>
-        ))
+          );
+        })
       )}
       {/* Add item modal */}
       <Modal
@@ -83,54 +147,114 @@ export default function ThisMealCard() {
         onRequestClose={() => setShowAdd(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setShowAdd(false)} />
-        <View style={styles.modal}>
-          <Text style={styles.modalTitle}>Add item</Text>
-          <TextInput
-            placeholder="Food name (required)"
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-          />
-          <TextInput
-            placeholder="Energy kcal (optional)"
-            value={energy}
-            onChangeText={setEnergy}
-            keyboardType="decimal-pad"
-            style={styles.input}
-          />
-          <View style={styles.modalActions}>
-            <Pressable onPress={() => setShowAdd(false)} style={styles.pill}>
-              <Text>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={onAdd}
-              disabled={!name.trim()}
-              style={[styles.pillPrimary, !name.trim() && styles.pillDisabled]}
-            >
-              <Text
-                style={{
-                  color: colors.white,
-                  opacity: !name.trim() ? 0.6 : 1,
-                }}
+        <View style={styles.modalContainer}>
+          <Card padding="md" shadow="sm" style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Add item</Text>
+            <Input
+              label="Food name"
+              placeholder="Required"
+              value={name}
+              onChangeText={setName}
+              autoFocus
+              returnKeyType="done"
+            />
+            <Input
+              label="Energy (kcal)"
+              placeholder="Optional"
+              value={energy}
+              onChangeText={setEnergy}
+              keyboardType="decimal-pad"
+            />
+            <View style={styles.modalActions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => setShowAdd(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onPress={onAdd}
+                disabled={!name.trim()}
+                style={styles.primaryActionButton}
+                textStyle={styles.primaryActionText}
               >
                 Add
-              </Text>
-            </Pressable>
-          </View>
+              </Button>
+            </View>
+          </Card>
         </View>
       </Modal>
-    </View>
+      {/* Item detail modal */}
+      <Modal
+        transparent
+        visible={detailItem != null}
+        animationType="fade"
+        onRequestClose={closeDetail}
+      >
+        <Pressable style={styles.backdrop} onPress={closeDetail} />
+        {detailItem && (
+          <View style={styles.modalContainer}>
+            <Card padding="md" shadow="sm" style={styles.detailCard}>
+              <Text style={styles.detailTitle}>
+                {resolveMealItemName(detailItem)}
+              </Text>
+              <Text style={styles.detailSubtitle}>
+                Quantity: x{detailItem.qty}
+              </Text>
+              {detailPortion ? (
+                <Text style={styles.detailMeta}>Portion: {detailPortion}</Text>
+              ) : null}
+              {detailModifiers.length > 0 ? (
+                <Text style={styles.detailMeta}>
+                  Modifiers: {detailModifiers.join(', ')}
+                </Text>
+              ) : null}
+              {detailSource ? (
+                <Text style={styles.detailMeta}>Source: {detailSource}</Text>
+              ) : null}
+              <Text style={styles.detailHint}>
+                Values for recorded quantity.
+              </Text>
+              <View style={styles.detailRows}>
+                {DETAIL_FIELDS.map(field => (
+                  <View key={field.key} style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>{field.label}</Text>
+                    <Text style={styles.detailValue}>
+                      {formatNutrientValue(
+                        getMealItemNutrientTotal(detailItem, field.key),
+                        field.unit,
+                        field.decimals
+                      )}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <Button
+                variant="primary"
+                size="sm"
+                onPress={closeDetail}
+                style={StyleSheet.flatten([
+                  styles.primaryActionButton,
+                  styles.detailCloseButton,
+                ])}
+                textStyle={styles.primaryActionText}
+              >
+                Close
+              </Button>
+            </Card>
+          </View>
+        )}
+      </Modal>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.white,
     borderRadius: borderRadius.xl,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    ...shadows.soft,
   },
   headerRow: {
     flexDirection: 'row',
@@ -151,81 +275,107 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.divider,
   },
+  itemPressable: { flex: 1 },
   itemName: { fontWeight: '600', color: colors.neutral[900] },
   itemSub: {
     color: colors.neutral[500],
     marginTop: spacing.xs,
     fontSize: fontSize.xs,
   },
-  deleteBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.red[300],
-    backgroundColor: colors.red[50],
+  itemMeta: {
+    color: colors.neutral[400],
+    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
   },
-  deleteTxt: { color: colors.red[700], fontWeight: '700' },
-  ghostBtn: {
-    paddingVertical: spacing.sm,
+  add: {
+    borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    backgroundColor: colors.white,
   },
-  ghostTxt: { fontWeight: '700', color: colors.neutral[900] },
+  removeButton: {
+    backgroundColor: colors.red[50],
+    borderColor: colors.red[200],
+    borderRadius: borderRadius.md,
+    marginLeft: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  removeButtonText: {
+    color: colors.red[700],
+    fontWeight: '600',
+  },
   backdrop: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.25)',
   },
-  modal: {
-    position: 'absolute',
-    left: spacing.md,
-    right: spacing.md,
-    top: '25%',
-    backgroundColor: colors.white,
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
     borderRadius: borderRadius.xl,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.neutral[200],
+    gap: spacing.sm,
   },
   modalTitle: {
     fontWeight: '700',
     fontSize: fontSize.base,
-    marginBottom: spacing.sm,
     color: colors.neutral[900],
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.divider,
-    borderRadius: borderRadius.lg,
-    padding: spacing.sm,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.white,
   },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: spacing.sm,
   },
-  pill: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.divider,
-    backgroundColor: colors.white,
-  },
-  pillPrimary: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
+  primaryActionButton: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  pillDisabled: { backgroundColor: colors.sky[300] },
+  primaryActionText: {
+    color: colors.white,
+    fontWeight: '600',
+  },
+  detailCard: {
+    borderRadius: borderRadius.xl,
+    gap: spacing.sm,
+  },
+  detailTitle: {
+    fontWeight: '700',
+    fontSize: fontSize.base,
+    color: colors.neutral[900],
+  },
+  detailSubtitle: {
+    color: colors.neutral[500],
+    marginTop: spacing.xs,
+  },
+  detailMeta: {
+    color: colors.neutral[500],
+    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
+  },
+  detailHint: {
+    color: colors.neutral[400],
+    fontSize: fontSize.xs,
+    marginTop: spacing.xs,
+  },
+  detailRows: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
+  },
+  detailLabel: {
+    color: colors.neutral[600],
+    fontSize: fontSize.sm,
+  },
+  detailValue: {
+    fontWeight: '600',
+    color: colors.neutral[900],
+    fontSize: fontSize.sm,
+  },
+  detailCloseButton: {
+    alignSelf: 'flex-end',
+    marginTop: spacing.sm,
+  },
 });
