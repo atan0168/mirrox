@@ -4,6 +4,7 @@ import { FULL_SLEEP_MINUTES } from '../constants';
 import { clamp } from '../utils/mathUtils';
 import { useEnergyStore } from '../store/energyStore';
 import EnergyInfoModal from './ui/EnergyInfoModal';
+import { colors } from '../theme';
 
 const BatteryIndicator = ({
   sleepMinutes,
@@ -17,7 +18,58 @@ const BatteryIndicator = ({
     () => typeof energyPct === 'number' || (sleepMinutes ?? 0) > 0,
     [energyPct, sleepMinutes]
   );
-  if (!hasSleep) return null;
+
+  if (!hasSleep)
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+        accessibilityLabel={`Energy battery: unknown percentage`}
+      >
+        <Pressable
+          onPress={() => setShowInfo(true)}
+          accessibilityRole="button"
+          accessibilityHint="Opens an explanation of the energy battery"
+          style={{
+            flexDirection: 'row',
+            paddingHorizontal: 4,
+            paddingVertical: 4,
+            borderWidth: 1,
+            borderColor: colors.neutral[50],
+            borderRadius: 4,
+            backgroundColor: 'rgba(0,0,0,0.25)',
+            alignItems: 'center',
+          }}
+        >
+          {Array.from({ length: 3 }).map((_, i) => (
+            <View
+              key={i}
+              style={{
+                width: 4,
+                height: 8,
+                marginHorizontal: 1,
+                borderRadius: 1,
+                backgroundColor: 'transparent',
+                borderWidth: 1,
+                borderColor: colors.neutral[50],
+              }}
+            />
+          ))}
+          <Text
+            style={{
+              marginLeft: 6,
+              color: colors.neutral[50],
+              fontSize: 10,
+              fontWeight: '600',
+            }}
+          >
+            ?
+          </Text>
+        </Pressable>
+      </View>
+    );
 
   // Compute display percentage from store or fallback from sleep minutes
   const pct = clamp(
@@ -52,9 +104,6 @@ const BatteryIndicator = ({
   return (
     <View
       style={{
-        position: 'absolute',
-        bottom: 8,
-        right: 8,
         flexDirection: 'row',
         alignItems: 'center',
       }}

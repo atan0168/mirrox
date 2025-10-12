@@ -9,38 +9,46 @@ import {
   Pressable,
   Platform,
 } from 'react-native';
-import dayjs from 'dayjs';
+import { format, startOfDay } from 'date-fns';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { useQuestStore } from '../store/useQuestStore';
 import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
 import type { RootStackParamList } from '../../App';
-import { resetDailyQuestsIfNewDay } from '../services/QuestService';
+import { useQuestHistory } from '../hooks/useQuests';
+import type {
+  CompletedLog,
+  QuestId,
+  RewardTag,
+  VisualEffectEvent,
+} from '../models/quest';
 
-function useTwinVisuals() {
-  const recentEffects = useQuestStore(s => s.recentEffects);
-  const [activeEffect, setActiveEffect] = useState<string | null>(null);
+function useTwinVisuals(effects: VisualEffectEvent[]) {
+  const [activeEffect, setActiveEffect] = useState<RewardTag | null>(null);
 
   useEffect(() => {
-    const now = Date.now();
-    const within10s = recentEffects.find(e => now - e.addedAt <= 10_000);
-    if (within10s) {
-      setActiveEffect(within10s.tag);
-      const t = setTimeout(() => setActiveEffect(null), 4000);
-      return () => clearTimeout(t);
+    if (!effects.length) {
+      setActiveEffect(null);
+      return;
     }
-  }, [recentEffects]);
+
+    const now = Date.now();
+    const within10s = effects.find(e => now - e.addedAt <= 10_000);
+    if (!within10s) return;
+
+    setActiveEffect(within10s.tag);
+    const timer = setTimeout(() => setActiveEffect(null), 4000);
+    return () => clearTimeout(timer);
+  }, [effects]);
 
   return activeEffect;
 }
 
-function useNarrativeFeedback() {
-  const history = useQuestStore(s => s.history);
+function useNarrativeFeedback(history: CompletedLog[]) {
   const last24h = useMemo(() => {
     const cutoff = Date.now() - 24 * 3600 * 1000;
     return history.filter(h => h.completedAt >= cutoff);
   }, [history]);
 
-  const text = useMemo(() => {
+  return useMemo(() => {
     const count = last24h.length;
     if (count >= 3) return 'Your twin looks stronger and more resilient.';
     if (count === 2)
@@ -55,22 +63,10 @@ function useNarrativeFeedback() {
     }
     return 'Small steps today shape a stronger twin tomorrow.';
   }, [last24h]);
-
-  return text;
 }
 
 /** --- Hook: per-quest current streak up to 7 (consecutive days) --- */
-type QuestId =
-  | 'drink_2l'
-  | 'haze_mask_today'
-  | 'nature_walk_10m'
-  | 'calm_breath_5m'
-  | 'gratitude_note';
-
-function usePerQuestStreaks() {
-  const history = useQuestStore(s => s.history);
-
-  // map questId -> sorted unique day timestamps
+function usePerQuestStreaks(history: CompletedLog[]) {
   const perQuestDays = useMemo(() => {
     const map: Record<QuestId, number[]> = {
       drink_2l: [],
@@ -81,16 +77,16 @@ function usePerQuestStreaks() {
     };
     history.forEach(h => {
       if (!map[h.questId as QuestId]) return;
-      const ts = dayjs(h.completedAt).startOf('day').valueOf();
-      if (!map[h.questId as QuestId].includes(ts))
+      const ts = startOfDay(new Date(h.completedAt)).getTime();
+      if (!map[h.questId as QuestId].includes(ts)) {
         map[h.questId as QuestId].push(ts);
+      }
     });
     (Object.keys(map) as QuestId[]).forEach(k => map[k].sort((a, b) => a - b));
     return map;
   }, [history]);
 
-  // compute "current" streak for each quest counting back from latest completion
-  const streaks = useMemo(() => {
+  return useMemo(() => {
     const res: Record<QuestId, number> = {
       drink_2l: 0,
       haze_mask_today: 0,
@@ -105,27 +101,23 @@ function usePerQuestStreaks() {
         for (let i = days.length - 1; i > 0; i--) {
           const diffDays = (days[i] - days[i - 1]) / (24 * 3600 * 1000);
           if (diffDays <= 1.1) streak += 1;
-          else break; // streak ends
+          else break;
         }
         res[qid] = Math.min(streak, 7);
       }
     );
     return res;
   }, [perQuestDays]);
-
-  return streaks;
 }
 
 /** --- Hook: mini achievements (count + latest badge) --- */
 type MiniBadge = { name: string; dateEarned: string; questId: string };
 
-function useMiniBadgeSummary() {
-  const history = useQuestStore(s => s.history);
-
+function useMiniBadgeSummary(history: CompletedLog[]) {
   const perQuestDays = useMemo(() => {
     const map: Record<string, number[]> = {};
     history.forEach(h => {
-      const dayTs = dayjs(h.completedAt).startOf('day').valueOf();
+      const dayTs = startOfDay(new Date(h.completedAt)).getTime();
       map[h.questId] ??= [];
       if (!map[h.questId].includes(dayTs)) map[h.questId].push(dayTs);
     });
@@ -157,14 +149,15 @@ function useMiniBadgeSummary() {
           result.push({
             name: label(questId),
             questId,
-            dateEarned: dayjs(days[i]).format('MMM D, YYYY'),
+            dateEarned: format(new Date(days[i]), 'MMM d, yyyy'),
           });
-          break; // only first unlock per quest
+          break;
         }
       }
     });
     return result.sort(
-      (a, b) => dayjs(b.dateEarned).valueOf() - dayjs(a.dateEarned).valueOf()
+      (a, b) =>
+        new Date(b.dateEarned).getTime() - new Date(a.dateEarned).getTime()
     );
   }, [perQuestDays]);
 
@@ -174,8 +167,7 @@ function useMiniBadgeSummary() {
 }
 
 /** --- UI: Task Progress Grid (5 compact segmented bars) --- */
-function TaskProgressGrid() {
-  const streaks = usePerQuestStreaks();
+function TaskProgressGrid({ streaks }: { streaks: Record<QuestId, number> }) {
   const items: Array<{ id: QuestId; label: string; emoji: string }> = [
     { id: 'drink_2l', label: 'Hydration', emoji: '💧' },
     { id: 'haze_mask_today', label: 'Mask', emoji: '😷' },
@@ -228,22 +220,21 @@ function TaskProgressGrid() {
 /** --- Main Twin Screen --- */
 export default function AchievementScreen() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const effect = useTwinVisuals();
-  const narrative = useNarrativeFeedback();
-  const { total: badgeCount, latest } = useMiniBadgeSummary();
+  const { history } = useQuestHistory();
 
-  // reset daily quests if a new day is detected
-  useEffect(() => {
-    (async () => {
-      try {
-        await resetDailyQuestsIfNewDay();
-      } catch (e) {
-        console.warn('resetDailyQuestsIfNewDay failed:', e);
-      }
-    })();
-  }, []);
+  const recentEffects = useMemo<VisualEffectEvent[]>(() => {
+    return history.slice(0, 5).map((h, idx) => ({
+      id: `eff-${h.questId}-${h.completedAt}-${idx}`,
+      tag: h.rewardTag,
+      addedAt: h.completedAt,
+    }));
+  }, [history]);
 
-  // hero glow animation
+  const effect = useTwinVisuals(recentEffects);
+  const narrative = useNarrativeFeedback(history);
+  const streaks = usePerQuestStreaks(history);
+  const { total: badgeCount, latest } = useMiniBadgeSummary(history);
+
   const glowAnim = useState(new Animated.Value(0))[0];
   useEffect(() => {
     if (!effect) return;
@@ -306,11 +297,11 @@ export default function AchievementScreen() {
           </Text>
           <Text style={styles.twinSubtitle}>{narrative}</Text>
           <Text style={styles.metaText}>
-            Last sync {dayjs().format('MMM D')}
+            Last sync {format(new Date(), 'MMM d')}
           </Text>
         </Animated.View>
 
-        <TaskProgressGrid />
+        <TaskProgressGrid streaks={streaks} />
 
         <View style={styles.badgeSummary}>
           <Text style={styles.badgeSummaryTitle}>Achievements</Text>

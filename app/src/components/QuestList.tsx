@@ -1,91 +1,80 @@
-// All comments in English as requested.
-
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, TextInput } from 'react-native';
-import dayjs from 'dayjs';
-import Constants from 'expo-constants';
+import { format } from 'date-fns';
 
-// Navigation imports
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../../App';
 
-// Zustand stores
-import { useQuestStore } from '../store/useQuestStore';
+import { useQuestProgress, useQuestComplete } from '../hooks/useQuests';
 import { useHydrationStore } from '../store/hydrationStore';
-
-// Services
 import { generateQuests } from '../services/questEngine';
-import { apiService } from '../services/ApiService';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { useAQICNAirQuality } from '../hooks/useAirQuality';
 
-// Theme constants
 import { colors, spacing, borderRadius, fontSize } from '../theme';
 
-// --- Helpers ---
-const TODAY = () => dayjs().format('YYYY-MM-DD');
+const TODAY = () => format(new Date(), 'yyyy-MM-dd');
 const keyFor = (id: string) => `${id}::${TODAY()}`;
-const API_BASE =
-  (Constants.expoConfig?.extra as any)?.apiBase ||
-  process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export default function QuestList() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
-  // Quest state
-  const { setQuests, markDone } = useQuestStore();
-  const quests = useQuestStore(s => s.quests);
-  const progress = useQuestStore(s => s.progress);
+  const { progress } = useQuestProgress();
+  const completeMutation = useQuestComplete();
 
-  // ✅ Hydration store: use the correct field names from your store
+  const { data: userProfile } = useUserProfile();
+  const { data: airQualityData } = useAQICNAirQuality(
+    userProfile?.location.latitude ?? 0,
+    userProfile?.location.longitude ?? 0,
+    !!userProfile
+  );
+
   const hydrationCurrentRaw = useHydrationStore(s => s.currentHydrationMl);
   const hydrationGoalRaw = useHydrationStore(s => s.dailyGoalMl);
 
-  // Guards to avoid NaN / division by 0
-  const hydrationCurrent = Number.isFinite(hydrationCurrentRaw as any)
+  const hydrationCurrent = Number.isFinite(hydrationCurrentRaw)
     ? (hydrationCurrentRaw as number)
     : 0;
   const hydrationGoal = Math.max(1, Number(hydrationGoalRaw) || 2000);
 
+  const quests = useMemo(
+    () =>
+      generateQuests({
+        aqi: airQualityData?.aqi,
+        hydrationDailyTargetMl: hydrationGoal,
+      }),
+    [airQualityData?.aqi, hydrationGoal]
+  );
+
   const [gratitude, setGratitude] = useState('');
 
-  // Generate daily quests (keeps hydration quest and conditionally adds others)
-  useEffect(() => {
-    (async () => {
-      try {
-        const airData = await apiService.fetchAQICNAirQuality(3.139, 101.6869);
-        const aqi = airData?.aqi ?? 0;
-        const qs = generateQuests({
-          aqi,
-          hydrationDailyTargetMl: hydrationGoal,
-        });
-        setQuests(qs);
-      } catch {
-        const qs = generateQuests({ hydrationDailyTargetMl: hydrationGoal });
-        setQuests(qs);
-      }
-    })();
-  }, [hydrationGoal, setQuests]);
+  const markDone = useCallback(
+    async (questId: string, note?: string) => {
+      const quest = quests.find(q => q.id === questId);
+      if (!quest) return;
+      await completeMutation.mutateAsync({ questDef: quest, note });
+    },
+    [quests, completeMutation]
+  );
 
-  // Convenience handlers
   const addIntake = useCallback((amountMl: number) => {
     useHydrationStore
       .getState()
       .logFluidIntake({ amountMl: Math.max(1, Math.floor(amountMl)) });
   }, []);
 
-  const completeHydrationToday = useCallback(() => {
+  const completeHydrationToday = useCallback(async () => {
     const remaining = Math.max(0, hydrationGoal - hydrationCurrent);
     if (remaining > 0) {
       useHydrationStore.getState().logFluidIntake({ amountMl: remaining });
     }
-    // If your app requires explicit quest completion record, also:
-    // useQuestStore.getState().markDone('drink_2l');
     const todayKey = keyFor('drink_2l');
-    const alreadyDone = !!useQuestStore.getState().progress[todayKey]?.done;
+    const alreadyDone = !!progress[todayKey]?.done;
     if (!alreadyDone) {
-      useQuestStore.getState().markDone('drink_2l'); // NEW
+      await markDone('drink_2l');
     }
-  }, [hydrationGoal, hydrationCurrent]);
+  }, [hydrationGoal, hydrationCurrent, progress, markDone]);
 
   return (
     <View style={{ marginTop: spacing.lg, paddingHorizontal: spacing.md }}>
@@ -137,7 +126,6 @@ export default function QuestList() {
             Math.floor(((p?.value ?? 0) / Math.max(1, q.target)) * 100)
           );
 
-          // ✅ Hydration quest: proportional progress from hydration store
           const pctHydration = Math.min(
             100,
             Math.floor((hydrationCurrent / hydrationGoal) * 100)

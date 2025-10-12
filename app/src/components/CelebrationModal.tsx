@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -11,6 +11,8 @@ import {
   Dimensions,
 } from 'react-native';
 import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+import { useConfetti } from '../hooks/useConfetti';
+import { ConfettiView } from './effects/ConfettiView';
 
 type Props = {
   visible: boolean;
@@ -20,7 +22,6 @@ type Props = {
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-// --- Speed-tuned durations ---
 const DUR = {
   enterScale: 160,
   enterFade: 140,
@@ -29,55 +30,28 @@ const DUR = {
   pop3: 80,
   haloLoop: 520,
   rayLoop: 600,
-  confetti: 900,
 };
 
-// Confetti parameters
-const CONFETTI_COUNT = 64;
-const CONFETTI_FALL = 220;
-const CONFETTI_START_OFFSET = 160;
-
-export default function BadgeCelebration({ visible, title, onClose }: Props) {
+export default function CelebrationModal({ visible, title, onClose }: Props) {
   const scale = useRef(new Animated.Value(0.9)).current;
   const fade = useRef(new Animated.Value(0)).current;
   const medalPop = useRef(new Animated.Value(0)).current;
   const halo = useRef(new Animated.Value(0)).current;
   const rays = useRef(new Animated.Value(0)).current;
-  const confettiProgress = useRef(new Animated.Value(0)).current;
 
-  const confetti = useMemo(() => {
-    const palette = ['#FFD54F', '#4FC3F7', '#FF8A80', '#CE93D8', '#80CBC4'];
-    const halfW = Math.min(420, SCREEN_W - spacing.lg * 2) / 2;
-    return Array.from({ length: CONFETTI_COUNT }).map((_, i) => {
-      const startX = (Math.random() * 2 - 1) * (halfW - 12);
-      const driftX = startX + (Math.random() * 2 - 1) * 28;
-      const rotateStart = Math.random() * 120 - 60;
-      const rotateEnd =
-        rotateStart +
-        (Math.random() * 360 + 180) * (Math.random() > 0.5 ? 1 : -1);
-      const delay = (i % 12) * 18;
-      const color = palette[i % palette.length];
-      const width = 4 + (i % 3) * 2;
-      const height = 8 + ((i + 1) % 4) * 4;
-      return {
-        startX,
-        driftX,
-        rotateStart,
-        rotateEnd,
-        delay,
-        color,
-        width,
-        height,
-      };
-    });
-  }, []);
+  const confetti = useConfetti({
+    count: 64,
+    colors: ['#FFD54F', '#4FC3F7', '#FF8A80', '#CE93D8', '#80CBC4'],
+    shapes: ['rectangle'],
+    duration: 900,
+    fallDistance: 220,
+    startOffset: 160,
+    spread: Math.min(420, SCREEN_W - spacing.lg * 2),
+  });
 
   useEffect(() => {
     if (!visible) return;
 
-    // Entrance animation
-    scale.setValue(0.9);
-    fade.setValue(0);
     Animated.parallel([
       Animated.timing(scale, {
         toValue: 1,
@@ -93,7 +67,6 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
       }),
     ]).start();
 
-    // Medal pop
     medalPop.setValue(0);
     Animated.sequence([
       Animated.timing(medalPop, {
@@ -116,7 +89,6 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
       }),
     ]).start();
 
-    // Halo & rays loops
     halo.setValue(0);
     const haloLoop = Animated.loop(
       Animated.sequence([
@@ -155,18 +127,14 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
     );
     rayLoop.start();
 
-    // Confetti drop
-    confettiProgress.setValue(0);
-    Animated.timing(confettiProgress, {
-      toValue: 1,
-      duration: DUR.confetti,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
+    confetti.trigger();
 
     return () => {
       haloLoop.stop();
       rayLoop.stop();
+      scale.setValue(0.9);
+      fade.setValue(0);
+      confetti.reset();
     };
   }, [visible]);
 
@@ -188,7 +156,6 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
     outputRange: [0.95, 1.08],
   });
 
-  // Render background rays
   const renderRays = () => {
     const RAY_COUNT = 12;
     return Array.from({ length: RAY_COUNT }, (_, i) => {
@@ -212,42 +179,6 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
     });
   };
 
-  // Render falling confetti
-  const renderConfetti = () =>
-    confetti.map((c, i) => {
-      const tX = confettiProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [c.startX, c.driftX],
-      });
-      const tY = confettiProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [-CONFETTI_START_OFFSET, CONFETTI_FALL],
-      });
-      const rot = confettiProgress.interpolate({
-        inputRange: [0, 1],
-        outputRange: [`${c.rotateStart}deg`, `${c.rotateEnd}deg`],
-      });
-      return (
-        <Animated.View
-          key={`confetti-${i}`}
-          pointerEvents="none"
-          style={[
-            styles.confetti,
-            {
-              width: c.width,
-              height: c.height,
-              backgroundColor: c.color,
-              transform: [
-                { translateX: tX as any },
-                { translateY: tY as any },
-                { rotate: rot as any },
-              ],
-            },
-          ]}
-        />
-      );
-    });
-
   if (!visible) return null;
 
   return (
@@ -255,8 +186,6 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
       <View style={styles.overlay}>
         <Animated.View
           renderToHardwareTextureAndroid
-          // @ts-ignore
-          shouldRasterizeIOS
           style={[styles.card, { opacity: fade, transform: [{ scale }] }]}
         >
           <View style={styles.ribbon} />
@@ -264,8 +193,6 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
             <Animated.View
               pointerEvents="none"
               renderToHardwareTextureAndroid
-              // @ts-ignore
-              shouldRasterizeIOS
               style={[
                 styles.halo,
                 {
@@ -275,7 +202,10 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
               ]}
             />
             <View style={styles.raysWrap}>{renderRays()}</View>
-            <View style={styles.confettiWrap}>{renderConfetti()}</View>
+            <ConfettiView
+              particles={confetti.particles}
+              getParticleStyle={confetti.getParticleStyle}
+            />
             <Animated.Text style={[styles.medal, medalStyle]}>🏅</Animated.Text>
           </View>
 
@@ -297,7 +227,6 @@ export default function BadgeCelebration({ visible, title, onClose }: Props) {
   );
 }
 
-// -------------------- styles --------------------
 const CARD_MAX_W = Math.min(420, SCREEN_W - spacing.lg * 2);
 
 const styles = StyleSheet.create({
@@ -356,16 +285,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,215,0,0.85)',
     top: 40,
     left: (160 - 7) / 2,
-  },
-  confettiWrap: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  confetti: {
-    position: 'absolute',
-    top: 0,
-    borderRadius: 2,
   },
   medal: {
     fontSize: 72,

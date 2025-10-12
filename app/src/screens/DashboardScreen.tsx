@@ -1,5 +1,11 @@
 import QuestList from '../components/QuestList';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import {
   View,
   Text,
@@ -12,7 +18,9 @@ import {
   Switch,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
+import ConfettiCannon from 'react-native-confetti-cannon';
 import AvatarExperience from '../components/avatar/AvatarExperience';
 import { EffectsList, EffectData, Button } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
@@ -42,115 +50,173 @@ import { useHydrationStore } from '../store/hydrationStore';
 import { hydrationService } from '../services/HydrationService';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
-import ViewAchievementButton from '../components/ViewBadgesButton';
 
-// NEW: 7-day streak celebration imports
 import dayjs from 'dayjs';
-import BadgeCelebration from '../components/BadgeCelebration';
-import { useQuestStore } from '../store/useQuestStore';
-import { useBadgeStore, BADGE_DEFS } from '../store/badgeStore';
+import { useQuestHistory } from '../hooks/useQuests';
+import { useBadges } from '../hooks/useBadges';
+import type { CompletedLog, QuestId, RewardTag, Streak } from '../models/quest';
+import { QuestRepository } from '../services/db/QuestRepository';
 
-// TEST: seed 6 consecutive past days; complete once today to truly award
-const seed6ThenCompleteToday = (
-  questId:
-    | 'drink_2l'
-    | 'haze_mask_today'
-    | 'nature_walk_10m'
-    | 'calm_breath_5m'
-    | 'gratitude_note'
-) => {
-  const now = dayjs();
-  const logs = Array.from({ length: 6 }).map((_, i) => {
-    const ts = now
-      .subtract(6 - i, 'day')
-      .endOf('day')
-      .valueOf(); // 6 consecutive days
-    return {
-      questId,
-      title:
-        questId === 'drink_2l'
-          ? 'Drink Water'
-          : questId === 'haze_mask_today'
-            ? 'Wear Mask'
-            : questId === 'nature_walk_10m'
-              ? 'Walk 10m'
-              : questId === 'calm_breath_5m'
-                ? 'Calm Breathing'
-                : 'Gratitude',
-      rewardPoints: 0,
-      rewardTag: 'skin' as any, // UI only
-      completedAt: ts,
-      streakCount: i + 1,
-      note: 'DEV seed 6d',
-    };
-  });
-  const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+const ALL_QUEST_IDS: QuestId[] = [
+  'drink_2l',
+  'haze_mask_today',
+  'nature_walk_10m',
+  'calm_breath_5m',
+  'gratitude_note',
+];
 
-  useQuestStore.setState(s => ({
-    history: [...logs, ...s.history],
-    streaks: {
-      ...s.streaks,
-      [questId]: { id: questId, count: 6, lastDate: yesterday },
-    },
-  }));
+const QUEST_REWARD_TAG: Record<QuestId, RewardTag> = {
+  drink_2l: 'skin',
+  haze_mask_today: 'lung',
+  nature_walk_10m: 'stress',
+  calm_breath_5m: 'calm',
+  gratitude_note: 'happiness',
+};
 
-  console.log(
-    '✅ Seeded 6 days for',
-    questId,
-    '—streaks preset to 6 (lastDate=yesterday). complete once today to award.'
-  );
+const QUEST_SHORT_TITLE: Record<QuestId, string> = {
+  drink_2l: 'Drink Water',
+  haze_mask_today: 'Wear Mask',
+  nature_walk_10m: 'Walk 10m',
+  calm_breath_5m: 'Calm Breathing',
+  gratitude_note: 'Gratitude',
+};
+
+const QUEST_LONG_TITLE: Record<QuestId, string> = {
+  drink_2l: 'Drink 2L Water',
+  haze_mask_today: 'Wear Mask on Hazy Day',
+  nature_walk_10m: '10-min Nature Walk',
+  calm_breath_5m: '5-min Calm Breathing',
+  gratitude_note: 'Gratitude Note',
 };
 
 const DashboardScreen: React.FC = () => {
+  const queryClient = useQueryClient();
+  const { history: questHistory } = useQuestHistory();
+  useBadges();
+
+  const [celebrateId, setCelebrateId] = useState<
+    | null
+    | 'streak7_drink'
+    | 'streak7_mask'
+    | 'streak7_walk'
+    | 'streak7_breathe'
+    | 'streak7_gratitude'
+  >(null);
+  const confettiRef = useRef<ConfettiCannon>(null);
+  const [previousHistoryLength, setPreviousHistoryLength] = useState(0);
+
   // --------------------------------- DEV seed helpers ---------------------------------
-  // NEW: Support seeding 7-day history for ALL 5 quests to quickly test celebration UI.
-  const seed7DayHistory = (
-    questId:
-      | 'drink_2l'
-      | 'haze_mask_today'
-      | 'nature_walk_10m'
-      | 'calm_breath_5m'
-      | 'gratitude_note'
-  ) => {
-    const now = dayjs();
-    const logs = Array.from({ length: 7 }).map((_, i) => {
-      const ts = now
-        .subtract(6 - i, 'day')
-        .endOf('day')
-        .valueOf(); // 7 consecutive days
-      return {
+  const updateHistoryCache = useCallback(
+    (updater: (prev: CompletedLog[]) => CompletedLog[]) => {
+      queryClient.setQueriesData(
+        { queryKey: ['quest-history'] },
+        (old: CompletedLog[] | undefined) => updater(old ?? [])
+      );
+    },
+    [queryClient]
+  );
+
+  const updateStreakCache = useCallback(
+    (questId: QuestId, count: number, lastDate: string) => {
+      queryClient.setQueryData(
+        ['quest-streaks'],
+        (old: Record<QuestId, Streak> | undefined) => ({
+          ...(old ?? ({} as Record<QuestId, Streak>)),
+          [questId]: { id: questId, count, lastDate },
+        })
+      );
+    },
+    [queryClient]
+  );
+
+  const seed7DayHistory = useCallback(
+    (questId: QuestId) => {
+      const now = dayjs();
+      const logs: CompletedLog[] = Array.from({ length: 7 }).map((_, i) => {
+        const ts = now
+          .subtract(6 - i, 'day')
+          .endOf('day')
+          .valueOf();
+        return {
+          questId,
+          title: QUEST_LONG_TITLE[questId],
+          rewardPoints: 0,
+          rewardTag: QUEST_REWARD_TAG[questId],
+          completedAt: ts,
+          streakCount: i + 1,
+          note: 'Dev Test Seed',
+        };
+      });
+
+      updateHistoryCache(prev => [...logs, ...prev].slice(0, 50));
+      console.log('✅ [DEV TEST] Seeded 7-day history for:', questId);
+    },
+    [updateHistoryCache]
+  );
+
+  const seed6ThenCompleteToday = useCallback(
+    async (questId: QuestId) => {
+      const now = dayjs();
+      const logs: CompletedLog[] = Array.from({ length: 6 }).map((_, i) => {
+        const ts = now
+          .subtract(6 - i, 'day')
+          .endOf('day')
+          .valueOf();
+        return {
+          questId,
+          title: QUEST_SHORT_TITLE[questId],
+          rewardPoints: 0,
+          rewardTag: QUEST_REWARD_TAG[questId],
+          completedAt: ts,
+          streakCount: i + 1,
+          note: 'DEV seed 6d',
+        };
+      });
+
+      updateHistoryCache(prev => [...logs, ...prev].slice(0, 50));
+
+      const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+      updateStreakCache(questId, 6, yesterday);
+      try {
+        await QuestRepository.upsertStreak(questId, 6, yesterday);
+      } catch (err) {
+        console.warn('Failed to seed quest streak for test', err);
+      }
+
+      console.log(
+        '✅ Seeded 6 days for',
         questId,
-        title:
-          questId === 'drink_2l'
-            ? 'Drink 2L Water'
-            : questId === 'haze_mask_today'
-              ? 'Wear Mask on Hazy Day'
-              : questId === 'nature_walk_10m'
-                ? '10-min Nature Walk'
-                : questId === 'calm_breath_5m'
-                  ? '5-min Calm Breathing'
-                  : 'Gratitude Note',
-        rewardPoints: 0,
-        rewardTag: 'skin' as any, // UI-only; placeholder (history cards need a tag)
-        completedAt: ts,
-        streakCount: i + 1,
-        note: 'Dev Test Seed',
-      };
-    });
+        '— streak preset to 6 (lastDate=yesterday). Complete once today to award.'
+      );
+    },
+    [updateHistoryCache, updateStreakCache]
+  );
 
-    useQuestStore.setState(s => ({
-      history: [...logs, ...s.history], // prepend injected logs
-    }));
-
-    console.log('✅ [DEV TEST] Seeded 7-day history for:', questId);
-  };
-
-  const clearHistoryForRetest = () => {
-    useQuestStore.setState({ history: [] });
+  const clearHistoryForRetest = useCallback(async () => {
+    updateHistoryCache(() => []);
     setCelebrateId(null);
-    setHighlightBtn(false);
+
+    try {
+      const today = dayjs().format('YYYY-MM-DD');
+      await Promise.all(
+        ALL_QUEST_IDS.map(id => QuestRepository.upsertStreak(id, 0, today))
+      );
+      queryClient.setQueryData(
+        ['quest-streaks'],
+        (old: Record<QuestId, Streak> | undefined) => {
+          const next = { ...(old ?? ({} as Record<QuestId, Streak>)) };
+          ALL_QUEST_IDS.forEach(id => {
+            next[id] = { id, count: 0, lastDate: today };
+          });
+          return next;
+        }
+      );
+    } catch (err) {
+      console.warn('Failed to reset streaks during dev clear', err);
+    }
+
     console.log('♻️ [DEV TEST] Cleared history for re-test');
-  };
+  }, [updateHistoryCache, queryClient]);
   // -------------------------------------------------------------------------------------
 
   const isFocused = useIsFocused();
@@ -194,21 +260,6 @@ const DashboardScreen: React.FC = () => {
   const eyeBagsWidth = useAvatarStore(s => s.eyeBagsWidth);
   const eyeBagsHeight = useAvatarStore(s => s.eyeBagsHeight);
   const setEyeBagsSize = useAvatarStore(s => s.setEyeBagsSize);
-
-  // NEW: UI state for celebration modal & floating button highlight
-  const [celebrateId, setCelebrateId] = useState<
-    | null
-    | 'streak7_drink'
-    | 'streak7_mask'
-    | 'streak7_walk'
-    | 'streak7_breathe'
-    | 'streak7_gratitude'
-  >(null);
-  const [highlightBtn, setHighlightBtn] = useState(false);
-
-  // Read stores needed for 7-day detection (UI only)
-  const history = useQuestStore(s => s.history);
-  useBadgeStore(s => s.earned); // keep subscribed in case you want to react to new badges later
 
   const { developerControlsEnabled } = useDeveloperControlsPreference();
 
@@ -587,7 +638,7 @@ const DashboardScreen: React.FC = () => {
 
   // NEW: Aggregate days per quest from history; compute 7-day flags (drink/mask/walk/breathe/gratitude)
   const flags = useMemo(() => {
-    if (!history?.length)
+    if (!questHistory?.length)
       return {
         drink7: false,
         mask7: false,
@@ -597,7 +648,7 @@ const DashboardScreen: React.FC = () => {
       };
 
     const map: Record<string, string[]> = {};
-    history.forEach(h => {
+    questHistory.forEach(h => {
       const dayKey = dayjs(h.completedAt).format('YYYY-MM-DD');
       if (!map[h.questId]) map[h.questId] = [];
       map[h.questId].push(dayKey);
@@ -610,19 +661,25 @@ const DashboardScreen: React.FC = () => {
       breathe7: has7Consecutive(map['calm_breath_5m'] ?? []),
       gratitude7: has7Consecutive(map['gratitude_note'] ?? []),
     };
-  }, [history]);
+  }, [questHistory]);
 
-  // NEW: Trigger a celebration modal for the first truthy flag (UI only; awarding handled in store)
+  // Trigger a celebration modal for the first truthy flag
   useEffect(() => {
-    if (celebrateId) return; // avoid re-trigger while showing modal
+    if (celebrateId) return;
 
-    // Priority order: drink > mask > walk > breathe > gratitude (can be adjusted)
     if (flags.drink7) setCelebrateId('streak7_drink');
     else if (flags.mask7) setCelebrateId('streak7_mask');
     else if (flags.walk7) setCelebrateId('streak7_walk');
     else if (flags.breathe7) setCelebrateId('streak7_breathe');
     else if (flags.gratitude7) setCelebrateId('streak7_gratitude');
   }, [flags, celebrateId]);
+
+  useEffect(() => {
+    if (questHistory && questHistory.length > previousHistoryLength) {
+      confettiRef.current?.start();
+    }
+    setPreviousHistoryLength(questHistory?.length ?? 0);
+  }, [questHistory?.length]);
   // ----------------------------------------------------------------------------------------------
 
   if (isLoading) {
@@ -822,29 +879,39 @@ const DashboardScreen: React.FC = () => {
                   <Button onPress={() => seed7DayHistory('gratitude_note')}>
                     🧪 DEV: Seed 7-day Gratitude
                   </Button>
-                  <Button onPress={clearHistoryForRetest}>
+                  <Button onPress={() => void clearHistoryForRetest()}>
                     ♻️ DEV: Clear injected history
                   </Button>
-                  <Button onPress={() => seed6ThenCompleteToday('drink_2l')}>
+                  <Button
+                    onPress={() => void seed6ThenCompleteToday('drink_2l')}
+                  >
                     🧪 Seed 6d Hydration (award on today)
                   </Button>
                   <Button
-                    onPress={() => seed6ThenCompleteToday('haze_mask_today')}
+                    onPress={() =>
+                      void seed6ThenCompleteToday('haze_mask_today')
+                    }
                   >
                     🧪 Seed 6d Mask (award on today)
                   </Button>
                   <Button
-                    onPress={() => seed6ThenCompleteToday('nature_walk_10m')}
+                    onPress={() =>
+                      void seed6ThenCompleteToday('nature_walk_10m')
+                    }
                   >
                     🧪 Seed 6d Walk (award on today)
                   </Button>
                   <Button
-                    onPress={() => seed6ThenCompleteToday('calm_breath_5m')}
+                    onPress={() =>
+                      void seed6ThenCompleteToday('calm_breath_5m')
+                    }
                   >
                     🧪 Seed 6d Breathe (award on today)
                   </Button>
                   <Button
-                    onPress={() => seed6ThenCompleteToday('gratitude_note')}
+                    onPress={() =>
+                      void seed6ThenCompleteToday('gratitude_note')
+                    }
                   >
                     🧪 Seed 6d Gratitude (award on today)
                   </Button>
@@ -889,21 +956,14 @@ const DashboardScreen: React.FC = () => {
         }}
       />
 
-      {/* {celebrateId && ( */}
-      {/*   <BadgeCelebration */}
-      {/*     visible */}
-      {/*     title={`${BADGE_DEFS[celebrateId].icon} ${BADGE_DEFS[celebrateId].title}`} */}
-      {/*     // message={`${BADGE_DEFS[celebrateId].encouragement}\n\n+${BADGE_DEFS[celebrateId].points} pts`} */}
-      {/*     onClose={() => { */}
-      {/*       setCelebrateId(null); */}
-      {/*       // setHighlightBtn(true); */}
-      {/*       // setTimeout(() => setHighlightBtn(false), 1800); */}
-      {/*     }} */}
-      {/*   /> */}
-      {/* )} */}
-
-      {/* Floating button to open badges page (pulses after celebration) */}
-      <ViewAchievementButton highlight={highlightBtn} />
+      {/* Confetti effect for quest completion */}
+      <ConfettiCannon
+        ref={confettiRef}
+        count={200}
+        origin={{ x: -10, y: 0 }}
+        autoStart={false}
+        fadeOut
+      />
     </SafeAreaView>
   );
 };

@@ -1,27 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
-  Text,
   View,
   Animated,
   Easing,
   LayoutChangeEvent,
   Platform,
   StyleSheet,
+  StyleProp,
+  ViewStyle,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
 import { colors, spacing, borderRadius, shadows, fontSize } from '../theme';
+import { Star } from 'lucide-react-native';
 
 type Props = {
   highlight?: boolean;
   size?: number;
+  style?: StyleProp<ViewStyle>;
   ariaLabel?: string;
 };
 
 export default function ViewAchievementButton({
   highlight = true,
   size,
+  style,
   ariaLabel = 'Open badges',
 }: Props) {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -33,11 +37,10 @@ export default function ViewAchievementButton({
   // Theme tokens & fallbacks
   const accent = colors.yellow[400];
   const accentStrong = colors.warning;
-  const text = colors.black;
 
   const iconSize = size ?? fontSize.xl;
 
-  const pad = spacing.lg;
+  const pad = spacing.xs;
 
   const [box, setBox] = useState({ w: iconSize, h: iconSize });
   const onLayout = (e: LayoutChangeEvent) => {
@@ -125,16 +128,7 @@ export default function ViewAchievementButton({
   };
 
   return (
-    <View
-      pointerEvents="box-none"
-      style={{
-        right: spacing.xl,
-        bottom: spacing.xl,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {/* GOLD HALOS — no elevation (prevents gray), pure colored light */}
+    <View pointerEvents="box-none" style={[styles.container, style]}>
       {highlight && (
         <>
           <Animated.View
@@ -192,17 +186,7 @@ export default function ViewAchievementButton({
             ...(Platform.OS === 'ios' ? shadows.none : null),
           }}
         >
-          {/* Medal icon; swap to Image if you have a custom asset */}
-          <Text
-            style={{
-              fontSize: iconSize * 0.9,
-              color: text,
-              includeFontPadding: false,
-              textAlignVertical: 'center',
-            }}
-          >
-            🏅
-          </Text>
+          <Star fill={colors.orange[200]} stroke={colors.orange[200]} />
         </Pressable>
       </Animated.View>
     </View>
@@ -210,6 +194,11 @@ export default function ViewAchievementButton({
 }
 
 const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   halo: {
     position: 'absolute',
   },
