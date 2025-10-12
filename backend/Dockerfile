@@ -39,6 +39,9 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/settings ./dist/settings
 COPY nutrition.db ./nutrition.db
 
+# Fix ownership before switching to node user
+RUN chown -R node:node /app
+
 # Use non-root user for better security
 USER node
 
