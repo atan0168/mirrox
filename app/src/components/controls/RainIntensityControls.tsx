@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Slider from '@react-native-community/slider';
+import { colors, borderRadius, spacing, fontSize } from '../../theme';
 
 type Props = {
   value: number; // 0..1
@@ -16,7 +17,7 @@ export default function RainIntensityControls({
   onChangeDirection,
 }: Props) {
   return (
-    <View style={styles.container}>
+    <View style={styles.card}>
       <Text style={styles.title}>Rain Intensity</Text>
       <View style={styles.sliderRow}>
         <Text style={styles.label}>Light</Text>
@@ -56,20 +57,44 @@ export default function RainIntensityControls({
 }
 
 const styles = StyleSheet.create({
-  container: { marginTop: 12 },
-  title: { fontSize: 14, fontWeight: '600', color: '#2D3748', marginBottom: 6 },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  title: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: '#2D3748',
+    marginBottom: 6,
+  },
   sliderRow: { flexDirection: 'row', alignItems: 'center' },
   slider: { flex: 1, marginHorizontal: 8 },
-  label: { fontSize: 12, color: '#4A5568', width: 40, textAlign: 'center' },
-  value: { marginTop: 4, fontSize: 12, color: '#475569' },
-  directionRow: { marginTop: 12 },
-  chips: { flexDirection: 'row', gap: 8 },
+  label: {
+    fontSize: fontSize.xs,
+    color: '#4A5568',
+    width: 40,
+    textAlign: 'center',
+  },
+  value: {
+    marginLeft: spacing.sm,
+    marginTop: spacing.xs,
+    fontSize: fontSize.xs,
+    color: '#475569',
+  },
+  directionRow: { marginTop: spacing.md },
+  chips: { flexDirection: 'row', gap: spacing.sm },
   chip: {
     backgroundColor: '#374151',
     color: 'white',
     paddingVertical: 6,
     paddingHorizontal: 10,
-    borderRadius: 16,
+    borderRadius: borderRadius.xl,
     marginRight: 8,
     overflow: 'hidden',
   },

@@ -13,7 +13,7 @@ import {
 import * as Location from 'expo-location';
 import AvatarExperience from '../components/avatar/AvatarExperience';
 import { EffectsList, EffectData } from '../components/ui';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { colors, spacing, fontSize } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
@@ -24,14 +24,7 @@ import {
 import { getCombinedRecommendedExpression } from '../utils/expressionUtils';
 import { useHealthData } from '../hooks/useHealthData';
 import { useDengueNearby } from '../hooks/useDengueNearby';
-import { SkinToneButton } from '../components/controls/SkinToneButton';
-import SceneSwitcher, {
-  SceneOption,
-} from '../components/controls/SceneSwitcher';
-import RainIntensityControls from '../components/controls/RainIntensityControls';
-import SandboxControls from '../components/controls/SandboxControls';
-import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
-import EyeBagsControls from '../components/controls/EyeBagsControls';
+import { SceneOption } from '../components/controls/SceneSwitcher';
 import { useAvatarStore } from '../store/avatarStore';
 import { useIsFocused } from '@react-navigation/native';
 import OnboardingOverlay from '../components/ui/OnboardingOverlay';
@@ -44,7 +37,7 @@ import { CelebrationIndicator } from '../components/CelebrationIndicator';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
 import { useQuestCelebrations } from '../hooks/useQuestCelebrations';
-import QuestStreakControls from '../components/controls/QuestStreakControls';
+import DeveloperControls from '../components/controls/DeveloperControls';
 
 const DashboardScreen: React.FC = () => {
   const { developerControlsEnabled } = useDeveloperControlsPreference();
@@ -502,51 +495,30 @@ const DashboardScreen: React.FC = () => {
 
           {/* Developer controls */}
           {developerControlsEnabled && (
-            <View style={styles.controlsContainer}>
-              <Text style={styles.controlsTitle}>Avatar Customization</Text>
-              <SceneSwitcher
-                value={scene}
-                onChange={value => {
-                  setScene(value);
-                  setSceneManuallyOverridden(value !== autoScene);
-                }}
-              />
-              <SkinToneButton
-                skinToneAdjustment={manualSkinToneAdjustment}
-                onSkinToneChange={setManualSkinToneAdjustment}
-              />
-              <SandboxControls location={userProfile?.location} />
-              <RainIntensityControls
-                value={rainIntensity}
-                onChange={setRainIntensity}
-                direction={rainDirection}
-                onChangeDirection={setRainDirection}
-              />
-
-              {/* Eye Bags (Dark Circles) Developer Controls */}
-              <EyeBagsControls />
-
-              {/* Developer utility: compact dev utilities */}
-              <QuestStreakControls
-                onResetOnboarding={() => {
-                  resetOnboardingSeen();
-                  setOnboardingStep(0);
-                  setShowOnboarding(true);
-                  setScrollEnabled(false);
-                }}
-                seed7DayHistory={seed7DayHistory}
-                seed6ThenCompleteToday={seed6ThenCompleteToday}
-                clearHistoryForRetest={clearHistoryForRetest}
-              />
-            </View>
-          )}
-
-          {/* Facial Expressions (dev only) */}
-          {developerControlsEnabled && (
-            <FacialExpressionControls
-              currentExpression={manualExpression}
-              onExpressionChange={setManualExpression}
-              onReset={clearManualExpression}
+            <DeveloperControls
+              scene={scene}
+              setScene={setScene}
+              setSceneManuallyOverridden={setSceneManuallyOverridden}
+              autoScene={autoScene}
+              manualSkinToneAdjustment={manualSkinToneAdjustment}
+              setManualSkinToneAdjustment={setManualSkinToneAdjustment}
+              rainIntensity={rainIntensity}
+              setRainIntensity={setRainIntensity}
+              rainDirection={rainDirection}
+              setRainDirection={setRainDirection}
+              manualExpression={manualExpression}
+              setManualExpression={setManualExpression}
+              clearManualExpression={clearManualExpression}
+              resetOnboarding={() => {
+                resetOnboardingSeen();
+                setOnboardingStep(0);
+                setShowOnboarding(true);
+                setScrollEnabled(false);
+              }}
+              seed7DayHistory={seed7DayHistory}
+              seed6ThenCompleteToday={seed6ThenCompleteToday}
+              clearHistoryForRetest={clearHistoryForRetest}
+              userProfile={userProfile}
             />
           )}
 
@@ -634,23 +606,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignItems: 'stretch',
     marginBottom: 16,
-  },
-  controlsContainer: {
-    marginBottom: 30,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    elevation: 3,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  controlsTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.neutral[800],
-    marginBottom: spacing.md,
   },
 });
 

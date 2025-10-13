@@ -154,7 +154,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.2)',
-    marginBottom: spacing.lg,
   },
   title: {
     color: '#1f2937',

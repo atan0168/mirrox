@@ -63,34 +63,38 @@ const QuestStreakControls: React.FC<QuestStreakProps> = ({
         <Button
           size="sm"
           onPress={() => seed7DayHistory(selectedQuest)}
-          style={styles.gridButton}
+          style={StyleSheet.flatten([styles.gridButton, styles.xsButton])}
+          textStyle={styles.xsButtonText}
         >
           Seed 7d
         </Button>
         <Button
           size="sm"
           onPress={() => seed6ThenCompleteToday(selectedQuest)}
-          style={styles.gridButton}
+          style={StyleSheet.flatten([styles.gridButton, styles.xsButton])}
+          textStyle={styles.xsButtonText}
         >
           Seed 6d
         </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onPress={clearHistoryForRetest}
-          style={styles.gridButton}
-        >
-          Clear data
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          onPress={onResetOnboarding}
-          style={styles.gridButton}
-        >
-          Show onboarding
-        </Button>
       </View>
+      <Button
+        size="sm"
+        variant="secondary"
+        onPress={clearHistoryForRetest}
+        style={StyleSheet.flatten([styles.gridButton, styles.xsButton])}
+        textStyle={styles.xsButtonText}
+      >
+        Clear data
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        onPress={onResetOnboarding}
+        style={StyleSheet.flatten([styles.gridButton, styles.xsButton])}
+        textStyle={styles.xsButtonText}
+      >
+        Show onboarding
+      </Button>
 
       <Text style={styles.caption}>Selected: {selectedLabel}</Text>
     </View>
@@ -102,7 +106,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    marginTop: spacing.md,
     shadowColor: '#000000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -165,8 +168,15 @@ const styles = StyleSheet.create({
   gridButton: {
     flex: 1,
     minWidth: '48%',
-    marginHorizontal: spacing.xs / 2,
-    marginVertical: spacing.xs / 2,
+    marginHorizontal: spacing.xs / 4,
+    marginVertical: spacing.xs / 4,
+  },
+  xsButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  xsButtonText: {
+    fontSize: fontSize.xs,
   },
   caption: {
     marginTop: spacing.xs,
