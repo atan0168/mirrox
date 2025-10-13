@@ -12,15 +12,11 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import AvatarExperience from '../components/avatar/AvatarExperience';
-import { EffectsList, EffectData } from '../components/ui';
 import { colors, spacing, fontSize } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
-import {
-  calculateCombinedEnvironmentalSkinEffects,
-  calculateSmogEffects,
-} from '../utils/skinEffectsUtils';
+import { calculateCombinedEnvironmentalSkinEffects } from '../utils/skinEffectsUtils';
 import { getCombinedRecommendedExpression } from '../utils/expressionUtils';
 import { useHealthData } from '../hooks/useHealthData';
 import { useDengueNearby } from '../hooks/useDengueNearby';
@@ -305,136 +301,136 @@ const DashboardScreen: React.FC = () => {
   }, [airQuality]);
 
   // Smog effects
-  const smogEffects = useMemo(() => {
-    if (!airQuality) {
-      return {
-        enabled: false,
-        intensity: 0,
-        opacity: 0,
-        density: 0,
-        description: 'No air quality data available',
-      };
-    }
-    return calculateSmogEffects({
-      aqi: airQuality.aqi,
-      pm25: airQuality.pm25,
-      pm10: airQuality.pm10,
-    });
-  }, [airQuality]);
+  // const smogEffects = useMemo(() => {
+  //   if (!airQuality) {
+  //     return {
+  //       enabled: false,
+  //       intensity: 0,
+  //       opacity: 0,
+  //       density: 0,
+  //       description: 'No air quality data available',
+  //     };
+  //   }
+  //   return calculateSmogEffects({
+  //     aqi: airQuality.aqi,
+  //     pm25: airQuality.pm25,
+  //     pm10: airQuality.pm10,
+  //   });
+  // }, [airQuality]);
 
   // Effects list data
-  const activeEffects = useMemo((): EffectData[] => {
-    const effects: EffectData[] = [];
-
-    // Skin
-    if (skinEffects.totalAdjustment !== 0) {
-      const severity =
-        Math.abs(skinEffects.totalAdjustment) > 0.3
-          ? 'high'
-          : Math.abs(skinEffects.totalAdjustment) > 0.15
-            ? 'medium'
-            : 'low';
-
-      effects.push({
-        id: 'skin-effects',
-        title: 'Skin Tone Changes',
-        description: skinEffects.description,
-        details: [
-          `Total skin adjustment: ${(skinEffects.totalAdjustment * 100).toFixed(0)}% darker`,
-          `Pollution effect: ${(skinEffects.pollutionEffect * 100).toFixed(0)}%`,
-          `UV effect: ${(skinEffects.uvEffect * 100).toFixed(0)}%`,
-          `Redness factor: ${(skinEffects.redness * 100).toFixed(0)}%`,
-          `Primary factor: ${skinEffects.primaryFactor}`,
-          ...skinEffects.recommendations,
-        ],
-        severity,
-        source: airQuality?.source?.toUpperCase() || 'Environmental Data',
-        actionRecommendations: [
-          'Use sunscreen with SPF 30+ when outdoors',
-          'Consider wearing protective clothing',
-          'Apply antioxidant-rich skincare products',
-          'Stay hydrated to maintain skin health',
-          'Limit outdoor activities during peak pollution hours',
-        ],
-      });
-    }
-
-    // Smog
-    if (smogEffects.enabled) {
-      const severity =
-        smogEffects.intensity > 0.7
-          ? 'high'
-          : smogEffects.intensity > 0.4
-            ? 'medium'
-            : 'low';
-
-      effects.push({
-        id: 'atmospheric-effects',
-        title: 'Atmospheric Effects',
-        description: smogEffects.description,
-        details: [
-          `Smog intensity: ${(smogEffects.intensity * 100).toFixed(0)}%`,
-          `Visibility opacity: ${(smogEffects.opacity * 100).toFixed(0)}%`,
-          `Particle density: ${(smogEffects.density / 20).toFixed(1)}x normal`,
-          'Simulates real-world air quality conditions',
-          'Based on PM2.5 and PM10 particulate matter levels',
-        ],
-        severity,
-        source: 'Air Quality Data',
-        actionRecommendations: [
-          'Wear an N95 or KN95 mask when outdoors',
-          'Keep windows closed and use air purifiers indoors',
-          'Avoid outdoor exercise during high pollution periods',
-          'Use public transportation to reduce emissions',
-          'Check air quality before planning outdoor activities',
-        ],
-      });
-    }
-
-    // Expression
-    if (recommendedExpression !== 'neutral') {
-      const severity =
-        airQuality?.aqi && airQuality.aqi > 150
-          ? 'high'
-          : airQuality?.aqi && airQuality.aqi > 100
-            ? 'medium'
-            : 'low';
-
-      effects.push({
-        id: 'facial-expression',
-        title: 'Facial Expression',
-        description: `Avatar expression set to "${recommendedExpression}" based on air quality and sleep`,
-        details: [
-          `Current expression: ${recommendedExpression}`,
-          `Based on AQI: ${airQuality?.aqi || 'N/A'}`,
-          `PM2.5 level: ${airQuality?.pm25 || 'N/A'} μg/m³`,
-          `Last-night sleep: ${
-            health?.sleepMinutes != null
-              ? (health.sleepMinutes / 60).toFixed(1) + 'h'
-              : 'N/A'
-          }`,
-          'Expression reflects health impact of air quality and sleep',
-        ],
-        severity,
-        source: 'Air + Sleep Analysis',
-        actionRecommendations: [
-          'Practice deep breathing exercises to reduce stress',
-          'Take breaks from outdoor activities if feeling discomfort',
-          'Monitor your symptoms and adjust activities accordingly',
-          'Consider using a humidifier to ease respiratory discomfort',
-          'Stay informed about air quality forecasts',
-        ],
-      });
-    }
-
-    return effects;
-  }, [
-    skinEffects,
-    smogEffects,
-    recommendedExpression,
-    airQuality,
-    health?.sleepMinutes,
-  ]);
+  // const activeEffects = useMemo((): EffectData[] => {
+  //   const effects: EffectData[] = [];
+  //
+  //   // Skin
+  //   if (skinEffects.totalAdjustment !== 0) {
+  //     const severity =
+  //       Math.abs(skinEffects.totalAdjustment) > 0.3
+  //         ? 'high'
+  //         : Math.abs(skinEffects.totalAdjustment) > 0.15
+  //           ? 'medium'
+  //           : 'low';
+  //
+  //     effects.push({
+  //       id: 'skin-effects',
+  //       title: 'Skin Tone Changes',
+  //       description: skinEffects.description,
+  //       details: [
+  //         `Total skin adjustment: ${(skinEffects.totalAdjustment * 100).toFixed(0)}% darker`,
+  //         `Pollution effect: ${(skinEffects.pollutionEffect * 100).toFixed(0)}%`,
+  //         `UV effect: ${(skinEffects.uvEffect * 100).toFixed(0)}%`,
+  //         `Redness factor: ${(skinEffects.redness * 100).toFixed(0)}%`,
+  //         `Primary factor: ${skinEffects.primaryFactor}`,
+  //         ...skinEffects.recommendations,
+  //       ],
+  //       severity,
+  //       source: airQuality?.source?.toUpperCase() || 'Environmental Data',
+  //       actionRecommendations: [
+  //         'Use sunscreen with SPF 30+ when outdoors',
+  //         'Consider wearing protective clothing',
+  //         'Apply antioxidant-rich skincare products',
+  //         'Stay hydrated to maintain skin health',
+  //         'Limit outdoor activities during peak pollution hours',
+  //       ],
+  //     });
+  //   }
+  //
+  //   // Smog
+  //   if (smogEffects.enabled) {
+  //     const severity =
+  //       smogEffects.intensity > 0.7
+  //         ? 'high'
+  //         : smogEffects.intensity > 0.4
+  //           ? 'medium'
+  //           : 'low';
+  //
+  //     effects.push({
+  //       id: 'atmospheric-effects',
+  //       title: 'Atmospheric Effects',
+  //       description: smogEffects.description,
+  //       details: [
+  //         `Smog intensity: ${(smogEffects.intensity * 100).toFixed(0)}%`,
+  //         `Visibility opacity: ${(smogEffects.opacity * 100).toFixed(0)}%`,
+  //         `Particle density: ${(smogEffects.density / 20).toFixed(1)}x normal`,
+  //         'Simulates real-world air quality conditions',
+  //         'Based on PM2.5 and PM10 particulate matter levels',
+  //       ],
+  //       severity,
+  //       source: 'Air Quality Data',
+  //       actionRecommendations: [
+  //         'Wear an N95 or KN95 mask when outdoors',
+  //         'Keep windows closed and use air purifiers indoors',
+  //         'Avoid outdoor exercise during high pollution periods',
+  //         'Use public transportation to reduce emissions',
+  //         'Check air quality before planning outdoor activities',
+  //       ],
+  //     });
+  //   }
+  //
+  //   // Expression
+  //   if (recommendedExpression !== 'neutral') {
+  //     const severity =
+  //       airQuality?.aqi && airQuality.aqi > 150
+  //         ? 'high'
+  //         : airQuality?.aqi && airQuality.aqi > 100
+  //           ? 'medium'
+  //           : 'low';
+  //
+  //     effects.push({
+  //       id: 'facial-expression',
+  //       title: 'Facial Expression',
+  //       description: `Avatar expression set to "${recommendedExpression}" based on air quality and sleep`,
+  //       details: [
+  //         `Current expression: ${recommendedExpression}`,
+  //         `Based on AQI: ${airQuality?.aqi || 'N/A'}`,
+  //         `PM2.5 level: ${airQuality?.pm25 || 'N/A'} μg/m³`,
+  //         `Last-night sleep: ${
+  //           health?.sleepMinutes != null
+  //             ? (health.sleepMinutes / 60).toFixed(1) + 'h'
+  //             : 'N/A'
+  //         }`,
+  //         'Expression reflects health impact of air quality and sleep',
+  //       ],
+  //       severity,
+  //       source: 'Air + Sleep Analysis',
+  //       actionRecommendations: [
+  //         'Practice deep breathing exercises to reduce stress',
+  //         'Take breaks from outdoor activities if feeling discomfort',
+  //         'Monitor your symptoms and adjust activities accordingly',
+  //         'Consider using a humidifier to ease respiratory discomfort',
+  //         'Stay informed about air quality forecasts',
+  //       ],
+  //     });
+  //   }
+  //
+  //   return effects;
+  // }, [
+  //   skinEffects,
+  //   smogEffects,
+  //   recommendedExpression,
+  //   airQuality,
+  //   health?.sleepMinutes,
+  // ]);
 
   if (isLoading) {
     return (
@@ -526,7 +522,7 @@ const DashboardScreen: React.FC = () => {
           <QuestList />
 
           {/* Effects list */}
-          <EffectsList effects={activeEffects} />
+          {/* <EffectsList effects={activeEffects} /> */}
         </View>
       </ScrollView>
 

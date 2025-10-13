@@ -1,19 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { Award } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Pressable,
-  View,
   Animated,
   Easing,
   LayoutChangeEvent,
   Platform,
-  StyleSheet,
+  Pressable,
   StyleProp,
+  StyleSheet,
+  View,
   ViewStyle,
 } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
 import type { RootStackParamList } from '../../App';
-import { colors, spacing, borderRadius, shadows, fontSize } from '../theme';
-import { Star } from 'lucide-react-native';
+import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 
 type Props = {
   highlight?: boolean;
@@ -23,7 +23,7 @@ type Props = {
 };
 
 export default function ViewAchievementButton({
-  highlight = true,
+  highlight = false,
   size,
   style,
   ariaLabel = 'Open badges',
@@ -186,7 +186,7 @@ export default function ViewAchievementButton({
             ...(Platform.OS === 'ios' ? shadows.none : null),
           }}
         >
-          <Star fill={colors.orange[200]} stroke={colors.orange[200]} />
+          <Award stroke={colors.orange[400]} />
         </Pressable>
       </Animated.View>
     </View>
