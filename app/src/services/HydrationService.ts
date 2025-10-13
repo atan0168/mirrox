@@ -212,6 +212,10 @@ export class HydrationService {
     try {
       const avatarState = useAvatarStore.getState();
 
+      if (avatarState.sleepMode) {
+        return;
+      }
+
       const currentAnimation = avatarState.activeAnimation;
       if (currentAnimation !== 'drinking') {
         this.previousAnimationBeforeHydration = {

@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, Pressable, TextInput } from 'react-native';
-import { format } from 'date-fns';
 
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -11,12 +10,10 @@ import { useHydrationStore } from '../store/hydrationStore';
 import { generateQuests } from '../services/questEngine';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
+import { localDayKeyUtc } from '../utils/datetimeUtils';
 
 import { colors, spacing, borderRadius, fontSize } from '../theme';
 import QuestCard from './quests/QuestCard';
-
-const TODAY = () => format(new Date(), 'yyyy-MM-dd');
-const keyFor = (id: string) => `${id}::${TODAY()}`;
 
 export default function QuestList() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -49,6 +46,7 @@ export default function QuestList() {
   );
 
   const [gratitude, setGratitude] = useState('');
+  const todayKey = useMemo(() => localDayKeyUtc(), []);
 
   const markDone = useCallback(
     async (questId: string, note?: string) => {
@@ -101,7 +99,7 @@ export default function QuestList() {
       <View style={{ gap: spacing.sm }}>
         {quests.map(q => {
           const isHydration = q.id === 'drink_2l';
-          const p = progress[keyFor(q.id)];
+          const p = progress[`${q.id}::${todayKey}`];
 
           // Non-hydration quests: keep original quest progress
           const pctQuest = Math.min(

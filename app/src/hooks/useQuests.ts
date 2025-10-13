@@ -1,4 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { QuestRepository } from '../services/db/QuestRepository';
 
 import type {
@@ -152,11 +158,13 @@ export const useQuestStreaks = () => {
   };
 };
 
-export const useQuestHistory = (limit = 50) => {
-  const query = useQuery({
-    queryKey: [...QUEST_HISTORY_KEY, limit],
-    queryFn: async (): Promise<CompletedLog[]> => {
-      const rows = await QuestRepository.getHistory(limit);
+export const useQuestHistory = (pageSize = 50) => {
+  const query = useInfiniteQuery({
+    queryKey: [...QUEST_HISTORY_KEY, pageSize],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }): Promise<CompletedLog[]> => {
+      const offset = pageParam ?? 0;
+      const rows = await QuestRepository.getHistory(pageSize, offset);
       return rows.map(row => ({
         questId: row.quest_id as QuestId,
         title: row.title ?? '',
@@ -167,14 +175,34 @@ export const useQuestHistory = (limit = 50) => {
         note: row.note ?? undefined,
       }));
     },
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage || lastPage.length < pageSize) {
+        return undefined;
+      }
+      const loadedCount = allPages.reduce(
+        (total, page) => total + (page?.length ?? 0),
+        0
+      );
+      return loadedCount;
+    },
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
   });
 
+  const history = useMemo(
+    () => query.data?.pages.flat() ?? [],
+    [query.data?.pages]
+  );
+
   return {
-    history: query.data ?? [],
+    history,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    isFetchingNextPage: query.isFetchingNextPage,
     error: query.error,
+    refetch: query.refetch,
+    fetchNextPage: query.fetchNextPage,
+    hasNextPage: query.hasNextPage,
   };
 };
 

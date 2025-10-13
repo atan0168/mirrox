@@ -130,14 +130,14 @@ export const QuestRepository = {
     );
   },
 
-  async getHistory(limit = 50): Promise<QuestHistoryRow[]> {
+  async getHistory(limit = 50, offset = 0): Promise<QuestHistoryRow[]> {
     const db = await getDatabase();
     return db.getAllAsync<QuestHistoryRow>(
       `SELECT id, quest_id, date, timestamp, title, reward_points, reward_tag, note, streak_count
        FROM quest_history
        ORDER BY timestamp DESC
-       LIMIT ?`,
-      [limit]
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
     );
   },
 
