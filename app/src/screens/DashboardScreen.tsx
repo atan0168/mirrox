@@ -1,11 +1,5 @@
 import QuestList from '../components/QuestList';
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,7 +12,6 @@ import {
   Switch,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import AvatarExperience from '../components/avatar/AvatarExperience';
 import { EffectsList, EffectData, Button } from '../components/ui';
@@ -43,188 +36,27 @@ import { FacialExpressionControls } from '../components/controls/FacialExpressio
 import { useAvatarStore } from '../store/avatarStore';
 import { useIsFocused } from '@react-navigation/native';
 import OnboardingOverlay from '../components/ui/OnboardingOverlay';
-import { ENV_REFRESH_INTERVAL_MS, AVAILABLE_ANIMATIONS } from '../constants';
+import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { useUIStore } from '../store/uiStore';
 import { useHydrationStore } from '../store/hydrationStore';
 import { hydrationService } from '../services/HydrationService';
 import { CelebrationSpotlight } from '../components/CelebrationSpotlight';
-import { type BadgeId } from '../constants/badges';
 import { CelebrationIndicator } from '../components/CelebrationIndicator';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
-
-import dayjs from 'dayjs';
-import { useQuestHistory } from '../hooks/useQuests';
-import { useBadges } from '../hooks/useBadges';
-import type { CompletedLog, QuestId, RewardTag, Streak } from '../models/quest';
-import { QuestRepository } from '../services/db/QuestRepository';
-
-const ALL_QUEST_IDS: QuestId[] = [
-  'drink_2l',
-  'haze_mask_today',
-  'nature_walk_10m',
-  'calm_breath_5m',
-  'gratitude_note',
-];
-
-const QUEST_REWARD_TAG: Record<QuestId, RewardTag> = {
-  drink_2l: 'skin',
-  haze_mask_today: 'lung',
-  nature_walk_10m: 'stress',
-  calm_breath_5m: 'calm',
-  gratitude_note: 'happiness',
-};
-
-const QUEST_SHORT_TITLE: Record<QuestId, string> = {
-  drink_2l: 'Drink Water',
-  haze_mask_today: 'Wear Mask',
-  nature_walk_10m: 'Walk 10m',
-  calm_breath_5m: 'Calm Breathing',
-  gratitude_note: 'Gratitude',
-};
-
-const QUEST_LONG_TITLE: Record<QuestId, string> = {
-  drink_2l: 'Drink 2L Water',
-  haze_mask_today: 'Wear Mask on Hazy Day',
-  nature_walk_10m: '10-min Nature Walk',
-  calm_breath_5m: '5-min Calm Breathing',
-  gratitude_note: 'Gratitude Note',
-};
-
-const CELEBRATION_ANIMATION = 'celebration_dance';
-const CELEBRATION_FALLBACK_ANIMATION = 'hype_dance';
+import { useQuestCelebrations } from '../hooks/useQuestCelebrations';
 
 const DashboardScreen: React.FC = () => {
-  const queryClient = useQueryClient();
-  const { history: questHistory } = useQuestHistory();
-  const { earned: awardedBadges } = useBadges();
+  const { developerControlsEnabled } = useDeveloperControlsPreference();
 
-  const [activeCelebration, setActiveCelebration] = useState<BadgeId | null>(
-    null
-  );
-  const [indicatorCelebration, setIndicatorCelebration] =
-    useState<BadgeId | null>(null);
-  const [dismissedCelebrations, setDismissedCelebrations] = useState<
-    Set<BadgeId>
-  >(() => new Set());
+  const {
+    activeCelebration,
+    indicatorCelebration,
+    handleOpenCelebration,
+    handleDismissCelebration,
+    dev: { seed7DayHistory, seed6ThenCompleteToday, clearHistoryForRetest },
+  } = useQuestCelebrations();
 
-  // --------------------------------- DEV seed helpers ---------------------------------
-  const updateHistoryCache = useCallback(
-    (updater: (prev: CompletedLog[]) => CompletedLog[]) => {
-      queryClient.setQueriesData(
-        { queryKey: ['quest-history'] },
-        (old: CompletedLog[] | undefined) => updater(old ?? [])
-      );
-    },
-    [queryClient]
-  );
-
-  const updateStreakCache = useCallback(
-    (questId: QuestId, count: number, lastDate: string) => {
-      queryClient.setQueryData(
-        ['quest-streaks'],
-        (old: Record<QuestId, Streak> | undefined) => ({
-          ...(old ?? ({} as Record<QuestId, Streak>)),
-          [questId]: { id: questId, count, lastDate },
-        })
-      );
-    },
-    [queryClient]
-  );
-
-  const seed7DayHistory = useCallback(
-    (questId: QuestId) => {
-      const now = dayjs();
-      const logs: CompletedLog[] = Array.from({ length: 7 }).map((_, i) => {
-        const ts = now
-          .subtract(6 - i, 'day')
-          .endOf('day')
-          .valueOf();
-        return {
-          questId,
-          title: QUEST_LONG_TITLE[questId],
-          rewardPoints: 0,
-          rewardTag: QUEST_REWARD_TAG[questId],
-          completedAt: ts,
-          streakCount: i + 1,
-          note: 'Dev Test Seed',
-        };
-      });
-
-      updateHistoryCache(prev => [...logs, ...prev].slice(0, 50));
-      console.log('✅ [DEV TEST] Seeded 7-day history for:', questId);
-    },
-    [updateHistoryCache]
-  );
-
-  const seed6ThenCompleteToday = useCallback(
-    async (questId: QuestId) => {
-      const now = dayjs();
-      const logs: CompletedLog[] = Array.from({ length: 6 }).map((_, i) => {
-        const ts = now
-          .subtract(6 - i, 'day')
-          .endOf('day')
-          .valueOf();
-        return {
-          questId,
-          title: QUEST_SHORT_TITLE[questId],
-          rewardPoints: 0,
-          rewardTag: QUEST_REWARD_TAG[questId],
-          completedAt: ts,
-          streakCount: i + 1,
-          note: 'DEV seed 6d',
-        };
-      });
-
-      updateHistoryCache(prev => [...logs, ...prev].slice(0, 50));
-
-      const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
-      updateStreakCache(questId, 6, yesterday);
-      try {
-        await QuestRepository.upsertStreak(questId, 6, yesterday);
-      } catch (err) {
-        console.warn('Failed to seed quest streak for test', err);
-      }
-
-      console.log(
-        '✅ Seeded 6 days for',
-        questId,
-        '— streak preset to 6 (lastDate=yesterday). Complete once today to award.'
-      );
-    },
-    [updateHistoryCache, updateStreakCache]
-  );
-
-  const clearHistoryForRetest = useCallback(async () => {
-    updateHistoryCache(() => []);
-    setActiveCelebration(null);
-    setIndicatorCelebration(null);
-    setDismissedCelebrations(new Set<BadgeId>());
-
-    try {
-      const today = dayjs().format('YYYY-MM-DD');
-      await Promise.all(
-        ALL_QUEST_IDS.map(id => QuestRepository.upsertStreak(id, 0, today))
-      );
-      queryClient.setQueryData(
-        ['quest-streaks'],
-        (old: Record<QuestId, Streak> | undefined) => {
-          const next = { ...(old ?? ({} as Record<QuestId, Streak>)) };
-          ALL_QUEST_IDS.forEach(id => {
-            next[id] = { id, count: 0, lastDate: today };
-          });
-          return next;
-        }
-      );
-    } catch (err) {
-      console.warn('Failed to reset streaks during dev clear', err);
-    }
-
-    console.log('♻️ [DEV TEST] Cleared history for re-test');
-  }, [updateHistoryCache, queryClient]);
-  // -------------------------------------------------------------------------------------
-
-  const isFocused = useIsFocused();
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
@@ -265,53 +97,8 @@ const DashboardScreen: React.FC = () => {
   const eyeBagsWidth = useAvatarStore(s => s.eyeBagsWidth);
   const eyeBagsHeight = useAvatarStore(s => s.eyeBagsHeight);
   const setEyeBagsSize = useAvatarStore(s => s.setEyeBagsSize);
-  const activeAnimation = useAvatarStore(s => s.activeAnimation);
-  const isManualAnimation = useAvatarStore(s => s.isManualAnimation);
-  const setActiveAnimationStore = useAvatarStore(s => s.setActiveAnimation);
-  const resetAvatarAnimations = useAvatarStore(s => s.resetAnimations);
 
-  const { developerControlsEnabled } = useDeveloperControlsPreference();
-
-  const celebrationAnimationName = useMemo(() => {
-    const availableNames = AVAILABLE_ANIMATIONS.map(anim => anim.name);
-    return availableNames.includes(CELEBRATION_ANIMATION)
-      ? CELEBRATION_ANIMATION
-      : CELEBRATION_FALLBACK_ANIMATION;
-  }, []);
-  const previousAnimationRef = useRef<string | null>(null);
-  const previousManualRef = useRef(false);
-
-  useEffect(() => {
-    if (activeCelebration) {
-      if (activeAnimation !== celebrationAnimationName) {
-        previousAnimationRef.current = activeAnimation;
-        previousManualRef.current = isManualAnimation;
-        setActiveAnimationStore(celebrationAnimationName, { manual: true });
-      }
-    } else if (activeAnimation === celebrationAnimationName) {
-      const previous = previousAnimationRef.current;
-      const wasManual = previousManualRef.current;
-
-      if (previous) {
-        setActiveAnimationStore(
-          previous,
-          wasManual ? { manual: true } : undefined
-        );
-      } else {
-        resetAvatarAnimations();
-      }
-
-      previousAnimationRef.current = null;
-      previousManualRef.current = false;
-    }
-  }, [
-    activeCelebration,
-    activeAnimation,
-    celebrationAnimationName,
-    isManualAnimation,
-    resetAvatarAnimations,
-    setActiveAnimationStore,
-  ]);
+  const isFocused = useIsFocused();
 
   // Skeleton shimmer
   useEffect(() => {
@@ -479,6 +266,30 @@ const DashboardScreen: React.FC = () => {
     }
   }, [storeHydrated, dashboardOnboardingSeen]);
 
+  // Health data (for sleep minutes)
+  const { data: health } = useHealthData({ autoSync: false });
+
+  // Hydration init
+  useEffect(() => {
+    if (userProfile && storeHydrated) {
+      hydrationService.initialize();
+    }
+  }, [userProfile, storeHydrated]);
+
+  // Avatar hydration bar (0-200%) from store
+  const hydrationProgressPercentage = useHydrationStore(s =>
+    s.getProgressPercentage()
+  );
+
+  // Auto facial expression
+  const recommendedExpression = useMemo(() => {
+    return getCombinedRecommendedExpression({
+      aqi: airQuality?.aqi ?? null,
+      pm25: airQuality?.pm25 ?? null,
+      sleepMinutes: health?.sleepMinutes ?? null,
+    });
+  }, [airQuality?.aqi, airQuality?.pm25, health?.sleepMinutes]);
+
   // Combined environmental skin effects (AQI + UV)
   const skinEffects = useMemo(() => {
     if (!airQuality) {
@@ -530,30 +341,6 @@ const DashboardScreen: React.FC = () => {
       pm10: airQuality.pm10,
     });
   }, [airQuality]);
-
-  // Health data (for sleep minutes)
-  const { data: health } = useHealthData({ autoSync: false });
-
-  // Hydration init
-  useEffect(() => {
-    if (userProfile && storeHydrated) {
-      hydrationService.initialize();
-    }
-  }, [userProfile, storeHydrated]);
-
-  // Avatar hydration bar (0-200%) from store
-  const hydrationProgressPercentage = useHydrationStore(s =>
-    s.getProgressPercentage()
-  );
-
-  // Auto facial expression
-  const recommendedExpression = useMemo(() => {
-    return getCombinedRecommendedExpression({
-      aqi: airQuality?.aqi ?? null,
-      pm25: airQuality?.pm25 ?? null,
-      sleepMinutes: health?.sleepMinutes ?? null,
-    });
-  }, [airQuality?.aqi, airQuality?.pm25, health?.sleepMinutes]);
 
   // Effects list data
   const activeEffects = useMemo((): EffectData[] => {
@@ -668,119 +455,6 @@ const DashboardScreen: React.FC = () => {
     airQuality,
     health?.sleepMinutes,
   ]);
-
-  // -------------------------------- 7-day streak detection (UI only) ----------------------------
-  const hasCurrentStreak = useCallback(
-    (days: string[], streakLength: number): boolean => {
-      if ((days?.length ?? 0) < streakLength) return false;
-
-      const uniqSorted = Array.from(new Set(days)).sort();
-      const today = dayjs().format('YYYY-MM-DD');
-      const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
-
-      const hasToday = uniqSorted.includes(today);
-      const hasYesterday = uniqSorted.includes(yesterday);
-
-      if (!hasToday && !hasYesterday) return false;
-
-      const endDate = hasToday ? today : yesterday;
-
-      const requiredDates: string[] = [];
-      for (let i = 0; i < streakLength; i++) {
-        requiredDates.push(
-          dayjs(endDate).subtract(i, 'day').format('YYYY-MM-DD')
-        );
-      }
-
-      return requiredDates.every(date => uniqSorted.includes(date));
-    },
-    []
-  );
-
-  const shouldCelebrate = useMemo(() => {
-    if (!questHistory?.length) {
-      return {
-        drink7: false,
-        mask7: false,
-        walk7: false,
-        breathe7: false,
-        gratitude7: false,
-      };
-    }
-
-    const badgeIds = new Set(awardedBadges?.map(b => b.id) ?? []);
-
-    const map: Record<string, string[]> = {};
-    questHistory.forEach(h => {
-      const dayKey = dayjs(h.completedAt).format('YYYY-MM-DD');
-      if (!map[h.questId]) map[h.questId] = [];
-      map[h.questId].push(dayKey);
-    });
-
-    return {
-      drink7:
-        !badgeIds.has('streak7_drink') &&
-        hasCurrentStreak(map['drink_2l'] ?? [], 7),
-      mask7:
-        !badgeIds.has('streak7_mask') &&
-        hasCurrentStreak(map['haze_mask_today'] ?? [], 7),
-      walk7:
-        !badgeIds.has('streak7_walk') &&
-        hasCurrentStreak(map['nature_walk_10m'] ?? [], 7),
-      breathe7:
-        !badgeIds.has('streak7_breathe') &&
-        hasCurrentStreak(map['calm_breath_5m'] ?? [], 7),
-      gratitude7:
-        !badgeIds.has('streak7_gratitude') &&
-        hasCurrentStreak(map['gratitude_note'] ?? [], 7),
-    };
-  }, [questHistory, awardedBadges, hasCurrentStreak]);
-
-  const availableCelebrations = useMemo(() => {
-    const candidates: Array<[BadgeId, boolean]> = [
-      ['streak7_drink', shouldCelebrate.drink7],
-      ['streak7_mask', shouldCelebrate.mask7],
-      ['streak7_walk', shouldCelebrate.walk7],
-      ['streak7_breathe', shouldCelebrate.breathe7],
-      ['streak7_gratitude', shouldCelebrate.gratitude7],
-    ];
-
-    return candidates
-      .filter(([, eligible]) => eligible)
-      .map(([id]) => id)
-      .filter(id => !dismissedCelebrations.has(id));
-  }, [shouldCelebrate, dismissedCelebrations]);
-
-  const markCelebrationDismissed = useCallback((id: BadgeId) => {
-    setDismissedCelebrations(prev => {
-      if (prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-  }, []);
-
-  useEffect(() => {
-    if (activeCelebration) return;
-    const next = availableCelebrations.length ? availableCelebrations[0] : null;
-    setIndicatorCelebration(current => (current === next ? current : next));
-  }, [availableCelebrations, activeCelebration]);
-
-  const handleOpenCelebration = useCallback(() => {
-    if (!indicatorCelebration) return;
-    setIndicatorCelebration(null);
-    setActiveCelebration(indicatorCelebration);
-  }, [indicatorCelebration]);
-
-  const handleDismissCelebration = useCallback(() => {
-    setActiveCelebration(current => {
-      if (current) {
-        markCelebrationDismissed(current);
-      }
-      return null;
-    });
-  }, [markCelebrationDismissed]);
-  // ----------------------------------------------------------------------------------------------
 
   if (isLoading) {
     return (
