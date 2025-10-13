@@ -210,6 +210,8 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           note TEXT,
           streak_count INTEGER
         );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_quest_history_unique_daily
+          ON quest_history(quest_id, date, title);
         CREATE INDEX IF NOT EXISTS idx_quest_history_date 
           ON quest_history(date DESC);
         CREATE INDEX IF NOT EXISTS idx_quest_history_quest 

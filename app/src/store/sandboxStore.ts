@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { subDays } from 'date-fns';
+import { localDayString } from '../utils/datetimeUtils';
 import type { HealthHistory, HealthSnapshot } from '../models/Health';
 import type { AirQualityData } from '../models/AirQuality';
 import type {
@@ -163,7 +164,7 @@ function mergeContext(
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return localDayString(date);
 }
 
 function createSnapshot(

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import dayjs from 'dayjs';
+import { subDays, endOfDay } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useQuestHistory } from './useQuests';
 import { useBadges } from './useBadges';
@@ -13,6 +13,7 @@ import {
   CELEBRATION_FALLBACK_ANIMATION,
   CELEBRATION_ANIMATIONS_BY_BADGE,
 } from '../constants/celebrations';
+import { localDayString } from '../utils/datetimeUtils';
 
 export type ShouldCelebrate = {
   drink7: boolean;
@@ -41,21 +42,18 @@ export function useQuestCelebrations() {
       if ((days?.length ?? 0) < streakLength) return false;
 
       const uniqSorted = Array.from(new Set(days)).sort();
-      const today = dayjs().format('YYYY-MM-DD');
-      const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+      const today = localDayString(new Date());
+      const yesterday = localDayString(subDays(new Date(), 1));
 
       const hasToday = uniqSorted.includes(today);
       const hasYesterday = uniqSorted.includes(yesterday);
 
       if (!hasToday && !hasYesterday) return false;
 
-      const endDate = hasToday ? today : yesterday;
-
       const requiredDates: string[] = [];
       for (let i = 0; i < streakLength; i++) {
-        requiredDates.push(
-          dayjs(endDate).subtract(i, 'day').format('YYYY-MM-DD')
-        );
+        const offset = hasToday ? i : i + 1;
+        requiredDates.push(localDayString(subDays(new Date(), offset)));
       }
 
       return requiredDates.every(date => uniqSorted.includes(date));
@@ -78,7 +76,7 @@ export function useQuestCelebrations() {
 
     const map: Record<string, string[]> = {};
     questHistory.forEach(h => {
-      const dayKey = dayjs(h.completedAt).format('YYYY-MM-DD');
+      const dayKey = localDayString(new Date(h.completedAt));
       if (!map[h.questId]) map[h.questId] = [];
       map[h.questId].push(dayKey);
     });
@@ -236,18 +234,15 @@ export function useQuestCelebrations() {
 
   const seed7DayHistory = useCallback(
     (questId: QuestId) => {
-      const now = dayjs();
+      const now = new Date();
       const logs: CompletedLog[] = Array.from({ length: 7 }).map((_, i) => {
-        const ts = now
-          .subtract(6 - i, 'day')
-          .endOf('day')
-          .valueOf();
+        const d = endOfDay(subDays(now, 6 - i)).getTime();
         return {
           questId,
           title: questId,
           rewardPoints: 0,
           rewardTag: 'calm',
-          completedAt: ts,
+          completedAt: d,
           streakCount: i + 1,
           note: 'Dev Test Seed',
         } as CompletedLog;
@@ -262,18 +257,15 @@ export function useQuestCelebrations() {
 
   const seed6ThenCompleteToday = useCallback(
     async (questId: QuestId) => {
-      const now = dayjs();
+      const now = new Date();
       const logs: CompletedLog[] = Array.from({ length: 6 }).map((_, i) => {
-        const ts = now
-          .subtract(6 - i, 'day')
-          .endOf('day')
-          .valueOf();
+        const d = endOfDay(subDays(now, 6 - i)).getTime();
         return {
           questId,
           title: questId,
           rewardPoints: 0,
           rewardTag: 'calm',
-          completedAt: ts,
+          completedAt: d,
           streakCount: i + 1,
           note: 'DEV seed 6d',
         } as CompletedLog;
@@ -281,7 +273,7 @@ export function useQuestCelebrations() {
 
       updateHistoryCache(prev => [...logs, ...prev].slice(0, 50));
 
-      const yesterday = now.subtract(1, 'day').format('YYYY-MM-DD');
+      const yesterday = localDayString(subDays(now, 1));
       updateStreakCache(questId, 6, yesterday);
       try {
         await QuestRepository.upsertStreak(questId, 6, yesterday);
@@ -314,7 +306,7 @@ export function useQuestCelebrations() {
         'calm_breath_5m',
         'gratitude_note',
       ];
-      const today = dayjs().format('YYYY-MM-DD');
+      const today = localDayString(new Date());
       await Promise.all(
         ALL_QUEST_IDS.map(id => QuestRepository.upsertStreak(id, 0, today))
       );

@@ -16,7 +16,8 @@ export type MealItemRow = {
   meta_json: string | null;
 };
 
-const getTodayDate = () => new Date().toISOString().split('T')[0];
+import { localDayKeyUtc } from '../../utils/datetimeUtils';
+const getTodayDate = () => localDayKeyUtc(new Date());
 
 export const MealsRepository = {
   async getMealByDate(date: string): Promise<MealRow | null> {

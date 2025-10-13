@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { QuestRepository } from '../services/db/QuestRepository';
-import { BadgeRepository } from '../services/db/BadgeRepository';
+
 import type {
   QuestDef,
   QuestId,
@@ -9,8 +9,7 @@ import type {
   CompletedLog,
   RewardTag,
 } from '../models/quest';
-import { format, subDays, isSameDay, parseISO } from 'date-fns';
-import { BADGE_DEFS, QUEST_BADGE_RULES } from '../constants/badges';
+import { localDayKeyUtc } from '../utils/datetimeUtils';
 import { BADGES_KEY } from './useBadges';
 
 export const QUEST_PROGRESS_KEY = ['quest-progress'] as const;
@@ -18,7 +17,7 @@ export const QUEST_STREAKS_KEY = ['quest-streaks'] as const;
 export const QUEST_HISTORY_KEY = ['quest-history'] as const;
 export const QUEST_POINTS_KEY = ['quest-points'] as const;
 
-const getTodayDate = () => format(new Date(), 'yyyy-MM-dd');
+const getTodayDate = () => localDayKeyUtc(new Date());
 
 export const useQuestProgress = () => {
   const queryClient = useQueryClient();
@@ -165,7 +164,7 @@ export const useQuestHistory = (limit = 50) => {
         rewardTag: (row.reward_tag ?? 'calm') as RewardTag,
         completedAt: row.timestamp,
         streakCount: row.streak_count ?? 0,
-        note: row.note,
+        note: row.note ?? undefined,
       }));
     },
     staleTime: 30 * 1000,
@@ -226,90 +225,22 @@ export const useQuestComplete = () => {
       questDef: QuestDef;
       note?: string;
     }) => {
-      const now = Date.now();
-      const today = getTodayDate();
-
-      const existingStreak = await QuestRepository.getStreak(questDef.id);
-      let count = existingStreak?.count ?? 0;
-
-      if (existingStreak?.last_date === today) {
-      } else if (
-        !existingStreak?.last_date ||
-        isSameDay(parseISO(existingStreak.last_date), subDays(new Date(), 1))
-      ) {
-        count += 1;
-      } else {
-        count = 1;
-      }
-
-      await QuestRepository.upsertStreak(questDef.id, count, today);
-
-      let bonus = 0;
-      if (count >= 7) bonus = 5;
-      else if (count >= 3) bonus = 2;
-      const totalReward = questDef.rewardPoints + bonus;
-
-      await QuestRepository.addPoints(questDef.rewardTag, totalReward);
-
-      const badgeRule = QUEST_BADGE_RULES.find(
-        r => r.questId === questDef.id && r.threshold === count
-      );
-
-      let badgeAwarded: {
-        badgeId: string;
-        title: string;
-        encouragement: string;
-      } | null = null;
-
-      if (badgeRule) {
-        const hasBadge = await BadgeRepository.hasId(badgeRule.badgeId);
-        if (!hasBadge) {
-          await BadgeRepository.award(badgeRule.badgeId);
-          const badgeDef = BADGE_DEFS[badgeRule.badgeId];
-
-          await QuestRepository.addHistory({
-            questId: questDef.id,
-            date: today,
-            timestamp: now,
-            title: `Badge Unlocked: ${badgeDef.title}`,
-            rewardPoints: 0,
-            rewardTag: questDef.rewardTag,
-            note: badgeDef.encouragement,
-            streakCount: count,
-          });
-
-          badgeAwarded = {
-            badgeId: badgeRule.badgeId,
-            title: badgeDef.title,
-            encouragement: badgeDef.encouragement,
-          };
-        }
-      }
-
-      await QuestRepository.addHistory({
+      const res = await QuestRepository.completeQuestAtomic({
         questId: questDef.id,
-        date: today,
-        timestamp: now,
         title: questDef.title,
-        rewardPoints: totalReward,
+        targetValue: questDef.target,
+        rewardPoints: questDef.rewardPoints,
         rewardTag: questDef.rewardTag,
         note,
-        streakCount: count,
       });
-
-      return {
-        questId: questDef.id,
-        totalReward,
-        count,
-        badgeAwarded,
-        timestamp: now,
-      };
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUEST_STREAKS_KEY });
       queryClient.invalidateQueries({ queryKey: QUEST_HISTORY_KEY });
       queryClient.invalidateQueries({ queryKey: QUEST_POINTS_KEY });
       queryClient.invalidateQueries({ queryKey: BADGES_KEY });
+      queryClient.invalidateQueries({ queryKey: QUEST_PROGRESS_KEY });
     },
   });
 };

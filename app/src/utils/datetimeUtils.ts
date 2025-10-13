@@ -45,6 +45,45 @@ export function startOfDayInTimeZone(d: Date, timeZone: string): Date {
   return fromZonedTime(`${dateStr}T00:00:00`, timeZone);
 }
 
+// === Local-day helpers ===
+// Local-day label for display: e.g., 'yyyy-MM-dd' according to user's timezone
+export function localDayString(date: Date = new Date()): string {
+  const tz = getDeviceTimeZone();
+  return yyyymmddInTimeZone(date, tz);
+}
+
+// Canonical DB key: UTC calendar date string of the start of local day
+export function localDayKeyUtc(date: Date = new Date()): string {
+  const tz = getDeviceTimeZone();
+  const start = startOfDayInTimeZone(date, tz);
+  return start.toISOString().split('T')[0];
+}
+
+export function yesterdayLocalDayString(date: Date = new Date()): string {
+  return localDayString(addDays(date, -1));
+}
+
+export function yesterdayLocalDayKeyUtc(date: Date = new Date()): string {
+  return localDayKeyUtc(addDays(date, -1));
+}
+
+export function isSameLocalDay(a: Date | number, b: Date | number): boolean {
+  const d1 = a instanceof Date ? a : new Date(a);
+  const d2 = b instanceof Date ? b : new Date(b);
+  return localDayString(d1) === localDayString(d2);
+}
+
+export function startOfLocalDay(date: Date = new Date()): Date {
+  const tz = getDeviceTimeZone();
+  return startOfDayInTimeZone(date, tz);
+}
+
+export function endOfLocalDay(date: Date = new Date()): Date {
+  const tz = getDeviceTimeZone();
+  const s = yyyymmddInTimeZone(date, tz);
+  return fromZonedTime(`${s}T23:59:59.999`, tz);
+}
+
 export function minutesSinceLocalMidnight(iso: string): number {
   const d = parseISO(iso);
   return d.getHours() * 60 + d.getMinutes();

@@ -1,5 +1,6 @@
 // src/services/QuestService.ts
 import { localStorageService } from './LocalStorageService';
+import { localDayKeyUtc } from '../utils/datetimeUtils';
 
 /** ===== Types ===== */
 
@@ -50,7 +51,7 @@ export async function getQuestHistory(): Promise<QuestHistoryItem[]> {
  * do NOT also rely on this function to write history, to avoid duplicates.
  */
 export async function markQuestCompleted(questId: string): Promise<void> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDayKeyUtc(new Date());
 
   // Update in-memory map of simple quest states
   const questsStr = await localStorageService.getString('quests');
@@ -81,7 +82,7 @@ export async function getQuests(): Promise<QuestStateMap> {
 export async function resetDailyQuestsIfNewDay(): Promise<void> {
   const questsStr = await localStorageService.getString('quests');
   const quests: QuestStateMap = questsStr ? JSON.parse(questsStr) : {};
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDayKeyUtc(new Date());
 
   let changed = false;
   Object.keys(quests).forEach(questId => {

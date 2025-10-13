@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import dayjs from 'dayjs';
+import { format } from 'date-fns';
 import { colors, spacing, borderRadius, fontSize } from '../theme';
 import { localStorageService } from '../services/LocalStorageService';
 
@@ -90,7 +90,7 @@ export default function QuestHistoryScreen() {
           const title =
             item.title || QUEST_TITLES[item.questId] || item.questId;
           const displayTime = item.timestamp
-            ? dayjs(item.timestamp).format('YYYY-MM-DD HH:mm')
+            ? format(new Date(item.timestamp), 'yyyy-MM-dd HH:mm')
             : item.date || '-';
 
           return (

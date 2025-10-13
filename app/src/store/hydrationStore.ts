@@ -47,7 +47,8 @@ export interface HydrationState {
 
 const HYDRATION_PERSIST_KEY = 'hydration-state';
 
-const toDayString = (date: Date): string => date.toISOString().split('T')[0];
+import { localDayString } from '../utils/datetimeUtils';
+const toDayString = (date: Date): string => localDayString(date);
 
 const initialDay = toDayString(new Date());
 
