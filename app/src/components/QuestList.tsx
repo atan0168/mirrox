@@ -13,6 +13,7 @@ import { useUserProfile } from '../hooks/useUserProfile';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 
 import { colors, spacing, borderRadius, fontSize } from '../theme';
+import QuestCard from './quests/QuestCard';
 
 const TODAY = () => format(new Date(), 'yyyy-MM-dd');
 const keyFor = (id: string) => `${id}::${TODAY()}`;
@@ -57,24 +58,6 @@ export default function QuestList() {
     },
     [quests, completeMutation]
   );
-
-  const addIntake = useCallback((amountMl: number) => {
-    useHydrationStore
-      .getState()
-      .logFluidIntake({ amountMl: Math.max(1, Math.floor(amountMl)) });
-  }, []);
-
-  const completeHydrationToday = useCallback(async () => {
-    const remaining = Math.max(0, hydrationGoal - hydrationCurrent);
-    if (remaining > 0) {
-      useHydrationStore.getState().logFluidIntake({ amountMl: remaining });
-    }
-    const todayKey = keyFor('drink_2l');
-    const alreadyDone = !!progress[todayKey]?.done;
-    if (!alreadyDone) {
-      await markDone('drink_2l');
-    }
-  }, [hydrationGoal, hydrationCurrent, progress, markDone]);
 
   return (
     <View style={{ marginTop: spacing.lg, paddingHorizontal: spacing.md }}>
@@ -137,235 +120,161 @@ export default function QuestList() {
 
           const pct = isHydration ? pctHydration : pctQuest;
 
-          return (
-            <View
-              key={q.id}
-              style={{
-                backgroundColor: colors.white,
-                borderRadius: borderRadius.lg,
-                padding: spacing.md,
-                borderWidth: 1,
-                borderColor: colors.divider,
-              }}
-            >
-              {/* Title & description */}
-              <Text
+          const badgeLabel = `+${q.rewardPoints} pts`;
+          const progressLabel = done
+            ? isHydration
+              ? `Hydration goal met (${hydrationGoal} mL)`
+              : '✅ Completed'
+            : isHydration
+              ? `${hydrationCurrent} / ${hydrationGoal} mL (${pctHydration}%)`
+              : `${p?.value ?? 0} / ${q.target} (${pctQuest}%)`;
+          const statusLabel = done
+            ? isHydration
+              ? 'Goal Met'
+              : 'Completed'
+            : undefined;
+          const accentOverride = isHydration ? colors.teal[400] : undefined;
+
+          const actionBlocks: React.ReactNode[] = [];
+
+          if (!done && q.id === 'haze_mask_today') {
+            actionBlocks.push(
+              <Pressable
+                key="mask"
+                onPress={() => markDone(q.id)}
                 style={{
-                  fontWeight: '600',
-                  fontSize: fontSize.base,
-                  color: colors.neutral[900],
+                  padding: spacing.md,
+                  backgroundColor: colors.sky[600],
+                  borderRadius: borderRadius.full,
                 }}
               >
-                {q.title}
-              </Text>
-
-              {!!q.description && (
                 <Text
                   style={{
-                    opacity: 0.7,
-                    marginTop: spacing.xs,
-                    color: colors.neutral[700],
+                    color: colors.white,
+                    textAlign: 'center',
+                    fontSize: fontSize.base,
+                    fontWeight: '600',
                   }}
                 >
-                  {q.description}
+                  Claim
                 </Text>
-              )}
+              </Pressable>
+            );
+          }
 
-              {/* Progress bar */}
-              <View
+          if (!done && q.id === 'nature_walk_10m') {
+            actionBlocks.push(
+              <Pressable
+                key="nature"
+                onPress={() => markDone(q.id)}
                 style={{
-                  height: 8,
-                  backgroundColor: colors.neutral[200],
-                  borderRadius: borderRadius.sm,
-                  marginTop: spacing.sm,
+                  padding: spacing.md,
+                  backgroundColor: colors.green[600],
+                  borderRadius: borderRadius.full,
                 }}
               >
-                <View
+                <Text
                   style={{
-                    height: 8,
-                    width: `${Number.isFinite(pct) ? pct : 0}%`,
-                    backgroundColor: done ? colors.green[500] : colors.sky[500],
-                    borderRadius: borderRadius.sm,
+                    color: colors.white,
+                    textAlign: 'center',
+                    fontSize: fontSize.base,
+                    fontWeight: '600',
+                  }}
+                >
+                  Claim
+                </Text>
+              </Pressable>
+            );
+          }
+
+          if (!done && q.id === 'calm_breath_5m') {
+            actionBlocks.push(
+              <Pressable
+                key="breath"
+                onPress={() => markDone(q.id)}
+                style={{
+                  padding: spacing.md,
+                  backgroundColor: colors.neutral[700],
+                  borderRadius: borderRadius.full,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.white,
+                    textAlign: 'center',
+                    fontSize: fontSize.base,
+                    fontWeight: '600',
+                  }}
+                >
+                  Claim
+                </Text>
+              </Pressable>
+            );
+          }
+
+          if (!done && q.id === 'gratitude_note') {
+            actionBlocks.push(
+              <View key="gratitude" style={{ gap: spacing.sm }}>
+                <TextInput
+                  placeholder="What are you grateful for today?"
+                  value={gratitude}
+                  onChangeText={setGratitude}
+                  placeholderTextColor={colors.neutral[400]}
+                  style={{
+                    padding: spacing.md,
+                    backgroundColor: colors.white,
+                    borderRadius: borderRadius.full,
+                    color: colors.neutral[900],
+                    borderWidth: 1,
+                    borderColor: colors.neutral[200],
                   }}
                 />
+                <Pressable
+                  onPress={() => {
+                    if (gratitude.trim()) {
+                      markDone(q.id, gratitude.trim());
+                      setGratitude('');
+                    }
+                  }}
+                  style={{
+                    padding: spacing.md,
+                    backgroundColor: colors.yellow[500],
+                    borderRadius: borderRadius.full,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: colors.white,
+                      textAlign: 'center',
+                      fontSize: fontSize.base,
+                      fontWeight: '600',
+                    }}
+                  >
+                    Claim
+                  </Text>
+                </Pressable>
               </View>
+            );
+          }
 
-              {/* Hydration actions */}
-              {!done && isHydration && (
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: spacing.xs,
-                    marginTop: spacing.sm,
-                  }}
-                >
-                  {[200, 300, 500].map(amt => (
-                    <Pressable
-                      key={amt}
-                      onPress={() => addIntake(amt)}
-                      style={{
-                        paddingVertical: spacing.xs,
-                        paddingHorizontal: spacing.sm,
-                        backgroundColor: colors.teal[500],
-                        borderRadius: borderRadius.full,
-                      }}
-                    >
-                      <Text
-                        style={{ color: colors.white, fontSize: fontSize.sm }}
-                      >
-                        +{amt} mL
-                      </Text>
-                    </Pressable>
-                  ))}
+          const actionContent =
+            actionBlocks.length > 0 ? actionBlocks : undefined;
 
-                  {/* Optional: one-tap complete */}
-                  <Pressable
-                    onPress={completeHydrationToday}
-                    style={{
-                      paddingVertical: spacing.xs,
-                      paddingHorizontal: spacing.sm,
-                      backgroundColor: colors.neutral[800],
-                      borderRadius: borderRadius.full,
-                    }}
-                  >
-                    <Text
-                      style={{ color: colors.white, fontSize: fontSize.sm }}
-                    >
-                      Complete today
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-
-              {/* Other quests */}
-              {!done && q.id === 'haze_mask_today' && (
-                <Pressable
-                  onPress={() => markDone(q.id)}
-                  style={{
-                    marginTop: spacing.sm,
-                    padding: spacing.sm,
-                    backgroundColor: colors.sky[500],
-                    borderRadius: borderRadius.md,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: colors.white,
-                      textAlign: 'center',
-                      fontSize: fontSize.base,
-                    }}
-                  >
-                    I wore a mask today
-                  </Text>
-                </Pressable>
-              )}
-
-              {!done && q.id === 'nature_walk_10m' && (
-                <Pressable
-                  onPress={() => markDone(q.id)}
-                  style={{
-                    marginTop: spacing.sm,
-                    padding: spacing.sm,
-                    backgroundColor: colors.green[500],
-                    borderRadius: borderRadius.md,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: colors.white,
-                      textAlign: 'center',
-                      fontSize: fontSize.base,
-                    }}
-                  >
-                    Completed 10-min walk
-                  </Text>
-                </Pressable>
-              )}
-
-              {!done && q.id === 'calm_breath_5m' && (
-                <Pressable
-                  onPress={() => markDone(q.id)}
-                  style={{
-                    marginTop: spacing.sm,
-                    padding: spacing.sm,
-                    backgroundColor: colors.neutral[700],
-                    borderRadius: borderRadius.md,
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: colors.white,
-                      textAlign: 'center',
-                      fontSize: fontSize.base,
-                    }}
-                  >
-                    I did 5-min breathing
-                  </Text>
-                </Pressable>
-              )}
-
-              {!done && q.id === 'gratitude_note' && (
-                <View style={{ marginTop: spacing.sm }}>
-                  <TextInput
-                    placeholder="Write one gratitude sentence..."
-                    value={gratitude}
-                    onChangeText={setGratitude}
-                    placeholderTextColor={colors.neutral[400]}
-                    style={{
-                      padding: spacing.sm,
-                      backgroundColor: colors.neutral[100],
-                      borderRadius: borderRadius.md,
-                      color: colors.neutral[900],
-                      borderWidth: 1,
-                      borderColor: colors.divider,
-                    }}
-                  />
-                  <Pressable
-                    onPress={() => {
-                      if (gratitude.trim()) {
-                        markDone(q.id, gratitude.trim());
-                        setGratitude('');
-                      }
-                    }}
-                    style={{
-                      marginTop: spacing.xs,
-                      padding: spacing.sm,
-                      backgroundColor: colors.yellow[500],
-                      borderRadius: borderRadius.md,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: colors.white,
-                        textAlign: 'center',
-                        fontSize: fontSize.base,
-                      }}
-                    >
-                      Submit gratitude
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-
-              {/* Progress caption */}
-              <Text
-                style={{
-                  marginTop: spacing.xs,
-                  fontSize: fontSize.xs,
-                  opacity: 0.75,
-                  color: colors.neutral[700],
-                }}
-              >
-                {isHydration
-                  ? `${hydrationCurrent} / ${hydrationGoal} mL (${pctHydration}%)${
-                      done ? ' — ✅ Completed' : ''
-                    }`
-                  : !!p?.done
-                    ? '✅ Completed'
-                    : `${p?.value ?? 0} / ${q.target} (${pctQuest}%)`}
-              </Text>
-            </View>
+          return (
+            <QuestCard
+              key={q.id}
+              title={q.title}
+              description={q.description}
+              rewardTag={q.rewardTag}
+              badgeLabel={badgeLabel}
+              progressPercent={Number.isFinite(pct) ? pct : 0}
+              progressLabel={progressLabel}
+              statusLabel={statusLabel}
+              completed={done}
+              accentColorOverride={accentOverride}
+            >
+              {actionContent}
+            </QuestCard>
           );
         })}
       </View>
