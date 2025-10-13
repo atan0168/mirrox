@@ -1,5 +1,4 @@
 import 'react-native-gesture-handler';
-import { StatusBar } from 'expo-status-bar';
 import {
   NavigationContainer,
   NavigatorScreenParams,
@@ -9,6 +8,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTimeOfDayScheduler } from './src/hooks/useTimeOfDayScheduler';
 import { enableScreens } from 'react-native-screens';
+import { SystemBars } from 'react-native-edge-to-edge';
 
 // Import screens
 import SplashScreen from './src/screens/SplashScreen';
@@ -100,7 +100,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <NavigationContainer ref={navigationRef}>
-        <StatusBar style="dark" />
+        <SystemBars style="auto" />
         {/* Always-mounted background services */}
         <RootServices />
         <Stack.Navigator

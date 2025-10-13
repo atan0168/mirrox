@@ -48,6 +48,7 @@
     "react-hook-form": "^7.62.0",
     "react-native": "0.79.5",
     "react-native-confetti-cannon": "^1.5.2",
+    "react-native-edge-to-edge": "^1.7.0",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-keychain": "^10.0.0",
     "react-native-mmkv": "^3.3.0",
