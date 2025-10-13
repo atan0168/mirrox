@@ -9,12 +9,10 @@ import {
   SafeAreaView,
   Animated,
   Easing,
-  Switch,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import * as Location from 'expo-location';
 import AvatarExperience from '../components/avatar/AvatarExperience';
-import { EffectsList, EffectData, Button } from '../components/ui';
+import { EffectsList, EffectData } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
@@ -33,6 +31,7 @@ import SceneSwitcher, {
 import RainIntensityControls from '../components/controls/RainIntensityControls';
 import SandboxControls from '../components/controls/SandboxControls';
 import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
+import EyeBagsControls from '../components/controls/EyeBagsControls';
 import { useAvatarStore } from '../store/avatarStore';
 import { useIsFocused } from '@react-navigation/native';
 import OnboardingOverlay from '../components/ui/OnboardingOverlay';
@@ -45,6 +44,7 @@ import { CelebrationIndicator } from '../components/CelebrationIndicator';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
 import { useQuestCelebrations } from '../hooks/useQuestCelebrations';
+import QuestStreakControls from '../components/controls/DevUtilities';
 
 const DashboardScreen: React.FC = () => {
   const { developerControlsEnabled } = useDeveloperControlsPreference();
@@ -84,19 +84,6 @@ const DashboardScreen: React.FC = () => {
   const dashboardOnboardingSeen = useUIStore(s => s.dashboardOnboardingSeen);
   const markOnboardingSeen = useUIStore(s => s.markDashboardOnboardingSeen);
   const resetOnboardingSeen = useUIStore(s => s.resetDashboardOnboarding);
-
-  // Eye-bags controls via store (no prop drilling)
-  const eyeBagsOverride = useAvatarStore(s => s.eyeBagsOverrideEnabled);
-  const setEyeBagsOverride = useAvatarStore(s => s.setEyeBagsOverrideEnabled);
-  const eyeBagsIntensity = useAvatarStore(s => s.eyeBagsIntensity);
-  const setEyeBagsIntensity = useAvatarStore(s => s.setEyeBagsIntensity);
-  const eyeBagsOffsetX = useAvatarStore(s => s.eyeBagsOffsetX);
-  const eyeBagsOffsetY = useAvatarStore(s => s.eyeBagsOffsetY);
-  const eyeBagsOffsetZ = useAvatarStore(s => s.eyeBagsOffsetZ);
-  const setEyeBagsOffsets = useAvatarStore(s => s.setEyeBagsOffsets);
-  const eyeBagsWidth = useAvatarStore(s => s.eyeBagsWidth);
-  const eyeBagsHeight = useAvatarStore(s => s.eyeBagsHeight);
-  const setEyeBagsSize = useAvatarStore(s => s.setEyeBagsSize);
 
   const isFocused = useIsFocused();
 
@@ -537,169 +524,20 @@ const DashboardScreen: React.FC = () => {
               />
 
               {/* Eye Bags (Dark Circles) Developer Controls */}
-              <View style={styles.devCard}>
-                <View style={styles.devRow}>
-                  <Text style={styles.devLabel}>Eye Bags (Override)</Text>
-                  <Switch
-                    value={eyeBagsOverride}
-                    onValueChange={setEyeBagsOverride}
-                  />
-                </View>
-                {eyeBagsOverride && (
-                  <View style={{ marginTop: spacing.sm }}>
-                    <Text style={styles.devSubtle}>
-                      Intensity: {(eyeBagsIntensity * 100).toFixed(0)}%
-                    </Text>
-                    <Slider
-                      value={eyeBagsIntensity}
-                      onValueChange={setEyeBagsIntensity}
-                      minimumValue={0}
-                      maximumValue={1}
-                      step={0.05}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Offset X: {eyeBagsOffsetX.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsOffsetX}
-                      onValueChange={v =>
-                        setEyeBagsOffsets(v, eyeBagsOffsetY, eyeBagsOffsetZ)
-                      }
-                      minimumValue={-0.15}
-                      maximumValue={0.15}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Offset Y: {eyeBagsOffsetY.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsOffsetY}
-                      onValueChange={v =>
-                        setEyeBagsOffsets(eyeBagsOffsetX, v, eyeBagsOffsetZ)
-                      }
-                      minimumValue={-0.15}
-                      maximumValue={0.15}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Offset Z: {eyeBagsOffsetZ.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsOffsetZ}
-                      onValueChange={v =>
-                        setEyeBagsOffsets(eyeBagsOffsetX, eyeBagsOffsetY, v)
-                      }
-                      minimumValue={-0.2}
-                      maximumValue={0.2}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Width: {eyeBagsWidth.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsWidth}
-                      onValueChange={v => setEyeBagsSize(v, eyeBagsHeight)}
-                      minimumValue={0.05}
-                      maximumValue={0.25}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Height: {eyeBagsHeight.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsHeight}
-                      onValueChange={v => setEyeBagsSize(eyeBagsWidth, v)}
-                      minimumValue={0.03}
-                      maximumValue={0.15}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devHint}>
-                      When override is off, eye bags follow sleep data.
-                    </Text>
-                  </View>
-                )}
-              </View>
+              <EyeBagsControls />
 
-              {/* Developer utility: Reset onboarding and seed badges */}
-              <View style={{ marginTop: spacing.md }}>
-                <Button
-                  onPress={async () => {
-                    resetOnboardingSeen();
-                    setOnboardingStep(0);
-                    setShowOnboarding(true);
-                    setScrollEnabled(false);
-                  }}
-                >
-                  Show onboarding again
-                </Button>
-
-                {/* NEW: Badge & Streak testing helpers for all 5 quests */}
-                <View style={{ marginTop: spacing.md, gap: 8 }}>
-                  <Button onPress={() => seed7DayHistory('drink_2l')}>
-                    🧪 DEV: Seed 7-day Hydration
-                  </Button>
-                  <Button onPress={() => seed7DayHistory('haze_mask_today')}>
-                    🧪 DEV: Seed 7-day Mask
-                  </Button>
-                  <Button onPress={() => seed7DayHistory('nature_walk_10m')}>
-                    🧪 DEV: Seed 7-day Walk
-                  </Button>
-                  <Button onPress={() => seed7DayHistory('calm_breath_5m')}>
-                    🧪 DEV: Seed 7-day Breathe
-                  </Button>
-                  <Button onPress={() => seed7DayHistory('gratitude_note')}>
-                    🧪 DEV: Seed 7-day Gratitude
-                  </Button>
-                  <Button onPress={() => void clearHistoryForRetest()}>
-                    ♻️ DEV: Clear injected history
-                  </Button>
-                  <Button
-                    onPress={() => void seed6ThenCompleteToday('drink_2l')}
-                  >
-                    🧪 Seed 6d Hydration (award on today)
-                  </Button>
-                  <Button
-                    onPress={() =>
-                      void seed6ThenCompleteToday('haze_mask_today')
-                    }
-                  >
-                    🧪 Seed 6d Mask (award on today)
-                  </Button>
-                  <Button
-                    onPress={() =>
-                      void seed6ThenCompleteToday('nature_walk_10m')
-                    }
-                  >
-                    🧪 Seed 6d Walk (award on today)
-                  </Button>
-                  <Button
-                    onPress={() =>
-                      void seed6ThenCompleteToday('calm_breath_5m')
-                    }
-                  >
-                    🧪 Seed 6d Breathe (award on today)
-                  </Button>
-                  <Button
-                    onPress={() =>
-                      void seed6ThenCompleteToday('gratitude_note')
-                    }
-                  >
-                    🧪 Seed 6d Gratitude (award on today)
-                  </Button>
-                </View>
-              </View>
+              {/* Developer utility: compact dev utilities */}
+              <QuestStreakControls
+                onResetOnboarding={() => {
+                  resetOnboardingSeen();
+                  setOnboardingStep(0);
+                  setShowOnboarding(true);
+                  setScrollEnabled(false);
+                }}
+                seed7DayHistory={seed7DayHistory}
+                seed6ThenCompleteToday={seed6ThenCompleteToday}
+                clearHistoryForRetest={clearHistoryForRetest}
+              />
             </View>
           )}
 
@@ -794,9 +632,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -spacing.lg,
     marginTop: -spacing.lg,
     position: 'relative',
-    // Let child fill width
     alignItems: 'stretch',
-    // Optional spacing below the canvas
     marginBottom: 16,
   },
   controlsContainer: {
@@ -804,52 +640,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
-    ...{
-      elevation: 3,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-    },
+    elevation: 3,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   controlsTitle: {
     fontSize: fontSize.lg,
     fontWeight: '600',
     color: colors.neutral[800],
     marginBottom: spacing.md,
-  },
-  devCard: {
-    backgroundColor: colors.white,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    ...{
-      elevation: 2,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 2,
-    },
-    marginTop: spacing.md,
-  },
-  devRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  devLabel: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    color: colors.neutral[800],
-  },
-  devSubtle: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[600],
-    marginBottom: spacing.xs,
-  },
-  devHint: {
-    fontSize: fontSize.xs,
-    color: colors.neutral[500],
-    marginTop: spacing.xs,
   },
 });
 
