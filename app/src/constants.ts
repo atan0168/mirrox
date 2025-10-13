@@ -12,6 +12,7 @@ export const AVAILABLE_ANIMATIONS = [
   { name: 'sleeping_idle', label: 'Idle Sleeping' },
   { name: 'slump', label: 'Slump' },
   { name: 'hype_dance', label: 'Hype Dance' },
+  { name: 'pump_jump', label: 'Pump Jump' },
 ];
 
 // Define available idle animations in order of preference

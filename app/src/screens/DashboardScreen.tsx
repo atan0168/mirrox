@@ -44,7 +44,7 @@ import { CelebrationIndicator } from '../components/CelebrationIndicator';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
 import { useQuestCelebrations } from '../hooks/useQuestCelebrations';
-import QuestStreakControls from '../components/controls/DevUtilities';
+import QuestStreakControls from '../components/controls/QuestStreakControls';
 
 const DashboardScreen: React.FC = () => {
   const { developerControlsEnabled } = useDeveloperControlsPreference();

@@ -9,7 +9,6 @@ import type { CompletedLog, QuestId, Streak } from '../models/quest';
 import { QuestRepository } from '../services/db/QuestRepository';
 import { AVAILABLE_ANIMATIONS } from '../constants';
 import {
-  CELEBRATION_ANIMATION,
   CELEBRATION_FALLBACK_ANIMATION,
   CELEBRATION_ANIMATIONS_BY_BADGE,
 } from '../constants/celebrations';
@@ -141,8 +140,6 @@ export function useQuestCelebrations() {
     if (!badge) return null;
     const preferred = CELEBRATION_ANIMATIONS_BY_BADGE[badge];
     if (preferred && availableNames.includes(preferred)) return preferred;
-    if (availableNames.includes(CELEBRATION_ANIMATION))
-      return CELEBRATION_ANIMATION;
     return CELEBRATION_FALLBACK_ANIMATION;
   }, []);
 
@@ -163,7 +160,6 @@ export function useQuestCelebrations() {
     } else {
       // Only restore if we are currently on a celebration animation
       const possibleCelebrations = new Set([
-        CELEBRATION_ANIMATION,
         CELEBRATION_FALLBACK_ANIMATION,
         ...Object.values(CELEBRATION_ANIMATIONS_BY_BADGE),
       ]);

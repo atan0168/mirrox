@@ -59,28 +59,34 @@ const QuestStreakControls: React.FC<QuestStreakProps> = ({
       <Text style={styles.sectionLabel}>Quest</Text>
       <View style={styles.pillRow}>{QUEST_OPTIONS.map(renderPill)}</View>
 
-      <View style={styles.row}>
-        <Button size="sm" onPress={() => seed7DayHistory(selectedQuest)}>
+      <View style={styles.grid}>
+        <Button
+          size="sm"
+          onPress={() => seed7DayHistory(selectedQuest)}
+          style={styles.gridButton}
+        >
           Seed 7d
         </Button>
         <Button
           size="sm"
           onPress={() => seed6ThenCompleteToday(selectedQuest)}
-          style={styles.buttonRight}
+          style={styles.gridButton}
         >
-          Seed 6d + today
-        </Button>
-      </View>
-
-      <View style={styles.row}>
-        <Button size="sm" variant="outline" onPress={clearHistoryForRetest}>
-          Clear seeded data
+          Seed 6d
         </Button>
         <Button
           size="sm"
-          variant="ghost"
+          variant="secondary"
+          onPress={clearHistoryForRetest}
+          style={styles.gridButton}
+        >
+          Clear data
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
           onPress={onResetOnboarding}
-          style={styles.buttonRight}
+          style={styles.gridButton}
         >
           Show onboarding
         </Button>
@@ -150,13 +156,17 @@ const styles = StyleSheet.create({
   pillTextActive: {
     color: colors.white,
   },
-  row: {
+  grid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
     marginBottom: spacing.xs,
   },
-  buttonRight: {
-    marginLeft: spacing.xs,
+  gridButton: {
+    flex: 1,
+    minWidth: '48%',
+    marginHorizontal: spacing.xs / 2,
+    marginVertical: spacing.xs / 2,
   },
   caption: {
     marginTop: spacing.xs,
