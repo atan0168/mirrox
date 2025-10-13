@@ -20,7 +20,6 @@ import {
 import Slider from '@react-native-community/slider';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
-import ConfettiCannon from 'react-native-confetti-cannon';
 import AvatarExperience from '../components/avatar/AvatarExperience';
 import { EffectsList, EffectData, Button } from '../components/ui';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
@@ -44,10 +43,13 @@ import { FacialExpressionControls } from '../components/controls/FacialExpressio
 import { useAvatarStore } from '../store/avatarStore';
 import { useIsFocused } from '@react-navigation/native';
 import OnboardingOverlay from '../components/ui/OnboardingOverlay';
-import { ENV_REFRESH_INTERVAL_MS } from '../constants';
+import { ENV_REFRESH_INTERVAL_MS, AVAILABLE_ANIMATIONS } from '../constants';
 import { useUIStore } from '../store/uiStore';
 import { useHydrationStore } from '../store/hydrationStore';
 import { hydrationService } from '../services/HydrationService';
+import { CelebrationSpotlight } from '../components/CelebrationSpotlight';
+import { type BadgeId } from '../constants/badges';
+import { CelebrationIndicator } from '../components/CelebrationIndicator';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
 
@@ -89,21 +91,22 @@ const QUEST_LONG_TITLE: Record<QuestId, string> = {
   gratitude_note: 'Gratitude Note',
 };
 
+const CELEBRATION_ANIMATION = 'celebration_dance';
+const CELEBRATION_FALLBACK_ANIMATION = 'hype_dance';
+
 const DashboardScreen: React.FC = () => {
   const queryClient = useQueryClient();
   const { history: questHistory } = useQuestHistory();
-  useBadges();
+  const { earned: awardedBadges } = useBadges();
 
-  const [celebrateId, setCelebrateId] = useState<
-    | null
-    | 'streak7_drink'
-    | 'streak7_mask'
-    | 'streak7_walk'
-    | 'streak7_breathe'
-    | 'streak7_gratitude'
-  >(null);
-  const confettiRef = useRef<ConfettiCannon>(null);
-  const [previousHistoryLength, setPreviousHistoryLength] = useState(0);
+  const [activeCelebration, setActiveCelebration] = useState<BadgeId | null>(
+    null
+  );
+  const [indicatorCelebration, setIndicatorCelebration] =
+    useState<BadgeId | null>(null);
+  const [dismissedCelebrations, setDismissedCelebrations] = useState<
+    Set<BadgeId>
+  >(() => new Set());
 
   // --------------------------------- DEV seed helpers ---------------------------------
   const updateHistoryCache = useCallback(
@@ -194,7 +197,9 @@ const DashboardScreen: React.FC = () => {
 
   const clearHistoryForRetest = useCallback(async () => {
     updateHistoryCache(() => []);
-    setCelebrateId(null);
+    setActiveCelebration(null);
+    setIndicatorCelebration(null);
+    setDismissedCelebrations(new Set<BadgeId>());
 
     try {
       const today = dayjs().format('YYYY-MM-DD');
@@ -260,8 +265,53 @@ const DashboardScreen: React.FC = () => {
   const eyeBagsWidth = useAvatarStore(s => s.eyeBagsWidth);
   const eyeBagsHeight = useAvatarStore(s => s.eyeBagsHeight);
   const setEyeBagsSize = useAvatarStore(s => s.setEyeBagsSize);
+  const activeAnimation = useAvatarStore(s => s.activeAnimation);
+  const isManualAnimation = useAvatarStore(s => s.isManualAnimation);
+  const setActiveAnimationStore = useAvatarStore(s => s.setActiveAnimation);
+  const resetAvatarAnimations = useAvatarStore(s => s.resetAnimations);
 
   const { developerControlsEnabled } = useDeveloperControlsPreference();
+
+  const celebrationAnimationName = useMemo(() => {
+    const availableNames = AVAILABLE_ANIMATIONS.map(anim => anim.name);
+    return availableNames.includes(CELEBRATION_ANIMATION)
+      ? CELEBRATION_ANIMATION
+      : CELEBRATION_FALLBACK_ANIMATION;
+  }, []);
+  const previousAnimationRef = useRef<string | null>(null);
+  const previousManualRef = useRef(false);
+
+  useEffect(() => {
+    if (activeCelebration) {
+      if (activeAnimation !== celebrationAnimationName) {
+        previousAnimationRef.current = activeAnimation;
+        previousManualRef.current = isManualAnimation;
+        setActiveAnimationStore(celebrationAnimationName, { manual: true });
+      }
+    } else if (activeAnimation === celebrationAnimationName) {
+      const previous = previousAnimationRef.current;
+      const wasManual = previousManualRef.current;
+
+      if (previous) {
+        setActiveAnimationStore(
+          previous,
+          wasManual ? { manual: true } : undefined
+        );
+      } else {
+        resetAvatarAnimations();
+      }
+
+      previousAnimationRef.current = null;
+      previousManualRef.current = false;
+    }
+  }, [
+    activeCelebration,
+    activeAnimation,
+    celebrationAnimationName,
+    isManualAnimation,
+    resetAvatarAnimations,
+    setActiveAnimationStore,
+  ]);
 
   // Skeleton shimmer
   useEffect(() => {
@@ -620,25 +670,35 @@ const DashboardScreen: React.FC = () => {
   ]);
 
   // -------------------------------- 7-day streak detection (UI only) ----------------------------
-  // NEW: Generic helper — detect any 7-day consecutive streak from YYYY-MM-DD strings
-  const has7Consecutive = (days: string[]) => {
-    if ((days?.length ?? 0) < 7) return false;
-    const uniqSorted = Array.from(new Set(days)).sort();
-    let streak = 1;
-    for (let i = 1; i < uniqSorted.length; i++) {
-      if (dayjs(uniqSorted[i]).diff(dayjs(uniqSorted[i - 1]), 'day') === 1) {
-        streak++;
-        if (streak >= 7) return true;
-      } else {
-        streak = 1;
-      }
-    }
-    return false;
-  };
+  const hasCurrentStreak = useCallback(
+    (days: string[], streakLength: number): boolean => {
+      if ((days?.length ?? 0) < streakLength) return false;
 
-  // NEW: Aggregate days per quest from history; compute 7-day flags (drink/mask/walk/breathe/gratitude)
-  const flags = useMemo(() => {
-    if (!questHistory?.length)
+      const uniqSorted = Array.from(new Set(days)).sort();
+      const today = dayjs().format('YYYY-MM-DD');
+      const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+
+      const hasToday = uniqSorted.includes(today);
+      const hasYesterday = uniqSorted.includes(yesterday);
+
+      if (!hasToday && !hasYesterday) return false;
+
+      const endDate = hasToday ? today : yesterday;
+
+      const requiredDates: string[] = [];
+      for (let i = 0; i < streakLength; i++) {
+        requiredDates.push(
+          dayjs(endDate).subtract(i, 'day').format('YYYY-MM-DD')
+        );
+      }
+
+      return requiredDates.every(date => uniqSorted.includes(date));
+    },
+    []
+  );
+
+  const shouldCelebrate = useMemo(() => {
+    if (!questHistory?.length) {
       return {
         drink7: false,
         mask7: false,
@@ -646,6 +706,9 @@ const DashboardScreen: React.FC = () => {
         breathe7: false,
         gratitude7: false,
       };
+    }
+
+    const badgeIds = new Set(awardedBadges?.map(b => b.id) ?? []);
 
     const map: Record<string, string[]> = {};
     questHistory.forEach(h => {
@@ -655,31 +718,68 @@ const DashboardScreen: React.FC = () => {
     });
 
     return {
-      drink7: has7Consecutive(map['drink_2l'] ?? []),
-      mask7: has7Consecutive(map['haze_mask_today'] ?? []),
-      walk7: has7Consecutive(map['nature_walk_10m'] ?? []),
-      breathe7: has7Consecutive(map['calm_breath_5m'] ?? []),
-      gratitude7: has7Consecutive(map['gratitude_note'] ?? []),
+      drink7:
+        !badgeIds.has('streak7_drink') &&
+        hasCurrentStreak(map['drink_2l'] ?? [], 7),
+      mask7:
+        !badgeIds.has('streak7_mask') &&
+        hasCurrentStreak(map['haze_mask_today'] ?? [], 7),
+      walk7:
+        !badgeIds.has('streak7_walk') &&
+        hasCurrentStreak(map['nature_walk_10m'] ?? [], 7),
+      breathe7:
+        !badgeIds.has('streak7_breathe') &&
+        hasCurrentStreak(map['calm_breath_5m'] ?? [], 7),
+      gratitude7:
+        !badgeIds.has('streak7_gratitude') &&
+        hasCurrentStreak(map['gratitude_note'] ?? [], 7),
     };
-  }, [questHistory]);
+  }, [questHistory, awardedBadges, hasCurrentStreak]);
 
-  // Trigger a celebration modal for the first truthy flag
+  const availableCelebrations = useMemo(() => {
+    const candidates: Array<[BadgeId, boolean]> = [
+      ['streak7_drink', shouldCelebrate.drink7],
+      ['streak7_mask', shouldCelebrate.mask7],
+      ['streak7_walk', shouldCelebrate.walk7],
+      ['streak7_breathe', shouldCelebrate.breathe7],
+      ['streak7_gratitude', shouldCelebrate.gratitude7],
+    ];
+
+    return candidates
+      .filter(([, eligible]) => eligible)
+      .map(([id]) => id)
+      .filter(id => !dismissedCelebrations.has(id));
+  }, [shouldCelebrate, dismissedCelebrations]);
+
+  const markCelebrationDismissed = useCallback((id: BadgeId) => {
+    setDismissedCelebrations(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
-    if (celebrateId) return;
+    if (activeCelebration) return;
+    const next = availableCelebrations.length ? availableCelebrations[0] : null;
+    setIndicatorCelebration(current => (current === next ? current : next));
+  }, [availableCelebrations, activeCelebration]);
 
-    if (flags.drink7) setCelebrateId('streak7_drink');
-    else if (flags.mask7) setCelebrateId('streak7_mask');
-    else if (flags.walk7) setCelebrateId('streak7_walk');
-    else if (flags.breathe7) setCelebrateId('streak7_breathe');
-    else if (flags.gratitude7) setCelebrateId('streak7_gratitude');
-  }, [flags, celebrateId]);
+  const handleOpenCelebration = useCallback(() => {
+    if (!indicatorCelebration) return;
+    setIndicatorCelebration(null);
+    setActiveCelebration(indicatorCelebration);
+  }, [indicatorCelebration]);
 
-  useEffect(() => {
-    if (questHistory && questHistory.length > previousHistoryLength) {
-      confettiRef.current?.start();
-    }
-    setPreviousHistoryLength(questHistory?.length ?? 0);
-  }, [questHistory?.length]);
+  const handleDismissCelebration = useCallback(() => {
+    setActiveCelebration(current => {
+      if (current) {
+        markCelebrationDismissed(current);
+      }
+      return null;
+    });
+  }, [markCelebrationDismissed]);
   // ----------------------------------------------------------------------------------------------
 
   if (isLoading) {
@@ -705,7 +805,10 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} scrollEnabled={scrollEnabled}>
+      <ScrollView
+        style={styles.container}
+        scrollEnabled={scrollEnabled && !activeCelebration}
+      >
         <View style={styles.content}>
           <View style={styles.avatarContainer}>
             <AvatarExperience
@@ -728,6 +831,12 @@ const DashboardScreen: React.FC = () => {
               hydrationProgressPercentage={hydrationProgressPercentage}
               hasNearbyDengueRisk={hasNearbyDengueRisk}
             />
+            {indicatorCelebration && (
+              <CelebrationIndicator
+                badgeId={indicatorCelebration}
+                onPress={handleOpenCelebration}
+              />
+            )}
           </View>
 
           {/* Developer controls */}
@@ -956,13 +1065,10 @@ const DashboardScreen: React.FC = () => {
         }}
       />
 
-      {/* Confetti effect for quest completion */}
-      <ConfettiCannon
-        ref={confettiRef}
-        count={200}
-        origin={{ x: -20, y: 0 }}
-        autoStart={false}
-        fadeOut
+      <CelebrationSpotlight
+        visible={!!activeCelebration}
+        badgeId={activeCelebration}
+        onClose={handleDismissCelebration}
       />
     </SafeAreaView>
   );
@@ -1013,6 +1119,7 @@ const styles = StyleSheet.create({
     // Full-bleed inside a padded ScrollView: cancel horizontal padding
     marginHorizontal: -spacing.lg,
     marginTop: -spacing.lg,
+    position: 'relative',
     // Let child fill width
     alignItems: 'stretch',
     // Optional spacing below the canvas

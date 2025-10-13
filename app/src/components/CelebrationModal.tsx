@@ -1,16 +1,17 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
-  Modal,
-  View,
-  Text,
-  StyleSheet,
   Animated,
-  Pressable,
-  Easing,
-  Platform,
   Dimensions,
+  Easing,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { colors, spacing, borderRadius, fontSize, shadows } from '../theme';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 
 type Props = {
   visible: boolean;
@@ -36,6 +37,13 @@ export default function CelebrationModal({ visible, title, onClose }: Props) {
   const medalPop = useRef(new Animated.Value(0)).current;
   const halo = useRef(new Animated.Value(0)).current;
   const rays = useRef(new Animated.Value(0)).current;
+  const confettiRef = useRef<ConfettiCannon>(null);
+
+  useEffect(() => {
+    if (visible) {
+      confettiRef.current?.start();
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -165,42 +173,54 @@ export default function CelebrationModal({ visible, title, onClose }: Props) {
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Animated.View
-          renderToHardwareTextureAndroid
-          style={[styles.card, { opacity: fade, transform: [{ scale }] }]}
-        >
-          <View style={styles.ribbon} />
-          <View style={styles.medalWrap}>
-            <Animated.View
-              pointerEvents="none"
-              renderToHardwareTextureAndroid
-              style={[
-                styles.halo,
-                {
-                  opacity: haloOpacity,
-                  transform: [{ scale: haloScale }],
-                },
-              ]}
-            />
-            <View style={styles.raysWrap}>{renderRays()}</View>
-            <Animated.Text style={[styles.medal, medalStyle]}>🏅</Animated.Text>
-          </View>
-
-          <Text style={styles.title}>{title}</Text>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={onClose}
-            style={({ pressed }) => [
-              styles.btn,
-              { transform: [{ scale: pressed ? 0.98 : 1 }] },
-            ]}
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable onPress={e => e.stopPropagation()}>
+          <Animated.View
+            renderToHardwareTextureAndroid
+            style={[styles.card, { opacity: fade, transform: [{ scale }] }]}
           >
-            <Text style={styles.btnText}>Awesome 🎉</Text>
-          </Pressable>
-        </Animated.View>
-      </View>
+            <View style={styles.ribbon} />
+            <View style={styles.medalWrap}>
+              <Animated.View
+                pointerEvents="none"
+                renderToHardwareTextureAndroid
+                style={[
+                  styles.halo,
+                  {
+                    opacity: haloOpacity,
+                    transform: [{ scale: haloScale }],
+                  },
+                ]}
+              />
+              <View style={styles.raysWrap}>{renderRays()}</View>
+              <Animated.Text style={[styles.medal, medalStyle]}>
+                🏅
+              </Animated.Text>
+            </View>
+
+            <Text style={styles.title}>{title}</Text>
+
+            <Pressable
+              accessibilityRole="button"
+              onPress={onClose}
+              style={({ pressed }) => [
+                styles.btn,
+                { transform: [{ scale: pressed ? 0.98 : 1 }] },
+              ]}
+            >
+              <Text style={styles.btnText}>Awesome 🎉</Text>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+        {/* Confetti effect for quest completion */}
+        <ConfettiCannon
+          ref={confettiRef}
+          count={200}
+          origin={{ x: -20, y: 0 }}
+          autoStart={false}
+          fadeOut
+        />
+      </Pressable>
     </Modal>
   );
 }
@@ -210,10 +230,28 @@ const CARD_MAX_W = Math.min(420, SCREEN_W - spacing.lg * 2);
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    // backgroundColor: 'rgba(0,0,0,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
+  },
+  spotlight: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    top: '50%',
+    left: '50%',
+    marginLeft: -140,
+    marginTop: -140,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 215, 0, 0.4)',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 40,
+    elevation: 10,
   },
   card: {
     width: '100%',
@@ -285,5 +323,9 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '800',
     letterSpacing: 0.2,
+  },
+  confettiLayer: {
+    flex: 1,
+    pointerEvents: 'none',
   },
 });

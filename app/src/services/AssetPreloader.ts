@@ -139,6 +139,10 @@ export class AssetPreloader {
           asset: require('../../assets/animations/slump.glb'),
           name: 'slump',
         },
+        {
+          asset: require('../../assets/animations/hype_dance.glb'),
+          name: 'hype_dance',
+        },
       ];
 
       const imageAssets = [

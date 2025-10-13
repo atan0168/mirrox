@@ -19,7 +19,8 @@ export const BADGE_DEFS: Record<
 > = {
   streak7_drink: {
     title: '7-Day Hydration Master',
-    encouragement: 'Amazing streak—your twin looks more radiant and resilient.',
+    encouragement:
+      'Amazing streak! Your twin looks more radiant and resilient.',
     points: 40,
     desc: 'Completed "Drink 2L of water" for 7 consecutive days.',
     icon: '💧',
@@ -33,21 +34,21 @@ export const BADGE_DEFS: Record<
   },
   streak7_walk: {
     title: 'Nature Explorer',
-    encouragement: '7 days of nature time—grounded and refreshed!',
+    encouragement: '7 days of nature time! Grounded and refreshed!',
     points: 40,
     desc: 'Completed "10-min walk outdoors" for 7 consecutive days.',
     icon: '🚶‍♂️',
   },
   streak7_breathe: {
     title: 'Calm Master',
-    encouragement: '7 days of calm breaths—mind like water.',
+    encouragement: '7 days of calm breaths! Mind is as still as water.',
     points: 40,
     desc: 'Completed "5-min calm breathing" for 7 consecutive days.',
     icon: '🌬️',
   },
   streak7_gratitude: {
     title: 'Gratitude Champion',
-    encouragement: 'A grateful week—warmth radiates from your twin!',
+    encouragement: 'A grateful week! Warmth radiates from your twin!',
     points: 40,
     desc: 'Wrote a gratitude note for 7 consecutive days.',
     icon: '💖',
