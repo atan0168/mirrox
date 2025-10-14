@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { subDays, endOfDay } from 'date-fns';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useQuestHistory } from './useQuests';
 import { useBadges } from './useBadges';
 import { useAvatarStore } from '../store/avatarStore';
@@ -207,9 +207,25 @@ export function useQuestCelebrations() {
   // DEV helper utilities colocated for now; will be extracted
   const updateHistoryCache = useCallback(
     (updater: (prev: CompletedLog[]) => CompletedLog[]) => {
-      queryClient.setQueriesData(
+      queryClient.setQueriesData<InfiniteData<CompletedLog[]> | undefined>(
         { queryKey: ['quest-history'] },
-        (old: CompletedLog[] | undefined) => updater(old ?? [])
+        old => {
+          const pages = old?.pages ?? [];
+          const firstPage = pages[0] ?? [];
+          const nextFirstPage = updater(firstPage);
+
+          if (!old) {
+            return {
+              pages: [nextFirstPage],
+              pageParams: [0],
+            };
+          }
+
+          return {
+            ...old,
+            pages: [nextFirstPage, ...pages.slice(1)],
+          };
+        }
       );
     },
     [queryClient]
