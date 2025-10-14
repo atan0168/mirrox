@@ -21,7 +21,7 @@ import { UserLocationDetails, UserProfile } from '../models/User';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { calculateBaselineHydrationGoal } from '../utils/hydrationUtils';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 
 interface QuestionnaireScreenProps {
   route: {

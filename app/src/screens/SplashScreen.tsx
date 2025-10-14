@@ -11,7 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Heart, RefreshCw } from 'lucide-react-native';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { localStorageService } from '../services/LocalStorageService';
 import { assetPreloader, PreloadProgress } from '../services/AssetPreloader';
 import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';

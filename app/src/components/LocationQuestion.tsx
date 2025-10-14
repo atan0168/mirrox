@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ChevronRight, MapPin } from 'lucide-react-native';
 
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { UserLocationDetails } from '../models/User';
 import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { Button } from './ui';

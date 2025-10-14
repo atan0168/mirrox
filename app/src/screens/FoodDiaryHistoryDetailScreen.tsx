@@ -17,7 +17,7 @@ import {
   resolveMealItemName,
   buildMealAnalysisFromItems,
 } from '../utils/nutritionUtils';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 
 type HistoryDetailRoute = RouteProp<
   RootStackParamList,

@@ -1,8 +1,5 @@
 import 'react-native-gesture-handler';
-import {
-  NavigationContainer,
-  NavigatorScreenParams,
-} from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { navigationRef } from './src/navigation/navigationRef';
 import { createStackNavigator } from '@react-navigation/stack';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,9 +19,7 @@ import QuestHistoryScreen from './src/screens/QuestHistoryScreen';
 import AchievementScreen from './src/screens/AchievementScreen';
 
 // Import tab navigator
-import MainTabNavigator, {
-  type MainTabParamList,
-} from './src/navigation/MainTabNavigator';
+import MainTabNavigator from './src/navigation/MainTabNavigator';
 import AlertsScreen from './src/screens/AlertsScreen';
 import HealthPermissionScreen from './src/screens/HealthPermissionScreen';
 import DebugDatabaseScreen from './src/screens/DebugDatabaseScreen';
@@ -32,54 +27,10 @@ import React, { useEffect } from 'react';
 import { initNotifications } from './src/services/notifications';
 import RootServices from './src/components/RootServices';
 import LocationPickerScreen from './src/screens/LocationPickerScreen';
-import { UserLocationDetails } from './src/models/User';
 import NutritionDetailScreen from './src/screens/NutritionDetailScreen';
 import FoodDiaryHistoryScreen from './src/screens/FoodDiaryHistoryScreen';
 import FoodDiaryHistoryDetailScreen from './src/screens/FoodDiaryHistoryDetailScreen';
-
-export type RootStackParamList = {
-  Splash: undefined;
-  Welcome: undefined;
-  Privacy: undefined;
-  Permission: undefined;
-  HealthPermission:
-    | {
-        location: {
-          latitude: number;
-          longitude: number;
-          city?: string;
-          state?: string;
-        } | null;
-      }
-    | undefined;
-  CitySelection: undefined;
-  Questionnaire: {
-    location: {
-      latitude: number;
-      longitude: number;
-      city?: string;
-      state?: string;
-    } | null;
-  };
-  GeneratingTwin: undefined;
-  MainTabs: NavigatorScreenParams<MainTabParamList>;
-  Alerts: { alertId?: string } | undefined;
-  DebugDB: undefined;
-  NutritionDetail: undefined;
-  FoodDiaryHistory: undefined;
-  FoodDiaryHistoryDetail: {
-    mealId: number;
-    dateLabel: string;
-    totalEnergyKcal?: number | null;
-  };
-  LocationPicker: {
-    initialLocation: UserLocationDetails | null;
-    onSelect?: (selection: UserLocationDetails | null) => void;
-    allowCurrentLocation?: boolean;
-  };
-  QuestHistory: undefined;
-  Achievements: undefined;
-};
+import type { RootStackParamList } from './src/navigation/types';
 
 const Stack = createStackNavigator<RootStackParamList>();
 

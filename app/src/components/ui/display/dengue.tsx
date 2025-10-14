@@ -8,7 +8,7 @@ import {
   OutbreakAttributes,
   PointGeometry,
   PolygonGeometry,
-} from '../../../services/BackendApiService';
+} from '../../../models/Dengue';
 
 export function getDengueDisplay(
   denguePrediction: DenguePredictResponse | null | undefined,

@@ -12,7 +12,7 @@ import {
 import { format, startOfDay } from 'date-fns';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { colors, spacing, fontSize, borderRadius, shadows } from '../theme';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { useQuestHistory } from '../hooks/useQuests';
 import type {
   CompletedLog,

@@ -3,7 +3,7 @@ import { View, Text, Pressable, TextInput } from 'react-native';
 
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 
 import { useQuestProgress, useQuestComplete } from '../hooks/useQuests';
 import { useHydrationStore } from '../store/hydrationStore';

@@ -12,7 +12,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { borderRadius, colors, fontSize, shadows, spacing } from '../theme';
 
 type Props = {

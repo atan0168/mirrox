@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { format } from 'date-fns';
 import { useMealHistory } from '../hooks/useMealHistory';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
 
 type HistoryNav = StackNavigationProp<RootStackParamList, 'FoodDiaryHistory'>;

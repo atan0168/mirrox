@@ -10,8 +10,9 @@ import type {
   OutbreakAttributes,
   PolygonGeometry,
   DenguePredictResponse,
-} from '../services/BackendApiService';
+} from '../models/Dengue';
 import { healthDataService } from '../services/HealthDataService';
+import { registerSandboxStateAccessor } from '../sandbox/sandboxAccess';
 
 type StressPreset = 'none' | 'moderate' | 'high';
 type SleepPreset = 'optimal' | 'moderate' | 'low';
@@ -506,3 +507,14 @@ export const useSandboxStore = create<SandboxState>((set, get) => ({
     return dengue;
   },
 }));
+
+registerSandboxStateAccessor(() => {
+  const state = useSandboxStore.getState();
+  return {
+    enabled: state.enabled,
+    airQuality: state.airQuality,
+    dengueHotspots: state.dengueHotspots,
+    dengueOutbreaks: state.dengueOutbreaks,
+    denguePrediction: state.denguePrediction,
+  };
+});

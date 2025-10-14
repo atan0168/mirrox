@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Button, Input } from '../components/ui';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 
 interface City {
   id: string;

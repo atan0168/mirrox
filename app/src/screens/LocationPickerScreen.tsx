@@ -27,7 +27,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { BackButton } from '../components/BackButton';
 import { LocationPickerFooter } from '../components/LocationPickerFooter';
 import { SearchHeader } from '../components/SearchHeader';

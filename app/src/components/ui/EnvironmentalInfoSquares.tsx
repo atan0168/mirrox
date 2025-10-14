@@ -18,7 +18,7 @@ import {
   OutbreakAttributes,
   PointGeometry,
   PolygonGeometry,
-} from '../../services/BackendApiService';
+} from '../../models/Dengue';
 
 interface AirQualityData {
   aqi?: number;
