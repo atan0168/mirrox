@@ -1,6 +1,6 @@
 # Digital Twin - Privacy-First Wellness Platform
 
-A React Native mobile application with Node.js backend that creates personalized digital avatars based on environmental air quality data and personal health metrics. The app promotes wellness and self-awareness through visual representation of how environmental factors affect the user's health.
+A React Native mobile application with a TypeScript/Node.js backend that creates personalized digital avatars informed by environmental air quality, traffic congestion, dengue surveillance, nutrition insights, and personal health metrics. The app promotes wellness and self-awareness through visual representation of how environmental factors affect the user's health.
 
 ## 🌟 Key Features
 
@@ -8,7 +8,8 @@ A React Native mobile application with Node.js backend that creates personalized
 - **Environmental Awareness**: Real-time air quality data visualization through personalized 3D avatars
 - **Health Insights**: Combines sleep patterns, commute habits, and environmental data for wellness recommendations
 - **3D Avatar System**: Dynamic avatar that changes based on air quality and personal health metrics
-- **Multi-API Integration**: OpenAQ, AQICN, and Malaysian MyEQMS for comprehensive air quality data
+- **Multi-API Integration**: AQICN + OpenAQ (air), TomTom (traffic), MYSA ArcGIS (dengue), LocationIQ (places), DeepSeek (food AI)
+- **Nutrition & Food Insights**: OCR + AI extraction mapped to a curated nutrition catalogue for personalised meal analysis
 - **HRV Stress Awareness**: Stress cues are computed locally from heart rate variability and recovery signals; insights are informational and not medical advice
 
 ## 🏗️ Architecture
@@ -25,8 +26,8 @@ This is a monorepo containing:
 
 ### Privacy-First Design
 
-- **No PII stored on backend** - All user data stays on device using encrypted storage (SQLCipher for health history; MMKV for key‑value data)
-- **Backend as proxy** - Server only proxies external API calls and provides air quality data
+- **No PII stored on backend** - All user data stays on device using encrypted storage (SQLCipher for health history; MMKV for key-value data)
+- **Backend as data broker** - Server centralises external environmental, mobility, outbreak, and nutrition APIs without persisting personal state
 - **Local-first architecture** - User profiles, health data, and preferences stored exclusively on device
 
 ### Tech Stack
@@ -44,11 +45,12 @@ This is a monorepo containing:
 
 - **Node.js** with **Express.js** framework
 - **TypeScript** with strict compilation
-- **Multiple API integrations**: OpenAQ, AQICN, TomTom Traffic
-- **In-memory caching** with TTL support
+- **Multiple API integrations**: AQICN, OpenAQ, TomTom Traffic, MYSA ArcGIS, LocationIQ, DeepSeek
+- **In-memory caching** with TTL support and adaptive rate limiting
+- **Nutrition catalogue** powered by bundled SQLite (`better-sqlite3`)
 - **Rate limiting** and security middleware
 
-## � Geotting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -88,6 +90,12 @@ cp .env.example .env
 OPENAQ_API_KEY=your_openaq_api_key_here
 AQICN_API_KEY=your_aqicn_api_key_here
 TOMTOM_API_KEY=your_tomtom_api_key_here
+LOCATIONIQ_API_KEY=your_locationiq_api_key_here
+DEEPSEEK_API_KEY=your_deepseek_api_key_here
+# Optional extras
+PY_PREDICT_BASE_URL=http://localhost:8090
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_UNSIGNED_PRESET=your_unsigned_preset
 ```
 
 5. Start the development server:
@@ -97,6 +105,10 @@ npm run dev
 ```
 
 The backend will be available at `http://localhost:3000`.
+
+> Optional: if you need dengue predictions, run the Python microservice configured at `PY_PREDICT_BASE_URL` before invoking `/api/dengue/predict`.
+
+> Optional: to refresh the bundled nutrition database, run `npm run seed:nutrition` (requires access to the seed data under `backend/scripts/data`).
 
 ### Mobile App Setup
 
@@ -178,19 +190,28 @@ npx expo run:ios --device  # or npx expo run:android --device
 
 ## 🔐 Privacy Principles
 
-- **Zero PII Storage**: Backend only receives coordinates for air quality lookup
+- **Zero PII Storage**: Backend only receives environmental queries (coordinates, search terms) and never stores personal identifiers
 - **Local-First Architecture**: User profiles, health data, and preferences stored exclusively on device
 - **Transparent Data Usage**: Clear explanations of why data is needed and how it's used
 - **User Control**: Easy data export and complete deletion capabilities
-- **Encrypted Storage**: Health history encrypted with SQLCipher (expo-sqlite); other key‑value data encrypted with MMKV
+- **Encrypted Storage**: Health history encrypted with SQLCipher (expo-sqlite); other key-value data encrypted with MMKV
 
 ## 📊 API Endpoints
 
 The backend provides the following endpoints:
 
-- `GET /api/air-quality` - Fetch air quality data for coordinates
-- `GET /api/traffic/congestion` - Get traffic congestion factors
-- `GET /api/health` - Service health check
+- `GET /api/air-quality` - Fetch AQI and pollutant data (AQICN primary, OpenAQ fallback)
+- `GET /api/air-quality/status` - Inspect cache utilisation and rate limits
+- `GET /api/air-quality/aqicn` - Retrieve AQICN readings by coordinates or station
+- `GET /api/traffic/congestion` - Get congestion factors from TomTom
+- `GET /api/traffic/status` - Inspect traffic service configuration
+- `GET /api/dengue/states|hotspots|outbreaks` - Access MYSA ArcGIS datasets
+- `GET /api/dengue/predict` - Proxy dengue predictions from the Python service
+- `GET /api/location/autocomplete` - LocationIQ-backed autocomplete
+- `POST /api/food/analyze` - Analyze meals via DeepSeek + nutrition DB
+- `GET /api/food/search` / `GET /api/food/:id` - Nutrition catalogue lookup
+- `POST /api/ai/extract` - Raw DeepSeek text/image extraction
+- `GET /api/health` - Backend health check
 
 See [backend/README.md](backend/README.md) for detailed API documentation.
 
@@ -271,17 +292,71 @@ app/
 ```
 backend/
 ├── src/
-│   ├── controllers/      # Request handlers
-│   ├── services/         # Business logic
-│   ├── routes/           # Express routes
-│   ├── middleware/       # Custom middleware
-│   └── models/           # TypeScript interfaces
+│   ├── controllers/      # Request handlers (air, traffic, dengue, food, etc.)
+│   ├── routes/           # Express route definitions
+│   ├── services/         # Integrations & domain logic (AQICN, TomTom, DeepSeek…)
+│   ├── middleware/       # Error handling, logging, security layers
+│   ├── models/           # TypeScript interfaces
+│   ├── utils/            # Config, helpers, OCR worker
+│   └── settings/         # Nutrition thresholds and portion metadata
+├── scripts/              # Nutrition DB tooling
+├── nutrition.db          # Bundled nutrition catalogue (read-only)
+├── eng.traineddata       # OCR language data for receipts
 └── package.json
 ```
 
 ## 🧪 Testing
 
 Currently the project focuses on development. Testing infrastructure will be added in future iterations.
+
+## Development Workflow
+
+### Local Development Setup
+
+```bash
+# Backend setup
+cd backend
+npm install
+cp .env.example .env
+npm run dev
+
+# Mobile app setup
+cd app
+npm install
+npx pod-install  # iOS only
+npm start
+```
+
+### Testing Strategy
+
+- **Unit Tests**: Individual service and component testing
+- **Integration Tests**: API endpoint and database interaction testing
+- **E2E Tests**: Complete user flow testing
+- **Performance Tests**: Load testing and benchmarking
+
+## Feature Status
+
+### Not Yet Implemented
+
+- ❌ Advanced health analytics
+- ❌ Push notifications
+- ❌ Data export functionality
+- ❌ Biometric authentication
+- ❌ Advanced avatar animations based on health status
+
+### Future Considerations
+
+#### Scalability Enhancements
+
+- **Database Integration**: Add PostgreSQL for data persistence and analytics
+- **Redis Caching**: Replace in-memory cache with Redis for scalability
+- **Microservices**: Split services by domain (air quality, weather, analytics)
+- **Geographic Sharding**: Distribute data by geographic regions
+
+#### Feature Expansions
+
+- **Machine Learning**: Predictive health insights based on environmental patterns
+- **Real-time Updates**: WebSocket connections for live environmental data
 
 ## 🤝 Contributing
 

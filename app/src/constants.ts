@@ -29,8 +29,8 @@ export const FULL_SLEEP_MINUTES = 7.5 * 60; // 100% energy when last-night sleep
 export const AWAKE_DEPLETION_PER_MIN = 100 / (24 * 60); // 24 hours to reach 0%
 export const TICK_MS = 30 * 1000; // update roughly every 30s
 
-export const RPM_SUBDOMAIN = 'mirrox';
-export const RPM_APPLICATION_ID = '68ab0e092240338178fb429e';
+export const RPM_SUBDOMAIN = process.env.EXPO_PUBLIC_RPM_SUBDOMAIN;
+export const RPM_APPLICATION_ID = process.env.EXPO_PUBLIC_RPM_APPLICATION_ID;
 export const USER_PROFILE_KEY = 'user_profile';
 export const AVATAR_URL_KEY = 'avatar_url';
 export const AVATAR_CACHE_KEY = 'avatar_cache';

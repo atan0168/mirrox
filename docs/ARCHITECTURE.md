@@ -22,39 +22,62 @@ The Digital Twin application is a privacy-first mobile wellness platform that cr
 ```mermaid
 graph TB
     subgraph "Mobile App (React Native)"
-        A[User Interface] --> B[Local Storage Service]
-        A --> C[API Service]
-        B --> D[MMKV Storage]
-        B --> E[SQLite]
-        C --> I[Backend API Client]
+        UI[UI Layer] --> LocalStore[Local Storage Service]
+        UI --> ApiClient[Backend API Service]
+        LocalStore --> MMKV[Encrypted MMKV Store]
+        LocalStore --> DeviceDB[SQLCipher]
+        ApiClient --> BackendClient[BackendApiService]
 
         subgraph "Local Data"
-            D --> F[User Profile]
-            D --> G[Avatar Preferences]
-            D --> H[App Settings]
-            E --> P[Health Metrics]
-            E --> Q[Alerts]
+            MMKV --> Profile[User Profile]
+            MMKV --> Avatar[Avatar Preferences]
+            MMKV --> Settings[App Settings]
+            DeviceDB --> Health[Health Metrics]
+            DeviceDB --> Alerts[Alert History]
         end
     end
 
-    subgraph "Backend Services (Node.js)"
-        I --> J[Express API Gateway]
-        J --> K[Air Quality Controller]
+    subgraph "Backend (Node.js + TypeScript)"
+        BackendClient --> Express[Express App + Middleware]
+        Express --> AirCtrl[AirQualityController]
+        Express --> TrafficCtrl[TrafficController]
+        Express --> DengueCtrl[DengueController]
+        Express --> LocationCtrl[LocationController]
+        Express --> FoodCtrl[FoodController]
+        Express --> AiCtrl[AI Router]
 
-        K --> N[In-Memory Cache Service]
+        AirCtrl --> CacheSvc[CacheService]
+        TrafficCtrl --> CacheSvc
+        DengueCtrl --> CacheSvc
+        AirCtrl --> RateLimiter[RateLimiterService]
 
-        N --> O[Memory Cache]
+        subgraph "Domain Services"
+            AirCtrl --> AQICNService[AQICNService]
+            AirCtrl --> OpenAQService["ApiService (OpenAQ)"]
+            TrafficCtrl --> TrafficService[TrafficService]
+            DengueCtrl --> DengueService[DengueService]
+            DengueCtrl --> PredictService[PredictionService]
+            LocationCtrl --> LocationService[LocationService]
+            FoodCtrl --> NutritionService[NutritionService]
+            FoodCtrl --> DeepseekService[DeepseekService]
+            AiCtrl --> DeepseekService
+        end
+
+        CacheSvc --> InMemory[(In-memory Cache)]
+        NutritionService --> NutritionDB[(nutrition.db)]
+        DeepseekService --> OcrWorker[OCR Worker]
+        OcrWorker --> OcrAssets[(eng.traineddata)]
     end
 
-    subgraph "External APIs"
-        K --> T[OpenAQ API]
-        K --> S[AQICN API]
-    end
-
-    subgraph "Infrastructure"
-        J --> W[Rate Limiter]
-        J --> X[Security Middleware]
-        J --> Y[Logging Service]
+    subgraph "External Services"
+        AQICNService --> AQICN[AQICN API]
+        OpenAQService --> OpenAQ[OpenAQ API]
+        TrafficService --> TomTom[TomTom Traffic Flow API]
+        DengueService --> MYSA[MYSA ArcGIS Proxy]
+        PredictService --> PythonPredict[Python Prediction Service]
+        LocationService --> LocationIQ[LocationIQ Autocomplete]
+        DeepseekService --> DeepSeek[DeepSeek API]
+        DeepseekService -. optional .-> Cloudinary[Cloudinary Uploads]
     end
 ```
 
@@ -62,48 +85,47 @@ graph TB
 
 ```mermaid
 sequenceDiagram
-    participant User as Mobile App
-    participant Local as Local Storage (MMKV)
-    participant Backend as Node.js API
-    participant Cache as In-Memory Cache
-    participant DB as SQLite Database
-    participant Alerts as Alert Rules Engine
-    participant External as External APIs
+    participant App as Mobile App
+    participant Backend as Express API
+    participant Cache as CacheService
+    participant AQICN as AQICN API
+    participant OpenAQ as OpenAQ API
+    participant TomTom as TomTom API
+    participant MYSA as MYSA ArcGIS
+    participant DeepSeek as DeepSeek API
+    participant Nutrition as nutrition.db
+    participant Python as Python Predict
 
-    Note over User,External: Initial Setup & Data Collection
-    User->>Local: Store user profile (sleep, commute, gender, skin tone)
-    User->>Backend: Request air quality data (lat, lon only)
-
-    Backend->>Cache: Check cache for location
-    alt Cache Hit
-        Cache-->>Backend: Return cached data
-    else Cache Miss
-        Backend->>External: Fetch fresh air quality data (OpenAQ/AQICN)
-        External-->>Backend: Return air quality data
-        Backend->>Cache: Cache processed data
+    Note over App,Backend: Air quality request
+    App->>Backend: GET /api/air-quality?latitude&longitude
+    Backend->>Cache: lookup geokey
+    alt Cache hit
+        Cache-->>Backend: cached payload
+    else Cache miss
+        Backend->>AQICN: fetch nearest station AQI
+        alt AQICN success
+            AQICN-->>Backend: AQI reading
+        else AQICN failure
+            Backend->>OpenAQ: fetch fallback measurements
+            OpenAQ-->>Backend: measurement set
+        end
+        Backend->>Cache: store normalized response
     end
+    Backend-->>App: AQI summary + metadata
 
-    %% Persist metrics in SQLite
-    Backend->>DB: Upsert health metrics (AQI, PM2.5, PM10, NO2, etc. + timestamps, location)
+    Note over App,Nutrition: Food analysis request
+    App->>Backend: POST /api/food/analyze
+    Backend->>DeepSeek: extract FOOD_ITEM / DRINK_ITEM
+    DeepSeek-->>Backend: structured items
+    Backend->>Nutrition: lookup canonical nutrients
+    Backend-->>App: nutrition totals + per-item detail
 
-    %% Generate alerts from data in the database
-    Backend->>Alerts: Evaluate alert rules (reads latest metrics from DB)
-    Alerts->>DB: Insert/Update alerts (threshold breaches, trends, personal risk)
-
-    %% Respond to app
-    Backend-->>User: Return air quality data (+latest relevant alerts)
-    User->>Local: Combine with personal data (profile from MMKV)
-    User->>User: Generate avatar & display health status + alerts
-
-    Note over User,External: Ongoing Usage
-    User->>Backend: Periodic air quality updates (background/foreground)
-    Backend->>Cache: Update/refresh cache as needed
-    Backend->>External: Fetch fresh data when cache is stale
-    External-->>Backend: Return updated metrics
-    Backend->>DB: Append/upsert new metrics rows
-    Backend->>Alerts: Re-evaluate rules on stored metrics
-    Alerts->>DB: Persist new/updated alerts (ack status, next review)
-    Backend-->>User: Send incremental updates (metrics + alerts)
+    Note over App,TomTom: Other feature endpoints
+    App->>Backend: GET /api/traffic | /api/dengue | /api/location
+    Backend->>TomTom: congestion factor query
+    Backend->>MYSA: dengue hotspot/outbreak query
+    Backend->>Python: dengue prediction (optional)
+    Backend-->>App: domain-specific response with cache metadata
 ```
 
 ## Component Architecture
@@ -123,7 +145,7 @@ graph LR
     C --> G[Health Analytics Service]
 
     D --> H[MMKV Storage]
-    D --> P[Sqlite]
+    D --> P[SqlCipher]
     E --> I[Backend API Client]
     F --> J[Avatar Renderer]
     G --> K[Health Calculator]
@@ -154,14 +176,21 @@ graph TD
     subgraph "TabNavigator"
         E[Dashboard Screen]
         F[Stats Screen]
-        G[Settings Screen]
+        G[Food Screen]
+        H[Settings Screen]
     end
 
     D --> E
 
-    E --> H[Alert Screen]
-    F --> H
-    G --> H
+    E --> I[Alert Screen]
+    F --> I
+    G --> I
+    H --> I
+    E --> J[Achievement Screen]
+    E --> K[Quest History Screen]
+    G --> L[Meal Summary Screen]
+    G --> M[Meal History Screen]
+    H --> N[Profile Edit Screen]
 ```
 
 ### Backend Services (Node.js)
@@ -171,31 +200,52 @@ graph TD
 ```mermaid
 graph TB
     subgraph "API Gateway Layer"
-        A[Express Router] --> B[Authentication Middleware]
-        B --> C[Rate Limiting]
-        C --> D[Request Validation]
+        Router[Express Router] --> Security[Helmet, CORS, Compression]
+        Security --> GlobalRateLimiter[Express Rate Limiter]
+        GlobalRateLimiter --> Validation[Request Validation (Zod)]
     end
 
     subgraph "Controller Layer"
-        D --> E[Air Quality Controller]
+        Validation --> AirCtrl[AirQualityController]
+        Validation --> TrafficCtrl[TrafficController]
+        Validation --> DengueCtrl[DengueController]
+        Validation --> LocationCtrl[LocationController]
+        Validation --> FoodCtrl[FoodController]
+        Validation --> AiCtrl[AI Router]
     end
 
     subgraph "Service Layer"
-        E --> I[OpenAQ API Service]
-        E --> J[AQICN Service]
-        E --> K[Rate Limiter Service]
-
-        I --> M[Cache Service]
-        J --> M
+        AirCtrl --> AQICNService[AQICNService]
+        AirCtrl --> OpenAQService[ApiService]
+        AirCtrl --> RateLimiter[RateLimiterService]
+        AirCtrl --> CacheSvc[CacheService]
+        TrafficCtrl --> TrafficService[TrafficService]
+        TrafficService --> CacheSvc
+        DengueCtrl --> DengueService[DengueService]
+        DengueService --> CacheSvc
+        DengueCtrl --> PredictionService[PredictionService]
+        LocationCtrl --> LocationService[LocationService]
+        FoodCtrl --> NutritionService[NutritionService]
+        FoodCtrl --> DeepseekService[DeepseekService]
+        AiCtrl --> DeepseekService
     end
 
-    subgraph "Data Layer"
-        M --> N[In-Memory Cache]
+    subgraph "Internal Data"
+        CacheSvc --> InMemory[(In-memory cache)]
+        NutritionService --> NutritionDB[(nutrition.db)]
+        DeepseekService --> OcrWorker[OCR Worker]
+        OcrWorker --> OcrAsset[(eng.traineddata)]
     end
 
-    subgraph "External Integration"
-        I --> P[OpenAQ API]
-        J --> Q[AQICN API]
+    subgraph "External Integrations"
+        AQICNService --> AQICN[AQICN API]
+        OpenAQService --> OpenAQ[OpenAQ API]
+        TrafficService --> TomTom[TomTom Traffic Flow]
+        DengueService --> MYSA[MYSA ArcGIS Proxy]
+        PredictionService --> PythonPredict[Python Predict Service]
+        LocationService --> LocationIQ[LocationIQ Autocomplete]
+        DeepseekService --> DeepSeek[DeepSeek API]
+        DeepseekService -. optional .-> Cloudinary[Cloudinary Uploads]
     end
 ```
 
@@ -287,31 +337,26 @@ interface APIResponse<T> {
 
 ```mermaid
 graph TB
-    subgraph "Mobile App Security"
-        A[Biometric Authentication] --> B[Local Data Encryption]
-        B --> C["Secure Storage (MMKV) & SqlCipher"]
-        C --> D[Certificate Pinning]
+    subgraph "Client Safeguards"
+        Biometrics[Biometric / PIN Guard] --> LocalEncrypt[Encrypted MMKV Storage]
+        LocalEncrypt --> Pinning[Certificate Pinning]
     end
 
-    subgraph "Network Security"
-        D --> E[HTTPS/TLS 1.3]
-        E --> F[API Gateway]
-        F --> G[Rate Limiting]
-        G --> H[Request Validation]
+    subgraph "Transport Security"
+        Pinning --> TLS[HTTPS (TLS 1.2+)]
+        TLS --> Gateway[Express Gateway with Helmet & CORS]
     end
 
-    subgraph "Backend Security"
-        H --> I[CORS Policy]
-        I --> J[Security Headers]
-        J --> K[Input Sanitization]
-        K --> L[SQL Injection Prevention]
+    subgraph "Backend Hardening"
+        Gateway --> RateLimit[Global Rate Limiting]
+        RateLimit --> Validation[Zod Validation & Sanitisation]
+        Validation --> Errors[Centralised Error Handler]
     end
 
-    subgraph "Infrastructure Security"
-        L --> M[VPC Network]
-        M --> N[Database Encryption]
-        N --> O[Backup Encryption]
-        O --> P[Access Logging]
+    subgraph "Operational Controls"
+        Errors --> Logging[Structured Logging & Request Tracing]
+        Logging --> Monitoring[Health/Status Endpoints]
+        Monitoring --> Secrets[Environment-based Secrets]
     end
 ```
 
@@ -328,21 +373,18 @@ graph TB
 
 ```mermaid
 graph LR
-    A[Client Request] --> B{Cache Check}
-    B -->|Hit| C[Return Cached Data]
-    B -->|Miss| D[Fetch from External API]
-    D --> E[Process Data]
-    E --> F[Store in Cache]
-    F --> G[Return to Client]
+    Request[Controller request] --> Check{Cache hit?}
+    Check -->|Yes| Serve[Return cached payload + cacheAge]
+    Check -->|No| Fetch[Call domain service]
+    Fetch --> Normalise[Normalise & enrich response]
+    Normalise --> Store[CacheService.set(key, data, ttl)]
+    Store --> Serve
 
-    subgraph "Cache Layers"
-        H[In-Memory Cache - Hot Data]
-        I[External APIs - Cold Data]
+    subgraph "CacheService Internals"
+        Check --> CacheGet[cache.get(key)]
+        Store --> CacheSet[cache.set(key, data, ttl)]
+        CacheSet --> Memory[(In-memory map)]
     end
-
-    C --> H
-    F --> H
-    D --> I
 ```
 
 ### Optimization Strategies
@@ -358,43 +400,45 @@ graph LR
 
 ```mermaid
 graph TB
-    subgraph "Client Tier"
-        A[iOS App]
-        B[Android App]
+    subgraph "Clients"
+        IOS[iOS App]
+        Android[Android App]
     end
 
-    subgraph "Load Balancer"
-        C[Application Load Balancer]
+    subgraph "Backend Runtime"
+        Express[Node.js Express API]
+        Python[Python Prediction Service]
     end
 
-    subgraph "Application Tier"
-        D[Node.js Instance 1]
-        E[Node.js Instance 2]
-        F[Node.js Instance N]
+    subgraph "Local Assets"
+        Nutrition[(nutrition.db)]
+        Ocr[(eng.traineddata)]
     end
 
-    subgraph "Cache Tier"
-        G[Redis Cluster]
+    subgraph "External APIs"
+        AQICN[AQICN]
+        OpenAQ[OpenAQ]
+        TomTom[TomTom Traffic Flow]
+        MYSA[MYSA ArcGIS]
+        LocationIQ[LocationIQ]
+        DeepSeek[DeepSeek]
+        Cloudinary[Cloudinary (optional)]
     end
 
-    subgraph "External Services"
-        H[OpenAQ API]
-        I[AQICN API]
-    end
+    IOS --> Express
+    Android --> Express
 
-    A --> C
-    B --> C
-    C --> D
-    C --> E
-    C --> F
-
-    D --> G
-    E --> G
-    F --> G
-
-    D --> H
-    E --> I
-    F --> H
+    Express --> AQICN
+    Express --> OpenAQ
+    Express --> TomTom
+    Express --> MYSA
+    Express --> LocationIQ
+    Express --> DeepSeek
+    Express -. optional .-> Cloudinary
+    Express --> Nutrition
+    Express --> Ocr
+    Express --> Python
+    Python --> Express
 ```
 
 ### Environment Configuration
@@ -459,77 +503,3 @@ graph TB
 - **Application Health**: API endpoint responsiveness
 - **Cache Health**: In-memory cache status and memory usage
 - **External API Health**: OpenAQ and AQICN service availability
-
-## Development Workflow
-
-### Local Development Setup
-
-```bash
-# Backend setup
-cd backend
-npm install
-cp .env.example .env
-npm run dev
-
-# Mobile app setup
-cd app
-npm install
-npx pod-install  # iOS only
-npm start
-```
-
-### Testing Strategy
-
-- **Unit Tests**: Individual service and component testing
-- **Integration Tests**: API endpoint and database interaction testing
-- **E2E Tests**: Complete user flow testing
-- **Performance Tests**: Load testing and benchmarking
-
-## Current Implementation Status
-
-### Implemented Features
-
-#### Mobile App (React Native)
-
-- ✅ User onboarding flow (Splash → Welcome → Questionnaire → Avatar Creation → Dashboard)
-- ✅ Local storage using MMKV for user profiles
-- ✅ 3D avatar rendering with Three.js
-- ✅ Air quality data integration
-- ✅ Avatar customization (skin tone, gender-based models)
-- ✅ Settings screen
-
-#### Backend (Node.js)
-
-- ✅ Express API with security middleware (helmet, CORS, rate limiting)
-- ✅ Air quality data from OpenAQ and AQICN APIs
-- ✅ In-memory caching with TTL
-- ✅ Rate limiting and request validation
-- ✅ Health check endpoints
-
-### Not Yet Implemented
-
-- ❌ Weather data integration
-- ❌ Database persistence (PostgreSQL/Redis)
-- ❌ Advanced health analytics
-- ❌ Push notifications
-- ❌ Data export functionality
-- ❌ Biometric authentication
-- ❌ Advanced avatar animations based on health status
-
-### Future Considerations
-
-#### Scalability Enhancements
-
-- **Database Integration**: Add PostgreSQL for data persistence and analytics
-- **Redis Caching**: Replace in-memory cache with Redis for scalability
-- **Microservices**: Split services by domain (air quality, weather, analytics)
-- **Geographic Sharding**: Distribute data by geographic regions
-
-#### Feature Expansions
-
-- **Weather Integration**: Add weather data to complement air quality information
-- **Machine Learning**: Predictive health insights based on environmental patterns
-- **Real-time Updates**: WebSocket connections for live environmental data
-- **Wearable Integration**: Sync with fitness trackers and health devices
-
-This architecture accurately reflects the current implementation while providing a roadmap for future enhancements.

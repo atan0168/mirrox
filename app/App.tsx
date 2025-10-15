@@ -32,8 +32,11 @@ import FoodDiaryHistoryScreen from './src/screens/FoodDiaryHistoryScreen';
 import FoodDiaryHistoryDetailScreen from './src/screens/FoodDiaryHistoryDetailScreen';
 import type { RootStackParamList } from './src/navigation/types';
 import EditProfileScreen from './src/screens/EditProfileScreen';
+import { LogBox } from 'react-native';
 
 const Stack = createStackNavigator<RootStackParamList>();
+
+LogBox.ignoreAllLogs(true);
 
 // Create a client
 const queryClient = new QueryClient({
