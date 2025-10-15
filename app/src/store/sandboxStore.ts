@@ -239,7 +239,7 @@ function buildAirQualityData(
       timezone: 'UTC',
       country: {
         id: 0,
-        code: countryCode,
+        code: countryCode as string,
         name: countryCode === 'MY' ? 'Malaysia' : 'Sandbox',
       },
       coordinates: { latitude, longitude },
@@ -357,7 +357,7 @@ function buildDengueData(
   } = {
     success: true,
     data: {
-      state: region,
+      state: region as string,
       as_of: {
         ew_year: now.getUTCFullYear(),
         ew: week,

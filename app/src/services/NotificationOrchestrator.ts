@@ -5,7 +5,7 @@ import { localStorageService } from './LocalStorageService';
 import { healthDataService } from './HealthDataService';
 import type { HydrationState } from '../store/hydrationStore';
 import { useHydrationStore } from '../store/hydrationStore';
-import type { HealthSnapshot } from '../models/Health';
+import type { HealthHistory, HealthSnapshot } from '../models/Health';
 
 const engine = new NotificationRuleEngine(buildNotificationRules());
 
@@ -31,8 +31,13 @@ function computeIsSleeping(
 
 async function buildContext(now: Date) {
   const profile = await localStorageService.getUserProfile();
-  const latestSnapshot = await healthDataService.syncNeeded(30, now);
-  const history = await healthDataService.getHistory(30);
+  let latestSnapshot: HealthSnapshot | null = null;
+  let history: HealthHistory | null = null;
+
+  if (profile) {
+    latestSnapshot = await healthDataService.syncNeeded(30, now);
+    history = await healthDataService.getHistory(30);
+  }
   let hydrationState: HydrationState | null = null;
   try {
     hydrationState = useHydrationStore.getState();
@@ -62,6 +67,9 @@ export async function runNotificationRules(
 ): Promise<AlertItem[]> {
   const now = new Date();
   const context = await buildContext(now);
+  if (!context.profile) {
+    return [];
+  }
 
   return await NotificationRuleEngine.dispatch(engine, context, {
     allowedRules: options.allowedRules,
