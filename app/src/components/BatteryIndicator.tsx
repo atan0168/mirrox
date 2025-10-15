@@ -1,10 +1,55 @@
-import React, { useMemo, useState } from 'react';
-import { Text, View, Pressable } from 'react-native';
+import React, { FC, useMemo, useState } from 'react';
+import { Text, View, Pressable, GestureResponderEvent } from 'react-native';
 import { FULL_SLEEP_MINUTES } from '../constants';
 import { clamp } from '../utils/mathUtils';
 import { useEnergyStore } from '../store/energyStore';
 import EnergyInfoModal from './ui/EnergyInfoModal';
 import { colors } from '../theme';
+
+const UnknownBattery: FC<{
+  onPress: (event: GestureResponderEvent) => void;
+}> = ({ onPress }) => (
+  <Pressable
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityHint="Opens an explanation of the energy battery"
+    style={{
+      flexDirection: 'row',
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderColor: colors.neutral[50],
+      borderRadius: 4,
+      backgroundColor: 'rgba(0,0,0,0.25)',
+      alignItems: 'center',
+    }}
+  >
+    {Array.from({ length: 3 }).map((_, i) => (
+      <View
+        key={i}
+        style={{
+          width: 4,
+          height: 8,
+          marginHorizontal: 1,
+          borderRadius: 1,
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderColor: colors.neutral[50],
+        }}
+      />
+    ))}
+    <Text
+      style={{
+        marginLeft: 6,
+        color: colors.neutral[50],
+        fontSize: 10,
+        fontWeight: '600',
+      }}
+    >
+      ?
+    </Text>
+  </Pressable>
+);
 
 const BatteryIndicator = ({
   sleepMinutes,
@@ -18,58 +63,6 @@ const BatteryIndicator = ({
     () => typeof energyPct === 'number' || (sleepMinutes ?? 0) > 0,
     [energyPct, sleepMinutes]
   );
-
-  if (!hasSleep)
-    return (
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}
-        accessibilityLabel={`Energy battery: unknown percentage`}
-      >
-        <Pressable
-          onPress={() => setShowInfo(true)}
-          accessibilityRole="button"
-          accessibilityHint="Opens an explanation of the energy battery"
-          style={{
-            flexDirection: 'row',
-            paddingHorizontal: 4,
-            paddingVertical: 4,
-            borderWidth: 1,
-            borderColor: colors.neutral[50],
-            borderRadius: 4,
-            backgroundColor: 'rgba(0,0,0,0.25)',
-            alignItems: 'center',
-          }}
-        >
-          {Array.from({ length: 3 }).map((_, i) => (
-            <View
-              key={i}
-              style={{
-                width: 4,
-                height: 8,
-                marginHorizontal: 1,
-                borderRadius: 1,
-                backgroundColor: 'transparent',
-                borderWidth: 1,
-                borderColor: colors.neutral[50],
-              }}
-            />
-          ))}
-          <Text
-            style={{
-              marginLeft: 6,
-              color: colors.neutral[50],
-              fontSize: 10,
-              fontWeight: '600',
-            }}
-          >
-            ?
-          </Text>
-        </Pressable>
-      </View>
-    );
 
   // Compute display percentage from store or fallback from sleep minutes
   const pct = clamp(
@@ -109,33 +102,37 @@ const BatteryIndicator = ({
       }}
       accessibilityLabel={`Energy battery: ${Math.round(pct)} percent`}
     >
-      <Pressable
-        onPress={() => setShowInfo(true)}
-        accessibilityRole="button"
-        accessibilityHint="Opens an explanation of the energy battery"
-        style={{
-          flexDirection: 'row',
-          paddingHorizontal: 4,
-          paddingVertical: 4,
-          borderWidth: 1,
-          borderColor: color,
-          borderRadius: 4,
-          backgroundColor: 'rgba(0,0,0,0.25)',
-          alignItems: 'center',
-        }}
-      >
-        {bars}
-        <Text
+      {hasSleep ? (
+        <Pressable
+          onPress={() => setShowInfo(true)}
+          accessibilityRole="button"
+          accessibilityHint="Opens an explanation of the energy battery"
           style={{
-            marginLeft: 6,
-            color,
-            fontSize: 10,
-            fontWeight: '600',
+            flexDirection: 'row',
+            paddingHorizontal: 4,
+            paddingVertical: 4,
+            borderWidth: 1,
+            borderColor: color,
+            borderRadius: 4,
+            backgroundColor: 'rgba(0,0,0,0.25)',
+            alignItems: 'center',
           }}
         >
-          {`${Math.round(pct)}%`}
-        </Text>
-      </Pressable>
+          {bars}
+          <Text
+            style={{
+              marginLeft: 6,
+              color,
+              fontSize: 10,
+              fontWeight: '600',
+            }}
+          >
+            {`${Math.round(pct)}%`}
+          </Text>
+        </Pressable>
+      ) : (
+        <UnknownBattery onPress={() => setShowInfo(true)} />
+      )}
 
       <EnergyInfoModal visible={showInfo} onClose={() => setShowInfo(false)} />
     </View>

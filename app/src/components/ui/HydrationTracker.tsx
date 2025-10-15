@@ -320,6 +320,7 @@ const styles = StyleSheet.create({
   },
   customSection: {
     marginBottom: spacing.lg,
+    gap: spacing.sm,
   },
   customControls: {
     flexDirection: 'row',

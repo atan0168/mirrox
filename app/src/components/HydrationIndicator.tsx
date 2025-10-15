@@ -193,6 +193,7 @@ const styles = StyleSheet.create({
   },
   trackerCard: {
     marginVertical: 0,
+    gap: spacing.sm,
   },
 });
 
