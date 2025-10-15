@@ -178,32 +178,41 @@ const DashboardScreen: React.FC = () => {
 
   // Scene selection from location
   useEffect(() => {
-    if (!userProfile) {
+    const permissionGranted =
+      locationPermissionStatus === Location.PermissionStatus.GRANTED;
+
+    if (!userProfile || !permissionGranted || !currentLocation) {
       if (autoScene !== 'home') setAutoScene('home');
       return;
     }
 
-    if (
-      locationPermissionStatus !== Location.PermissionStatus.GRANTED ||
-      !currentLocation
-    ) {
+    const homeLocation = userProfile.homeLocation ?? null;
+
+    if (!homeLocation) {
       if (autoScene !== 'home') setAutoScene('home');
       return;
     }
 
-    const homeLocation = userProfile.homeLocation || null;
-    const workLocation = userProfile.workLocation || null;
+    const workLocation = userProfile.workLocation ?? null;
 
-    const nearHome =
-      !!homeLocation &&
-      isWithinRadiusKm(currentLocation, homeLocation.coordinates, 1);
+    const nearHome = isWithinRadiusKm(
+      currentLocation,
+      homeLocation.coordinates,
+      2
+    );
     const nearWork =
       !!workLocation &&
-      isWithinRadiusKm(currentLocation, workLocation.coordinates, 1);
+      isWithinRadiusKm(currentLocation, workLocation.coordinates, 2);
 
-    let nextScene: SceneOption = 'home';
-    if (nearHome) nextScene = 'home';
-    else if (nearWork) nextScene = 'city';
+    let nextScene: SceneOption;
+
+    if (nearWork) {
+      nextScene = 'city';
+    } else if (nearHome) {
+      nextScene = 'home';
+    } else {
+      nextScene = 'zenpark';
+    }
 
     if (nextScene !== autoScene) setAutoScene(nextScene);
   }, [autoScene, currentLocation, locationPermissionStatus, userProfile]);
