@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { Droplet, Droplets, X } from 'lucide-react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { clamp } from '../utils/mathUtils';
 import { useHydrationStore } from '../store/hydrationStore';
 import { HydrationTracker } from './ui/HydrationTracker';
@@ -24,16 +25,18 @@ const getProgressColor = (progress: number) => {
 };
 
 export const HydrationIndicator: React.FC = () => {
-  const { currentHydrationMl, dailyGoalMl, getProgressPercentage } =
-    useHydrationStore();
+  const { getProgressPercentage } = useHydrationStore();
   const [isVisible, setIsVisible] = useState(false);
 
   const progress = clampProgress(getProgressPercentage());
   const displayProgress = Math.round(progress);
   const progressColor = useMemo(() => getProgressColor(progress), [progress]);
 
-  const currentAmount = Math.max(0, currentHydrationMl);
-  const goalAmount = Math.max(dailyGoalMl, 1);
+  const circleSize = 36;
+  const strokeWidth = 3;
+  const radius = (circleSize - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
     <>
@@ -45,21 +48,38 @@ export const HydrationIndicator: React.FC = () => {
         style={({ pressed }) => [
           styles.container,
           {
-            borderColor: progressColor,
             opacity: pressed ? 0.85 : 1,
           },
         ]}
       >
-        <View style={[styles.iconContainer, { borderColor: colors.sky[400] }]}>
+        <View style={styles.iconContainer}>
+          <Svg
+            width={circleSize}
+            height={circleSize}
+            style={{ position: 'absolute' }}
+          >
+            <Circle
+              cx={circleSize / 2}
+              cy={circleSize / 2}
+              r={radius}
+              stroke={colors.neutral[300]}
+              strokeWidth={strokeWidth}
+              fill="none"
+            />
+            <Circle
+              cx={circleSize / 2}
+              cy={circleSize / 2}
+              r={radius}
+              stroke={progressColor}
+              strokeWidth={strokeWidth}
+              fill="none"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${circleSize / 2} ${circleSize / 2})`}
+            />
+          </Svg>
           <Droplet size={16} color={colors.sky[400]} fill={colors.sky[400]} />
-        </View>
-        <View style={styles.content}>
-          <Text style={[styles.percentage, { color: progressColor }]}>
-            {displayProgress}%
-          </Text>
-          <Text style={styles.detailText}>
-            {currentAmount.toLocaleString()} / {goalAmount.toLocaleString()} mL
-          </Text>
         </View>
       </Pressable>
 
@@ -98,20 +118,15 @@ export const HydrationIndicator: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   iconContainer: {
-    width: 28,
-    height: 28,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
-    borderColor: colors.neutral[200],
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.sm,
   },
   content: {
     flex: 1,

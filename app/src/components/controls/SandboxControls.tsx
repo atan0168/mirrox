@@ -347,7 +347,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    marginTop: spacing.md,
     shadowColor: '#000000',
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -361,7 +360,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   headerTitle: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.base,
     fontWeight: '700',
     color: colors.neutral[900],
   },

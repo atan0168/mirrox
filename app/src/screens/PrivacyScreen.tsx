@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { colors, fontSize, spacing } from '../theme';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 
 interface PrivacyScreenProps {
   navigation: StackNavigationProp<RootStackParamList, 'Privacy'>;

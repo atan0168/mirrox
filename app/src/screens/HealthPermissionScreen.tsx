@@ -12,7 +12,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Button } from '../components/ui';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
 import { useHealthData } from '../hooks/useHealthData';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 
 type HealthPermissionScreenNavigationProp = StackNavigationProp<
   RootStackParamList,

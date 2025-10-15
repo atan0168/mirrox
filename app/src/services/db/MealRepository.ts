@@ -16,7 +16,8 @@ export type MealItemRow = {
   meta_json: string | null;
 };
 
-const getTodayDate = () => new Date().toISOString().split('T')[0];
+import { localDayKeyUtc } from '../../utils/datetimeUtils';
+const getTodayDate = () => localDayKeyUtc(new Date());
 
 export const MealsRepository = {
   async getMealByDate(date: string): Promise<MealRow | null> {
@@ -52,8 +53,21 @@ export const MealsRepository = {
     return inserted.id;
   },
 
+  async closeMealsBeforeDate(date: string): Promise<void> {
+    const db = await getDatabase();
+    await db.runAsync(
+      `UPDATE meals
+       SET ended_at = ?
+       WHERE date < ?
+         AND (ended_at IS NULL OR ended_at = 0)`,
+      [Date.now(), date]
+    );
+  },
+
   async ensureMealForToday(): Promise<number> {
-    return MealsRepository.ensureMealForDate(getTodayDate());
+    const today = getTodayDate();
+    await MealsRepository.closeMealsBeforeDate(today);
+    return MealsRepository.ensureMealForDate(today);
   },
 
   async closeMeal(mealId: number): Promise<void> {
@@ -132,6 +146,39 @@ export const MealsRepository = {
        ORDER BY id DESC`,
       [mealId]
     );
+  },
+
+  async listMealsWithSummary(limit?: number): Promise<
+    Array<
+      MealRow & {
+        total_energy_kcal: number;
+        item_count: number;
+      }
+    >
+  > {
+    const db = await getDatabase();
+    const query = `SELECT
+        m.id,
+        m.started_at,
+        m.ended_at,
+        m.date,
+        COALESCE(SUM(mi.energy_kcal), 0) AS total_energy_kcal,
+        COUNT(mi.id) AS item_count
+      FROM meals m
+      LEFT JOIN meal_items mi ON mi.meal_id = m.id
+      GROUP BY m.id
+      ORDER BY m.started_at DESC
+      ${limit && Number.isFinite(limit) ? 'LIMIT ?' : ''}`;
+
+    const rows = await db.getAllAsync<
+      MealRow & { total_energy_kcal: number | null; item_count: number | null }
+    >(query, limit && Number.isFinite(limit) ? [limit] : []);
+
+    return rows.map(row => ({
+      ...row,
+      total_energy_kcal: row.total_energy_kcal ?? 0,
+      item_count: row.item_count ?? 0,
+    }));
   },
 };
 

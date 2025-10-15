@@ -53,6 +53,7 @@ export default function FoodDiaryScreen() {
     null
   );
   const [loading, setLoading] = useState(false);
+  const [preparingMeal, setPreparingMeal] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [selectionVisible, setSelectionVisible] = useState(false);
   const [itemDecisions, setItemDecisions] = useState<ItemDecision[]>([]);
@@ -542,10 +543,40 @@ export default function FoodDiaryScreen() {
     };
   }, []);
 
-  // Refresh meal items on focus
+  // Refresh meal items on focus and ensure a fresh meal each day
   useFocusEffect(
     useCallback(() => {
-      void refetchMealItems();
+      let isActive = true;
+      setPreparingMeal(true);
+
+      const run = async () => {
+        try {
+          const result = await refetchMealItems({ throwOnError: false });
+          if (result.error) {
+            console.error('Failed to refresh meal items', result.error);
+            Alert.alert(
+              'Meal update failed',
+              "We could not refresh today's meal. Please try again."
+            );
+          }
+        } catch (error) {
+          console.error('Failed to refresh meal items', error);
+          Alert.alert(
+            'Meal update failed',
+            "We could not refresh today's meal. Please try again."
+          );
+        } finally {
+          if (isActive) {
+            setPreparingMeal(false);
+          }
+        }
+      };
+
+      void run();
+
+      return () => {
+        isActive = false;
+      };
     }, [refetchMealItems])
   );
 
@@ -587,6 +618,14 @@ export default function FoodDiaryScreen() {
 
   return (
     <View style={styles.container}>
+      {preparingMeal ? (
+        <View style={styles.preparingOverlay}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.preparingText}>
+            Preparing today&apos;s meal...
+          </Text>
+        </View>
+      ) : null}
       {statusMessage ? (
         <View style={styles.toastContainer}>
           <Text style={styles.toastText}>{statusMessage}</Text>
@@ -597,7 +636,21 @@ export default function FoodDiaryScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.headingText}>Hello, what did you have today?</Text>
+        <View style={styles.headingRow}>
+          <Text style={styles.headingText}>
+            Hello, what did you have today?
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.historyButton,
+              (preparingMeal || loading) && styles.historyButtonDisabled,
+            ]}
+            disabled={preparingMeal || loading}
+            onPress={() => navigation.navigate('FoodDiaryHistory' as never)}
+          >
+            <Text style={styles.historyButtonText}>History</Text>
+          </TouchableOpacity>
+        </View>
 
         <TextInput
           placeholder="e.g. I had some Roti canai and a cup of teh tarik"
@@ -693,6 +746,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.neutral[50],
+    position: 'relative',
+  },
+  preparingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  preparingText: {
+    marginTop: spacing.sm,
+    color: colors.neutral[700],
+    fontWeight: '600',
+    fontSize: fontSize.base,
   },
   toastContainer: {
     position: 'absolute',
@@ -721,8 +792,29 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     gap: spacing.sm,
   },
+  headingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   headingText: {
     fontSize: fontSize.lg,
+    fontWeight: '600',
+    flex: 1,
+  },
+  historyButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.neutral[800],
+  },
+  historyButtonDisabled: {
+    backgroundColor: colors.neutral[300],
+  },
+  historyButtonText: {
+    color: colors.white,
+    fontSize: fontSize.sm,
     fontWeight: '600',
   },
   diaryInput: {

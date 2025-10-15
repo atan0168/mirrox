@@ -27,7 +27,7 @@ import { colors, spacing, fontSize, borderRadius } from '../theme';
 import { useHealthData } from '../hooks/useHealthData';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { useEnergyNotificationsPreference } from '../hooks/useEnergyNotificationsPreference';
 import { useSleepHealthNotificationsPreference } from '../hooks/useSleepHealthNotificationsPreference';
 import {

@@ -1,9 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  backendApiService,
-  ArcGISResponse,
-  StateAttributes,
-} from '../services/BackendApiService';
+import { backendApiService } from '../services/BackendApiService';
+import { ArcGISResponse, StateAttributes } from '../models/Dengue';
 
 interface UseDengueStateStatsOptions {
   enabled?: boolean;

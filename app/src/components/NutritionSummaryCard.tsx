@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useMeal } from '../hooks/useMeal';
 import { TAG_LABEL } from '../constants';
 
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius, fontSize } from '../theme/layout';
 import { StackNavigationProp } from '@react-navigation/stack';

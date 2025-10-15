@@ -1,6 +1,5 @@
 export const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
-// Define available idle animations in order of preference
 export const AVAILABLE_ANIMATIONS = [
   { name: 'M_Standing_Expressions_007', label: 'Cough' },
   { name: 'wiping_sweat', label: 'Wipe Sweat' },
@@ -12,8 +11,11 @@ export const AVAILABLE_ANIMATIONS = [
   { name: 'sleeping', label: 'Sleeping' },
   { name: 'sleeping_idle', label: 'Idle Sleeping' },
   { name: 'slump', label: 'Slump' },
+  { name: 'hype_dance', label: 'Hype Dance' },
+  { name: 'pump_jump', label: 'Pump Jump' },
 ];
 
+// Define available idle animations in order of preference
 export const IDLE_ANIMATIONS = [
   'M_Standing_Idle_Variations_007',
   'M_Standing_Idle_Variations_003',

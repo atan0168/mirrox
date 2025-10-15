@@ -1,3 +1,4 @@
+import QuestList from '../components/QuestList';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -8,30 +9,18 @@ import {
   SafeAreaView,
   Animated,
   Easing,
-  Switch,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import * as Location from 'expo-location';
 import AvatarExperience from '../components/avatar/AvatarExperience';
-import { EffectsList, EffectData, Button } from '../components/ui';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { colors, spacing, fontSize } from '../theme';
 import { useAQICNAirQuality } from '../hooks/useAirQuality';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useDeveloperControlsPreference } from '../hooks/useDeveloperControlsPreference';
-import {
-  calculateCombinedEnvironmentalSkinEffects,
-  calculateSmogEffects,
-} from '../utils/skinEffectsUtils';
+import { calculateCombinedEnvironmentalSkinEffects } from '../utils/skinEffectsUtils';
 import { getCombinedRecommendedExpression } from '../utils/expressionUtils';
 import { useHealthData } from '../hooks/useHealthData';
 import { useDengueNearby } from '../hooks/useDengueNearby';
-import { SkinToneButton } from '../components/controls/SkinToneButton';
-import SceneSwitcher, {
-  SceneOption,
-} from '../components/controls/SceneSwitcher';
-import RainIntensityControls from '../components/controls/RainIntensityControls';
-import SandboxControls from '../components/controls/SandboxControls';
-import { FacialExpressionControls } from '../components/controls/FacialExpressionControls';
+import { SceneOption } from '../components/controls/SceneSwitcher';
 import { useAvatarStore } from '../store/avatarStore';
 import { useIsFocused } from '@react-navigation/native';
 import OnboardingOverlay from '../components/ui/OnboardingOverlay';
@@ -39,11 +28,24 @@ import { ENV_REFRESH_INTERVAL_MS } from '../constants';
 import { useUIStore } from '../store/uiStore';
 import { useHydrationStore } from '../store/hydrationStore';
 import { hydrationService } from '../services/HydrationService';
+import { CelebrationSpotlight } from '../components/CelebrationSpotlight';
+import { CelebrationIndicator } from '../components/CelebrationIndicator';
 import { Coordinates } from '../models/User';
 import { isWithinRadiusKm } from '../utils/geoUtils';
+import { useQuestCelebrations } from '../hooks/useQuestCelebrations';
+import DeveloperControls from '../components/controls/DeveloperControls';
 
 const DashboardScreen: React.FC = () => {
-  const isFocused = useIsFocused();
+  const { developerControlsEnabled } = useDeveloperControlsPreference();
+
+  const {
+    activeCelebration,
+    indicatorCelebration,
+    handleOpenCelebration,
+    handleDismissCelebration,
+    dev: { seed7DayHistory, seed6ThenCompleteToday, clearHistoryForRetest },
+  } = useQuestCelebrations();
+
   const { data: userProfile, isLoading, error } = useUserProfile();
   const [skeletonAnim] = useState(new Animated.Value(0));
   const [manualSkinToneAdjustment, setManualSkinToneAdjustment] = useState(0);
@@ -71,23 +73,10 @@ const DashboardScreen: React.FC = () => {
   const dashboardOnboardingSeen = useUIStore(s => s.dashboardOnboardingSeen);
   const markOnboardingSeen = useUIStore(s => s.markDashboardOnboardingSeen);
   const resetOnboardingSeen = useUIStore(s => s.resetDashboardOnboarding);
-  // Eye-bags controls via store (no prop drilling)
-  const eyeBagsOverride = useAvatarStore(s => s.eyeBagsOverrideEnabled);
-  const setEyeBagsOverride = useAvatarStore(s => s.setEyeBagsOverrideEnabled);
-  const eyeBagsIntensity = useAvatarStore(s => s.eyeBagsIntensity);
-  const setEyeBagsIntensity = useAvatarStore(s => s.setEyeBagsIntensity);
-  const eyeBagsOffsetX = useAvatarStore(s => s.eyeBagsOffsetX);
-  const eyeBagsOffsetY = useAvatarStore(s => s.eyeBagsOffsetY);
-  const eyeBagsOffsetZ = useAvatarStore(s => s.eyeBagsOffsetZ);
-  const setEyeBagsOffsets = useAvatarStore(s => s.setEyeBagsOffsets);
-  const eyeBagsWidth = useAvatarStore(s => s.eyeBagsWidth);
-  const eyeBagsHeight = useAvatarStore(s => s.eyeBagsHeight);
-  const setEyeBagsSize = useAvatarStore(s => s.setEyeBagsSize);
 
-  // Use developer controls preference
-  const { developerControlsEnabled } = useDeveloperControlsPreference();
+  const isFocused = useIsFocused();
 
-  // Animate skeleton shimmer/pulse
+  // Skeleton shimmer
   useEffect(() => {
     const loop = Animated.loop(
       Animated.timing(skeletonAnim, {
@@ -119,6 +108,7 @@ const DashboardScreen: React.FC = () => {
     (dengueNearby?.hotspotCount ?? 0) > 0 ||
     (dengueNearby?.outbreakCount ?? 0) > 0;
 
+  // Location lifecycle
   useEffect(() => {
     let isMounted = true;
     let subscription: Location.LocationSubscription | null = null;
@@ -186,11 +176,10 @@ const DashboardScreen: React.FC = () => {
     };
   }, [isFocused]);
 
+  // Scene selection from location
   useEffect(() => {
     if (!userProfile) {
-      if (autoScene !== 'home') {
-        setAutoScene('home');
-      }
+      if (autoScene !== 'home') setAutoScene('home');
       return;
     }
 
@@ -198,9 +187,7 @@ const DashboardScreen: React.FC = () => {
       locationPermissionStatus !== Location.PermissionStatus.GRANTED ||
       !currentLocation
     ) {
-      if (autoScene !== 'home') {
-        setAutoScene('home');
-      }
+      if (autoScene !== 'home') setAutoScene('home');
       return;
     }
 
@@ -215,27 +202,19 @@ const DashboardScreen: React.FC = () => {
       isWithinRadiusKm(currentLocation, workLocation.coordinates, 1);
 
     let nextScene: SceneOption = 'home';
-    if (nearHome) {
-      nextScene = 'home';
-    } else if (nearWork) {
-      nextScene = 'city';
-    }
+    if (nearHome) nextScene = 'home';
+    else if (nearWork) nextScene = 'city';
 
-    if (nextScene !== autoScene) {
-      setAutoScene(nextScene);
-    }
+    if (nextScene !== autoScene) setAutoScene(nextScene);
   }, [autoScene, currentLocation, locationPermissionStatus, userProfile]);
 
+  // Respect manual override
   useEffect(() => {
-    if (sceneManuallyOverridden) {
-      return;
-    }
-
-    if (scene !== autoScene) {
-      setScene(autoScene);
-    }
+    if (sceneManuallyOverridden) return;
+    if (scene !== autoScene) setScene(autoScene);
   }, [autoScene, scene, sceneManuallyOverridden]);
 
+  // Disable manual override if developer controls are off
   useEffect(() => {
     if (!developerControlsEnabled && sceneManuallyOverridden) {
       setSceneManuallyOverridden(false);
@@ -263,7 +242,31 @@ const DashboardScreen: React.FC = () => {
     }
   }, [storeHydrated, dashboardOnboardingSeen]);
 
-  // Calculate combined environmental skin effects (air quality + UV)
+  // Health data (for sleep minutes)
+  const { data: health } = useHealthData({ autoSync: false });
+
+  // Hydration init
+  useEffect(() => {
+    if (userProfile && storeHydrated) {
+      hydrationService.initialize();
+    }
+  }, [userProfile, storeHydrated]);
+
+  // Avatar hydration bar (0-200%) from store
+  const hydrationProgressPercentage = useHydrationStore(s =>
+    s.getProgressPercentage()
+  );
+
+  // Auto facial expression
+  const recommendedExpression = useMemo(() => {
+    return getCombinedRecommendedExpression({
+      aqi: airQuality?.aqi ?? null,
+      pm25: airQuality?.pm25 ?? null,
+      sleepMinutes: health?.sleepMinutes ?? null,
+    });
+  }, [airQuality?.aqi, airQuality?.pm25, health?.sleepMinutes]);
+
+  // Combined environmental skin effects (AQI + UV)
   const skinEffects = useMemo(() => {
     if (!airQuality) {
       return {
@@ -277,7 +280,6 @@ const DashboardScreen: React.FC = () => {
       };
     }
 
-    // Get current UV index from forecast data (use today's average if available)
     const currentUVIndex =
       airQuality.uvIndex ||
       (airQuality.uvForecast && airQuality.uvForecast.length > 0
@@ -292,163 +294,143 @@ const DashboardScreen: React.FC = () => {
       },
       {
         uvIndex: currentUVIndex,
-        exposureHours: 2, // Assume 2 hours of outdoor exposure
+        exposureHours: 2,
       },
-      0 // Base skin tone adjustment
+      0
     );
   }, [airQuality]);
 
-  // Calculate smog effects based on air quality
-  const smogEffects = useMemo(() => {
-    if (!airQuality) {
-      return {
-        enabled: false,
-        intensity: 0,
-        opacity: 0,
-        density: 0,
-        description: 'No air quality data available',
-      };
-    }
-    return calculateSmogEffects({
-      aqi: airQuality.aqi,
-      pm25: airQuality.pm25,
-      pm10: airQuality.pm10,
-    });
-  }, [airQuality]);
+  // Smog effects
+  // const smogEffects = useMemo(() => {
+  //   if (!airQuality) {
+  //     return {
+  //       enabled: false,
+  //       intensity: 0,
+  //       opacity: 0,
+  //       density: 0,
+  //       description: 'No air quality data available',
+  //     };
+  //   }
+  //   return calculateSmogEffects({
+  //     aqi: airQuality.aqi,
+  //     pm25: airQuality.pm25,
+  //     pm10: airQuality.pm10,
+  //   });
+  // }, [airQuality]);
 
-  // Health data (for sleep minutes)
-  const { data: health } = useHealthData({ autoSync: false });
-
-  // Initialize hydration service
-  useEffect(() => {
-    if (userProfile && storeHydrated) {
-      hydrationService.initialize();
-    }
-  }, [userProfile, storeHydrated]);
-
-  // Get hydration progress percentage for avatar visual feedback
-  const hydrationProgressPercentage = useHydrationStore(s =>
-    s.getProgressPercentage()
-  );
-
-  // Auto-adjust facial expression based on air quality and sleep
-  const recommendedExpression = useMemo(() => {
-    return getCombinedRecommendedExpression({
-      aqi: airQuality?.aqi ?? null,
-      pm25: airQuality?.pm25 ?? null,
-      sleepMinutes: health?.sleepMinutes ?? null,
-    });
-  }, [airQuality?.aqi, airQuality?.pm25, health?.sleepMinutes]);
-
-  // Create effects data for the effects list
-  const activeEffects = useMemo((): EffectData[] => {
-    const effects: EffectData[] = [];
-
-    // Skin effects
-    if (skinEffects.totalAdjustment !== 0) {
-      const severity =
-        Math.abs(skinEffects.totalAdjustment) > 0.3
-          ? 'high'
-          : Math.abs(skinEffects.totalAdjustment) > 0.15
-            ? 'medium'
-            : 'low';
-
-      effects.push({
-        id: 'skin-effects',
-        title: 'Skin Tone Changes',
-        description: skinEffects.description,
-        details: [
-          `Total skin adjustment: ${(skinEffects.totalAdjustment * 100).toFixed(0)}% darker`,
-          `Pollution effect: ${(skinEffects.pollutionEffect * 100).toFixed(0)}%`,
-          `UV effect: ${(skinEffects.uvEffect * 100).toFixed(0)}%`,
-          `Redness factor: ${(skinEffects.redness * 100).toFixed(0)}%`,
-          `Primary factor: ${skinEffects.primaryFactor}`,
-          ...skinEffects.recommendations,
-        ],
-        severity,
-        source: airQuality?.source?.toUpperCase() || 'Environmental Data',
-        actionRecommendations: [
-          'Use sunscreen with SPF 30+ when outdoors',
-          'Consider wearing protective clothing',
-          'Apply antioxidant-rich skincare products',
-          'Stay hydrated to maintain skin health',
-          'Limit outdoor activities during peak pollution hours',
-        ],
-      });
-    }
-
-    // Smog/atmospheric effects
-    if (smogEffects.enabled) {
-      const severity =
-        smogEffects.intensity > 0.7
-          ? 'high'
-          : smogEffects.intensity > 0.4
-            ? 'medium'
-            : 'low';
-
-      effects.push({
-        id: 'atmospheric-effects',
-        title: 'Atmospheric Effects',
-        description: smogEffects.description,
-        details: [
-          `Smog intensity: ${(smogEffects.intensity * 100).toFixed(0)}%`,
-          `Visibility opacity: ${(smogEffects.opacity * 100).toFixed(0)}%`,
-          `Particle density: ${(smogEffects.density / 20).toFixed(1)}x normal`,
-          'Simulates real-world air quality conditions',
-          'Based on PM2.5 and PM10 particulate matter levels',
-        ],
-        severity,
-        source: airQuality?.source?.toUpperCase() || 'Air Quality Data',
-        actionRecommendations: [
-          'Wear an N95 or KN95 mask when outdoors',
-          'Keep windows closed and use air purifiers indoors',
-          'Avoid outdoor exercise during high pollution periods',
-          'Use public transportation to reduce emissions',
-          'Check air quality before planning outdoor activities',
-        ],
-      });
-    }
-
-    // Facial expression effects
-    if (recommendedExpression !== 'neutral') {
-      const severity =
-        airQuality?.aqi && airQuality.aqi > 150
-          ? 'high'
-          : airQuality?.aqi && airQuality.aqi > 100
-            ? 'medium'
-            : 'low';
-
-      effects.push({
-        id: 'facial-expression',
-        title: 'Facial Expression',
-        description: `Avatar expression set to "${recommendedExpression}" based on air quality and sleep`,
-        details: [
-          `Current expression: ${recommendedExpression}`,
-          `Based on AQI: ${airQuality?.aqi || 'N/A'}`,
-          `PM2.5 level: ${airQuality?.pm25 || 'N/A'} μg/m³`,
-          `Last-night sleep: ${health?.sleepMinutes != null ? (health.sleepMinutes / 60).toFixed(1) + 'h' : 'N/A'}`,
-          'Expression reflects health impact of air quality and sleep',
-        ],
-        severity,
-        source: 'Air + Sleep Analysis',
-        actionRecommendations: [
-          'Practice deep breathing exercises to reduce stress',
-          'Take breaks from outdoor activities if feeling discomfort',
-          'Monitor your symptoms and adjust activities accordingly',
-          'Consider using a humidifier to ease respiratory discomfort',
-          'Stay informed about air quality forecasts',
-        ],
-      });
-    }
-
-    return effects;
-  }, [
-    skinEffects,
-    smogEffects,
-    recommendedExpression,
-    airQuality,
-    health?.sleepMinutes,
-  ]);
+  // Effects list data
+  // const activeEffects = useMemo((): EffectData[] => {
+  //   const effects: EffectData[] = [];
+  //
+  //   // Skin
+  //   if (skinEffects.totalAdjustment !== 0) {
+  //     const severity =
+  //       Math.abs(skinEffects.totalAdjustment) > 0.3
+  //         ? 'high'
+  //         : Math.abs(skinEffects.totalAdjustment) > 0.15
+  //           ? 'medium'
+  //           : 'low';
+  //
+  //     effects.push({
+  //       id: 'skin-effects',
+  //       title: 'Skin Tone Changes',
+  //       description: skinEffects.description,
+  //       details: [
+  //         `Total skin adjustment: ${(skinEffects.totalAdjustment * 100).toFixed(0)}% darker`,
+  //         `Pollution effect: ${(skinEffects.pollutionEffect * 100).toFixed(0)}%`,
+  //         `UV effect: ${(skinEffects.uvEffect * 100).toFixed(0)}%`,
+  //         `Redness factor: ${(skinEffects.redness * 100).toFixed(0)}%`,
+  //         `Primary factor: ${skinEffects.primaryFactor}`,
+  //         ...skinEffects.recommendations,
+  //       ],
+  //       severity,
+  //       source: airQuality?.source?.toUpperCase() || 'Environmental Data',
+  //       actionRecommendations: [
+  //         'Use sunscreen with SPF 30+ when outdoors',
+  //         'Consider wearing protective clothing',
+  //         'Apply antioxidant-rich skincare products',
+  //         'Stay hydrated to maintain skin health',
+  //         'Limit outdoor activities during peak pollution hours',
+  //       ],
+  //     });
+  //   }
+  //
+  //   // Smog
+  //   if (smogEffects.enabled) {
+  //     const severity =
+  //       smogEffects.intensity > 0.7
+  //         ? 'high'
+  //         : smogEffects.intensity > 0.4
+  //           ? 'medium'
+  //           : 'low';
+  //
+  //     effects.push({
+  //       id: 'atmospheric-effects',
+  //       title: 'Atmospheric Effects',
+  //       description: smogEffects.description,
+  //       details: [
+  //         `Smog intensity: ${(smogEffects.intensity * 100).toFixed(0)}%`,
+  //         `Visibility opacity: ${(smogEffects.opacity * 100).toFixed(0)}%`,
+  //         `Particle density: ${(smogEffects.density / 20).toFixed(1)}x normal`,
+  //         'Simulates real-world air quality conditions',
+  //         'Based on PM2.5 and PM10 particulate matter levels',
+  //       ],
+  //       severity,
+  //       source: 'Air Quality Data',
+  //       actionRecommendations: [
+  //         'Wear an N95 or KN95 mask when outdoors',
+  //         'Keep windows closed and use air purifiers indoors',
+  //         'Avoid outdoor exercise during high pollution periods',
+  //         'Use public transportation to reduce emissions',
+  //         'Check air quality before planning outdoor activities',
+  //       ],
+  //     });
+  //   }
+  //
+  //   // Expression
+  //   if (recommendedExpression !== 'neutral') {
+  //     const severity =
+  //       airQuality?.aqi && airQuality.aqi > 150
+  //         ? 'high'
+  //         : airQuality?.aqi && airQuality.aqi > 100
+  //           ? 'medium'
+  //           : 'low';
+  //
+  //     effects.push({
+  //       id: 'facial-expression',
+  //       title: 'Facial Expression',
+  //       description: `Avatar expression set to "${recommendedExpression}" based on air quality and sleep`,
+  //       details: [
+  //         `Current expression: ${recommendedExpression}`,
+  //         `Based on AQI: ${airQuality?.aqi || 'N/A'}`,
+  //         `PM2.5 level: ${airQuality?.pm25 || 'N/A'} μg/m³`,
+  //         `Last-night sleep: ${
+  //           health?.sleepMinutes != null
+  //             ? (health.sleepMinutes / 60).toFixed(1) + 'h'
+  //             : 'N/A'
+  //         }`,
+  //         'Expression reflects health impact of air quality and sleep',
+  //       ],
+  //       severity,
+  //       source: 'Air + Sleep Analysis',
+  //       actionRecommendations: [
+  //         'Practice deep breathing exercises to reduce stress',
+  //         'Take breaks from outdoor activities if feeling discomfort',
+  //         'Monitor your symptoms and adjust activities accordingly',
+  //         'Consider using a humidifier to ease respiratory discomfort',
+  //         'Stay informed about air quality forecasts',
+  //       ],
+  //     });
+  //   }
+  //
+  //   return effects;
+  // }, [
+  //   skinEffects,
+  //   smogEffects,
+  //   recommendedExpression,
+  //   airQuality,
+  //   health?.sleepMinutes,
+  // ]);
 
   if (isLoading) {
     return (
@@ -473,7 +455,10 @@ const DashboardScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} scrollEnabled={scrollEnabled}>
+      <ScrollView
+        style={styles.container}
+        scrollEnabled={scrollEnabled && !activeCelebration}
+      >
         <View style={styles.content}>
           <View style={styles.avatarContainer}>
             <AvatarExperience
@@ -496,157 +481,52 @@ const DashboardScreen: React.FC = () => {
               hydrationProgressPercentage={hydrationProgressPercentage}
               hasNearbyDengueRisk={hasNearbyDengueRisk}
             />
+            {indicatorCelebration && (
+              <CelebrationIndicator
+                badgeId={indicatorCelebration}
+                onPress={handleOpenCelebration}
+              />
+            )}
           </View>
 
-          {/* Skin Tone Controls - above facial expressions */}
+          {/* Developer controls */}
           {developerControlsEnabled && (
-            <View style={styles.controlsContainer}>
-              <Text style={styles.controlsTitle}>Avatar Customization</Text>
-              <SceneSwitcher
-                value={scene}
-                onChange={value => {
-                  setScene(value);
-                  setSceneManuallyOverridden(value !== autoScene);
-                }}
-              />
-              <SkinToneButton
-                skinToneAdjustment={manualSkinToneAdjustment}
-                onSkinToneChange={setManualSkinToneAdjustment}
-              />
-              <SandboxControls location={userProfile?.location} />
-              <RainIntensityControls
-                value={rainIntensity}
-                onChange={setRainIntensity}
-                direction={rainDirection}
-                onChangeDirection={setRainDirection}
-              />
-
-              {/* Eye Bags (Dark Circles) Developer Controls */}
-              <View style={styles.devCard}>
-                <View style={styles.devRow}>
-                  <Text style={styles.devLabel}>Eye Bags (Override)</Text>
-                  <Switch
-                    value={eyeBagsOverride}
-                    onValueChange={setEyeBagsOverride}
-                  />
-                </View>
-                {eyeBagsOverride && (
-                  <View style={{ marginTop: spacing.sm }}>
-                    <Text style={styles.devSubtle}>
-                      Intensity: {(eyeBagsIntensity * 100).toFixed(0)}%
-                    </Text>
-                    <Slider
-                      value={eyeBagsIntensity}
-                      onValueChange={setEyeBagsIntensity}
-                      minimumValue={0}
-                      maximumValue={1}
-                      step={0.05}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Offset X: {eyeBagsOffsetX.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsOffsetX}
-                      onValueChange={v =>
-                        setEyeBagsOffsets(v, eyeBagsOffsetY, eyeBagsOffsetZ)
-                      }
-                      minimumValue={-0.15}
-                      maximumValue={0.15}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Offset Y: {eyeBagsOffsetY.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsOffsetY}
-                      onValueChange={v =>
-                        setEyeBagsOffsets(eyeBagsOffsetX, v, eyeBagsOffsetZ)
-                      }
-                      minimumValue={-0.15}
-                      maximumValue={0.15}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Offset Z: {eyeBagsOffsetZ.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsOffsetZ}
-                      onValueChange={v =>
-                        setEyeBagsOffsets(eyeBagsOffsetX, eyeBagsOffsetY, v)
-                      }
-                      minimumValue={-0.2}
-                      maximumValue={0.2}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Width: {eyeBagsWidth.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsWidth}
-                      onValueChange={v => setEyeBagsSize(v, eyeBagsHeight)}
-                      minimumValue={0.05}
-                      maximumValue={0.25}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devSubtle}>
-                      Height: {eyeBagsHeight.toFixed(3)}
-                    </Text>
-                    <Slider
-                      value={eyeBagsHeight}
-                      onValueChange={v => setEyeBagsSize(eyeBagsWidth, v)}
-                      minimumValue={0.03}
-                      maximumValue={0.15}
-                      step={0.005}
-                      minimumTrackTintColor={colors.neutral[700]}
-                      maximumTrackTintColor={colors.neutral[300]}
-                    />
-                    <Text style={styles.devHint}>
-                      When override is off, eye bags follow sleep data.
-                    </Text>
-                  </View>
-                )}
-              </View>
-              {/* Developer utility: Reset onboarding */}
-              <View style={{ marginTop: spacing.md }}>
-                <Button
-                  onPress={async () => {
-                    resetOnboardingSeen();
-                    setOnboardingStep(0);
-                    setShowOnboarding(true);
-                    setScrollEnabled(false);
-                  }}
-                >
-                  Show onboarding again
-                </Button>
-              </View>
-            </View>
-          )}
-
-          {/* Facial Expressions */}
-          {developerControlsEnabled && (
-            <FacialExpressionControls
-              currentExpression={manualExpression}
-              onExpressionChange={setManualExpression}
-              onReset={clearManualExpression}
+            <DeveloperControls
+              scene={scene}
+              setScene={setScene}
+              setSceneManuallyOverridden={setSceneManuallyOverridden}
+              autoScene={autoScene}
+              manualSkinToneAdjustment={manualSkinToneAdjustment}
+              setManualSkinToneAdjustment={setManualSkinToneAdjustment}
+              rainIntensity={rainIntensity}
+              setRainIntensity={setRainIntensity}
+              rainDirection={rainDirection}
+              setRainDirection={setRainDirection}
+              manualExpression={manualExpression}
+              setManualExpression={setManualExpression}
+              clearManualExpression={clearManualExpression}
+              resetOnboarding={() => {
+                resetOnboardingSeen();
+                setOnboardingStep(0);
+                setShowOnboarding(true);
+                setScrollEnabled(false);
+              }}
+              seed7DayHistory={seed7DayHistory}
+              seed6ThenCompleteToday={seed6ThenCompleteToday}
+              clearHistoryForRetest={clearHistoryForRetest}
+              userProfile={userProfile}
             />
           )}
 
-          {/* Traffic Information */}
-          <EffectsList effects={activeEffects} />
+          {/* Main quest list */}
+          <QuestList />
+
+          {/* Effects list */}
+          {/* <EffectsList effects={activeEffects} /> */}
         </View>
       </ScrollView>
 
-      {/* Onboarding overlay - shown once */}
+      {/* Onboarding overlay */}
       <OnboardingOverlay
         visible={showOnboarding}
         step={onboardingStep}
@@ -663,6 +543,12 @@ const DashboardScreen: React.FC = () => {
           setOnboardingStep(0);
           markOnboardingSeen();
         }}
+      />
+
+      <CelebrationSpotlight
+        visible={!!activeCelebration}
+        badgeId={activeCelebration}
+        onClose={handleDismissCelebration}
       />
     </SafeAreaView>
   );
@@ -709,239 +595,13 @@ const styles = StyleSheet.create({
     color: colors.neutral[700],
     textAlign: 'center',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#2D3748',
-  },
   avatarContainer: {
     // Full-bleed inside a padded ScrollView: cancel horizontal padding
     marginHorizontal: -spacing.lg,
     marginTop: -spacing.lg,
-    // Let child fill width
+    position: 'relative',
     alignItems: 'stretch',
-    // Optional spacing below the canvas
     marginBottom: 16,
-  },
-  controlsContainer: {
-    marginBottom: 30,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  controlsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2D3748',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#2D3748',
-  },
-  statsContainer: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-    gap: spacing.md,
-  },
-  statRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#4A5568',
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2D3748',
-  },
-  // New AQI-specific styles
-  aqiCard: {
-    padding: spacing.lg,
-    borderWidth: 2,
-  },
-  aqiHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  aqiTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
-    color: colors.neutral[700],
-  },
-  aqiValue: {
-    fontSize: fontSize.xxl,
-    fontWeight: 'bold',
-  },
-  aqiClassification: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  healthAdvice: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[600],
-    lineHeight: 18,
-    marginBottom: spacing.sm,
-  },
-  dataTimestamp: {
-    fontSize: fontSize.xs,
-    color: colors.neutral[500],
-    fontStyle: 'italic',
-  },
-  pollutantsContainer: {
-    backgroundColor: colors.neutral[50],
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-  },
-  pollutantsTitle: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    color: colors.neutral[700],
-    marginBottom: spacing.sm,
-  },
-  pollutantGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  pollutantItem: {
-    backgroundColor: colors.neutral[100],
-    padding: spacing.sm,
-    borderRadius: borderRadius.sm,
-    minWidth: '45%',
-    alignItems: 'center',
-  },
-  pollutantLabel: {
-    fontSize: fontSize.xs,
-    color: colors.neutral[600],
-    fontWeight: '500',
-  },
-  pollutantValue: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[800],
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  recommendationsCard: {
-    padding: spacing.md,
-    backgroundColor: '#EBF8FF', // Light blue
-    borderColor: '#BEE3F8', // Medium blue
-  },
-  recommendationsTitle: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    color: '#2B6CB0', // Dark blue
-    marginBottom: spacing.sm,
-  },
-  recommendationItem: {
-    fontSize: fontSize.sm,
-    color: '#2C5282', // Darker blue
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  // Dev controls styling
-  devCard: {
-    backgroundColor: '#FFFFFF',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-    marginTop: spacing.md,
-  },
-  devRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  devLabel: {
-    fontSize: fontSize.base,
-    fontWeight: '600',
-    color: colors.neutral[800],
-  },
-  devSubtle: {
-    fontSize: fontSize.sm,
-    color: colors.neutral[600],
-    marginBottom: spacing.xs,
-  },
-  devHint: {
-    fontSize: fontSize.xs,
-    color: colors.neutral[500],
-    marginTop: spacing.xs,
-  },
-  // Skin effects indicator styles
-  skinEffectsIndicator: {
-    backgroundColor: '#FFF5F5', // Light red/pink background
-    borderColor: '#FEB2B2', // Light red border
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginTop: spacing.md,
-  },
-  skinEffectsTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: '600',
-    color: '#C53030', // Dark red
-    marginBottom: spacing.xs,
-  },
-  skinEffectsDescription: {
-    fontSize: fontSize.sm,
-    color: '#744210', // Dark orange/brown
-    lineHeight: 18,
-    marginBottom: spacing.sm,
-  },
-  skinEffectsDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  skinEffectsLabel: {
-    fontSize: fontSize.xs,
-    color: '#9C4221', // Medium brown
-    fontWeight: '500',
-  },
-  skinEffectsSource: {
-    fontSize: fontSize.xs,
-    color: colors.neutral[500],
-    fontStyle: 'italic',
-  },
-  effectSection: {
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral[200],
-  },
-  effectSubtitle: {
-    fontSize: fontSize.xs,
-    fontWeight: '600',
-    color: '#B91C1C', // Darker red
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
 });
 

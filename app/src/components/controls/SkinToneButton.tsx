@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { SkinToneControls } from './SkinToneControls';
+import { borderRadius, colors, fontSize, spacing } from '../../theme';
 
 interface SkinToneButtonProps {
   skinToneAdjustment: number;
@@ -93,34 +94,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
-    marginBottom: 12,
   },
   emoji: {
-    fontSize: 24,
-    marginRight: 12,
+    fontSize: fontSize.xxl,
+    marginRight: spacing.md,
   },
   textContainer: {
     flex: 1,
   },
   label: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     fontWeight: '600',
     color: '#2D3748',
     marginBottom: 2,
   },
   value: {
-    fontSize: 14,
+    fontSize: fontSize.sm,
     color: '#4A5568',
   },
   arrow: {
-    fontSize: 16,
+    fontSize: fontSize.base,
     color: '#CBD5E0',
   },
   modalOverlay: {
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 20,
     width: '90%',
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: fontSize.lg,
     fontWeight: 'bold',
     color: '#2D3748',
   },
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButtonText: {
-    fontSize: 18,
+    fontSize: fontSize.lg,
     color: '#4A5568',
   },
   sliderContainer: {
@@ -169,8 +169,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   doneButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: colors.white,
+    fontSize: fontSize.base,
     fontWeight: '600',
   },
 });

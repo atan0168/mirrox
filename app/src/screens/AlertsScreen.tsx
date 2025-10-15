@@ -16,7 +16,7 @@ import { useDismissedAlertsToday } from '../hooks/useDismissedAlertsToday';
 import { AlertsService } from '../services/AlertsService';
 import { useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import type { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { X } from 'lucide-react-native';
 import { formatDistanceToNow } from 'date-fns';
 import type { AlertItem } from '../models/Alert';

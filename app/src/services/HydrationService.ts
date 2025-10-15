@@ -15,7 +15,8 @@ import type { ExerciseSessionData } from './health/types';
 const DEFAULT_BASE_GOAL = 2000;
 const DAY_CHECK_INTERVAL_MS = 15 * 60 * 1000; // refresh context every 15 minutes
 
-const toDayString = (date: Date): string => date.toISOString().split('T')[0];
+import { localDayString } from '../utils/datetimeUtils';
+const toDayString = (date: Date): string => localDayString(date);
 
 export class HydrationService {
   private static instance: HydrationService | null = null;
@@ -210,6 +211,10 @@ export class HydrationService {
   private triggerDrinkingAnimation(): void {
     try {
       const avatarState = useAvatarStore.getState();
+
+      if (avatarState.sleepMode) {
+        return;
+      }
 
       const currentAnimation = avatarState.activeAnimation;
       if (currentAnimation !== 'drinking') {

@@ -11,7 +11,7 @@ import {
 import { Button, Card } from '../components/ui';
 import { borderRadius, colors, fontSize, spacing } from '../theme';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 
 interface WelcomeScreenProps {
   navigation: StackNavigationProp<RootStackParamList, 'Welcome'>;

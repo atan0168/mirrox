@@ -1,9 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useReverseGeocode } from './useReverseGeocode';
-import {
-  backendApiService,
-  DenguePredictResponse,
-} from '../services/BackendApiService';
+import { backendApiService } from '../services/BackendApiService';
+import { DenguePredictResponse } from '../models/Dengue';
 
 export interface UseDenguePredictionOptions {
   latitude?: number;

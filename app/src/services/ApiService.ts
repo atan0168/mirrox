@@ -1,6 +1,6 @@
 import { AirQualityData } from '../models/AirQuality';
 import { backendApiService, AirQualityApiResponse } from './BackendApiService';
-import { useSandboxStore } from '../store/sandboxStore';
+import { getSandboxState } from '../sandbox/sandboxAccess';
 
 /**
  * Main API service that communicates with our backend
@@ -18,7 +18,7 @@ class ApiService {
     longitude: number
   ): Promise<AirQualityData> {
     try {
-      const sandbox = useSandboxStore.getState();
+      const sandbox = getSandboxState();
       if (sandbox.enabled && sandbox.airQuality) {
         return JSON.parse(JSON.stringify(sandbox.airQuality));
       }
@@ -95,7 +95,7 @@ class ApiService {
     longitude: number
   ): Promise<AirQualityData> {
     try {
-      const sandbox = useSandboxStore.getState();
+      const sandbox = getSandboxState();
       if (sandbox.enabled && sandbox.airQuality) {
         return JSON.parse(JSON.stringify(sandbox.airQuality));
       }
@@ -167,7 +167,7 @@ class ApiService {
     stationId: string
   ): Promise<AirQualityData> {
     try {
-      const sandbox = useSandboxStore.getState();
+      const sandbox = getSandboxState();
       if (sandbox.enabled && sandbox.airQuality) {
         return JSON.parse(JSON.stringify(sandbox.airQuality));
       }

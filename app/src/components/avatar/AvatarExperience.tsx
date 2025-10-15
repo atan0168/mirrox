@@ -48,6 +48,7 @@ import BatteryIndicator from '../BatteryIndicator';
 import HydrationIndicator from '../HydrationIndicator';
 import { colors } from '../../theme';
 import { useAvatarAnimationEngine } from '../../hooks/useAvatarAnimationEngine';
+import ViewAchievementButton from '../ViewAchievementButton';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -881,13 +882,17 @@ function AvatarExperience({
         reasons={stressResult.reasons}
       />
 
+      <ViewAchievementButton style={styles.achievementButton} />
+
       {/* Hydration indicator overlay */}
       <View style={styles.hydrationIndicator}>
         <HydrationIndicator />
       </View>
 
       {/* Sleep battery indicator overlay */}
-      <BatteryIndicator sleepMinutes={health?.sleepMinutes} />
+      <View style={styles.batteryIndicator}>
+        <BatteryIndicator sleepMinutes={health?.sleepMinutes} />
+      </View>
     </View>
   );
 }
@@ -922,10 +927,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  achievementButton: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    zIndex: 1000,
+  },
   hydrationIndicator: {
     position: 'absolute',
+    bottom: 36,
+    right: 8,
+    zIndex: 1000,
+  },
+  batteryIndicator: {
+    position: 'absolute',
     bottom: 8,
-    left: 8,
+    right: 12,
     zIndex: 1000,
   },
   statusIndicator: {

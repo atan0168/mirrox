@@ -1,10 +1,19 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { API_BASE_URL } from '../constants';
-import { useSandboxStore } from '../store/sandboxStore';
 import {
   LocationAutocompleteResponse,
   LocationSuggestion,
 } from '../models/Location';
+import {
+  ArcGISResponse,
+  DenguePredictResponse,
+  HotspotAttributes,
+  OutbreakAttributes,
+  PointGeometry,
+  PolygonGeometry,
+  StateAttributes,
+} from '../models/Dengue';
+import { getSandboxState } from '../sandbox/sandboxAccess';
 
 export interface AirQualityApiResponse {
   success: boolean;
@@ -57,82 +66,6 @@ export interface StationSearchResult {
   stationId: string;
   distance: number;
   aqi: number;
-}
-
-export interface DenguePredictResponse {
-  state: string;
-  as_of: {
-    ew_year: number;
-    ew: number;
-    week_start: string;
-    week_end: string;
-    source: string;
-  };
-  season: {
-    lags: number;
-    prob_in_season: number;
-    in_season: boolean;
-    threshold: number;
-  };
-  trend: {
-    lags: number;
-    prob_trend_increase_next_week: number;
-    trend_increase: boolean;
-    threshold: number;
-  };
-}
-
-export interface ArcGISField {
-  name: string;
-  type: string;
-  alias: string;
-  length?: number;
-}
-
-export interface ArcGISSpatialReference {
-  wkid?: number;
-  latestWkid?: number;
-}
-
-export interface ArcGISFeature<TAttributes, TGeometry = undefined> {
-  attributes: TAttributes;
-  geometry?: TGeometry;
-}
-
-export interface ArcGISResponse<TAttributes, TGeometry = undefined> {
-  fields: ArcGISField[];
-  features: Array<ArcGISFeature<TAttributes, TGeometry>>;
-  geometryType?: string;
-  spatialReference?: ArcGISSpatialReference;
-}
-
-export interface PointGeometry {
-  x: number;
-  y: number;
-}
-
-export interface PolygonGeometry {
-  rings: number[][][];
-}
-
-export interface HotspotAttributes {
-  'SPWD.DBO_LOKALITI_POINTS.LOKALITI': string;
-  'SPWD.AVT_HOTSPOTMINGGUAN.KUMULATIF_KES': number;
-  'SPWD.AVT_HOTSPOTMINGGUAN.TEMPOH_WABAK'?: number;
-}
-
-export interface OutbreakAttributes {
-  'SPWD.AVT_WABAK_IDENGUE_NODM.LOKALITI': string;
-  'SPWD.AVT_WABAK_IDENGUE_NODM.TOTAL_KES': number;
-}
-
-export interface StateAttributes {
-  NEGERI: string;
-  JUMLAH_HARIAN: number;
-  JUMLAH_SPATIALHARIAN: number;
-  JUMLAH_SPATIALKUMCURR: number;
-  JUMLAH_KUMULATIF: number;
-  JUMLAH_KEMATIAN: number;
 }
 
 export interface SmartPromptSuggestion {
@@ -633,7 +566,7 @@ class BackendApiService {
     error?: string;
   }> {
     try {
-      const sandbox = useSandboxStore.getState();
+      const sandbox = getSandboxState();
       if (sandbox.enabled) {
         const result = sandbox.denguePrediction
           ? JSON.parse(JSON.stringify(sandbox.denguePrediction))
@@ -659,7 +592,7 @@ class BackendApiService {
     longitude: number,
     radiusKm: number = 10
   ): Promise<ArcGISResponse<HotspotAttributes, PointGeometry>> {
-    const sandbox = useSandboxStore.getState();
+    const sandbox = getSandboxState();
     if (sandbox.enabled) {
       if (sandbox.dengueHotspots) {
         return JSON.parse(JSON.stringify(sandbox.dengueHotspots));
@@ -686,7 +619,7 @@ class BackendApiService {
     longitude: number,
     radiusKm: number = 10
   ): Promise<ArcGISResponse<OutbreakAttributes, PolygonGeometry>> {
-    const sandbox = useSandboxStore.getState();
+    const sandbox = getSandboxState();
     if (sandbox.enabled) {
       if (sandbox.dengueOutbreaks) {
         return JSON.parse(JSON.stringify(sandbox.dengueOutbreaks));

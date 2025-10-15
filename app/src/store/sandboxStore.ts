@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { subDays } from 'date-fns';
+import { localDayString } from '../utils/datetimeUtils';
 import type { HealthHistory, HealthSnapshot } from '../models/Health';
 import type { AirQualityData } from '../models/AirQuality';
 import type {
@@ -9,8 +10,9 @@ import type {
   OutbreakAttributes,
   PolygonGeometry,
   DenguePredictResponse,
-} from '../services/BackendApiService';
+} from '../models/Dengue';
 import { healthDataService } from '../services/HealthDataService';
+import { registerSandboxStateAccessor } from '../sandbox/sandboxAccess';
 
 type StressPreset = 'none' | 'moderate' | 'high';
 type SleepPreset = 'optimal' | 'moderate' | 'low';
@@ -163,7 +165,7 @@ function mergeContext(
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return localDayString(date);
 }
 
 function createSnapshot(
@@ -505,3 +507,14 @@ export const useSandboxStore = create<SandboxState>((set, get) => ({
     return dengue;
   },
 }));
+
+registerSandboxStateAccessor(() => {
+  const state = useSandboxStore.getState();
+  return {
+    enabled: state.enabled,
+    airQuality: state.airQuality,
+    dengueHotspots: state.dengueHotspots,
+    dengueOutbreaks: state.dengueOutbreaks,
+    denguePrediction: state.denguePrediction,
+  };
+});

@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useReverseGeocode } from './useReverseGeocode';
+import { backendApiService } from '../services/BackendApiService';
 import {
-  backendApiService,
   ArcGISFeature,
   ArcGISResponse,
   HotspotAttributes,
   OutbreakAttributes,
   PointGeometry,
   PolygonGeometry,
-} from '../services/BackendApiService';
+} from '../models/Dengue';
 
 export interface UseDengueNearbyOptions {
   latitude?: number;

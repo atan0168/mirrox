@@ -14,7 +14,7 @@ import Loader from '../components/ui/Loader';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { readyPlayerMeApiService } from '../services/ReadyPlayerMeApiService';
 import { localStorageService } from '../services/LocalStorageService';
-import { RootStackParamList } from '../../App';
+import type { RootStackParamList } from '../navigation/types';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 interface GeneratingTwinScreenProps {

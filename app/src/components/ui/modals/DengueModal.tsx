@@ -17,7 +17,7 @@ import {
   PointGeometry,
   PolygonGeometry,
   StateAttributes,
-} from '../../../services/BackendApiService';
+} from '../../../models/Dengue';
 import { colors, fontSize, spacing } from '../../../theme';
 import { Button } from '../Button';
 import { Card } from '../Card';

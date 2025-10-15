@@ -174,6 +174,66 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
           ON meal_items(meal_id, id DESC);
       `);
 
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS quest_progress (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          quest_id TEXT NOT NULL,
+          date TEXT NOT NULL,
+          value REAL NOT NULL DEFAULT 0,
+          done INTEGER NOT NULL DEFAULT 0,
+          updated_at INTEGER NOT NULL,
+          UNIQUE(quest_id, date)
+        );
+        CREATE INDEX IF NOT EXISTS idx_quest_progress_quest_date 
+          ON quest_progress(quest_id, date DESC);
+        CREATE INDEX IF NOT EXISTS idx_quest_progress_date 
+          ON quest_progress(date DESC);
+      `);
+
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS quest_streaks (
+          quest_id TEXT PRIMARY KEY NOT NULL,
+          count INTEGER NOT NULL DEFAULT 0,
+          last_date TEXT NOT NULL
+        );
+      `);
+
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS quest_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          quest_id TEXT NOT NULL,
+          date TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          title TEXT,
+          reward_points INTEGER,
+          reward_tag TEXT,
+          note TEXT,
+          streak_count INTEGER
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_quest_history_unique_daily
+          ON quest_history(quest_id, date, title);
+        CREATE INDEX IF NOT EXISTS idx_quest_history_date 
+          ON quest_history(date DESC);
+        CREATE INDEX IF NOT EXISTS idx_quest_history_quest 
+          ON quest_history(quest_id, date DESC);
+      `);
+
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS quest_points (
+          tag TEXT PRIMARY KEY NOT NULL,
+          points INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS badges (
+          id TEXT PRIMARY KEY NOT NULL,
+          awarded_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_badges_awarded_at 
+          ON badges(awarded_at DESC);
+      `);
+
       return db;
     })();
   }
