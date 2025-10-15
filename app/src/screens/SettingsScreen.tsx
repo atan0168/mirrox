@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Database,
   Bell,
+  UserRound,
 } from 'lucide-react-native';
 import { localStorageService } from '../services/LocalStorageService';
 import { useStressVisualsPreference } from '../hooks/useStressVisualsPreference';
@@ -138,8 +139,6 @@ export default function SettingsScreen() {
         setRequireAuth(profile.security.requireAuthentication);
         setAuthMethod(profile.security.authMethod || 'biometric');
       }
-
-      // Note: Stress visuals preference is now handled by the hook
     } catch (error) {
       console.error('Failed to load settings:', error);
     } finally {
@@ -498,6 +497,34 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <UserRound size={24} color={colors.neutral[700]} />
+            <Text style={styles.sectionTitle}>Profile</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Edit Profile</Text>
+              <Text style={styles.settingDescription}>
+                Update your personal details, locations, and commute
+                preferences.
+              </Text>
+            </View>
+            <TouchableOpacity
+              disabled={loading}
+              onPress={() => navigation.navigate('EditProfile')}
+              style={{
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm,
+              }}
+            >
+              <Text style={{ color: colors.black, fontWeight: '600' }}>
+                Edit
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Bell size={24} color={colors.neutral[700]} />

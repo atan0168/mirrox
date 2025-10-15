@@ -2,7 +2,7 @@ import { MMKV } from 'react-native-mmkv';
 import * as FileSystem from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
 import * as Keychain from 'react-native-keychain';
-import { UserProfile } from '../models/User';
+import { UserProfile, UserLocationDetails } from '../models/User';
 import {
   AVATAR_CACHE_KEY,
   AVATAR_URL_KEY,
@@ -14,6 +14,61 @@ import {
   MAX_REVERSE_GEOCODE_CACHE_ENTRIES,
   REVERSE_GEOCODE_TOUCH_MIN_MS,
 } from '../constants';
+import { calculateBaselineHydrationGoal } from '../utils/hydrationUtils';
+
+const cloneLocationDetails = (
+  location?: UserLocationDetails | null
+): UserLocationDetails | null => {
+  if (!location) {
+    return null;
+  }
+
+  return {
+    ...location,
+    coordinates: {
+      latitude: location.coordinates.latitude,
+      longitude: location.coordinates.longitude,
+    },
+  };
+};
+
+const locationDetailsEqual = (
+  a?: UserLocationDetails | null,
+  b?: UserLocationDetails | null
+): boolean => {
+  if (!a && !b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+
+  const coordinateMatch =
+    a.coordinates.latitude === b.coordinates.latitude &&
+    a.coordinates.longitude === b.coordinates.longitude;
+
+  if (!coordinateMatch) {
+    return false;
+  }
+
+  const fields: Array<keyof Omit<UserLocationDetails, 'coordinates'>> = [
+    'label',
+    'address',
+    'city',
+    'state',
+    'country',
+    'countryCode',
+    'postcode',
+  ];
+
+  for (const field of fields) {
+    if ((a[field] ?? null) !== (b[field] ?? null)) {
+      return false;
+    }
+  }
+
+  return true;
+};
 
 /**
  * LocalStorageService - Encrypted storage service using MMKV
@@ -501,6 +556,125 @@ export class LocalStorageService {
       }
     } catch (error) {
       console.error('Failed to update preferences:', error);
+    }
+  }
+
+  public async updateProfileDetails(updates: {
+    weightKg?: number | null;
+    heightCm?: number | null;
+    homeLocation?: UserLocationDetails | null;
+    workLocation?: UserLocationDetails | null;
+    commuteMode?: 'car' | 'transit' | 'wfh' | 'bike' | 'walk';
+  }): Promise<UserProfile | null> {
+    try {
+      const profile = await this.getUserProfile();
+      if (!profile) {
+        throw new Error('User profile not found');
+      }
+
+      let hasChanges = false;
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'weightKg')) {
+        const rawWeight = updates.weightKg;
+        if (rawWeight !== undefined) {
+          const sanitizedWeight =
+            typeof rawWeight === 'number' &&
+            Number.isFinite(rawWeight) &&
+            rawWeight > 0
+              ? rawWeight
+              : rawWeight === null
+                ? null
+                : null;
+
+          if (sanitizedWeight !== profile.weightKg) {
+            const previousBaseline = profile.hydrationBaselineMl ?? null;
+            profile.weightKg = sanitizedWeight;
+            hasChanges = true;
+
+            if (sanitizedWeight && sanitizedWeight > 0) {
+              const baseline = calculateBaselineHydrationGoal(sanitizedWeight);
+              profile.hydrationBaselineMl = baseline;
+              if (
+                profile.hydrationGoalMl == null ||
+                profile.hydrationGoalMl === previousBaseline
+              ) {
+                profile.hydrationGoalMl = baseline;
+              }
+            } else if (sanitizedWeight === null) {
+              profile.hydrationBaselineMl = null;
+              if (profile.hydrationGoalMl === previousBaseline) {
+                profile.hydrationGoalMl = null;
+              }
+            }
+          }
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'heightCm')) {
+        const rawHeight = updates.heightCm;
+        if (rawHeight !== undefined) {
+          const sanitizedHeight =
+            typeof rawHeight === 'number' &&
+            Number.isFinite(rawHeight) &&
+            rawHeight > 0
+              ? rawHeight
+              : rawHeight === null
+                ? null
+                : null;
+
+          if (sanitizedHeight !== profile.heightCm) {
+            profile.heightCm = sanitizedHeight;
+            hasChanges = true;
+          }
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'homeLocation')) {
+        const rawHome = updates.homeLocation;
+        if (rawHome !== undefined) {
+          const newHome = cloneLocationDetails(rawHome);
+          if (!locationDetailsEqual(profile.homeLocation, newHome)) {
+            profile.homeLocation = newHome;
+            if (newHome?.coordinates) {
+              profile.location = {
+                latitude: newHome.coordinates.latitude,
+                longitude: newHome.coordinates.longitude,
+              };
+            }
+            hasChanges = true;
+          }
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, 'workLocation')) {
+        const rawWork = updates.workLocation;
+        if (rawWork !== undefined) {
+          const newWork = cloneLocationDetails(rawWork);
+          if (!locationDetailsEqual(profile.workLocation, newWork)) {
+            profile.workLocation = newWork;
+            hasChanges = true;
+          }
+        }
+      }
+
+      if (
+        Object.prototype.hasOwnProperty.call(updates, 'commuteMode') &&
+        updates.commuteMode &&
+        updates.commuteMode !== profile.commuteMode
+      ) {
+        profile.commuteMode = updates.commuteMode;
+        hasChanges = true;
+      }
+
+      if (!hasChanges) {
+        return profile;
+      }
+
+      await this.saveUserProfile(profile);
+      return profile;
+    } catch (error) {
+      console.error('Failed to update profile details:', error);
+      throw error;
     }
   }
 

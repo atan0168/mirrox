@@ -31,6 +31,7 @@ import NutritionDetailScreen from './src/screens/NutritionDetailScreen';
 import FoodDiaryHistoryScreen from './src/screens/FoodDiaryHistoryScreen';
 import FoodDiaryHistoryDetailScreen from './src/screens/FoodDiaryHistoryDetailScreen';
 import type { RootStackParamList } from './src/navigation/types';
+import EditProfileScreen from './src/screens/EditProfileScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -134,6 +135,14 @@ export default function App() {
             component={AlertsScreen}
             options={{
               title: 'Alerts',
+              headerBackTitle: 'Back',
+            }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{
+              title: 'Edit Profile',
               headerBackTitle: 'Back',
             }}
           />

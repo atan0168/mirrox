@@ -28,6 +28,7 @@ export type RootStackParamList = {
   };
   GeneratingTwin: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList>;
+  EditProfile: undefined;
   Alerts: { alertId?: string } | undefined;
   DebugDB: undefined;
   NutritionDetail: undefined;
