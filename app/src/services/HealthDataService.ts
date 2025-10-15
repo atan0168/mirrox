@@ -336,6 +336,7 @@ export class HealthDataService {
     if (!enabled) {
       this.sandboxSnapshot = null;
       this.sandboxHistory = null;
+      this.restoreLiveDataAfterSandboxExit();
       return;
     }
 
@@ -364,6 +365,26 @@ export class HealthDataService {
     if (this.sandboxEnabled) {
       this.notifyUpdate(updatedSnapshot);
     }
+  }
+
+  private restoreLiveDataAfterSandboxExit(): void {
+    void (async () => {
+      try {
+        const latest = await HealthHistoryRepository.getLatest();
+        if (!this.sandboxEnabled && latest) {
+          this.notifyUpdate(latest);
+        }
+        if (this.sandboxEnabled) {
+          return;
+        }
+        await this.syncNeeded(30);
+      } catch (error) {
+        console.warn(
+          '[HealthDataService] Failed to restore live health data after disabling sandbox mode',
+          error
+        );
+      }
+    })();
   }
 
   public isSandboxEnabled(): boolean {

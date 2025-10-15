@@ -838,6 +838,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+    marginBottom: spacing.lg,
   },
   section: {
     marginBottom: spacing.xl,
@@ -939,7 +940,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     backgroundColor: colors.neutral[50],
     borderRadius: borderRadius.lg,
-    marginTop: spacing.lg,
+    marginVertical: spacing.lg,
   },
   infoText: {
     fontSize: fontSize.sm,
