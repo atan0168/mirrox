@@ -36,7 +36,9 @@ import { LogBox } from 'react-native';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-LogBox.ignoreAllLogs(true);
+if (__DEV__) {
+  LogBox.ignoreAllLogs(true);
+}
 
 // Create a client
 const queryClient = new QueryClient({

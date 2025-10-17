@@ -99,6 +99,7 @@ export class HealthKitProvider implements HealthProvider {
         'HKCategoryTypeIdentifierSleepAnalysis',
         {
           filter: { startDate: start, endDate: end },
+          limit: 0,
         }
       );
       const minutes = (res || [])
@@ -132,7 +133,10 @@ export class HealthKitProvider implements HealthProvider {
     try {
       const samples = await HealthKit.queryCategorySamples(
         'HKCategoryTypeIdentifierSleepAnalysis',
-        { filter: { startDate: start, endDate: end } }
+        {
+          filter: { startDate: start, endDate: end },
+          limit: 0,
+        }
       );
       if (!samples || !samples.length) {
         return {
@@ -230,6 +234,7 @@ export class HealthKitProvider implements HealthProvider {
         {
           ascending: false,
           filter: { startDate: start, endDate: end },
+          limit: 0,
           unit: 'ms',
         }
       );
@@ -272,6 +277,7 @@ export class HealthKitProvider implements HealthProvider {
         {
           ascending: false,
           filter: { startDate: start, endDate: end },
+          limit: 0,
           unit: 'count/min',
         }
       );
@@ -314,6 +320,7 @@ export class HealthKitProvider implements HealthProvider {
         {
           ascending: false,
           filter: { startDate: start, endDate: end },
+          limit: 0,
           unit: 'kcal',
         }
       );
@@ -329,7 +336,7 @@ export class HealthKitProvider implements HealthProvider {
     try {
       const res = await HealthKit.queryCategorySamples(
         'HKCategoryTypeIdentifierMindfulSession',
-        { filter: { startDate: start, endDate: end } }
+        { filter: { startDate: start, endDate: end }, limit: 0 }
       );
       if (!res?.length) return 0;
       const minutes = res.reduce((sum: number, s) => {
@@ -372,6 +379,7 @@ export class HealthKitProvider implements HealthProvider {
         {
           ascending: false,
           filter: { startDate: start, endDate: end },
+          limit: 0,
           unit: 'count/min',
         }
       );
