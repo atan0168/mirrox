@@ -23,6 +23,7 @@ import {
   Dumbbell,
   Brain,
   Droplet,
+  Apple,
 } from 'lucide-react-native';
 import { Card } from './Card';
 import { Button } from './Button';
@@ -34,11 +35,15 @@ import SleepTimesTrendChart from './SleepTimesTrendChart';
 import { useHealthHistory } from '../../hooks/useHealthHistory';
 import { addDays, differenceInMinutes, format, parseISO } from 'date-fns';
 import { useHydrationStore } from '../../store/hydrationStore';
+import { useMeal } from '../../hooks/useMeal';
+import { getMealItemNutrientTotal } from '../../utils/nutritionUtils';
 import { getHydrationStatusInfo } from '../../utils/hydrationUtils';
+import { getNutritionRecommendations } from './nutritionRecommendations';
 import {
   getDeviceTimeZone,
   yyyymmddInTimeZone,
 } from '../../utils/datetimeUtils';
+import { NutritionDetailsModal } from '../nutrition/NutritionDetailsModal';
 
 interface HealthInfoSquaresProps {
   health?: HealthSnapshot | null;
@@ -65,6 +70,7 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
     | 'respiratory'
     | 'workouts'
     | 'mindfulness'
+    | 'nutrition'
     | null
   >(null);
 
@@ -80,7 +86,70 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
   const currentHydrationMl = useHydrationStore(
     state => state.currentHydrationMl
   );
+
+  // Meal / Nutrition (dietary calories)
+  const { data: mealItems, isLoading: isMealLoading } = useMeal();
+
+  const totalDietaryEnergyKcal = useMemo(() => {
+    if (!mealItems || mealItems.length === 0) return 0;
+    return Math.round(
+      mealItems.reduce((sum, item) => {
+        const val = getMealItemNutrientTotal(item, 'energy_kcal');
+        return sum + (val ?? 0);
+      }, 0)
+    );
+  }, [mealItems]);
   const hydrationGoalMl = useHydrationStore(state => state.dailyGoalMl);
+
+  // Macronutrient totals (grams and kcal)
+  const macroTotals = useMemo(() => {
+    if (!mealItems || mealItems.length === 0) {
+      return {
+        carbohydrate_g: 0,
+        protein_g: 0,
+        fat_g: 0,
+        sugar_g: 0,
+        fiber_g: 0,
+        sodium_mg: 0,
+        carbs_kcal: 0,
+        protein_kcal: 0,
+        fat_kcal: 0,
+        macroKcalSum: 0,
+      };
+    }
+
+    const sums = mealItems.reduce(
+      (acc, item) => {
+        acc.carbohydrate_g += (getMealItemNutrientTotal(item, 'energy_kcal') ??
+          0) as number;
+        acc.protein_g += (getMealItemNutrientTotal(item, 'protein_g') ??
+          0) as number;
+        acc.fat_g += (getMealItemNutrientTotal(item, 'fat_g') ?? 0) as number;
+        acc.sugar_g += (getMealItemNutrientTotal(item, 'sugar_g') ??
+          0) as number;
+        acc.fiber_g += (getMealItemNutrientTotal(item, 'fiber_g') ??
+          0) as number;
+        acc.sodium_mg += (getMealItemNutrientTotal(item, 'sodium_mg') ??
+          0) as number;
+        return acc;
+      },
+      {
+        carbohydrate_g: 0,
+        protein_g: 0,
+        fat_g: 0,
+        sugar_g: 0,
+        fiber_g: 0,
+        sodium_mg: 0,
+      }
+    );
+
+    const carbs_kcal = Math.round(sums.carbohydrate_g * 4);
+    const protein_kcal = Math.round(sums.protein_g * 4);
+    const fat_kcal = Math.round(sums.fat_g * 9);
+    const macroKcalSum = carbs_kcal + protein_kcal + fat_kcal;
+
+    return { ...sums, carbs_kcal, protein_kcal, fat_kcal, macroKcalSum };
+  }, [mealItems]);
   const hydrationProgressPercentage = useHydrationStore(state =>
     state.getProgressPercentage()
   );
@@ -597,7 +666,8 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       | 'energy'
       | 'respiratory'
       | 'workouts'
-      | 'mindfulness',
+      | 'mindfulness'
+      | 'nutrition',
     options: {
       title: string;
       valueText: string;
@@ -666,7 +736,9 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
               </Card>
               {options.extra}
               {options.summary.length > 0 && (
-                <View style={styles.metricsSection}>
+                <View
+                  style={[styles.metricsSection, { paddingBottom: spacing.lg }]}
+                >
                   <Text style={styles.sectionTitle}>Summary</Text>
                   <View style={styles.metricGrid}>
                     {options.summary.map((m, idx) => (
@@ -921,6 +993,132 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       ],
     });
 
+  const [showNutritionDetails, setShowNutritionDetails] = useState(false);
+  const [selectedNutritionAspectId, setSelectedNutritionAspectId] = useState<
+    string | null
+  >(null);
+  const nutritionRecommendations = useMemo(
+    () =>
+      getNutritionRecommendations({
+        mealItems,
+        macroTotals,
+        totalDietaryEnergyKcal,
+      }),
+    [mealItems, macroTotals, totalDietaryEnergyKcal]
+  );
+
+  const renderNutritionModal = () => {
+    const { aspects, footnotes } = nutritionRecommendations;
+
+    return renderMetricModal('nutrition', {
+      title: 'Dietary Summary',
+      valueText:
+        isError || isMealLoading
+          ? isError
+            ? 'Error'
+            : '...'
+          : `${totalDietaryEnergyKcal} kcal`,
+      color: colors.green[600],
+      statusText: isMealLoading
+        ? '...'
+        : mealItems && mealItems.length > 0
+          ? 'Logged'
+          : 'No data',
+      presentationStyle: 'formSheet',
+      extra: (
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { marginTop: spacing.md }]}>
+            Recommendations
+          </Text>
+          <Card>
+            <View style={{ padding: spacing.md }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  gap: spacing.sm,
+                }}
+              >
+                {aspects.map(a => (
+                  <TouchableOpacity
+                    key={a.id}
+                    onPress={() => {
+                      setSelectedNutritionAspectId(a.id);
+                      setShowNutritionDetails(true);
+                    }}
+                    style={{
+                      width: '48%',
+                      backgroundColor: colors.neutral[50],
+                      borderRadius: borderRadius.md,
+                      borderWidth: 1,
+                      borderColor:
+                        a.status === 'ok'
+                          ? colors.green[500]
+                          : colors.orange[600],
+                      padding: spacing.sm,
+                      marginBottom: spacing.sm,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontWeight: '700',
+                        color: colors.neutral[900],
+                      }}
+                    >
+                      {a.title}
+                    </Text>
+                    <Text
+                      style={{
+                        color:
+                          a.status === 'ok'
+                            ? colors.green[600]
+                            : colors.orange[600],
+                        marginTop: spacing.xs,
+                      }}
+                    >
+                      {a.short}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={{ marginTop: spacing.sm }}>
+                <Text style={[styles.timestamp, { marginTop: spacing.sm }]}>
+                  Sources: WHO, USDA MyPlate, Australian Dietary Guidelines,
+                  NHS.
+                </Text>
+              </View>
+            </View>
+          </Card>
+
+          {footnotes && footnotes.length > 0 && (
+            <View style={{ marginTop: spacing.md }}>
+              <Text style={styles.sectionTitle}>Notes</Text>
+              <Card>
+                <View style={{ padding: spacing.sm }}>
+                  {footnotes.map(f => (
+                    <Text key={f.id} style={styles.recommendationItem}>
+                      • {f.text}
+                    </Text>
+                  ))}
+                </View>
+              </Card>
+            </View>
+          )}
+        </View>
+      ),
+      summary: [
+        { label: 'Total', value: `${totalDietaryEnergyKcal} kcal` },
+        { label: 'Protien', value: `${macroTotals.protein_g} g` },
+        { label: 'Carbs', value: `${macroTotals.carbohydrate_g} g` },
+        { label: 'Fat', value: `${macroTotals.fat_g} g` },
+        { label: 'Sugar', value: `${macroTotals.sugar_g} g` },
+        { label: 'Fiber', value: `${macroTotals.fiber_g} g` },
+        { label: 'Sodium', value: `${macroTotals.sodium_mg} mg` },
+        { label: 'Total Items', value: `${mealItems ? mealItems.length : 0}` },
+      ],
+    });
+  };
+
   const renderRespiratoryModal = () =>
     renderMetricModal('respiratory', {
       title: 'Respiratory Rate',
@@ -1119,6 +1317,28 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
           </Text>
         </TouchableOpacity>
 
+        {/* Dietary Calories (Nutrition) Square */}
+        <TouchableOpacity
+          style={[styles.square, { borderColor: colors.green[600] }]}
+          onPress={() => setSelectedModal('nutrition')}
+          disabled={isMealLoading}
+        >
+          <View style={styles.squareIcon}>
+            <Apple size={24} color={colors.green[600]} />
+          </View>
+          <Text style={styles.squareValue}>
+            {isMealLoading ? '...' : `${totalDietaryEnergyKcal} kcal`}
+          </Text>
+          <Text style={styles.squareLabel}>Calories (diet)</Text>
+          <Text style={[styles.squareStatus, { color: colors.green[600] }]}>
+            {isMealLoading
+              ? 'Loading'
+              : mealItems && mealItems.length > 0
+                ? 'Logged'
+                : 'No data'}
+          </Text>
+        </TouchableOpacity>
+
         {/* Respiratory Rate Square */}
         <TouchableOpacity
           style={[styles.square, { borderColor: getRRColor() }]}
@@ -1197,6 +1417,13 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       {renderRespiratoryModal()}
       {renderWorkoutsModal()}
       {!isAndroid && renderMindfulnessModal()}
+      {renderNutritionModal()}
+      <NutritionDetailsModal
+        showNutritionDetails={showNutritionDetails}
+        setShowNutritionDetails={setShowNutritionDetails}
+        nutritionRecommendations={nutritionRecommendations}
+        selectedNutritionAspectId={selectedNutritionAspectId}
+      />
     </View>
   );
 };
