@@ -55,6 +55,7 @@ import {
   estimateDailyCalorieGoal,
   getMealItemNutrientTotal,
 } from '../../utils/nutritionUtils';
+import TypingChatBubble from '../ui/TypingChatBubble';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -503,6 +504,8 @@ function AvatarExperience({
     isActive,
   });
 
+  const showNutritionBubble = activeAnimation === 'thumbs_up';
+
   useEffect(() => {
     return () => {
       resetEngine();
@@ -912,6 +915,12 @@ function AvatarExperience({
 
       <ViewAchievementButton style={styles.achievementButton} />
 
+      <TypingChatBubble
+        text="Great job achieving your nutrition goals! 👍"
+        isVisible={showNutritionBubble}
+        style={styles.nutritionBubble}
+      />
+
       {/* Hydration indicator overlay */}
       <View style={styles.hydrationIndicator}>
         <HydrationIndicator />
@@ -972,6 +981,13 @@ const styles = StyleSheet.create({
     bottom: 8,
     right: 12,
     zIndex: 1000,
+  },
+  nutritionBubble: {
+    position: 'absolute',
+    bottom: 12,
+    left: 80,
+    right: 120,
+    zIndex: 950,
   },
   statusIndicator: {
     width: 12,
