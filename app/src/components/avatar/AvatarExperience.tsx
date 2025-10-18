@@ -15,6 +15,8 @@ import AvatarLoadingIndicator from '../ui/AvatarLoadingIndicator';
 import { useStressVisualsPreference } from '../../hooks/useStressVisualsPreference';
 import { useDeveloperControlsPreference } from '../../hooks/useDeveloperControlsPreference';
 import { useStressLevel } from '../../hooks/useStressLevel';
+import { useMeal } from '../../hooks/useMeal';
+import { useUserProfile } from '../../hooks/useUserProfile';
 import { localStorageService } from '../../services/LocalStorageService';
 import { assetPreloader } from '../../services/AssetPreloader';
 import {
@@ -49,6 +51,10 @@ import HydrationIndicator from '../HydrationIndicator';
 import { colors } from '../../theme';
 import { useAvatarAnimationEngine } from '../../hooks/useAvatarAnimationEngine';
 import ViewAchievementButton from '../ViewAchievementButton';
+import {
+  estimateDailyCalorieGoal,
+  getMealItemNutrientTotal,
+} from '../../utils/nutritionUtils';
 
 // Initialize Three.js configuration
 suppressEXGLWarnings();
@@ -142,6 +148,26 @@ function AvatarExperience({
 
   // Health data
   const { data: health } = useHealthData({ autoSync: false });
+  const { data: mealItems } = useMeal();
+  const { data: userProfile } = useUserProfile();
+  const totalDietaryEnergyKcal = useMemo(() => {
+    if (!mealItems || mealItems.length === 0) {
+      return 0;
+    }
+    return Math.round(
+      mealItems.reduce((sum, item) => {
+        const val = getMealItemNutrientTotal(item, 'energy_kcal');
+        return sum + (val ?? 0);
+      }, 0)
+    );
+  }, [mealItems]);
+  const nutritionGoalInfo = useMemo(
+    () => estimateDailyCalorieGoal(userProfile),
+    [userProfile]
+  );
+  const hasMetCalorieGoal =
+    nutritionGoalInfo.goal > 0 &&
+    totalDietaryEnergyKcal >= nutritionGoalInfo.goal;
   const energyInfo = useMemo(() => {
     if (!health) return null;
     return computeEnergy(health.steps, health.sleepMinutes);
@@ -293,8 +319,9 @@ function AvatarExperience({
     const extras: string[] = [];
     if (isSleepDeprived) extras.push('yawn');
     if (hasNearbyDengueRisk && !sleepMode) extras.push('swat_bugs');
+    if (hasMetCalorieGoal) extras.push('thumbs_up');
     return Array.from(new Set(extras));
-  }, [hasNearbyDengueRisk, isSleepDeprived, sleepMode]);
+  }, [hasMetCalorieGoal, hasNearbyDengueRisk, isSleepDeprived, sleepMode]);
 
   // Eye-bag effect (dark circles) — auto derive from sleep when not explicitly provided
   // If user sleeps < 7.5h (FULL_SLEEP_MINUTES), apply 0.1 intensity per
@@ -449,6 +476,7 @@ function AvatarExperience({
       isSleepDeprived,
       hasNearbyDengueRisk,
       recommendedAnimation,
+      hasMetCalorieGoal,
       aqi: airQualityData?.aqi ?? null,
       aqiReason:
         aqiAnimationRecommendation?.reason ??

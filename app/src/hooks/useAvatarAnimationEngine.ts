@@ -12,6 +12,7 @@ export interface AnimationEngineContext {
   stressVisualsEnabled: boolean;
   isSweatyWeather: boolean;
   isSleepDeprived: boolean;
+  hasMetCalorieGoal: boolean;
   hasNearbyDengueRisk: boolean;
   recommendedAnimation: string | null;
   aqi: number | null;
@@ -38,6 +39,7 @@ const DEFAULT_ANIMATION_DURATIONS: Record<string, number> = {
   swat_bugs: 7400,
   yawn: 5000,
   slump: 10000,
+  thumbs_up: 6000,
 };
 
 const getAnimationDuration = (name: string, fallback: number = 6000) => {
@@ -75,6 +77,13 @@ const buildModerateAQICycle = (
     });
   }
 
+  if (context.hasMetCalorieGoal && !context.sleepMode) {
+    extras.push({
+      name: 'thumbs_up',
+      durationMs: getAnimationDuration('thumbs_up'),
+    });
+  }
+
   if (extras.length === 0) {
     return [breathingEntry];
   }
@@ -85,6 +94,7 @@ const buildModerateAQICycle = (
     if (cycle.length === 0 || cycle[cycle.length - 1].name !== 'breathing') {
       cycle.push({ ...breathingEntry });
     }
+    console.log('extra', extra);
     cycle.push(extra);
   });
 

@@ -147,6 +147,10 @@ export class AssetPreloader {
           asset: require('../../assets/animations/pump_jump.glb'),
           name: 'pump_jump',
         },
+        {
+          asset: require('../../assets/animations/thumbs_up.glb'),
+          name: 'thumbs_up',
+        },
       ];
 
       const imageAssets = [

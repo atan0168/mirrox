@@ -4,6 +4,7 @@ import {
   ItemNutrient,
 } from '../services/BackendApiService';
 import type { MealItem } from '../types/meal';
+import type { UserProfile } from '../models/User';
 
 export const NUTRIENT_KEYS = [
   'energy_kcal',
@@ -293,4 +294,79 @@ export function buildMealAnalysisFromItems(
     },
     canonical: perItem,
   };
+}
+
+interface CalorieGoalDefaults {
+  gender: UserProfile['gender'] | 'unknown';
+  weightKg: number;
+  heightCm: number;
+  goal: number;
+}
+
+const DEFAULT_CALORIE_TARGETS: CalorieGoalDefaults[] = [
+  { gender: 'male', weightKg: 78, heightCm: 178, goal: 2500 },
+  { gender: 'female', weightKg: 62, heightCm: 165, goal: 2000 },
+  { gender: 'unknown', weightKg: 70, heightCm: 170, goal: 2200 },
+];
+
+export type CalorieGoalMethod = 'profile' | 'gender' | 'default';
+
+export function estimateDailyCalorieGoal(profile?: UserProfile | null): {
+  goal: number;
+  method: CalorieGoalMethod;
+  assumedAge: number;
+} {
+  const assumedAge = 30; // Age not captured yet; use adult baseline for Mifflin-St Jeor
+  const gender = profile?.gender ?? 'unknown';
+
+  const defaults =
+    DEFAULT_CALORIE_TARGETS.find(entry => entry.gender === gender) ??
+    DEFAULT_CALORIE_TARGETS.find(entry => entry.gender === 'unknown')!;
+
+  const hasAnthropometrics =
+    typeof profile?.weightKg === 'number' &&
+    profile.weightKg > 0 &&
+    typeof profile.heightCm === 'number' &&
+    profile.heightCm > 0;
+
+  const activityFactor = 1.45; // Lightly active baseline (sedentary + incidental activity)
+
+  if (
+    hasAnthropometrics &&
+    profile?.gender &&
+    profile?.weightKg &&
+    profile?.heightCm
+  ) {
+    const sexConstant = profile.gender === 'male' ? 5 : -161;
+    const bmr =
+      10 * profile.weightKg +
+      6.25 * profile.heightCm -
+      5 * assumedAge +
+      sexConstant;
+    const goal = clampCalorieGoal(Math.round(bmr * activityFactor));
+    return { goal, method: 'profile', assumedAge };
+  }
+
+  if (profile?.gender) {
+    const sexConstant = profile.gender === 'male' ? 5 : -161;
+    const bmr =
+      10 * defaults.weightKg +
+      6.25 * defaults.heightCm -
+      5 * assumedAge +
+      sexConstant;
+    const goal = clampCalorieGoal(Math.round(bmr * activityFactor));
+    return { goal, method: 'gender', assumedAge };
+  }
+
+  // Gender unknown: fall back to general adult average needs
+  const neutralBmr =
+    10 * defaults.weightKg + 6.25 * defaults.heightCm - 5 * assumedAge;
+  const neutralGoal = clampCalorieGoal(
+    Math.round(neutralBmr * (activityFactor - 0.05))
+  );
+  return { goal: neutralGoal, method: 'default', assumedAge };
+}
+
+function clampCalorieGoal(goal: number): number {
+  return Math.min(3500, Math.max(1200, goal));
 }

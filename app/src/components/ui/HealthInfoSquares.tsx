@@ -36,7 +36,10 @@ import { useHealthHistory } from '../../hooks/useHealthHistory';
 import { addDays, differenceInMinutes, format, parseISO } from 'date-fns';
 import { useHydrationStore } from '../../store/hydrationStore';
 import { useMeal } from '../../hooks/useMeal';
-import { getMealItemNutrientTotal } from '../../utils/nutritionUtils';
+import {
+  estimateDailyCalorieGoal,
+  getMealItemNutrientTotal,
+} from '../../utils/nutritionUtils';
 import { getHydrationStatusInfo } from '../../utils/hydrationUtils';
 import { getNutritionRecommendations } from './nutritionRecommendations';
 import {
@@ -44,6 +47,7 @@ import {
   yyyymmddInTimeZone,
 } from '../../utils/datetimeUtils';
 import { NutritionDetailsModal } from '../nutrition/NutritionDetailsModal';
+import { useUserProfile } from '../../hooks/useUserProfile';
 
 interface HealthInfoSquaresProps {
   health?: HealthSnapshot | null;
@@ -99,6 +103,91 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
       }, 0)
     );
   }, [mealItems]);
+  const { data: userProfile } = useUserProfile();
+  const nutritionGoalInfo = useMemo(
+    () => estimateDailyCalorieGoal(userProfile),
+    [userProfile]
+  );
+  const nutritionTargetKcal = nutritionGoalInfo.goal;
+  const rawNutritionProgress =
+    nutritionTargetKcal > 0 ? totalDietaryEnergyKcal / nutritionTargetKcal : 0;
+  const nutritionProgressPercent = Math.max(
+    0,
+    Math.min(200, Math.round(rawNutritionProgress * 100))
+  );
+  const nutritionRemainingKcal = Math.max(
+    0,
+    Math.round(nutritionTargetKcal - totalDietaryEnergyKcal)
+  );
+  const nutritionExcessKcal = Math.max(
+    0,
+    Math.round(totalDietaryEnergyKcal - nutritionTargetKcal)
+  );
+  const nutritionGoalSourceLabel = useMemo(() => {
+    switch (nutritionGoalInfo.method) {
+      case 'profile':
+        return 'Profile data';
+      case 'gender':
+        return 'Gender-based';
+      default:
+        return 'Average adult';
+    }
+  }, [nutritionGoalInfo.method]);
+  const nutritionStatus = useMemo(() => {
+    if (isMealLoading) {
+      return {
+        label: 'Loading',
+        detail: 'Retrieving logged meals…',
+        color: colors.neutral[400],
+        state: 'loading' as const,
+      };
+    }
+    if (!mealItems || mealItems.length === 0) {
+      return {
+        label: 'No data',
+        detail: 'Log meals to see progress toward your goal.',
+        color: colors.neutral[400],
+        state: 'empty' as const,
+      };
+    }
+    const diff = Math.round(totalDietaryEnergyKcal - nutritionTargetKcal);
+    if (rawNutritionProgress < 0.85) {
+      return {
+        label: 'Below target',
+        detail: `~${Math.abs(diff)} kcal under goal`,
+        color: colors.orange[600],
+        state: 'below' as const,
+      };
+    }
+    if (rawNutritionProgress > 1.15) {
+      return {
+        label: 'Above target',
+        detail: `~${Math.abs(diff)} kcal over goal`,
+        color: colors.red[500],
+        state: 'above' as const,
+      };
+    }
+    if (rawNutritionProgress >= 0.9 && rawNutritionProgress <= 1.1) {
+      return {
+        label: 'Met goal',
+        detail: 'Within ±10% of goal',
+        color: colors.green[600],
+        state: 'on' as const,
+      };
+    }
+    return {
+      label: 'On track',
+      detail: 'Within ±15% of goal',
+      color: colors.green[600],
+      state: 'on' as const,
+    };
+  }, [
+    isMealLoading,
+    mealItems,
+    rawNutritionProgress,
+    totalDietaryEnergyKcal,
+    nutritionTargetKcal,
+  ]);
   const hydrationGoalMl = useHydrationStore(state => state.dailyGoalMl);
 
   // Macronutrient totals (grams and kcal)
@@ -1009,21 +1098,21 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
 
   const renderNutritionModal = () => {
     const { aspects, footnotes } = nutritionRecommendations;
+    const balanceLabel = nutritionExcessKcal > 0 ? 'Over Goal' : 'Remaining';
+    const balanceValue =
+      nutritionExcessKcal > 0
+        ? `${nutritionExcessKcal} kcal`
+        : `${nutritionRemainingKcal} kcal`;
 
     return renderMetricModal('nutrition', {
       title: 'Dietary Summary',
-      valueText:
-        isError || isMealLoading
-          ? isError
-            ? 'Error'
-            : '...'
-          : `${totalDietaryEnergyKcal} kcal`,
-      color: colors.green[600],
-      statusText: isMealLoading
-        ? '...'
-        : mealItems && mealItems.length > 0
-          ? 'Logged'
-          : 'No data',
+      valueText: isError
+        ? 'Error'
+        : isMealLoading
+          ? '...'
+          : `${totalDietaryEnergyKcal} / ${nutritionTargetKcal} kcal`,
+      color: nutritionStatus.color,
+      statusText: nutritionStatus.detail,
       presentationStyle: 'formSheet',
       extra: (
         <View style={styles.metricsSection}>
@@ -1107,14 +1196,17 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
         </View>
       ),
       summary: [
-        { label: 'Total', value: `${totalDietaryEnergyKcal} kcal` },
-        { label: 'Protien', value: `${macroTotals.protein_g} g` },
+        {
+          label: `Target (${nutritionGoalSourceLabel})`,
+          value: `${nutritionTargetKcal} kcal`,
+        },
+        { label: 'Consumed', value: `${totalDietaryEnergyKcal} kcal` },
+        { label: balanceLabel, value: balanceValue },
+        { label: 'Progress', value: `${nutritionProgressPercent}%` },
+        { label: 'Protein', value: `${macroTotals.protein_g} g` },
         { label: 'Carbs', value: `${macroTotals.carbohydrate_g} g` },
         { label: 'Fat', value: `${macroTotals.fat_g} g` },
-        { label: 'Sugar', value: `${macroTotals.sugar_g} g` },
         { label: 'Fiber', value: `${macroTotals.fiber_g} g` },
-        { label: 'Sodium', value: `${macroTotals.sodium_mg} mg` },
-        { label: 'Total Items', value: `${mealItems ? mealItems.length : 0}` },
       ],
     });
   };
@@ -1319,23 +1411,19 @@ export const HealthInfoSquares: React.FC<HealthInfoSquaresProps> = ({
 
         {/* Dietary Calories (Nutrition) Square */}
         <TouchableOpacity
-          style={[styles.square, { borderColor: colors.green[600] }]}
+          style={[styles.square, { borderColor: nutritionStatus.color }]}
           onPress={() => setSelectedModal('nutrition')}
           disabled={isMealLoading}
         >
           <View style={styles.squareIcon}>
-            <Apple size={24} color={colors.green[600]} />
+            <Apple size={24} color={nutritionStatus.color} />
           </View>
           <Text style={styles.squareValue}>
             {isMealLoading ? '...' : `${totalDietaryEnergyKcal} kcal`}
           </Text>
           <Text style={styles.squareLabel}>Calories (diet)</Text>
-          <Text style={[styles.squareStatus, { color: colors.green[600] }]}>
-            {isMealLoading
-              ? 'Loading'
-              : mealItems && mealItems.length > 0
-                ? 'Logged'
-                : 'No data'}
+          <Text style={[styles.squareStatus, { color: nutritionStatus.color }]}>
+            {nutritionStatus.label}
           </Text>
         </TouchableOpacity>
 

@@ -11,37 +11,13 @@ export const TextureRegistry: Record<TextureKey, StaticAssetModule> = {
   laminated_wood: require('../../assets/textures/laminated_wood.jpg'),
 };
 
-export type AssetKey = 'low_poly_bonsai' | 'low_poly_rock_set';
+export type AssetKey = '';
 
 export interface AssetDefaultPlacement {
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: [number, number, number] | number;
 }
-
-export const AssetRegistry: Record<
-  AssetKey,
-  { module: StaticAssetModule; defaults?: AssetDefaultPlacement }
-> = {
-  low_poly_bonsai: {
-    module: require('../../assets/objects/low_poly_bonsai.glb'),
-    defaults: {
-      // Place slightly behind and next to the avatar (camera looks towards z decreasing)
-      position: [-1.2, 1, -0.3],
-      rotation: [0, Math.PI * 0.15, 0],
-      // Increase size relative to avatar
-      scale: 2.4,
-    },
-  },
-  low_poly_rock_set: {
-    module: require('../../assets/objects/low_poly_rock_set.glb'),
-    defaults: {
-      position: [1.6, -1.65, 0.0],
-      rotation: [0, -Math.PI * 0.1, 0],
-      scale: 1.0,
-    },
-  },
-};
 
 export type SceneAssetInstance = {
   assetKey: AssetKey;
@@ -74,21 +50,5 @@ export type SceneEnvironmentConfig = {
 
 // A convenient default environment using built-in assets
 export const DefaultEnvironment: SceneEnvironmentConfig = {
-  assets: [
-    {
-      assetKey: 'low_poly_bonsai',
-      // use defaults
-      textureKey: undefined,
-      receiveShadow: true,
-      castShadow: true,
-    },
-    {
-      assetKey: 'low_poly_rock_set',
-      // demonstrate applying a texture to all meshes if needed
-      // textureKey: 'sandy_gravel',
-      // applyTexture: { toAll: true },
-      receiveShadow: true,
-      castShadow: true,
-    },
-  ],
+  assets: [],
 };

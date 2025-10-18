@@ -13,6 +13,7 @@ export const AVAILABLE_ANIMATIONS = [
   { name: 'slump', label: 'Slump' },
   { name: 'hype_dance', label: 'Hype Dance' },
   { name: 'pump_jump', label: 'Pump Jump' },
+  { name: 'thumbs_up', label: 'thumbs_up' },
 ];
 
 // Define available idle animations in order of preference
