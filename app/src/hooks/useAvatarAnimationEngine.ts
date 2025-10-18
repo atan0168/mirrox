@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { IDLE_ANIMATIONS } from '../constants';
 import { getAnimationCycleForAQI } from '../utils/animationUtils';
 
 type StressLevel = 'none' | 'mild' | 'moderate' | 'high';
@@ -39,11 +40,39 @@ const DEFAULT_ANIMATION_DURATIONS: Record<string, number> = {
   swat_bugs: 7400,
   yawn: 5000,
   slump: 10000,
-  thumbs_up: 6000,
+  thumbs_up: 5500,
 };
 
 const getAnimationDuration = (name: string, fallback: number = 6000) => {
   return DEFAULT_ANIMATION_DURATIONS[name] ?? fallback;
+};
+
+const getIdleEntry = (name: string): AnimationEntry => ({
+  name,
+  durationMs: getAnimationDuration(name, 7000),
+});
+
+const getDefaultIdleEntry = (): AnimationEntry => {
+  const fallbackName = IDLE_ANIMATIONS[0] ?? 'M_Standing_Idle_Variations_007';
+  return getIdleEntry(fallbackName);
+};
+
+const getContextualIdleAnimations = (context: AnimationEngineContext) => {
+  const extras: string[] = [];
+
+  if (context.isSleepDeprived) {
+    extras.push('yawn');
+  }
+
+  if (context.hasNearbyDengueRisk && !context.sleepMode) {
+    extras.push('swat_bugs');
+  }
+
+  if (context.hasMetCalorieGoal) {
+    extras.push('thumbs_up');
+  }
+
+  return Array.from(new Set(extras));
 };
 
 const buildModerateAQICycle = (
@@ -94,7 +123,6 @@ const buildModerateAQICycle = (
     if (cycle.length === 0 || cycle[cycle.length - 1].name !== 'breathing') {
       cycle.push({ ...breathingEntry });
     }
-    console.log('extra', extra);
     cycle.push(extra);
   });
 
@@ -139,6 +167,13 @@ const buildUnhealthyAQICycle = (
     });
   }
 
+  if (context.hasMetCalorieGoal && !context.sleepMode) {
+    entries.set('thumbs_up', {
+      name: 'thumbs_up',
+      durationMs: getAnimationDuration('thumbs_up'),
+    });
+  }
+
   return Array.from(entries.values());
 };
 
@@ -172,13 +207,123 @@ const plansEqual = (a: AnimationPlan | null, b: AnimationPlan | null) => {
   return false;
 };
 
-const buildAnimationPlan = (context: AnimationEngineContext): AnimationPlan => {
+const buildContextualIdleCycle = (
+  context: AnimationEngineContext,
+  contextualIdleAnimations: string[]
+): AnimationEntry[] => {
+  if (!contextualIdleAnimations.length) {
+    return [];
+  }
+
+  const baseIdleNames = IDLE_ANIMATIONS.length
+    ? IDLE_ANIMATIONS
+    : [getDefaultIdleEntry().name];
+  const baseIdleEntries = baseIdleNames.map(name => getIdleEntry(name));
+  const entries: AnimationEntry[] = [];
+
+  let baseIndex = 0;
+  contextualIdleAnimations.forEach(extraName => {
+    const baseEntry =
+      baseIdleEntries[baseIndex] ?? baseIdleEntries[0] ?? getDefaultIdleEntry();
+    entries.push({ ...baseEntry });
+    entries.push({
+      name: extraName,
+      durationMs: getAnimationDuration(extraName),
+    });
+    baseIndex = (baseIndex + 1) % baseIdleEntries.length;
+  });
+
+  const trailingBase =
+    baseIdleEntries[baseIndex] ?? baseIdleEntries[0] ?? getDefaultIdleEntry();
+  entries.push({ ...trailingBase });
+
+  return entries;
+};
+
+const buildAnimationPlan = (
+  context: AnimationEngineContext,
+  contextualIdleAnimations: string[]
+): AnimationPlan => {
+  const finalize = (plan: AnimationPlan): AnimationPlan => {
+    if (!context.hasMetCalorieGoal || context.sleepMode) {
+      return plan;
+    }
+
+    if (plan.type === 'manual') {
+      return plan;
+    }
+
+    const thumbsUpEntry: AnimationEntry = {
+      name: 'thumbs_up',
+      durationMs: getAnimationDuration('thumbs_up'),
+    };
+
+    if (plan.type === 'single') {
+      if (plan.name === 'thumbs_up') {
+        return plan;
+      }
+
+      const baseEntry =
+        plan.name !== null && plan.name !== undefined
+          ? {
+              name: plan.name,
+              durationMs: plan.durationMs ?? getAnimationDuration(plan.name),
+            }
+          : null;
+
+      const entries = baseEntry ? [baseEntry, thumbsUpEntry] : [thumbsUpEntry];
+
+      return {
+        type: 'cycle',
+        reason: `${plan.reason} (with celebration)`,
+        entries,
+      };
+    }
+
+    if (plan.type === 'cycle') {
+      const alreadyIncludesThumbsUp = plan.entries.some(
+        entry => entry.name === 'thumbs_up'
+      );
+      if (alreadyIncludesThumbsUp) {
+        return plan;
+      }
+
+      return {
+        ...plan,
+        entries: [...plan.entries, thumbsUpEntry],
+      };
+    }
+
+    if (plan.type === 'idle') {
+      const extendedContextual = Array.from(
+        new Set([...contextualIdleAnimations, 'thumbs_up'])
+      );
+      const cycle = buildContextualIdleCycle(context, extendedContextual);
+      if (cycle.length) {
+        return {
+          type: 'cycle',
+          reason: `${plan.reason} (with celebration)`,
+          entries: cycle,
+        };
+      }
+
+      return {
+        type: 'single',
+        name: 'thumbs_up',
+        reason: 'Nutrition celebration',
+        durationMs: thumbsUpEntry.durationMs,
+      };
+    }
+
+    return plan;
+  };
+
   if (context.isManualAnimation) {
     return { type: 'manual', name: context.activeAnimation };
   }
 
   if (context.sleepMode) {
-    return {
+    return finalize({
       type: 'cycle',
       reason: 'Sleep mode cycle',
       entries: [
@@ -191,16 +336,16 @@ const buildAnimationPlan = (context: AnimationEngineContext): AnimationPlan => {
           durationMs: getAnimationDuration('sleeping_idle', 12000),
         },
       ],
-    };
+    });
   }
 
   if (context.stressLevel === 'high' && context.stressVisualsEnabled) {
-    return {
+    return finalize({
       type: 'single',
       name: 'M_Standing_Expressions_007',
       reason: 'High HRV stress detected',
       durationMs: getAnimationDuration('M_Standing_Expressions_007'),
-    };
+    });
   }
 
   const aqi = context.aqi;
@@ -215,56 +360,56 @@ const buildAnimationPlan = (context: AnimationEngineContext): AnimationPlan => {
   if (isModerateAQI) {
     const cycleEntries = buildModerateAQICycle(context);
     if (cycleEntries.length <= 1) {
-      return {
+      return finalize({
         type: 'single',
         name: cycleEntries[0]?.name ?? recommended,
         reason: context.aqiReason,
         durationMs: cycleEntries[0]?.durationMs,
-      };
+      });
     }
 
-    return {
+    return finalize({
       type: 'cycle',
       reason: context.aqiReason,
       entries: cycleEntries,
-    };
+    });
   }
 
   const isUnhealthyAQI = typeof aqi === 'number' && aqi >= 101;
   if (isUnhealthyAQI && recommended) {
     const cycleEntries = buildUnhealthyAQICycle(context);
     if (cycleEntries.length <= 1) {
-      return {
+      return finalize({
         type: 'single',
         name: cycleEntries[0]?.name ?? recommended,
         reason: context.aqiReason,
         durationMs: cycleEntries[0]?.durationMs,
-      };
+      });
     }
 
-    return {
+    return finalize({
       type: 'cycle',
       reason: context.aqiReason,
       entries: cycleEntries,
-    };
+    });
   }
 
   if (recommended) {
-    return {
+    return finalize({
       type: 'single',
       name: recommended,
       reason: context.aqiReason,
       durationMs: getAnimationDuration(recommended),
-    };
+    });
   }
 
   if (context.isSweatyWeather) {
-    return {
+    return finalize({
       type: 'single',
       name: 'wiping_sweat',
       reason: 'Hot and humid weather',
       durationMs: getAnimationDuration('wiping_sweat'),
-    };
+    });
   }
 
   if (
@@ -272,38 +417,52 @@ const buildAnimationPlan = (context: AnimationEngineContext): AnimationPlan => {
     !context.sleepMode &&
     context.stressLevel === 'none'
   ) {
-    return {
+    return finalize({
       type: 'single',
       name: 'slump',
       reason: 'Sleep deprivation posture',
       durationMs: getAnimationDuration('slump'),
-    };
+    });
   }
 
   if (context.hasNearbyDengueRisk) {
-    return {
+    const dengueEntries: AnimationEntry[] = [
+      {
+        name: 'swat_bugs',
+        durationMs: getAnimationDuration('swat_bugs'),
+      },
+      {
+        name: 'M_Standing_Idle_Variations_007',
+        durationMs: getAnimationDuration(
+          'M_Standing_Idle_Variations_007',
+          7000
+        ),
+      },
+    ];
+
+    return finalize({
       type: 'cycle',
       reason: 'Nearby dengue risk - swat cycle',
-      entries: [
-        {
-          name: 'swat_bugs',
-          durationMs: getAnimationDuration('swat_bugs'),
-        },
-        {
-          name: 'M_Standing_Idle_Variations_007',
-          durationMs: getAnimationDuration(
-            'M_Standing_Idle_Variations_007',
-            7000
-          ),
-        },
-      ],
-    };
+      entries: dengueEntries,
+    });
   }
 
-  return {
+  const contextualIdleCycle = buildContextualIdleCycle(
+    context,
+    contextualIdleAnimations
+  );
+  if (contextualIdleCycle.length) {
+    return finalize({
+      type: 'cycle',
+      reason: 'Contextual idle cycle',
+      entries: contextualIdleCycle,
+    });
+  }
+
+  return finalize({
     type: 'idle',
     reason: 'No automatic animation selected',
-  };
+  });
 };
 
 interface UseAvatarAnimationEngineParams {
@@ -320,6 +479,20 @@ export const useAvatarAnimationEngine = ({
   setActiveAnimation,
   isActive = true,
 }: UseAvatarAnimationEngineParams) => {
+  const contextualIdleAnimations = useMemo(
+    () => getContextualIdleAnimations(context),
+    [
+      context.hasMetCalorieGoal,
+      context.hasNearbyDengueRisk,
+      context.isSleepDeprived,
+      context.sleepMode,
+    ]
+  );
+  const idleAnimations = useMemo(() => {
+    return Array.from(
+      new Set([...IDLE_ANIMATIONS, ...contextualIdleAnimations])
+    );
+  }, [contextualIdleAnimations]);
   const planRef = useRef<AnimationPlan | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const contextRef = useRef(context);
@@ -392,7 +565,7 @@ export const useAvatarAnimationEngine = ({
       return;
     }
 
-    const plan = buildAnimationPlan(context);
+    const plan = buildAnimationPlan(context, contextualIdleAnimations);
 
     if (plansEqual(planRef.current, plan)) {
       return;
@@ -426,7 +599,14 @@ export const useAvatarAnimationEngine = ({
       : -1;
 
     playCycleEntry(cyclePlan, startIndex >= 0 ? startIndex : 0);
-  }, [context, isActive, playCycleEntry, setActiveAnimation, stopCycle]);
+  }, [
+    context,
+    contextualIdleAnimations,
+    isActive,
+    playCycleEntry,
+    setActiveAnimation,
+    stopCycle,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -434,12 +614,12 @@ export const useAvatarAnimationEngine = ({
     };
   }, [stopCycle]);
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    return {
       resetEngine,
-    }),
-    [resetEngine]
-  );
+      idleAnimations,
+    };
+  }, [idleAnimations, resetEngine]);
 };
 
 export default useAvatarAnimationEngine;

@@ -316,14 +316,6 @@ function AvatarExperience({
     return sleepH > 0 && sleepH < 6;
   }, [health]);
 
-  const contextualIdleAnimations = useMemo(() => {
-    const extras: string[] = [];
-    if (isSleepDeprived) extras.push('yawn');
-    if (hasNearbyDengueRisk && !sleepMode) extras.push('swat_bugs');
-    if (hasMetCalorieGoal) extras.push('thumbs_up');
-    return Array.from(new Set(extras));
-  }, [hasMetCalorieGoal, hasNearbyDengueRisk, isSleepDeprived, sleepMode]);
-
   // Eye-bag effect (dark circles) — auto derive from sleep when not explicitly provided
   // If user sleeps < 7.5h (FULL_SLEEP_MINUTES), apply 0.1 intensity per
   // consecutive day of insufficient sleep, capped at 0.6. Disable when >= 7.5h.
@@ -498,13 +490,14 @@ function AvatarExperience({
     ]
   );
 
-  const { resetEngine } = useAvatarAnimationEngine({
+  const { resetEngine, idleAnimations } = useAvatarAnimationEngine({
     context: animationContext,
     setActiveAnimation,
     isActive,
   });
 
-  const showNutritionBubble = activeAnimation === 'thumbs_up';
+  const showNutritionBubble =
+    hasMetCalorieGoal && activeAnimation === 'thumbs_up';
 
   useEffect(() => {
     return () => {
@@ -798,7 +791,7 @@ function AvatarExperience({
               animationSpeedScale={energyInfo?.speedScale ?? 1}
               onLoadingChange={handleAvatarLoadingChange}
               onLoadingProgress={handleLoadingProgress}
-              additionalIdleAnimations={contextualIdleAnimations}
+              idleAnimations={idleAnimations}
               isActive={isActive}
             />
             {hasNearbyDengueRisk && !sleepMode && (
@@ -986,7 +979,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 12,
     left: 80,
-    right: 120,
+    right: 80,
     zIndex: 950,
   },
   statusIndicator: {
