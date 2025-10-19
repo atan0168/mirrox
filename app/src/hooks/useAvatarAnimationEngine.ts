@@ -38,7 +38,7 @@ const DEFAULT_ANIMATION_DURATIONS: Record<string, number> = {
   breathing: 6000,
   wiping_sweat: 6000,
   swat_bugs: 7400,
-  yawn: 5000,
+  yawn: 10000,
   slump: 10000,
   thumbs_up: 5500,
 };

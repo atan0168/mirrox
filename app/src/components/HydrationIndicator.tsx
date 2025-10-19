@@ -31,12 +31,14 @@ export const HydrationIndicator: React.FC = () => {
   const progress = clampProgress(getProgressPercentage());
   const displayProgress = Math.round(progress);
   const progressColor = useMemo(() => getProgressColor(progress), [progress]);
+  const circleProgress = Math.min(progress, 100);
 
   const circleSize = 36;
   const strokeWidth = 3;
   const radius = (circleSize - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const strokeDashoffset =
+    circumference - (circleProgress / 100) * circumference;
 
   return (
     <>

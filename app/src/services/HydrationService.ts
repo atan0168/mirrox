@@ -3,6 +3,7 @@ import { useAvatarStore } from '../store/avatarStore';
 import { localStorageService } from './LocalStorageService';
 import { apiService } from './ApiService';
 import { assetPreloader } from './AssetPreloader';
+import { QuestRepository } from './db/QuestRepository';
 import {
   calculateBaselineHydrationGoal,
   calculateHeatIndexCategory,
@@ -270,12 +271,23 @@ export class HydrationService {
    */
   logFluidIntake(amountMl: number, fluidType?: string): void {
     try {
-      const { logFluidIntake } = useHydrationStore.getState();
-      logFluidIntake({ amountMl, fluidType });
+      const stateBefore = useHydrationStore.getState();
+      const previousHydration = stateBefore.currentHydrationMl;
+      const goal = Number.isFinite(stateBefore.dailyGoalMl)
+        ? stateBefore.dailyGoalMl
+        : 0;
+
+      stateBefore.logFluidIntake({ amountMl, fluidType });
+
+      const updatedHydration = useHydrationStore.getState().currentHydrationMl;
 
       console.log(
         `[HydrationService] Logged ${amountMl}mL of ${fluidType || 'fluid'} intake`
       );
+
+      if (goal > 0 && previousHydration < goal && updatedHydration >= goal) {
+        this.completeHydrationQuestIfNeeded(goal);
+      }
 
       if (amountMl > 0) {
         this.triggerDrinkingAnimation();
@@ -283,6 +295,39 @@ export class HydrationService {
     } catch (error) {
       console.error('[HydrationService] Failed to log fluid intake:', error);
     }
+  }
+
+  private completeHydrationQuestIfNeeded(targetGoal: number): void {
+    const safeGoal = Math.max(0, Math.round(targetGoal));
+    if (!safeGoal) {
+      return;
+    }
+
+    (async () => {
+      try {
+        const progress = await QuestRepository.getTodayProgress('drink_2l');
+        if (progress?.done) {
+          return;
+        }
+
+        await QuestRepository.completeQuestAtomic({
+          questId: 'drink_2l',
+          title: 'Hydration Goal: Drink water',
+          targetValue: safeGoal,
+          rewardPoints: 10,
+          rewardTag: 'skin',
+        });
+
+        console.log(
+          `[HydrationService] Auto-completed hydration quest at ${safeGoal}mL`
+        );
+      } catch (error) {
+        console.warn(
+          '[HydrationService] Failed to auto-complete hydration quest:',
+          error
+        );
+      }
+    })();
   }
 
   private metToIntensity(
